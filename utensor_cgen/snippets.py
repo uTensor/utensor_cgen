@@ -56,6 +56,16 @@ class MainContainer(SnippetContainer):
       self._text += "    return 0;\n}"
     return self._text
 
+class uTensorCTXContainer(SnippetContainer):
+
+  def __str__(self):
+    if not self._cached:
+      self._text = "void get_contex(Contex& ctx) {\n"
+      for snippet in self._snippets:
+        self._text += str(snippet)
+    self._text += "\n}"
+    return self._text
+
 
 class HelloWorld(Snippet):
 
@@ -68,5 +78,5 @@ class HelloWorld(Snippet):
 
 class TensorSnippet(Snippet):
 
-  def __init__(self):
-    pass
+  def __init__(self, contex_name='ctx'):
+    self._contex_name = contex_name

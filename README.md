@@ -5,6 +5,6 @@
 
 # TODOs
 1. Freezed graph protobuff parser
-2. Tensor snippets for `uTensor`
+2. Tensor snippets for [`uTensor`](https://github.com/neil-tan/uTensor)
 3. Add template engine for richer flexibility
     - [jinja2](http://jinja.pocoo.org)

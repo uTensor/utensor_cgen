@@ -1,4 +1,7 @@
 # -*- coding:utf8 -*-
+"""
+Parser for Protobuf file of Tensorflow Graph
+"""
 import io
 import sys
 import tensorflow as tf
