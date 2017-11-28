@@ -1,82 +1,86 @@
 # -*- coding:utf8 -*-
+import os
 from copy import deepcopy
+from jinja2 import Template
+from .snippets_cfg import SNIPPET_CONFIG, CONAINER_CONFIG
+
+_ROOT_DIR = os.path.abspath(os.path.dirname(__file__))
+_TEMPLATE_DIR = os.path.join(_ROOT_DIR, "templates")
+
+_SNIPPET_DIR = os.path.join(_TEMPLATE_DIR, "snippets")
+_CONTAINER_DIR = os.path.join(_TEMPLATE_DIR, "containers")
+
+_SNIPPETS_FILES = os.listdir(_SNIPPET_DIR)
+_SNIPPETS = dict((fname, os.path.join(_SNIPPET_DIR, fname)) for fname in _SNIPPETS_FILES)
+_CONTAINER_FILES = os.listdir(_CONTAINER_DIR)
+_CONTAINERS = dict((fname, os.path.join(_CONTAINER_DIR, fname)) for fname in _CONTAINER_FILES)
 
 
 class Snippet(object):
 
-  def __init__(self, headers=None):
-    if headers is None:
-      headers = []
-    self._headers = headers
-  
+  def __init__(self, template_name, template_vars=None):
+    if template_name not in SNIPPET_CONFIG:
+      raise ValueError("unknown tempalte name: {}".format(template_name))
+    template_path = _SNIPPETS[template_name]
+    if template_vars is None:
+      template_vars = {}
+    with open(template_path) as rf:
+      template = Template(rf.read())
+    self._template = template
+    self._headers = SNIPPET_CONFIG[template_name]
+    self.template_vars = template_vars
+
+  @property
+  def template(self):
+    return self._template
+
   @property
   def headers(self):
     return deepcopy(self._headers)
 
-  def __str__(self):
-    return ""
+  def render(self):
+    return self._template.render(self.template_vars)
 
-  def __radd__(self, other):
-    if isinstance(other, str):
-      return other + str(self)
-    return NotImplemented
+  @classmethod
+  def get_template_names(cls):
+    return list(SNIPPET_CONFIG.keys())
 
-class SnippetContainer(Snippet):
 
-  def __init__(self, *args, **kwargs):
-    super(SnippetContainer, self).__init__(*args, **kwargs)
-    self._snippets = []
-    self._text = ""
-    self._cached = False
+class SnippetContainer(object):
+
+  def __init__(self, template_name, snippets=None, template_vars=None):
+    if template_name not in CONAINER_CONFIG:
+      raise ValueError("unknown container tempalte name: {}".format(template_name))
+    template_path = _CONTAINERS[template_name]
+    if template_vars is None:
+      template_vars = {}
+    with open(template_path) as rf:
+      template = Template(rf.read())
+    if snippets is None:
+      snippets = []
+
+    self._snippets = snippets
+    self._template = template
+    self._headers = CONAINER_CONFIG[template_name]
+    for snp in self._snippets:
+      self._headers.update(snp.headers)
+    self.template_vars = template_vars
+
+  @property
+  def template(self):
+    return self._template
+
+  @property
+  def headers(self):
+    return deepcopy(self._headers)
 
   def add_snippet(self, snippet):
     """Add snippet into containers
     """
-    self._cached = False
     if not isinstance(snippet, Snippet):
       msg = "expecting Snippet object, get {}".format(type(snippet))
       raise TypeError(msg)
     self._snippets.append(snippet)
-  
-  def reset(self):
-    self._text = ""
-    self._cached = False
-    self._snippets = []
 
-  def __str__(self):
-    raise NotImplementedError("Not implemented")
-
-class MainContainer(SnippetContainer):
-
-  def __str__(self):
-    if not self._cached:
-      self._text = "int main(int argc, char* argv[]) {\n"
-      for snippet in self._snippets:
-        self._text += str(snippet)
-      self._text += "    return 0;\n}"
-    return self._text
-
-class uTensorCTXContainer(SnippetContainer):
-
-  def __str__(self):
-    if not self._cached:
-      self._text = "void get_contex(Contex& ctx) {\n"
-      for snippet in self._snippets:
-        self._text += str(snippet)
-    self._text += "\n}"
-    return self._text
-
-
-class HelloWorld(Snippet):
-
-  def __init__(self):
-    self._headers = ["<stdio.h>"]
-
-  def __str__(self):
-    return '    printf("Hello world!\\n");\n'
-
-
-class TensorSnippet(Snippet):
-
-  def __init__(self, contex_name='ctx'):
-    self._contex_name = contex_name
+  def render(self):
+    return self._template.render(snippets=self._snippets, **self.template_vars)

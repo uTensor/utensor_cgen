@@ -2,7 +2,7 @@
 # -*- coding:utf8 -*-
 import argparse
 import sys
-from utensor_cgen.snippets import HelloWorld
+from utensor_cgen.snippets import Snippet, SnippetContainer
 from utensor_cgen.composer import Composer
 
 
@@ -10,8 +10,9 @@ def main(output_fname):
   """Main function
   """
   comp = Composer()
-  hello_world = HelloWorld()
-  comp.add_snippet(hello_world)
+  hello_world = Snippet("hello_world.cpp")
+  main_container = SnippetContainer("main.cpp", [hello_world])
+  comp.add_snippet(main_container)
   with open(output_fname, "w") as wf:
     wf.write(comp.compose())
   return 0
