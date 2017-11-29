@@ -8,7 +8,7 @@ import idx2numpy as idx2np
 import numpy as np
 import tensorflow as tf
 from tensorflow.python.framework import graph_util  # pylint: disable=E0611
-from ._graph_utils import _parse_tensor_name
+from ._graph_utils import _parse_graph_def
 
 __all__ = ["parse_pb"]
 
@@ -37,7 +37,7 @@ def parse_pb(file_or_path, output_nodes=None):
     fid = file_or_path
   else:
     raise ValueError("`file_or_path` has to be either file object or path string")
-
+  
   # load pb file
   graph_def = tf.GraphDef()
   graph_def.ParseFromString(fid.read())
@@ -48,4 +48,4 @@ def parse_pb(file_or_path, output_nodes=None):
   else:
     sub_graph_def = graph_def
 
-  return dict((node.op, node) for node in sub_graph_def.node)  # pylint: disable=E1101
+  return _parse_graph_def(sub_graph_def)

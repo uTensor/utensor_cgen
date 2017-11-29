@@ -16,6 +16,8 @@ _CONTAINER_FILES = os.listdir(_CONTAINER_DIR)
 _CONTAINERS = dict((fname, os.path.join(_CONTAINER_DIR, fname)) for fname in _CONTAINER_FILES)
 
 
+# TODO `Snippet` and `SnippetContainer` behave really alike.
+# Should be able do some refactoring here....
 class Snippet(object):
 
   def __init__(self, template_name, template_vars=None):

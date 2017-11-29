@@ -11,7 +11,7 @@ def main(output_fname):
   """
   comp = Composer()
   hello_world = Snippet("hello_world.cpp")
-  main_container = SnippetContainer("main.cpp", [hello_world])
+  main_container = SnippetContainer("main.cpp", [hello_world, hello_world])
   comp.add_snippet(main_container)
   with open(output_fname, "w") as wf:
     wf.write(comp.compose())
