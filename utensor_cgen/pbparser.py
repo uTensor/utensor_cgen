@@ -8,23 +8,11 @@ import idx2numpy as idx2np
 import numpy as np
 import tensorflow as tf
 from tensorflow.python.framework import graph_util  # pylint: disable=E0611
+from ._graph_utils import _parse_tensor_name
 
 __all__ = ["parse_pb"]
 
 __KNOWN_OPS = {}  # Add known uTensor ops <--> tensorflow ops mapping
-
-def _parse_tensor_name(tname):
-  components = tname.split(":")
-  if len(components) == 2:
-    try:
-      output_index = int(components[1])
-    except ValueError:
-      raise ValueError("invalid output index: {}".format(tname))
-    return (components[0], output_index)
-  elif len(components) == 1:
-    return (components[0], 0)
-  else:
-    raise ValueError("invalid tensor name: {}".format(tname))
 
 
 def parse_pb(file_or_path, output_nodes=None):
