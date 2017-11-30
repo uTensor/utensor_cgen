@@ -4,27 +4,41 @@ Parser for Protobuf file of Tensorflow Graph
 """
 import io
 import sys
-import idx2numpy as idx2np
-import numpy as np
 import tensorflow as tf
 from tensorflow.python.framework import graph_util  # pylint: disable=E0611
-from ._graph_utils import _parse_graph_def
+from ._pbparser_impl import _parse_graph_def
 
 __all__ = ["parse_pb"]
 
 __KNOWN_OPS = {}  # Add known uTensor ops <--> tensorflow ops mapping
 
 
-def parse_pb(file_or_path, output_nodes=None):
+def parse_pb(file_or_path, output_nodes=None) -> (dict, list):
   """
-  arguments
+  Arguments
   =========
   - file_or_path: a file object or a path string of the pb file
   - output_nodes: list of output node names
 
-  returns
+  Returns
   =======
-  - nodes: mapping from node name to its NodeDef object
+  - graph_info <defaultdict>: a dict with information neccessary for 
+    building context in uTensor
+  - layers <list>: list of layer which is a list of operation names 
+    in the graph
+
+  Note
+  ====
+  Ex:
+    `bottom` <--------> `top`
+      foo -
+            \\
+              tar - - var
+            /
+      bar -
+  the return list, layers, will be [['foo', 'bar'], ['tar'], ['var']]
+  That is, layers[0] is the bottom layer of the graph, layers[1] is the
+  second bottom layer of the graph, so on and so forth
   """
   if sys.version_info.major < 3:
     file_type = (file, io.IOBase)  # pylint: disable=E0602
@@ -44,8 +58,7 @@ def parse_pb(file_or_path, output_nodes=None):
   fid.close()
 
   if output_nodes is not None:
-    sub_graph_def = graph_util.extract_sub_graph(graph_def, output_nodes)
-  else:
-    sub_graph_def = graph_def
+    graph_def = graph_util.extract_sub_graph(graph_def, output_nodes)
 
-  return _parse_graph_def(sub_graph_def)
+  graph_info, layers = _parse_graph_def(graph_def)
+  return graph_info, layers
