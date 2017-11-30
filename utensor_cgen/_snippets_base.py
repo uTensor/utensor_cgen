@@ -18,6 +18,21 @@ _CONTAINER_FILES = os.listdir(_CONTAINER_DIR)
 _CONTAINERS = dict((fname, os.path.join(_CONTAINER_DIR, fname)) for fname in _CONTAINER_FILES)
 
 
+def register_template(template_name, headers=None, is_container=False, path=None):
+  template_type = is_container and "containers" or "snippets"
+  if path is None:
+    dir_path = os.path.join(_TEMPLATE_DIR, template_type)
+    path = os.path.join(dir_path, template_name)
+  if headers is None:
+    headers = []
+  if is_container:
+    _CONTAINER_FILES[template_name] = path
+    CONAINER_CONFIG[template_name] = headers
+  else:
+    _SNIPPETS_FILES[template_name] = path
+    SNIPPET_CONFIG[template_name] = headers
+
+
 # TODO `Snippet` and `SnippetContainer` behave really alike.
 # Should be able do some refactoring here....
 class Snippet(object):
