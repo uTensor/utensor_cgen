@@ -29,7 +29,23 @@ def parse_pb(file_or_path, output_nodes=None) -> (dict, list):
 
   Note
   ====
-  Ex:
+  graph_info example:
+    { 'my_const': {
+        "input_tensor": set([]),
+        "output_tensor": set(["my_const:0"])
+        "output_content": {"my_const:0": 3.14},
+        "op_type": "Const"
+      },
+      'myop': {
+        "input_tensor": set(["input1:0", "input2:0"]),
+        "output_tensor": set(["my_op:0", "my_op:1"]),
+        "output_content": {},
+        "op_type": "MyOp"
+      },
+      ...
+    }
+
+  layers example:
     `bottom` <--------> `top`
       foo -
             \\

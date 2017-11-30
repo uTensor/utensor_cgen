@@ -1,12 +1,7 @@
 # -*- coding:utf8 -*-
 from collections import defaultdict
 import numpy as np
-# pylint: disable=E0611
-from tensorflow.python.framework.ops import Graph
-from tensorflow.core.framework.graph_pb2 import GraphDef
-from tensorflow.python.framework.importer import import_graph_def
-from tensorflow.python.client.session import Session
-# pylint: enable=E0611
+from tensorflow import Graph, GraphDef, Session, import_graph_def
 
 
 def _parse_tensor_name(tname: str) -> (str, int):
@@ -90,8 +85,8 @@ def _parse_graph_nodes(graph_def: GraphDef) -> defaultdict:
   with graph.as_default():  # pylint: disable=E1129
     import_graph_def(graph_def, name="")
   graph_info = defaultdict(lambda: {"input_tensor": set([]),
-                                     "output_tensor": set([]),
-                                     "output_content": {}})
+                                    "output_tensor": set([]),
+                                    "output_content": {}})
   with Session(graph=graph):
     for node in graph_def.node:
       op = graph.get_operation_by_name(node.name)
