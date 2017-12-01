@@ -1,6 +1,6 @@
 # -*- coding:utf8 -*-
 import re
-from .snippets import Snippet, SnippetContainer
+from ._snippets_base import Snippet, SnippetContainer
 
 _STD_PATTERN = re.compile(r"^<[\w\.]+h?>$")
 

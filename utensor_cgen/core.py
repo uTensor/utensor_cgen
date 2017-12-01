@@ -4,6 +4,7 @@ import idx2numpy as idx2np
 from .pbparser import parse_pb
 from .snippets import CreateTensorIdxSnippet, CreateTensorNewSnippet
 from .snippets import CreateOpSnippet, register_template
+from .composer import Composer
 from ._snippets_base import SnippetContainer, Snippet
 from ._types import TYPES_MAP
 
@@ -19,9 +20,11 @@ class CodeGenerator(object):
     """Generate source and header files
     """
     fname, _ = os.path.splitext(src_fname)
-    header_fname = "{}.hpp".format(fname)
+    header_fname = '{}.hpp'.format(fname)
 
+    composer = Composer()
     container = SnippetContainer("get_ctx.cpp")
+    container.add_header('"{}"'.format(header_fname))
     header_snippet = Snippet("get_ctx.hpp")
     print("Generate header file: {}".format(header_fname))
     with open(header_fname, "w") as wf:
@@ -61,10 +64,12 @@ class CodeGenerator(object):
         elif op_type == "Reshape":
           pass
         else:
-          raise ValueError("unsupported op type in uTensor")
+          pass
+          # raise ValueError("unsupported op type in uTensor")
+    composer.add_snippet(container)
     print("Generate source file: {}".format(src_fname))
     with open(src_fname, "w") as wf:
-      wf.write(container.render())
+      wf.write(composer.compose())
 
   def _save_data(self, tensor_name, array):
     pass

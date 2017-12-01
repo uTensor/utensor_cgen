@@ -59,8 +59,8 @@ class Snippet(object):
   def headers(self):
     return deepcopy(self._headers)
 
-  def add_header(self, new_header):
-    self._headers.add(new_header)
+  def add_header(self, header):
+    self._headers.add(header)
 
   def remove_header(self, header):
     self._headers.remove(header)
@@ -101,27 +101,23 @@ class SnippetContainer(object):
   def headers(self):
     return deepcopy(self._headers)
 
+  def add_header(self, header):
+    self._headers.add(header)
+
+  def remove_header(self, header):
+    self._headers.remove(header)
+
   def add_snippet(self, snippet):
     """Add snippet into containers
     """
     if not isinstance(snippet, Snippet):
       msg = "expecting Snippet object, get {}".format(type(snippet))
       raise TypeError(msg)
+    self._headers.update(snippet.headers)
     self._snippets.append(snippet)
 
   def render(self):
-    text = self._compose_header()
-    text += self._template.render(snippets=self._snippets, **self.template_vars)
-    return text
-
-  def _compose_header(self):
-    template_path = _SNIPPETS["headers.hpp"]
-    with open(template_path) as rf:
-      header_template = Template(rf.read())
-    headers = [(header, 0) if _STD_PATTERN.match(header) else (header, 1) for header in self._headers]
-    sorted(headers, key=lambda t: t[1])
-    headers = [t[0] for t in headers]
-    return header_template.render(headers=self._headers)
+    return self._template.render(snippets=self._snippets, **self.template_vars)
 
   @classmethod
   def get_template_names(cls):

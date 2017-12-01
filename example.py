@@ -2,7 +2,7 @@
 # -*- coding:utf8 -*-
 import argparse
 import sys
-from utensor_cgen.snippets import Snippet, SnippetContainer
+from utensor_cgen._snippets_base import Snippet, SnippetContainer
 from utensor_cgen.composer import Composer
 
 

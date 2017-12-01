@@ -4,8 +4,8 @@ import argparse
 from .core import CodeGenerator
 
 
-def main(pb_file, src_fname):
-  generator = CodeGenerator(pb_file)
+def main(pb_file, src_fname, idx_dir):
+  generator = CodeGenerator(pb_file, idx_dir)
   generator.generate(src_fname)
 
 

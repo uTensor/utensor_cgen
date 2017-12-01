@@ -9,5 +9,5 @@ SNIPPET_CONFIG = {
 }
 CONTAINER_CONFIG = {
   "main.cpp": set([]),
-  "get_ctx.cpp": set(['"get_ctx.hpp"'])
+  "get_ctx.cpp": set([])
 }

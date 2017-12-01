@@ -5,10 +5,11 @@
 
 # TODOs
 1. (done) Freezed graph protobuff parser
-2. Tensor snippets for [`uTensor`](https://github.com/neil-tan/uTensor)
+2. (done)Tensor snippets for [`uTensor`](https://github.com/neil-tan/uTensor)
 3. (done) Add template engine for richer flexibility
     - [jinja2](http://jinja.pocoo.org)
-4. Better configuration schema
+4. core code generator implementation
+5. Better configuration schema
     - json
     - yaml
     - or ?
