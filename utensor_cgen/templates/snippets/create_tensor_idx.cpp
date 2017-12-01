@@ -3,8 +3,8 @@ S_TENSOR {{sptr_name}};
 {% endif %}
 {
     TensorIdxImporter t_import;
-    {{ctx_var_name}}.add(t_import.{{dtype}}_import("{{data_dir}}/{{idx_fname}}", "{{tensor_name}}"), {{init_count}});
+    ctx.add(t_import.{{dtype}}_import("{{data_dir}}/{{idx_fname}}", "{{tensor_name}}"), {{init_count}});
     {% if create_sptr %}
-    {{sptr_name}} = {{ctx_var_name}}.get("{{tensor_name}}");
+    {{sptr_name}} = ctx.get("{{tensor_name}}");
     {% endif %}
 }

@@ -1,11 +1,13 @@
 # -*- coding:utf8 -*-
 import os
+import re
 from copy import deepcopy
 from jinja2 import Template
-from .snippets_cfg import SNIPPET_CONFIG, CONAINER_CONFIG
+from .snippets_cfg import SNIPPET_CONFIG, CONTAINER_CONFIG
 
 __all__ = ["Snippet", "SnippetContainer"]
 
+_STD_PATTERN = re.compile(r'^<[\w]+(.h|.hpp)?>$')
 _ROOT_DIR = os.path.abspath(os.path.dirname(__file__))
 _TEMPLATE_DIR = os.path.join(_ROOT_DIR, "templates")
 
@@ -27,7 +29,7 @@ def register_template(template_name, headers=None, is_container=False, path=None
     headers = []
   if is_container:
     _CONTAINER_FILES[template_name] = path
-    CONAINER_CONFIG[template_name] = headers
+    CONTAINER_CONFIG[template_name] = headers
   else:
     _SNIPPETS_FILES[template_name] = path
     SNIPPET_CONFIG[template_name] = headers
@@ -57,18 +59,24 @@ class Snippet(object):
   def headers(self):
     return deepcopy(self._headers)
 
+  def add_header(self, new_header):
+    self._headers.add(new_header)
+
+  def remove_header(self, header):
+    self._headers.remove(header)
+
   def render(self):
     return self._template.render(**self.template_vars)
 
   @classmethod
   def get_template_names(cls):
-    return list(SNIPPET_CONFIG.keys())
+    return SNIPPET_CONFIG.keys()
 
 
 class SnippetContainer(object):
 
   def __init__(self, template_name, snippets=None, template_vars=None):
-    if template_name not in CONAINER_CONFIG:
+    if template_name not in CONTAINER_CONFIG:
       raise ValueError("unknown container tempalte name: {}".format(template_name))
     template_path = _CONTAINERS[template_name]
     if template_vars is None:
@@ -80,7 +88,7 @@ class SnippetContainer(object):
 
     self._snippets = snippets
     self._template = template
-    self._headers = CONAINER_CONFIG[template_name]
+    self._headers = CONTAINER_CONFIG[template_name]
     for snp in self._snippets:
       self._headers.update(snp.headers)
     self.template_vars = template_vars
@@ -102,4 +110,19 @@ class SnippetContainer(object):
     self._snippets.append(snippet)
 
   def render(self):
-    return self._template.render(snippets=self._snippets, **self.template_vars)
+    text = self._compose_header()
+    text += self._template.render(snippets=self._snippets, **self.template_vars)
+    return text
+
+  def _compose_header(self):
+    template_path = _SNIPPETS["headers.hpp"]
+    with open(template_path) as rf:
+      header_template = Template(rf.read())
+    headers = [(header, 0) if _STD_PATTERN.match(header) else (header, 1) for header in self._headers]
+    sorted(headers, key=lambda t: t[1])
+    headers = [t[0] for t in headers]
+    return header_template.render(headers=self._headers)
+
+  @classmethod
+  def get_template_names(cls):
+    return CONTAINER_CONFIG.keys()

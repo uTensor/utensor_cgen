@@ -1,8 +1,21 @@
 # -*- coding:utf8 -*-
-from ._snippets_base import Snippet
+from ._snippets_base import Snippet, register_template  # pylint: disable=W0611
+
+__all__ = ["CreateTensorIdxSnippet", "CreateTensorNewSnippet", "CreateOpSnippet"]
 
 
-class CreateTensorSnippet(Snippet):
+class CreateTensorIdxSnippet(Snippet):
 
-  def __init__(self, template_name, template_vars=None):
-    Snippet.__init__(self, "create_tensor.cpp", template_vars)
+  def __init__(self, **kwargs):
+    Snippet.__init__(self, "create_tensor_idx.cpp")
+
+
+class CreateTensorNewSnippet(Snippet):
+
+  def __init__(self, **kwargs):
+    Snippet.__init__(self, "create_tensor_new.cpp")
+
+
+class CreateOpSnippet(Snippet):
+  def __init__(self, **kwargs):
+    Snippet.__init__(self, "create_op.cpp")
