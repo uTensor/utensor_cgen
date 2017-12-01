@@ -8,3 +8,7 @@
 2. Tensor snippets for [`uTensor`](https://github.com/neil-tan/uTensor)
 3. (done) Add template engine for richer flexibility
     - [jinja2](http://jinja.pocoo.org)
+4. Better configuration schema
+    - json
+    - yaml
+    - or ?
