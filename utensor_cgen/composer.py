@@ -2,7 +2,7 @@
 import re
 from ._snippets_base import Snippet, SnippetContainer
 
-_STD_PATTERN = re.compile(r"^<[\w]+(.h)?>$")
+_STD_PATTERN = re.compile(r'^<[\w]+(.h|.hpp)?>$')
 
 
 class Composer(object):

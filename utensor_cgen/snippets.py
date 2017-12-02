@@ -3,7 +3,7 @@ import tensorflow as tf
 from ._snippets_base import Snippet, register_template  # pylint: disable=W0611
 from ._types import TYPES_MAP
 
-__all__ = ["CreateTensorIdxSnippet", "CreateTensorNewSnippet", 
+__all__ = ["CreateTensorIdxSnippet", "CreateTensorNewSnippet",
            "AddOpSnippet", "MatMulOpSnippet"]
 
 
@@ -56,7 +56,7 @@ class CreateTensorNewSnippet(Snippet):
     self.template_vars["create_sptr"] = create_sptr
 
 
-class AddOpSniipet(Snippet):
+class AddOpSnippet(Snippet):
   def __init__(self, inputs, output, tf_dtype=tf.float32):
     Snippet.__init__(self, "add_op.cpp")
     input_tnames = "{{{}}}".format(",".join(["\"{}\"".format(in_tensor) for in_tensor in inputs]))

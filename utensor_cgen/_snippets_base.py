@@ -7,7 +7,7 @@ from .snippets_cfg import SNIPPET_CONFIG, CONTAINER_CONFIG
 
 __all__ = ["Snippet", "SnippetContainer"]
 
-_STD_PATTERN = re.compile(r'^<[\w]+(.h|.hpp)?>$')
+
 _ROOT_DIR = os.path.abspath(os.path.dirname(__file__))
 _TEMPLATE_DIR = os.path.join(_ROOT_DIR, "templates")
 

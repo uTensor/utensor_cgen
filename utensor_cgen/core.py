@@ -4,7 +4,7 @@ import numpy as np
 import idx2numpy as idx2np
 from .pbparser import parse_pb
 from .snippets import CreateTensorIdxSnippet, CreateTensorNewSnippet
-from .snippets import AddOpSniipet, register_template
+from .snippets import AddOpSnippet, register_template
 from .composer import Composer
 from ._snippets_base import SnippetContainer, Snippet
 from ._types import TYPES_MAP
@@ -55,7 +55,7 @@ class CodeGenerator(object):
           inputs = [tname for tname, _ in op_info["input_tensor"]]
           output, _ = op_info["output_tensor"][0]
           tf_dtype = op_info["input_tensor"][0][1]
-          snippet = AddOpSniipet(inputs, output, tf_dtype=tf_dtype)
+          snippet = AddOpSnippet(inputs, output, tf_dtype=tf_dtype)
           container.add_snippet(snippet)
         elif op_type == "ArgMax":
           pass
