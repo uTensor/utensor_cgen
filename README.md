@@ -1,7 +1,13 @@
 # Example
-
-1. run `python3 example.py` and it should generate a `main.cpp` file.
-2. compile it and run, you should see familier hello world message
+1. `example.py`:
+    1. run `python3 example.py` and it should generate a `main.cpp` file.
+    2. compile it and run, you should see familier hello world message
+2. `simple_graph.pb`:
+    1. install `utensor_cgen` by running `python3 setup.py install`
+    2. run `python3 -m utensor_cgen simple_graph.pb`
+    3. it will save constant tensor data in `idx_data/` and generate two files, `model.hpp` and `model.cpp`.
+    4. compile your `uTensor` project with `model.hpp` and `model.cpp` and copy `idx_data/` to your SD card.
+    5. You should have a running simple graph.
 
 # TODOs
 1. (done) Freezed graph protobuff parser
