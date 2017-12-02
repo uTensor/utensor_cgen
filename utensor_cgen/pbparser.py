@@ -10,8 +10,6 @@ from ._pbparser_impl import _parse_graph_def
 
 __all__ = ["parse_pb"]
 
-__KNOWN_OPS = {}  # Add known uTensor ops <--> tensorflow ops mapping
-
 
 def parse_pb(file_or_path, output_nodes=None) -> (dict, list):
   """

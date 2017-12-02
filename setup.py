@@ -24,5 +24,10 @@ setup(
   author_email="qmalliao@gmail.com",
   license=license,
   packages=find_packages(),
-  package_data={"utensor_cgen": ["templates/*"]}
+  package_data={"utensor_cgen": ["templates/*"]},
+  entry_points = {
+      "console_scripts": [
+          "utensor-cli=utensor_cgen.__main__:main"
+          ]
+      }
 )
