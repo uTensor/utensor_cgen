@@ -67,7 +67,7 @@ def parse_pb(file_or_path, output_nodes=None) -> (dict, list):
     fid = file_or_path
   else:
     raise ValueError("`file_or_path` has to be either file object or path string")
-  
+
   # load pb file
   graph_def = tf.GraphDef()
   graph_def.ParseFromString(fid.read())

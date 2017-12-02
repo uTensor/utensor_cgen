@@ -84,15 +84,13 @@ def _parse_graph_nodes(graph_def: GraphDef) -> defaultdict:
   graph = Graph()
   with graph.as_default():  # pylint: disable=E1129
     import_graph_def(graph_def, name="")
-  graph_info = defaultdict(lambda: {"input_tensor": set([]),
-                                    "output_tensor": set([]),
-                                    "output_content": {}})
+  graph_info = defaultdict(lambda: {"output_content": {}})
   with Session(graph=graph):
     for node in graph_def.node:
       op = graph.get_operation_by_name(node.name)
       op_info = graph_info[node.name]
-      op_info["input_tensor"].update([(t.name, t.dtype) for t in op.inputs])
-      op_info["output_tensor"].update([(t.name, t.dtype) for t in op.outputs])
+      op_info["input_tensor"] = [(t.name, t.dtype) for t in op.inputs]
+      op_info["output_tensor"] = [(t.name, t.dtype) for t in op.outputs]
       op_info["op_type"] = node.op
       if node.op in ["Const"]:
         for out_tensor, _ in op_info["output_tensor"]:

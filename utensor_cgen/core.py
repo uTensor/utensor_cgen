@@ -71,7 +71,7 @@ class CodeGenerator(object):
     with open(src_fname, "w") as wf:
       wf.write(composer.compose())
 
-  def _save_data(self, tensor_name, array):
+  def _save_data(self, tensor_name, array) -> str:
     pass
 
   def register_template(self, template_name, headers=None):
