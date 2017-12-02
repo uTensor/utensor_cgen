@@ -2,9 +2,12 @@
 import os
 import numpy as np
 import idx2numpy as idx2np
+import tensorflow as tf
 from .pbparser import parse_pb
-from .snippets import CreateTensorIdxSnippet, CreateTensorNewSnippet
-from .snippets import AddOpSnippet, register_template
+from .snippets import CreateTensorIdxSnippet
+from .snippets import AddOpSnippet, MinOpSnippet, MaxOpSnippet
+from .snippets import ArgMaxOpSnippet, DequantizeOpSnippet
+from .snippets import register_template
 from .composer import Composer
 from ._snippets_base import SnippetContainer, Snippet
 from ._types import TYPES_MAP
@@ -33,6 +36,7 @@ class CodeGenerator(object):
 
     print("Parsing {}".format(self.pb_file))
     graph_info, layers = parse_pb(self.pb_file)
+
     # TODO better snippet construction abstraction
     for layer in layers:
       for op_name in layer:
@@ -48,8 +52,9 @@ class CodeGenerator(object):
             container.add_snippet(snippet)
             idx_path = os.path.join(self.idx_dir, idx_fname)
             value = op_info["output_content"][out_tname]
-            self._save_data(idx_path, value)
+            self._save_data(idx_path, value, out_dtype)
         elif op_type == "Placeholder":
+          # TODO what is a placeholder in uTensor?
           pass
         elif op_type == "Add":
           inputs = [tname for tname, _ in op_info["input_tensor"]]
@@ -58,13 +63,26 @@ class CodeGenerator(object):
           snippet = AddOpSnippet(inputs, output, tf_dtype=tf_dtype)
           container.add_snippet(snippet)
         elif op_type == "ArgMax":
-          pass
+          inputs = [tname for tname, _ in op_info["input_tensor"]]
+          output, out_dtype = op_info["output_tensor"][0]
+          _, in_dtype = op_info["input_tensor"][0]
+          snippet = ArgMaxOpSnippet(inputs, output, in_dtype, out_dtype)
+          container.add_snippet(snippet)
         elif op_type == "Dequantize":
-          pass
+          inputs = [tname for tname, _ in op_info["input_tensor"]]
+          output, _ = op_info["output_tensor"][0]
+          snippet = DequantizeOpSnippet(inputs, output)
+          container.add_snippet(snippet)
         elif op_type == "Max":
-          pass
+          inputs = [tname for tname, _ in op_info["input_tensor"]]
+          output, _ = op_info["output_tensor"][0]
+          snippet = MaxOpSnippet(inputs, output)
+          container.add_snippet(snippet)
         elif op_type == "Min":
-          pass
+          inputs = [tname for tname, _ in op_info["input_tensor"]]
+          output, _ = op_info["output_tensor"][0]
+          snippet = MinOpSnippet(inputs, output)
+          container.add_snippet(snippet)
         elif op_type == "QuantizeV2":
           pass
         elif op_type == "QuantizedMatMul":
@@ -78,8 +96,7 @@ class CodeGenerator(object):
         elif op_type == "Reshape":
           pass
         else:
-          pass
-          # raise ValueError("unsupported op type in uTensor")
+          raise ValueError("unsupported op type in uTensor: {}".format(op_type))
     composer.add_snippet(container)
 
     header_snippet = Snippet("get_ctx.hpp")
@@ -89,16 +106,26 @@ class CodeGenerator(object):
     print("Generate source file: {}".format(src_fname))
     with open(src_fname, "w") as wf:
       wf.write(composer.compose())
-  
+
   def _prepare_tensor_name(self, tensor_name: str) -> str:
     prepared = tensor_name.replace(":", "_").replace("/", "_")
     return prepared
 
-  def _save_data(self, path, arr):
-    if arr.shape == ():
-      arr = np.array([arr])
+  def _save_data(self, path, value, tf_dtype):
+    if tf_dtype in [tf.uint8, tf.qint8]:
+      np_dtype = np.uint8
+    elif tf_dtype in [tf.int32, tf.qint32]:
+      np_dtype = np.int32
+    else:
+      np_dtype = np.float32
+
+    if value.shape == ():
+      value = np.array([value], dtype=np_dtype)
+    else:
+      value = value.astype(np_dtype)
+
     with open(path, "wb") as fid:
-      idx2np.convert_to_file(fid, arr)
+      idx2np.convert_to_file(fid, value)
     print("saving {}".format(path))
 
   def register_template(self, template_name, headers=None):

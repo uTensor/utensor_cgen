@@ -4,7 +4,9 @@ from ._snippets_base import Snippet, register_template  # pylint: disable=W0611
 from ._types import TYPES_MAP
 
 __all__ = ["CreateTensorIdxSnippet", "CreateTensorNewSnippet",
-           "AddOpSnippet", "MatMulOpSnippet"]
+           "AddOpSnippet", "MinOpSnippet", "MaxOpSnippet",
+           "ArgMaxOpSnippet", "DequantizeOpSnippet",
+           "MatMulOpSnippet"]
 
 
 class CreateTensorIdxSnippet(Snippet):
@@ -56,12 +58,55 @@ class CreateTensorNewSnippet(Snippet):
     self.template_vars["create_sptr"] = create_sptr
 
 
+def _prepare_inputs(inputs):
+  input_tnames = "{{{}}}".format(",".join(["\"{}\"".format(in_tensor) for in_tensor in inputs]))
+  return input_tnames
+
+
 class AddOpSnippet(Snippet):
   def __init__(self, inputs, output, tf_dtype=tf.float32):
     Snippet.__init__(self, "add_op.cpp")
-    input_tnames = "{{{}}}".format(",".join(["\"{}\"".format(in_tensor) for in_tensor in inputs]))
+    input_tnames = _prepare_inputs(inputs)
     output_tname = '{{"{}"}}'.format(output)
     self.template_vars["dtype"] = TYPES_MAP[tf_dtype]
+    self.template_vars["input_tnames"] = input_tnames
+    self.template_vars["output_tname"] = output_tname
+
+
+class MinOpSnippet(Snippet):
+  def __init__(self, inputs, output):
+    Snippet.__init__(self, "min_op.cpp")
+    input_tnames = _prepare_inputs(inputs)
+    output_tname = '{{"{}"}}'.format(output)
+    self.template_vars["input_tnames"] = input_tnames
+    self.template_vars["output_tname"] = output_tname
+
+
+class MaxOpSnippet(Snippet):
+  def __init__(self, inputs, output):
+    Snippet.__init__(self, "max_op.cpp")
+    input_tnames = _prepare_inputs(inputs)
+    output_tname = '{{"{}"}}'.format(output)
+    self.template_vars["input_tnames"] = input_tnames
+    self.template_vars["output_tname"] = output_tname
+
+
+class ArgMaxOpSnippet(Snippet):
+  def __init__(self, inputs, output, in_dtype=tf.float32, out_dtype=tf.int32):
+    Snippet.__init__(self, "argmax_op.cpp")
+    input_tnames = _prepare_inputs(inputs)
+    output_tname = '{{"{}"}}'.format(output)
+    self.template_vars["input_tnames"] = input_tnames
+    self.template_vars["output_tname"] = output_tname
+    self.template_vars["in_dtype"] = TYPES_MAP[in_dtype]
+    self.template_vars["out_dtype"] = TYPES_MAP[out_dtype]
+
+
+class DequantizeOpSnippet(Snippet):
+  def __init__(self, inputs, output):
+    Snippet.__init__(self, "dequantize_op.cpp")
+    input_tnames = _prepare_inputs(inputs)
+    output_tname = '{{"{}"}}'.format(output)
     self.template_vars["input_tnames"] = input_tnames
     self.template_vars["output_tname"] = output_tname
 

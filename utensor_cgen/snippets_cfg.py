@@ -4,6 +4,10 @@ SNIPPET_CONFIG = {
   "create_tensor_idx.cpp": set(['"tensorIdxImporter.hpp"', '"context.hpp"', '"tensor.hpp"']),
   "create_tensor_new.cpp": set(['"context.hpp"', '"tensor.hpp"']),
   "add_op.cpp": set(['"MathOps.hpp"']),
+  "min_op.cpp": set(['"MathOps.hpp"']),
+  "max_op.cpp": set(['"MathOps.hpp"']),
+  "argmax_op.cpp": set(['"MathOps.hpp"']),
+  "dequantize_op.cpp": set(['"ArrayOps.hpp"']),
   "headers.hpp": set([]),
   "get_ctx.hpp": set([])
 }
