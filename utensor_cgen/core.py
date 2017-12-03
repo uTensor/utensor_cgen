@@ -104,9 +104,15 @@ class CodeGenerator(object):
         elif op_type == "RequantizationRange":
           pass
         elif op_type == "Requantize":
-          pass
+          inputs = [tname for tname, _ in op_info["input_tensor"]]
+          outputs = [tname for tname, _ in op_info["output_tensor"]]
+          snippet = RequantizeOpSnippet(inputs, outputs)
+          container.add_snippet(snippet)
         elif op_type == "Reshape":
-          pass
+          inputs = [tname for tname, _ in op_info["input_tensor"]]
+          output, _ = op_info["output_tensor"][0]
+          snippet = ReshapeOpSnippet(inputs, output)
+          container.add_snippet(snippet)
         else:
           raise ValueError("unsupported op type in uTensor: {}".format(op_type))
     composer.add_snippet(container)

@@ -11,9 +11,12 @@ SNIPPET_CONFIG = {
   "qmatmul_op.cpp": set(['"MatrixOps.hpp"']),
   "quantV2_op.cpp": set(['"ArrayOps.hpp"']),
   "qrelu_op.cpp": set(['"NnOps.hpp"']),
+  "reshape_op.cpp": set(['"ArrayOps.hpp"']),
+  "requant_op.cpp": set(['"MathOps.hpp"']),
   "headers.hpp": set([]),
   "get_ctx.hpp": set([])
 }
+
 CONTAINER_CONFIG = {
   "main.cpp": set([]),
   "get_ctx.cpp": set([])

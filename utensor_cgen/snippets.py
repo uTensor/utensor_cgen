@@ -8,7 +8,8 @@ __all__ = ["CreateTensorIdxSnippet", "CreateTensorNewSnippet",
            "AddOpSnippet", "MinOpSnippet", "MaxOpSnippet",
            "ArgMaxOpSnippet", "DequantizeOpSnippet",
            "QuantizedMatMulOpSnippet", "QuantizeV2OpSnippet",
-           "QuantizedReluOpSnippet"]
+           "QuantizedReluOpSnippet", "ReshapeOpSnippet",
+           "RequantizeOpSnippet"]
 
 
 class CreateTensorIdxSnippet(Snippet):
@@ -137,19 +138,15 @@ class QuantizedMatMulOpSnippet(Snippet):
 class QuantizeV2OpSnippet(Snippet):
   def __init__(self, inputs, outputs):
     Snippet.__init__(self, "quantV2_op.cpp")
-    input_tnames = _prepare_inputs(inputs)
-    output_tnames = _prepare_inputs(outputs)
-    self.template_vars["input_tnames"] = input_tnames
-    self.template_vars["output_tnames"] = output_tnames
+    self.template_vars["inputs"] = inputs
+    self.template_vars["outputs"] = outputs
 
 
 class QuantizedReluOpSnippet(Snippet):
   def __init__(self, inputs, outputs, in_dtype, out_dtype, qout_dtype):
     Snippet.__init__(self, "qrelu_op.cpp")
-    input_tnames = _prepare_inputs(inputs)
-    output_tnames = _prepare_inputs(outputs)
-    self.template_vars["input_tnames"] = input_tnames
-    self.template_vars["output_tnames"] = output_tnames
+    self.template_vars["inputs"] = inputs
+    self.template_vars["outputs"] = outputs
     self.template_vars["in_dtype"] = TF_TYPES_MAP[in_dtype].tensor_type_str
     self.template_vars["out_dtype"] = TF_TYPES_MAP[out_dtype].tensor_type_str
     self.template_vars["qout_dtype"] = TF_TYPES_MAP[qout_dtype].tensor_type_str
@@ -161,10 +158,14 @@ class RequantizationRangeOpSnippet(Snippet):
 
 
 class RequantizeOpSnippet(Snippet):
-  def __init__(self):
-    pass
+  def __init__(self, inputs, outputs):
+    Snippet.__init__(self, "requant_op.cpp")
+    self.template_vars["inputs"] = inputs
+    self.template_vars["outputs"] = outputs
 
 
 class ReshapeOpSnippet(Snippet):
-  def __init__(self):
-    pass
+  def __init__(self, inputs, output):
+    Snippet.__init__(self, "reshape_op.cpp")
+    self.template_vars["inputs"] = inputs
+    self.template_vars["output"] = output
