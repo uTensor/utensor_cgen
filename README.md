@@ -19,7 +19,8 @@
 5. type alias in C/C++
     - ex: use `uint8_t` or `unsigned char`?
     - a lot more about this.... 
-6. Better configuration schema
+6. `MANIFAST.in` for the `setup.py`
+7. Better configuration schema
     - json
     - yaml
     - or ?
