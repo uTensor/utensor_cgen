@@ -8,6 +8,9 @@ SNIPPET_CONFIG = {
   "max_op.cpp": set(['"MathOps.hpp"']),
   "argmax_op.cpp": set(['"MathOps.hpp"']),
   "dequantize_op.cpp": set(['"ArrayOps.hpp"']),
+  "qmatmul_op.cpp": set(['"MatrixOps.hpp"']),
+  "quantV2_op.cpp": set(['"ArrayOps.hpp"']),
+  "qrelu_op.cpp": set(['"NnOps.hpp"']),
   "headers.hpp": set([]),
   "get_ctx.hpp": set([])
 }

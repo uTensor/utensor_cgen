@@ -1,1 +1,3 @@
-ctx.push(new MinOp(), {{input_tnames}}, {{output_tname}});
+ctx.push(new MinOp(), 
+         {{input_tnames}},
+         {{output_tname}});

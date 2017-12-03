@@ -5,11 +5,11 @@ import os
 from .core import CodeGenerator
 
 
-def _main(pb_file, src_fname, idx_dir, mbed_data_dir):
-  if mbed_data_dir is None:
-    mbed_data_dir = os.path.join("/fs", idx_dir)
-  generator = CodeGenerator(pb_file, idx_dir)
-  generator.generate(src_fname, mbed_data_dir)
+def _main(pb_file, src_fname, idx_dir, embed_data_dir):
+  if embed_data_dir is None:
+    embed_data_dir = os.path.join("/fs", idx_dir)
+  generator = CodeGenerator(pb_file, idx_dir, embed_data_dir)
+  generator.generate(src_fname)
 
 
 def _build_parser():
@@ -22,7 +22,7 @@ def _build_parser():
   parser.add_argument("-o", "--output", dest="src_fname",
                       metavar="FILE.cpp", default="model.cpp",
                       help="output source file name, header file will be named accordingly. (default: %(default)s)")
-  parser.add_argument("-D", "--embed-data-dir", dest="mbed_data_dir",
+  parser.add_argument("-D", "--embed-data-dir", dest="embed_data_dir",
                       metavar="EMBED_DIR", default=None,
                       help="the data dir on the develop board (default: the value as the value of -d/data-dir flag)")
   return parser

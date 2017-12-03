@@ -15,7 +15,11 @@
 3. (done) Add template engine for richer flexibility
     - [jinja2](http://jinja.pocoo.org)
 4. core code generator implementation
-5. Better configuration schema
+    - What is a `Placeholder` in uTensor?
+5. type alias in C/C++
+    - ex: use `uint8_t` or `unsigned char`?
+    - a lot more about this.... 
+6. Better configuration schema
     - json
     - yaml
     - or ?

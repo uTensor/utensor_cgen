@@ -1,0 +1,1 @@
+ctx.push(new QuantizeV2Op(), {{input_tnames}}, {{output_tnames}});

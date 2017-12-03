@@ -1,0 +1,1 @@
+ctx.push(new ReluOp<{{in_dtype}}, {{out_dtype}}, {{qout_dtype}}>(), {{input_tnames}}, {{output_tnames}});

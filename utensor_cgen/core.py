@@ -4,29 +4,26 @@ import numpy as np
 import idx2numpy as idx2np
 import tensorflow as tf
 from .pbparser import parse_pb
-from .snippets import CreateTensorIdxSnippet
-from .snippets import AddOpSnippet, MinOpSnippet, MaxOpSnippet
-from .snippets import ArgMaxOpSnippet, DequantizeOpSnippet
+from .snippets import *
 from .snippets import register_template
 from .composer import Composer
 from ._snippets_base import SnippetContainer, Snippet
-from ._types import TYPES_MAP
+from ._types import TF_TYPES_MAP
 
 __all__ = ["CodeGenerator"]
 
 
 class CodeGenerator(object):
-  def __init__(self, pb_file: str, idx_dir: str):
+  def __init__(self, pb_file: str, idx_dir: str, embed_data_dir: str):
     self.pb_file = pb_file
     if not os.path.exists(idx_dir):
       os.makedirs(idx_dir)
     self.idx_dir = idx_dir
+    self.embed_data_dir = embed_data_dir.rstrip("/")
 
-  def generate(self, src_fname: str, mbed_data_dir: str):
+  def generate(self, src_fname: str):
     """Generate source and header files
     """
-    if mbed_data_dir.endswith("/"):
-      mbed_data_dir = mbed_data_dir[:-1]
     fname, _ = os.path.splitext(src_fname)
     header_fname = '{}.hpp'.format(fname)
 
@@ -42,20 +39,20 @@ class CodeGenerator(object):
       for op_name in layer:
         op_info = graph_info[op_name]
         op_type = op_info["op_type"]
-        if op_type == 'Const':
+        if op_type == "Placeholder":
+          # TODO what is a placeholder in uTensor?
+          pass
+        elif op_type == 'Const':
           for out_tname, out_dtype in op_info["output_tensor"]:
             pre_tname = self._prepare_tensor_name(out_tname)
             idx_fname = "{}.idx".format(pre_tname)
-            snippet = CreateTensorIdxSnippet(mbed_data_dir, out_tname,
+            snippet = CreateTensorIdxSnippet(self.embed_data_dir, out_tname,
                                              idx_fname=idx_fname,
                                              tf_dtype=out_dtype)
             container.add_snippet(snippet)
             idx_path = os.path.join(self.idx_dir, idx_fname)
             value = op_info["output_content"][out_tname]
             self._save_data(idx_path, value, out_dtype)
-        elif op_type == "Placeholder":
-          # TODO what is a placeholder in uTensor?
-          pass
         elif op_type == "Add":
           inputs = [tname for tname, _ in op_info["input_tensor"]]
           output, _ = op_info["output_tensor"][0]
@@ -84,11 +81,26 @@ class CodeGenerator(object):
           snippet = MinOpSnippet(inputs, output)
           container.add_snippet(snippet)
         elif op_type == "QuantizeV2":
-          pass
+          inputs = [tname for tname, _ in op_info["input_tensor"]]
+          outputs = [tname for tname, _ in op_info["output_tensor"]]
+          snippet = QuantizeV2OpSnippet(inputs, outputs)
+          container.add_snippet(snippet)
         elif op_type == "QuantizedMatMul":
-          pass
+          inputs = [tname for tname, _ in op_info["input_tensor"]]
+          outputs = [tname for tname, _ in op_info["output_tensor"]]
+          x_dtype = op_info["input_tensor"][0][1]
+          w_dtype = op_info["input_tensor"][1][1]
+          out_dtype = op_info["output_tensor"][0][1]
+          snippet = QuantizedMatMulOpSnippet(inputs, outputs, x_dtype, w_dtype, out_dtype)
+          container.add_snippet(snippet)
         elif op_type == "QuantizedRelu":
-          pass
+          inputs = [tname for tname, _ in op_info["input_tensor"]]
+          outputs = [tname for tname, _ in op_info["output_tensor"]]
+          _, in_dtype = op_info["input_tensor"][0]
+          _, qout_dtype = op_info["output_tensor"][0]
+          _, out_dtype = op_info["output_tensor"][1]
+          snippet = QuantizedReluOpSnippet(inputs, outputs, in_dtype, out_dtype, qout_dtype)
+          container.add_snippet(snippet)
         elif op_type == "RequantizationRange":
           pass
         elif op_type == "Requantize":
