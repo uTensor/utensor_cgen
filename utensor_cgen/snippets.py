@@ -9,7 +9,8 @@ __all__ = ["CreateTensorIdxSnippet", "CreateTensorNewSnippet",
            "ArgMaxOpSnippet", "DequantizeOpSnippet",
            "QuantizedMatMulOpSnippet", "QuantizeV2OpSnippet",
            "QuantizedReluOpSnippet", "ReshapeOpSnippet",
-           "RequantizeOpSnippet"]
+           "RequantizationRangeOpSnippet", "RequantizeOpSnippet", 
+           "CommentSnippet"]
 
 
 class CreateTensorIdxSnippet(Snippet):
@@ -76,92 +77,94 @@ def _permute_args(args: list, perm: list=None):
 class AddOpSnippet(Snippet):
   def __init__(self, inputs, output, tf_dtype=tf.float32):
     Snippet.__init__(self, "add_op.cpp")
-    input_tnames = _prepare_inputs(inputs)
-    output_tname = '{{"{}"}}'.format(output)
     self.template_vars["in_dtype"] = TF_TYPES_MAP[tf_dtype].tensor_type_str
     self.template_vars["out_dtype"] = TF_TYPES_MAP[tf_dtype].tensor_type_str
-    self.template_vars["input_tnames"] = input_tnames
-    self.template_vars["output_tname"] = output_tname
+    self.template_vars["inputs"] = inputs
+    self.template_vars["output"] = output
 
 
 class MinOpSnippet(Snippet):
-  def __init__(self, inputs, output):
+  def __init__(self, inputs, output, out_dtype):
     Snippet.__init__(self, "min_op.cpp")
-    input_tnames = _prepare_inputs(inputs)
-    output_tname = '{{"{}"}}'.format(output)
-    self.template_vars["input_tnames"] = input_tnames
-    self.template_vars["output_tname"] = output_tname
+    self.template_vars["inputs"] = inputs
+    self.template_vars["output"] = output
+    self.template_vars["out_dtype"] = TF_TYPES_MAP[out_dtype].tensor_type_str
 
 
 class MaxOpSnippet(Snippet):
-  def __init__(self, inputs, output):
+  def __init__(self, inputs, output, out_dtype):
     Snippet.__init__(self, "max_op.cpp")
-    input_tnames = _prepare_inputs(inputs)
-    output_tname = '{{"{}"}}'.format(output)
-    self.template_vars["input_tnames"] = input_tnames
-    self.template_vars["output_tname"] = output_tname
+    self.template_vars["inputs"] = inputs
+    self.template_vars["output"] = output
+    self.template_vars["out_dtype"] = TF_TYPES_MAP[out_dtype].tensor_type_str
 
 
 class ArgMaxOpSnippet(Snippet):
   def __init__(self, inputs, output, in_dtype=tf.float32, out_dtype=tf.int32):
     Snippet.__init__(self, "argmax_op.cpp")
-    input_tnames = _prepare_inputs(inputs)
-    output_tname = '{{"{}"}}'.format(output)
-    self.template_vars["input_tnames"] = input_tnames
-    self.template_vars["output_tname"] = output_tname
+    self.template_vars["inputs"] = inputs
+    self.template_vars["output"] = output
     self.template_vars["in_dtype"] = TF_TYPES_MAP[in_dtype].tensor_type_str
     self.template_vars["out_dtype"] = TF_TYPES_MAP[out_dtype].tensor_type_str
 
 
 class DequantizeOpSnippet(Snippet):
-  def __init__(self, inputs, output):
+  def __init__(self, inputs, output, out_dtype):
     Snippet.__init__(self, "dequantize_op.cpp")
-    input_tnames = _prepare_inputs(inputs)
-    output_tname = '{{"{}"}}'.format(output)
-    self.template_vars["input_tnames"] = input_tnames
-    self.template_vars["output_tname"] = output_tname
+    self.template_vars["inputs"] = inputs
+    self.template_vars["output"] = output
+    self.template_vars["out_dtype"] = TF_TYPES_MAP[out_dtype].tensor_type_str
 
 
 class QuantizedMatMulOpSnippet(Snippet):
   def __init__(self, inputs, outputs, x_dtype, w_dtype, out_dtype):
     Snippet.__init__(self, "qmatmul_op.cpp")
     # hack on different arguments order between tensorflow and uTensor
-    input_tnames = _prepare_inputs(_permute_args(inputs, [0, 2, 3, 1, 4, 5]))
-    output_tnames = _prepare_inputs(_permute_args(outputs))
-    self.template_vars["input_tnames"] = input_tnames
-    self.template_vars["output_tnames"] = output_tnames
+    inputs = _permute_args(inputs, [0, 2, 3, 1, 4, 5])
+    self.template_vars["inputs"] = inputs
+    self.template_vars["outputs"] = outputs
     self.template_vars["x_dtype"] = TF_TYPES_MAP[x_dtype].tensor_type_str
     self.template_vars["w_dtype"] = TF_TYPES_MAP[w_dtype].tensor_type_str
     self.template_vars["out_dtype"] = TF_TYPES_MAP[out_dtype].tensor_type_str
 
 
 class QuantizeV2OpSnippet(Snippet):
-  def __init__(self, inputs, outputs):
+  def __init__(self, inputs, outputs, out_dtype):
     Snippet.__init__(self, "quantV2_op.cpp")
     self.template_vars["inputs"] = inputs
     self.template_vars["outputs"] = outputs
+    self.template_vars["out_dtype"] = TF_TYPES_MAP[out_dtype].tensor_type_str
 
 
 class QuantizedReluOpSnippet(Snippet):
-  def __init__(self, inputs, outputs, in_dtype, out_dtype, qout_dtype):
+  def __init__(self, inputs, outputs, in_dtype, out_dtypes, qout_dtype):
     Snippet.__init__(self, "qrelu_op.cpp")
     self.template_vars["inputs"] = inputs
     self.template_vars["outputs"] = outputs
     self.template_vars["in_dtype"] = TF_TYPES_MAP[in_dtype].tensor_type_str
-    self.template_vars["out_dtype"] = TF_TYPES_MAP[out_dtype].tensor_type_str
+    self.template_vars["out_dtypes"] = [TF_TYPES_MAP[out_dtype].tensor_type_str for out_dtype in out_dtypes]
     self.template_vars["qout_dtype"] = TF_TYPES_MAP[qout_dtype].tensor_type_str
 
 
 class RequantizationRangeOpSnippet(Snippet):
-  def __init__(self):
-    pass
+  def __init__(self, inputs, outputs, out_dtype):
+    Snippet.__init__(self, "requant_range_op.cpp")
+    self.template_vars["inputs"] = inputs
+    self.template_vars["outputs"] = outputs
+    self.template_vars["out_dtype"] = TF_TYPES_MAP[out_dtype].tensor_type_str
 
 
 class RequantizeOpSnippet(Snippet):
-  def __init__(self, inputs, outputs):
+  def __init__(self, inputs, outputs, qout_dtype, range_dtype):
+    """qout_dtype: Tout
+    range_dtype: T2
+    input_dtype: T1
+    """
     Snippet.__init__(self, "requant_op.cpp")
     self.template_vars["inputs"] = inputs
     self.template_vars["outputs"] = outputs
+    self.template_vars["qout_dtype"] = TF_TYPES_MAP[qout_dtype].tensor_type_str
+    self.template_vars["range_dtype"] = TF_TYPES_MAP[range_dtype].tensor_type_str
 
 
 class ReshapeOpSnippet(Snippet):
@@ -169,3 +172,9 @@ class ReshapeOpSnippet(Snippet):
     Snippet.__init__(self, "reshape_op.cpp")
     self.template_vars["inputs"] = inputs
     self.template_vars["output"] = output
+
+
+class CommentSnippet(Snippet):
+  def __init__(self, comments):
+    Snippet.__init__(self, "comments.cpp")
+    self.template_vars["comments"] = comments

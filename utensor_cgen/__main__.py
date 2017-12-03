@@ -5,10 +5,10 @@ import os
 from .core import CodeGenerator
 
 
-def _main(pb_file, src_fname, idx_dir, embed_data_dir):
+def _main(pb_file, src_fname, idx_dir, embed_data_dir, debug_cmt):
   if embed_data_dir is None:
     embed_data_dir = os.path.join("/fs", idx_dir)
-  generator = CodeGenerator(pb_file, idx_dir, embed_data_dir)
+  generator = CodeGenerator(pb_file, idx_dir, embed_data_dir, debug_cmt)
   generator.generate(src_fname)
 
 
@@ -25,6 +25,9 @@ def _build_parser():
   parser.add_argument("-D", "--embed-data-dir", dest="embed_data_dir",
                       metavar="EMBED_DIR", default=None,
                       help="the data dir on the develop board (default: the value as the value of -d/data-dir flag)")
+  parser.add_argument("--debug-comment", dest="debug_cmt",
+                      action="store_true",
+                      help="Add debug comments in the output source file (default: %(default)s)")
   return parser
 
 

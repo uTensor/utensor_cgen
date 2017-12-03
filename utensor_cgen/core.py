@@ -1,10 +1,11 @@
 # -*- coding:utf8 -*-
 import os
+import logging
 import numpy as np
 import idx2numpy as idx2np
 import tensorflow as tf
 from .pbparser import parse_pb
-from .snippets import *
+from .snippets import *  # pylint: disable=W0401
 from .snippets import register_template
 from .composer import Composer
 from ._snippets_base import SnippetContainer, Snippet
@@ -14,12 +15,13 @@ __all__ = ["CodeGenerator"]
 
 
 class CodeGenerator(object):
-  def __init__(self, pb_file: str, idx_dir: str, embed_data_dir: str):
+  def __init__(self, pb_file: str, idx_dir: str, embed_data_dir: str, debug_cmt=False):
     self.pb_file = pb_file
     if not os.path.exists(idx_dir):
       os.makedirs(idx_dir)
     self.idx_dir = idx_dir
     self.embed_data_dir = embed_data_dir.rstrip("/")
+    self.debug_cmt = debug_cmt
 
   def generate(self, src_fname: str):
     """Generate source and header files
@@ -35,13 +37,13 @@ class CodeGenerator(object):
     graph_info, layers = parse_pb(self.pb_file)
 
     # TODO better snippet construction abstraction
-    for layer in layers:
+    for layer_id, layer in enumerate(layers, 1):
       for op_name in layer:
         op_info = graph_info[op_name]
         op_type = op_info["op_type"]
         if op_type == "Placeholder":
           # TODO what is a placeholder in uTensor?
-          pass
+          logging.warning("[FIXME] Placeholder: {} detected, snippet not implemented yet".format(op_name))
         elif op_type == 'Const':
           for out_tname, out_dtype in op_info["output_tensor"]:
             pre_tname = self._prepare_tensor_name(out_tname)
@@ -67,23 +69,24 @@ class CodeGenerator(object):
           container.add_snippet(snippet)
         elif op_type == "Dequantize":
           inputs = [tname for tname, _ in op_info["input_tensor"]]
-          output, _ = op_info["output_tensor"][0]
-          snippet = DequantizeOpSnippet(inputs, output)
+          output, out_dtype = op_info["output_tensor"][0]
+          snippet = DequantizeOpSnippet(inputs, output, out_dtype)
           container.add_snippet(snippet)
         elif op_type == "Max":
           inputs = [tname for tname, _ in op_info["input_tensor"]]
-          output, _ = op_info["output_tensor"][0]
-          snippet = MaxOpSnippet(inputs, output)
+          output, out_dtype = op_info["output_tensor"][0]
+          snippet = MaxOpSnippet(inputs, output, out_dtype)
           container.add_snippet(snippet)
         elif op_type == "Min":
           inputs = [tname for tname, _ in op_info["input_tensor"]]
-          output, _ = op_info["output_tensor"][0]
-          snippet = MinOpSnippet(inputs, output)
+          output, out_dtype = op_info["output_tensor"][0]
+          snippet = MinOpSnippet(inputs, output, out_dtype)
           container.add_snippet(snippet)
         elif op_type == "QuantizeV2":
           inputs = [tname for tname, _ in op_info["input_tensor"]]
           outputs = [tname for tname, _ in op_info["output_tensor"]]
-          snippet = QuantizeV2OpSnippet(inputs, outputs)
+          out_dtype = op_info["output_tensor"][0][1]
+          snippet = QuantizeV2OpSnippet(inputs, outputs, out_dtype)
           container.add_snippet(snippet)
         elif op_type == "QuantizedMatMul":
           inputs = [tname for tname, _ in op_info["input_tensor"]]
@@ -98,15 +101,21 @@ class CodeGenerator(object):
           outputs = [tname for tname, _ in op_info["output_tensor"]]
           _, in_dtype = op_info["input_tensor"][0]
           _, qout_dtype = op_info["output_tensor"][0]
-          _, out_dtype = op_info["output_tensor"][1]
-          snippet = QuantizedReluOpSnippet(inputs, outputs, in_dtype, out_dtype, qout_dtype)
+          out_dtypes = [t[1] for t in op_info["output_tensor"][1:]]
+          snippet = QuantizedReluOpSnippet(inputs, outputs, in_dtype, out_dtypes, qout_dtype)
           container.add_snippet(snippet)
         elif op_type == "RequantizationRange":
-          pass
+          inputs = [tname for tname, _ in op_info["input_tensor"]]
+          outputs = [tname for tname, _ in op_info["output_tensor"]]
+          _, out_dtype = op_info["output_tensor"][0]
+          snippet = RequantizationRangeOpSnippet(inputs, outputs, out_dtype)
+          container.add_snippet(snippet)
         elif op_type == "Requantize":
           inputs = [tname for tname, _ in op_info["input_tensor"]]
           outputs = [tname for tname, _ in op_info["output_tensor"]]
-          snippet = RequantizeOpSnippet(inputs, outputs)
+          _, qout_dtype = op_info["output_tensor"][0]
+          _, range_dtype = op_info["output_tensor"][1]
+          snippet = RequantizeOpSnippet(inputs, outputs, qout_dtype, range_dtype)
           container.add_snippet(snippet)
         elif op_type == "Reshape":
           inputs = [tname for tname, _ in op_info["input_tensor"]]
@@ -115,6 +124,11 @@ class CodeGenerator(object):
           container.add_snippet(snippet)
         else:
           raise ValueError("unsupported op type in uTensor: {}".format(op_type))
+      if self.debug_cmt:
+        comments = ["<<< Graph Layer {}".format(layer_id), 
+                    ">>> Graph Layer {}".format(layer_id+1)]
+        cmt_snippet = CommentSnippet(comments)
+        container.add_snippet(cmt_snippet)
     composer.add_snippet(container)
 
     header_snippet = Snippet("get_ctx.hpp")
