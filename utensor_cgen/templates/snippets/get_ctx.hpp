@@ -1,7 +1,7 @@
-#ifndef _GET_CTX_H
-#define _GET_CTX_H
+#ifndef _{{header_guard}}
+#define _{{header_guard}}
 #include "context.hpp"
 
-void get_ctx(Contex& ctx);
+void get_{{graph_name}}_ctx(Context& ctx);
 
-#endif // _GET_CTX_H
+#endif // _{{header_guard}}

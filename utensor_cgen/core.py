@@ -27,10 +27,15 @@ class CodeGenerator(object):
     """Generate source and header files
     """
     fname, _ = os.path.splitext(src_fname)
+    graph_name, _ = os.path.splitext(os.path.basename(self.pb_file))
     header_fname = '{}.hpp'.format(fname)
+    header_snippet = Snippet("get_ctx.hpp")
+    header_snippet.template_vars["header_guard"] = "_{}_H".format(fname.upper())
+    header_snippet.template_vars["graph_name"] = graph_name
 
     composer = Composer()
     container = SnippetContainer("get_ctx.cpp")
+    container.template_vars["graph_name"] = graph_name
     container.add_header('"{}"'.format(header_fname))
 
     print("Parsing {}".format(self.pb_file))
@@ -123,7 +128,7 @@ class CodeGenerator(object):
           snippet = ReshapeOpSnippet(inputs, output)
           container.add_snippet(snippet)
         else:
-          raise ValueError("unsupported op type in uTensor: {}".format(op_type))
+          raise ValueError("unsupported op type in uTensor: {}, try quantizing your graph".format(op_type))
       if self.debug_cmt:
         comments = ["<<< Graph Layer {}".format(layer_id), 
                     ">>> Graph Layer {}".format(layer_id+1)]
@@ -131,7 +136,6 @@ class CodeGenerator(object):
         container.add_snippet(cmt_snippet)
     composer.add_snippet(container)
 
-    header_snippet = Snippet("get_ctx.hpp")
     print("Generate header file: {}".format(header_fname))
     with open(header_fname, "w") as wf:
       wf.write(header_snippet.render())

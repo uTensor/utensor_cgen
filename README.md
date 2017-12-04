@@ -20,7 +20,9 @@
     - ex: use `uint8_t` or `unsigned char`?
     - a lot more about this.... 
 6. `MANIFAST.in` for the `setup.py`
-7. Better configuration schema
+7. Relation among snippets/containers
+    - shared template variables?
+8. Better configuration schema
     - json
     - yaml
     - or ?

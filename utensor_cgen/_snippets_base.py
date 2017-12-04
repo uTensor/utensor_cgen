@@ -80,7 +80,7 @@ class SnippetContainer(object):
       raise ValueError("unknown container tempalte name: {}".format(template_name))
     template_path = _CONTAINERS[template_name]
     if template_vars is None:
-      template_vars = {}
+      template_vars = {"graph_name": "graph"}
     with open(template_path) as rf:
       template = Template(rf.read())
     if snippets is None:
