@@ -9,6 +9,10 @@
     4. compile your `uTensor` project with `model.hpp` and `model.cpp` and copy `idx_data/` to your SD card.
     5. You should have a running simple graph.
 
+<center>
+<img alt=simple-graph src=images/simple_graph.png />
+</center>
+
 # TODOs
 1. (done) Freezed graph protobuff parser
 2. (done)Tensor snippets for [`uTensor`](https://github.com/neil-tan/uTensor)

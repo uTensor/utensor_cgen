@@ -1,3 +1,4 @@
 # virtual env
 env
 dev_notes
+*.ipynb
