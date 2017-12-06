@@ -16,7 +16,7 @@ SNIPPET_CONFIG = {
   "requant_range_op.cpp": set(['"MathOps.hpp"']),
   "comments.cpp": set([]),
   "headers.hpp": set([]),
-  "get_ctx.hpp": set([])
+  "get_ctx.hpp": set(['"context.hpp"', '"tensor.hpp"'])
 }
 
 CONTAINER_CONFIG = {

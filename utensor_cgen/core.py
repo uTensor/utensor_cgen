@@ -32,10 +32,12 @@ class CodeGenerator(object):
     header_snippet = Snippet("get_ctx.hpp")
     header_snippet.template_vars["header_guard"] = "_{}_H".format(fname.upper())
     header_snippet.template_vars["graph_name"] = graph_name
+    header_snippet.template_vars["placeholders"] = []
 
     composer = Composer()
     container = SnippetContainer("get_ctx.cpp")
     container.template_vars["graph_name"] = graph_name
+    container.template_vars["placeholders"] = []
     container.add_header('"{}"'.format(header_fname))
 
     print("Parsing {}".format(self.pb_file))
@@ -47,8 +49,9 @@ class CodeGenerator(object):
         op_info = graph_info[op_name]
         op_type = op_info["op_type"]
         if op_type == "Placeholder":
-          # TODO what is a placeholder in uTensor?
-          logging.warning("[FIXME] Placeholder: {} detected, snippet not implemented yet".format(op_name))
+          out_tname, _ = op_info["output_tensor"][0]
+          container.template_vars["placeholders"].append(out_tname)
+          header_snippet.template_vars["placeholders"].append(out_tname)
         elif op_type == 'Const':
           for out_tname, out_dtype in op_info["output_tensor"]:
             pre_tname = self._prepare_tensor_name(out_tname)
