@@ -1,4 +1,4 @@
-TESTS=add argmax const matmul
+TESTS=add argmax const matmul linreg
 .PHONY: $(TESTS)
 
 all:

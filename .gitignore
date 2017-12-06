@@ -1,6 +1,9 @@
 # virtual env
 env
+# dev
 dev_notes
 *.ipynb
+# tests
 tests/quantize_graph.py
 tests/*/cpp
+*/*/chkps
