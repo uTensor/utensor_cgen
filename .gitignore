@@ -2,3 +2,5 @@
 env
 dev_notes
 *.ipynb
+tests/quantize_graph.py
+tests/*/cpp
