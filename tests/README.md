@@ -13,3 +13,8 @@
 
 - Test for deep multiperceptron models
 - Test for CNN
+
+## References
+
+- [Quantization - TensorFlow](https://www.tensorflow.org/performance/quantization)
+    - [python script](https://raw.githubusercontent.com/tensorflow/tensorflow/master/tensorflow/tools/quantization/quantize_graph.py)

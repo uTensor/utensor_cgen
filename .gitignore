@@ -3,6 +3,7 @@ env
 # dev
 dev_notes
 *.ipynb
+*.egg*
 # tests
 tests/quantize_graph.py
 tests/*/cpp
