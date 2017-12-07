@@ -20,3 +20,4 @@ clean:
 		 rm -rf cpp; \
 		 cd - > /dev/null 2>&1; \
 	 done
+	rm -rf linreg/chkps
