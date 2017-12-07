@@ -4,9 +4,9 @@ S_TENSOR {{sptr_name}};
 {
     TensorIdxImporter t_import;
     {% if tensor_shape %}
-    ctx.add(new {{tensor_type}}<{{dtype}}>({{tensor_shape}}, "{{tensor_name}}"), {{init_count}});
+    ctx.add(new {{tensor_type}}<{{dtype}}>({{tensor_shape}}), "{{tensor_name}}", {{init_count}});
     {% else %}
-    ctx.add(new {{tensor_type}}<{{dtype}}>("{{tensor_name}}"), {{init_count}});
+    ctx.add(new {{tensor_type}}<{{dtype}}>(), "{{tensor_name}}", {{init_count}});
     {% endif %}
 
     {% if create_sptr %}
