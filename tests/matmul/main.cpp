@@ -1,14 +1,13 @@
-#include "placeholder_ctx.hpp"
-#include "tensorIdxImporter.hpp" 
-#include "tensor.hpp"
+#include "matmul_ctx.hpp"
+#include "tensorIdxImporter.hpp"
+#include "uTensor_util.hpp"
 #include "test.hpp"
 #include <mbed.h>
 #include <FATFileSystem.h>
 #include <SDBlockDevice.h>
-#include <math.h>
 
 
-class PlaceholderTest : public Test {
+class qMatMulTest : public Test {
     Context ctx;
     TensorIdxImporter t_import;
 public:
@@ -20,32 +19,34 @@ SDBlockDevice bd(MBED_CONF_APP_SD_MOSI, MBED_CONF_APP_SD_MISO,
                  MBED_CONF_APP_SD_CLK, MBED_CONF_APP_SD_CS);
 FATFileSystem fs("fs");
 
-int main(int argc, char* argv[]) {
 
+int main(int argc, char* argv[]) {
     ON_ERR(bd.init(), "SDBlockDevice init ");
     ON_ERR(fs.mount(&bd), "Mounting the filesystem on \"/fs\". ");
 
-    PlaceholderTest test;
+    qMatMulTest test;
     test.runAll();
     test.printSummary();
 
     ON_ERR(fs.unmount(), "fs unmount ");
     ON_ERR(bd.deinit(), "SDBlockDevice de-init ");
-    
+
     return 0;
 }
 
-void PlaceholderTest::runAll(void) {
-    testStart("simple placeholder test");
+void qMatMulTest::runAll(void) {
+    testStart("simple quantized matmul test");
     timer_start();
-    Tensor* input_0 = new RamTensor<float>({1});
-    *(input_0->write<float>(0, 0)) = 3.1415;
-    get_test_quant_placeholder_ctx(ctx, input_0);
-
-    S_TENSOR sptr_y = ctx.get("y:0");
+    get_test_quant_matmul_ctx(ctx);
+    S_TENSOR z = ctx.get("z:0");
     ctx.eval();
     timer_stop();
 
-    float ans = 4.1415, output = *(sptr_y->read<float>(0, 0));
-    passed(fabs(ans - output) < 0.0001);
+    Tensor* ptr_z = z.get();
+    Tensor* ref_z = t_import.float_import("/fs/idx_data/output_z.idx");
+
+    // compare the results
+    double percErr = meanPercentErr<float>(ref_z, ptr_z);
+    printf("percErr: %f (< 0.003)\n", percErr);
+    passed(percErr < 0.003);
 }
