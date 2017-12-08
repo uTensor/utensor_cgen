@@ -151,7 +151,7 @@ class CodeGenerator(object):
     return prepared
 
   def _save_data(self, path, value, tf_dtype):
-    if tf_dtype in [tf.uint8, tf.qint8]:
+    if tf_dtype in [tf.uint8, tf.qint8, tf.quint8]:
       np_dtype = np.uint8
     elif tf_dtype in [tf.int32, tf.qint32]:
       np_dtype = np.int32
@@ -162,7 +162,6 @@ class CodeGenerator(object):
       value = np.array([value], dtype=np_dtype)
     else:
       value = value.astype(np_dtype)
-
     with open(path, "wb") as fid:
       idx2np.convert_to_file(fid, value)
     print("saving {}".format(path))
