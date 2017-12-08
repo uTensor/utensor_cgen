@@ -1,4 +1,4 @@
-#include "add_ctx.hpp"
+#include "argmax_ctx.hpp"
 #include "tensorIdxImporter.hpp"
 #include "uTensor_util.hpp"
 #include "test.hpp"
@@ -7,7 +7,7 @@
 #include <SDBlockDevice.h>
 
 
-class AddTest : public Test {
+class ArgmaxTest : public Test {
     Context ctx;
     TensorIdxImporter t_import;
 public:
@@ -23,7 +23,7 @@ int main(int argc, char* argv[]) {
     ON_ERR(bd.init(), "SDBlockDevice init ");
     ON_ERR(fs.mount(&bd), "Mounting the filesystem on \"/fs\". ");
 
-    AddTest test;
+    ArgmaxTest test;
     test.runAll();
     test.printSummary();
 
@@ -33,18 +33,15 @@ int main(int argc, char* argv[]) {
     return 0;
 }
 
-void AddTest::runAll(void) {
-    testStart("simple add test");
+void ArgmaxTest::runAll(void) {
+    testStart("simple argmax test");
     timer_start();
-    get_test_quant_add_ctx(ctx);
-    S_TENSOR z = ctx.get("z:0");
-    Tensor* ptr_z = z.get();
+    get_test_quant_argmax_ctx(ctx);
+    S_TENSOR argmax = ctx.get("argmax:0");
     ctx.eval();
     timer_stop();
 
-    Tensor* ref_z = t_import.float_import("/fs/idx_data/output_z.idx");
-
-    // compare the results
-    double result = meanPercentErr<float>(ref_z, ptr_z);
-    passed(result < 0.001);
+    Tensor* ref_argmax = t_import.int_import("/fs/idx_data/output_argmax.idx");
+    double err = meanAbsErr<float>(ref_argmax, argmax.get());
+    passed(err == 0);
 }

@@ -1,4 +1,4 @@
-#include "add_ctx.hpp"
+#include "linreg_ctx.hpp"
 #include "tensorIdxImporter.hpp"
 #include "uTensor_util.hpp"
 #include "test.hpp"
@@ -7,7 +7,7 @@
 #include <SDBlockDevice.h>
 
 
-class AddTest : public Test {
+class LinregTest : public Test {
     Context ctx;
     TensorIdxImporter t_import;
 public:
@@ -19,11 +19,12 @@ SDBlockDevice bd(MBED_CONF_APP_SD_MOSI, MBED_CONF_APP_SD_MISO,
                  MBED_CONF_APP_SD_CLK, MBED_CONF_APP_SD_CS);
 FATFileSystem fs("fs");
 
+
 int main(int argc, char* argv[]) {
     ON_ERR(bd.init(), "SDBlockDevice init ");
     ON_ERR(fs.mount(&bd), "Mounting the filesystem on \"/fs\". ");
 
-    AddTest test;
+    LinregTest test;
     test.runAll();
     test.printSummary();
 
@@ -33,18 +34,18 @@ int main(int argc, char* argv[]) {
     return 0;
 }
 
-void AddTest::runAll(void) {
-    testStart("simple add test");
+void LinregTest::runAll(void) {
+    testStart("simple linreg matmul test");
     timer_start();
-    get_test_quant_add_ctx(ctx);
-    S_TENSOR z = ctx.get("z:0");
-    Tensor* ptr_z = z.get();
+    get_test_quant_linreg_ctx(ctx);
+    S_TENSOR yhat = ctx.get("yhat:0");
     ctx.eval();
     timer_stop();
 
-    Tensor* ref_z = t_import.float_import("/fs/idx_data/output_z.idx");
+    Tensor* ref_yhat = t_import.float_import("/fs/idx_data/output_yhat.idx");
 
     // compare the results
-    double result = meanPercentErr<float>(ref_z, ptr_z);
-    passed(result < 0.001);
+    double percErr = meanPercentErr<float>(ref_yhat, yhat.get());
+    printf("percErr: %f (< 0.003)\n", percErr);
+    passed(percErr < 0.003);
 }

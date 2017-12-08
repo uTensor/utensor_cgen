@@ -1,4 +1,4 @@
-#include "add_ctx.hpp"
+#include "const_ctx.hpp"
 #include "tensorIdxImporter.hpp"
 #include "uTensor_util.hpp"
 #include "test.hpp"
@@ -7,7 +7,7 @@
 #include <SDBlockDevice.h>
 
 
-class AddTest : public Test {
+class ConstTest : public Test {
     Context ctx;
     TensorIdxImporter t_import;
 public:
@@ -23,7 +23,7 @@ int main(int argc, char* argv[]) {
     ON_ERR(bd.init(), "SDBlockDevice init ");
     ON_ERR(fs.mount(&bd), "Mounting the filesystem on \"/fs\". ");
 
-    AddTest test;
+    ConstTest test;
     test.runAll();
     test.printSummary();
 
@@ -33,18 +33,16 @@ int main(int argc, char* argv[]) {
     return 0;
 }
 
-void AddTest::runAll(void) {
-    testStart("simple add test");
+void ConstTest::runAll(void) {
+    testStart("simple const test");
     timer_start();
-    get_test_quant_add_ctx(ctx);
-    S_TENSOR z = ctx.get("z:0");
-    Tensor* ptr_z = z.get();
+    get_test_quant_const_ctx(ctx);
+    S_TENSOR x = ctx.get("x:0");
+    Tensor* ptr_x = x.get();
     ctx.eval();
     timer_stop();
 
-    Tensor* ref_z = t_import.float_import("/fs/idx_data/output_z.idx");
-
-    // compare the results
-    double result = meanPercentErr<float>(ref_z, ptr_z);
-    passed(result < 0.001);
+    Tensor* ref_x = t_import.float_import("/fs/idx_data/x_0.idx");
+    double err = meanAbsErr(ref_x, ptr_x);
+    passed(err == 0);
 }
