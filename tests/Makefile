@@ -1,4 +1,4 @@
-TESTS=add argmax const matmul linreg placeholder relu min max
+TESTS=add argmax const matmul linreg placeholder relu min max_1_1 max_1 max_2 max_3 max_3_1
 .PHONY: $(TESTS)
 
 all:

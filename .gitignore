@@ -3,8 +3,8 @@ env
 # dev
 dev_notes
 *.ipynb
+!tests/test_cases.ipynb
 *.egg*
 # tests
-tests/quantize_graph.py
 tests/*/cpp
 */*/chkps

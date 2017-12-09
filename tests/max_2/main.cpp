@@ -1,4 +1,4 @@
-#include "max_ctx.hpp"
+#include "max_2_ctx.hpp"
 #include "tensorIdxImporter.hpp"
 #include "uTensor_util.hpp"
 #include "test.hpp"
@@ -35,17 +35,17 @@ int main(int argc, char* argv[]) {
 }
 
 void MaxTest::runAll(void) {
-    testStart("simple max test");
+    testStart("simple max test 2");
     timer_start();
-    get_test_quant_max_ctx(ctx);
-    S_TENSOR max_x = ctx.get("max_x:0");
+    get_test_quant_max_2_ctx(ctx);
+    S_TENSOR max_x1 = ctx.get("max_x2:0");
     ctx.eval();
     timer_stop();
 
-    Tensor* ref_max = t_import.float_import("/fs/idx_data/output_max_x.idx");
+    Tensor* ref_max1 = t_import.float_import("/fs/idx_data/output_max_x2.idx");
 
     // compare the results
-    double err = meanAbsErr<float>(ref_max, max_x.get());
+    double err = meanAbsErr<float>(ref_max1, max_x1.get());
     printf("err: %f\n", err);
     passed(err < 0.0003);
 }
