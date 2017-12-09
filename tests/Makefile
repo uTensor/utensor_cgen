@@ -1,4 +1,4 @@
-TESTS=add argmax const matmul linreg placeholder
+TESTS=add argmax const matmul linreg placeholder relu min max
 .PHONY: $(TESTS)
 
 all:
@@ -10,7 +10,10 @@ $(TESTS):
 	 	mkdir cpp; \
 	 fi; \
 	 cd cpp; \
-	 utensor-cli ../test_quant_$@.pb -o $@_ctx.cpp
+	 utensor-cli ../test_quant_$@.pb -o $@_ctx.cpp; \
+	 if [ "$@" == "linreg" ]; then \
+	 	cp ../*.idx idx_data; \
+	 fi
 
 clean:
 	@for dname in $(TESTS); \
