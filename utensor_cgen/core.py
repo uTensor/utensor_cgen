@@ -49,11 +49,11 @@ class CodeGenerator(object):
         op_info = graph_info[op_name]
         op_type = op_info["op_type"]
         if op_type == "Placeholder":
-          out_tname, _ = op_info["output_tensor"][0]
+          out_tname, _, _ = op_info["output_tensor"][0]
           container.template_vars["placeholders"].append(out_tname)
           header_snippet.template_vars["placeholders"].append(out_tname)
         elif op_type == 'Const':
-          for out_tname, out_dtype in op_info["output_tensor"]:
+          for out_tname, out_dtype, _ in op_info["output_tensor"]:
             pre_tname = self._prepare_tensor_name(out_tname)
             idx_fname = "{}.idx".format(pre_tname)
             snippet = CreateTensorIdxSnippet(self.embed_data_dir, out_tname,
@@ -64,70 +64,70 @@ class CodeGenerator(object):
             value = op_info["output_content"][out_tname]
             self._save_data(idx_path, value, out_dtype)
         elif op_type == "Add":
-          inputs = [tname for tname, _ in op_info["input_tensor"]]
-          output, _ = op_info["output_tensor"][0]
+          inputs = [tname for tname, _, _ in op_info["input_tensor"]]
+          output, _, _ = op_info["output_tensor"][0]
           tf_dtype = op_info["input_tensor"][0][1]
           snippet = AddOpSnippet(inputs, output, tf_dtype=tf_dtype)
           container.add_snippet(snippet)
         elif op_type == "ArgMax":
-          inputs = [tname for tname, _ in op_info["input_tensor"]]
-          output, out_dtype = op_info["output_tensor"][0]
-          _, in_dtype = op_info["input_tensor"][0]
+          inputs = [tname for tname, _, _ in op_info["input_tensor"]]
+          output, out_dtype, _ = op_info["output_tensor"][0]
+          _, in_dtype, _ = op_info["input_tensor"][0]
           snippet = ArgMaxOpSnippet(inputs, output, in_dtype, out_dtype)
           container.add_snippet(snippet)
         elif op_type == "Dequantize":
-          inputs = [tname for tname, _ in op_info["input_tensor"]]
-          output, out_dtype = op_info["output_tensor"][0]
+          inputs = [tname for tname, _, _ in op_info["input_tensor"]]
+          output, out_dtype, _ = op_info["output_tensor"][0]
           snippet = DequantizeOpSnippet(inputs, output, out_dtype)
           container.add_snippet(snippet)
         elif op_type == "Max":
-          inputs = [tname for tname, _ in op_info["input_tensor"]]
-          output, out_dtype = op_info["output_tensor"][0]
-          snippet = MaxOpSnippet(inputs, output, out_dtype)
+          inputs = [tname for tname, _, _ in op_info["input_tensor"]]
+          output, out_dtype, out_shape = op_info["output_tensor"][0]
+          snippet = MaxOpSnippet(inputs, output, out_dtype, out_shape)
           container.add_snippet(snippet)
         elif op_type == "Min":
-          inputs = [tname for tname, _ in op_info["input_tensor"]]
-          output, out_dtype = op_info["output_tensor"][0]
-          snippet = MinOpSnippet(inputs, output, out_dtype)
+          inputs = [tname for tname, _, _ in op_info["input_tensor"]]
+          output, out_dtype, out_shape = op_info["output_tensor"][0]
+          snippet = MinOpSnippet(inputs, output, out_dtype, out_shape)
           container.add_snippet(snippet)
         elif op_type == "QuantizeV2":
-          inputs = [tname for tname, _ in op_info["input_tensor"]]
-          outputs = [tname for tname, _ in op_info["output_tensor"]]
+          inputs = [tname for tname, _, _ in op_info["input_tensor"]]
+          outputs = [tname for tname, _, _ in op_info["output_tensor"]]
           out_dtype = op_info["output_tensor"][0][1]
           snippet = QuantizeV2OpSnippet(inputs, outputs, out_dtype)
           container.add_snippet(snippet)
         elif op_type == "QuantizedMatMul":
-          inputs = [tname for tname, _ in op_info["input_tensor"]]
-          outputs = [tname for tname, _ in op_info["output_tensor"]]
+          inputs = [tname for tname, _, _ in op_info["input_tensor"]]
+          outputs = [tname for tname, _, _ in op_info["output_tensor"]]
           x_dtype = op_info["input_tensor"][0][1]
           w_dtype = op_info["input_tensor"][1][1]
           out_dtype = op_info["output_tensor"][0][1]
           snippet = QuantizedMatMulOpSnippet(inputs, outputs, x_dtype, w_dtype, out_dtype)
           container.add_snippet(snippet)
         elif op_type == "QuantizedRelu":
-          inputs = [tname for tname, _ in op_info["input_tensor"]]
-          outputs = [tname for tname, _ in op_info["output_tensor"]]
-          _, in_dtype = op_info["input_tensor"][0]
-          _, qout_dtype = op_info["output_tensor"][0]
+          inputs = [tname for tname, _, _ in op_info["input_tensor"]]
+          outputs = [tname for tname, _, _ in op_info["output_tensor"]]
+          _, in_dtype, _ = op_info["input_tensor"][0]
+          _, qout_dtype, _ = op_info["output_tensor"][0]
           out_dtypes = [t[1] for t in op_info["output_tensor"][1:]]
           snippet = QuantizedReluOpSnippet(inputs, outputs, in_dtype, out_dtypes, qout_dtype)
           container.add_snippet(snippet)
         elif op_type == "RequantizationRange":
-          inputs = [tname for tname, _ in op_info["input_tensor"]]
-          outputs = [tname for tname, _ in op_info["output_tensor"]]
-          _, out_dtype = op_info["output_tensor"][0]
+          inputs = [tname for tname, _, _ in op_info["input_tensor"]]
+          outputs = [tname for tname, _, _ in op_info["output_tensor"]]
+          _, out_dtype, _ = op_info["output_tensor"][0]
           snippet = RequantizationRangeOpSnippet(inputs, outputs, out_dtype)
           container.add_snippet(snippet)
         elif op_type == "Requantize":
-          inputs = [tname for tname, _ in op_info["input_tensor"]]
-          outputs = [tname for tname, _ in op_info["output_tensor"]]
-          _, qout_dtype = op_info["output_tensor"][0]
-          _, range_dtype = op_info["output_tensor"][1]
+          inputs = [tname for tname, _, _ in op_info["input_tensor"]]
+          outputs = [tname for tname, _, _ in op_info["output_tensor"]]
+          _, qout_dtype, _ = op_info["output_tensor"][0]
+          _, range_dtype, _ = op_info["output_tensor"][1]
           snippet = RequantizeOpSnippet(inputs, outputs, qout_dtype, range_dtype)
           container.add_snippet(snippet)
         elif op_type == "Reshape":
-          inputs = [tname for tname, _ in op_info["input_tensor"]]
-          output, _ = op_info["output_tensor"][0]
+          inputs = [tname for tname, _, _ in op_info["input_tensor"]]
+          output, _, _ = op_info["output_tensor"][0]
           snippet = ReshapeOpSnippet(inputs, output)
           container.add_snippet(snippet)
         else:

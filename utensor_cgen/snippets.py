@@ -84,19 +84,21 @@ class AddOpSnippet(Snippet):
 
 
 class MinOpSnippet(Snippet):
-  def __init__(self, inputs, output, out_dtype):
+  def __init__(self, inputs, output, out_dtype, out_shape=None):
     Snippet.__init__(self, "min_op.cpp")
     self.template_vars["inputs"] = inputs
     self.template_vars["output"] = output
     self.template_vars["out_dtype"] = TF_TYPES_MAP[out_dtype].tensor_type_str
+    self.template_vars["out_shape"] = out_shape
 
 
 class MaxOpSnippet(Snippet):
-  def __init__(self, inputs, output, out_dtype):
+  def __init__(self, inputs, output, out_dtype, out_shape=None):
     Snippet.__init__(self, "max_op.cpp")
     self.template_vars["inputs"] = inputs
     self.template_vars["output"] = output
     self.template_vars["out_dtype"] = TF_TYPES_MAP[out_dtype].tensor_type_str
+    self.template_vars["out_shape"] = out_shape
 
 
 class ArgMaxOpSnippet(Snippet):

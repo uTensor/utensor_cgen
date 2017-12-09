@@ -89,11 +89,11 @@ def _parse_graph_nodes(graph_def: GraphDef) -> defaultdict:
     for node in graph_def.node:
       op = graph.get_operation_by_name(node.name)
       op_info = graph_info[node.name]
-      op_info["input_tensor"] = [(t.name, t.dtype) for t in op.inputs]
-      op_info["output_tensor"] = [(t.name, t.dtype) for t in op.outputs]
+      op_info["input_tensor"] = [(t.name, t.dtype, t.shape.as_list()) for t in op.inputs]
+      op_info["output_tensor"] = [(t.name, t.dtype, t.shape.as_list()) for t in op.outputs]
       op_info["op_type"] = node.op
       if node.op in ["Const"]:
-        for out_tensor, _ in op_info["output_tensor"]:
+        for out_tensor, _, _ in op_info["output_tensor"]:
           tensor = graph.get_tensor_by_name(out_tensor)
           op_info["output_content"][tensor.name] = tensor.eval()
   return graph_info
