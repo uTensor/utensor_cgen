@@ -83,11 +83,15 @@ class CodeGenerator(object):
         elif op_type == "Max":
           inputs = [tname for tname, _, _ in op_info["input_tensor"]]
           output, out_dtype, out_shape = op_info["output_tensor"][0]
+          if len(out_shape) == 0:  # dirty hack for uTensor
+            out_shape = [1]
           snippet = MaxOpSnippet(inputs, output, out_dtype, out_shape)
           container.add_snippet(snippet)
         elif op_type == "Min":
           inputs = [tname for tname, _, _ in op_info["input_tensor"]]
           output, out_dtype, out_shape = op_info["output_tensor"][0]
+          if len(out_shape) == 0:  # dirty hack for uTensor
+            out_shape = [1]
           snippet = MinOpSnippet(inputs, output, out_dtype, out_shape)
           container.add_snippet(snippet)
         elif op_type == "QuantizeV2":
