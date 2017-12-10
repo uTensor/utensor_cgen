@@ -1,8 +1,14 @@
 # Installation (Python3)
 
+## `setup.py`
+
 1. `python3 setup.py bdist_wheel`
 2. `cd dist`
 3. `python3 -m pip install utensor_cgen-<whatever>.whl`
+
+## `pip`
+
+1. run `python3 -m pip install utensor_cgen`
 
 This package is under beta development, using `virtualenv` is recommanded.
 
