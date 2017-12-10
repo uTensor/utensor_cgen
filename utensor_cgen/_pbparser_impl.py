@@ -61,6 +61,14 @@ def _has_content(node):
   return True
 
 
+def _parse_shape(t_shape):
+  try:
+    shape = t_shape.as_list()
+  except ValueError:
+    shape = None
+  return shape
+
+
 def _parse_graph_nodes(graph_def: GraphDef) -> defaultdict:
   """Parse GraphDef
   Fetch input tensors and output tensors name for reconstructing
@@ -89,8 +97,8 @@ def _parse_graph_nodes(graph_def: GraphDef) -> defaultdict:
     for node in graph_def.node:
       op = graph.get_operation_by_name(node.name)
       op_info = graph_info[node.name]
-      op_info["input_tensor"] = [(t.name, t.dtype, t.shape.as_list()) for t in op.inputs]
-      op_info["output_tensor"] = [(t.name, t.dtype, t.shape.as_list()) for t in op.outputs]
+      op_info["input_tensor"] = [(t.name, t.dtype, _parse_shape(t.shape)) for t in op.inputs]
+      op_info["output_tensor"] = [(t.name, t.dtype, _parse_shape(t.shape)) for t in op.outputs]
       op_info["op_type"] = node.op
       if node.op in ["Const"]:
         for out_tensor, _, _ in op_info["output_tensor"]:

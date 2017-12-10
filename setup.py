@@ -30,5 +30,17 @@ setup(
       "console_scripts": [
           "utensor-cli=utensor_cgen.__main__:main"
       ]
-  }
+  },
+  classifiers=[
+    "Development Status :: 4 - Beta",
+    "Environment :: MacOS X",
+    "Intended Audience :: Developers",
+    "License :: OSI Approved :: Apache Software License",
+    "Natural Language :: English",
+    "Operating System :: Unix",
+    "Programming Language :: Python :: 3 :: Only",
+    "Topic :: Scientific/Engineering",
+    "Topic :: Scientific/Engineering :: Artificial Intelligence",
+    "Topic :: Utilities"
+  ]
 )
