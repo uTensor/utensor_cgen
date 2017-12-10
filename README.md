@@ -1,3 +1,11 @@
+# Installation (Python3)
+
+1. `python3 setup.py bdist_wheel`
+2. `cd dist`
+3. `python3 -m pip install utensor_cgen-<whatever>.whl`
+
+This package is under beta development, using `virtualenv` is recommanded.
+
 # Example
 1. `example.py`:
     1. run `python3 example.py` and it should generate a `main.cpp` file.

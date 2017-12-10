@@ -24,6 +24,7 @@ setup(
   author_email="qmalliao@gmail.com",
   license=license,
   packages=find_packages(),
+  include_package_data=True,
   package_data={"utensor_cgen": ["templates/*"]},
   entry_points={
       "console_scripts": [

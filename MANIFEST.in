@@ -1,0 +1,2 @@
+include LICENSE README.md requirements.txt
+recursive-include utensor_cgen/templates *
