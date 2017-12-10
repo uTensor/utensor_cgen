@@ -1,4 +1,4 @@
-#include "min_ctx.hpp"
+#include "min_3_ctx.hpp"
 #include "tensorIdxImporter.hpp"
 #include "uTensor_util.hpp"
 #include "test.hpp"
@@ -35,14 +35,14 @@ int main(int argc, char* argv[]) {
 }
 
 void MinTest::runAll(void) {
-    testStart("simple min test");
+    testStart("simple min_3 test");
     timer_start();
-    get_test_quant_min_ctx(ctx);
-    S_TENSOR min_x = ctx.get("min_x:0");
+    get_test_quant_min_3_ctx(ctx);
+    S_TENSOR min_x = ctx.get("min_x_3:0");
     ctx.eval();
     timer_stop();
 
-    Tensor* ref_min = t_import.float_import("/fs/idx_data/output_min_x.idx");
+    Tensor* ref_min = t_import.float_import("/fs/idx_data/output_min_x3.idx");
 
     // compare the results
     double err = meanAbsErr<float>(ref_min, min_x.get());
