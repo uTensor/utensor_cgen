@@ -12,12 +12,12 @@ $(TESTS):
 	 	mkdir cpp; \
 	 fi; \
 	 cd cpp; \
-	 utensor-cli ../test_quant_$@.pb -d $@_idx_data -o $@_ctx.cpp; \
+	 utensor-cli ../test_quant_$@.pb -d idx_data -o $@_ctx.cpp; \
 	 if [ -e output*.idx ]; then \
-	 	cp -f ../output_*.idx $@_idx_data; \
+	 	cp -f ../output_*.idx idx_data; \
 	 fi; \
 	 if [ "$@" == "linreg" ]; then \
-	 	cp ../*.idx $@_idx_data; \
+	 	cp ../*.idx idx_data; \
 	 fi
 
 clean:
