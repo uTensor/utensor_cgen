@@ -1,13 +1,14 @@
-#include "linreg_ctx.hpp"
-#include "tensorIdxImporter.hpp"
-#include "uTensor_util.hpp"
+#include "reshape_5_ctx.hpp"
+#include "tensorIdxImporter.hpp" 
+#include "tensor.hpp"
 #include "test.hpp"
 #include <mbed.h>
 #include <FATFileSystem.h>
 #include <SDBlockDevice.h>
+#include <math.h>
 
 
-class LinregTest : public Test {
+class ReshapeTest5 : public Test {
     Context ctx;
     TensorIdxImporter t_import;
 public:
@@ -19,33 +20,32 @@ SDBlockDevice bd(MBED_CONF_APP_SD_MOSI, MBED_CONF_APP_SD_MISO,
                  MBED_CONF_APP_SD_CLK, MBED_CONF_APP_SD_CS);
 FATFileSystem fs("fs");
 
-
 int main(int argc, char* argv[]) {
+
     ON_ERR(bd.init(), "SDBlockDevice init ");
     ON_ERR(fs.mount(&bd), "Mounting the filesystem on \"/fs\". ");
 
-    LinregTest test;
+    ReshapeTest5 test;
     test.runAll();
     test.printSummary();
 
     ON_ERR(fs.unmount(), "fs unmount ");
     ON_ERR(bd.deinit(), "SDBlockDevice de-init ");
-
+    
     return 0;
 }
 
-void LinregTest::runAll(void) {
-    testStart("simple linreg matmul test");
+void ReshapeTest5::runAll(void) {
+    testStart("simple reshape test 5");
     timer_start();
-    get_test_quant_linreg_ctx(ctx);
-    S_TENSOR yhat = ctx.get("yhat:0");
+    get_test_quant_reshape_5_ctx(ctx);
+
+    S_TENSOR out_x = ctx.get("output_x:0");
     ctx.eval();
     timer_stop();
 
-    Tensor* ref_yhat = t_import.float_import("/fs/idx_data/output_yhat.idx");
-
-    // compare the results
-    double percErr = meanPercentErr<float>(ref_yhat, yhat.get());
-    printf("percErr: %f (< 0.05)\n", percErr);
-    passed(percErr < 0.05);
+    Tensor* ref_x = t_import.float_import("/fs/idx_data/output_x.idx");
+    float err = meanAbsErr<float>(ref_x, out_x.get());
+    printf("err: %f (< 0.0001)\n", err);
+    passed(err < 0.0001);
 }
