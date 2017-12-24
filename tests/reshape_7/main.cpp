@@ -1,4 +1,4 @@
-#include "reshape_3_ctx.hpp"
+#include "reshape_7_ctx.hpp"
 #include "tensorIdxImporter.hpp" 
 #include "tensor.hpp"
 #include "test.hpp"
@@ -8,7 +8,7 @@
 #include <math.h>
 
 
-class ReshapeTest3 : public Test {
+class ReshapeTest7 : public Test {
     Context ctx;
     TensorIdxImporter t_import;
 public:
@@ -25,7 +25,7 @@ int main(int argc, char* argv[]) {
     ON_ERR(bd.init(), "SDBlockDevice init ");
     ON_ERR(fs.mount(&bd), "Mounting the filesystem on \"/fs\". ");
 
-    ReshapeTest3 test;
+    ReshapeTest7 test;
     test.runAll();
     test.printSummary();
 
@@ -35,18 +35,17 @@ int main(int argc, char* argv[]) {
     return 0;
 }
 
-void ReshapeTest3::runAll(void) {
-    testStart("simple reshape test 3");
+void ReshapeTest7::runAll(void) {
+    testStart("simple reshape test 7");
     timer_start();
-    Tensor* input_x = t_import.float_import("/fs/idx_data/input_x.idx");
-    get_test_quant_reshape_3_ctx(ctx, input_x);
+    get_test_quant_reshape_7_ctx(ctx);
 
-    S_TENSOR sptr_y = ctx.get("y:0");
+    S_TENSOR out_x = ctx.get("output_x:0");
     ctx.eval();
     timer_stop();
 
-    Tensor* ref_y = t_import.float_import("/fs/idx_data/output_y.idx");
-    float err = meanPercentErr<float>(ref_y, sptr_y.get());
+    Tensor* ref_x = t_import.float_import("/fs/idx_data/output_x.idx");
+    float err = meanPercentErr<float>(ref_x, out_x.get());
     printf("err: %f (< 0.03)\n", err);
     passed(err < 0.03);
 }

@@ -45,7 +45,7 @@ void ReshapeTest6::runAll(void) {
     timer_stop();
 
     Tensor* ref_x = t_import.float_import("/fs/idx_data/output_x.idx");
-    float err = meanAbsErr<float>(ref_x, out_x.get());
-    printf("err: %f (< 0.0001)\n", err);
-    passed(err < 0.0001);
+    float err = meanPercentErr<float>(ref_x, out_x.get());
+    printf("err: %f (< 0.03)\n", err);
+    passed(err < 0.03);
 }
