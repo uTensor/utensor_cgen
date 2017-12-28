@@ -1,7 +1,4 @@
 from .snippets import *  # pylint: disable=W0401
-from .snippets import register_template
-from ._snippets_base import SnippetContainer, Snippet
-
 
 class _Operator():
   # Base Class
