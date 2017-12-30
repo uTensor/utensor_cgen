@@ -15,32 +15,31 @@ with open(os.path.join(root_dir, "requirements.txt")) as rf:
 version = __version__
 
 setup(
-  name='utensor_cgen',
-  version=version,
-  description="C code generation program for uTensor",
-  long_description=long_desc,
-  url="https://github.com/dboyliao/utensor_cgen",
-  author="Dboy Liao",
-  author_email="qmalliao@gmail.com",
-  license=license,
-  packages=find_packages(),
-  include_package_data=True,
-  package_data={"utensor_cgen": ["templates/*"]},
-  entry_points={
-      "console_scripts": [
-          "utensor-cli=utensor_cgen.__main__:main"
-      ]
-  },
-  classifiers=[
-    "Development Status :: 4 - Beta",
-    "Environment :: MacOS X",
-    "Intended Audience :: Developers",
-    "License :: OSI Approved :: Apache Software License",
-    "Natural Language :: English",
-    "Operating System :: Unix",
-    "Programming Language :: Python :: 3 :: Only",
-    "Topic :: Scientific/Engineering",
-    "Topic :: Scientific/Engineering :: Artificial Intelligence",
-    "Topic :: Utilities"
-  ]
+    name='utensor_cgen',
+    version=version,
+    description="C code generation program for uTensor",
+    long_description=long_desc,
+    url="https://github.com/dboyliao/utensor_cgen",
+    author="Dboy Liao",
+    author_email="qmalliao@gmail.com",
+    license=license,
+    packages=find_packages(),
+    include_package_data=True,
+    package_data={"utensor_cgen": ["templates/*"]},
+    entry_points={
+        "console_scripts": [
+            "utensor-cli=utensor_cgen.__main__:main"
+        ]},
+    classifiers=[
+        "Development Status :: 4 - Beta",
+        "Environment :: MacOS X",
+        "Intended Audience :: Developers",
+        "License :: OSI Approved :: Apache Software License",
+        "Natural Language :: English",
+        "Operating System :: Unix",
+        "Programming Language :: Python :: 3 :: Only",
+        "Topic :: Scientific/Engineering",
+        "Topic :: Scientific/Engineering :: Artificial Intelligence",
+        "Topic :: Utilities"
+    ]
 )

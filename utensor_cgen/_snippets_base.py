@@ -1,6 +1,5 @@
 # -*- coding:utf8 -*-
 import os
-import re
 from copy import deepcopy
 from jinja2 import Template
 from .snippets_cfg import SNIPPET_CONFIG, CONTAINER_CONFIG

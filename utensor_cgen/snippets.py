@@ -14,7 +14,6 @@ __all__ = ["CreateTensorIdxSnippet", "CreateTensorNewSnippet",
 
 
 class CreateTensorIdxSnippet(Snippet):
-
   def __init__(self, data_dir, tensor_name,
                init_count=0,
                idx_fname=None,
@@ -38,7 +37,6 @@ class CreateTensorIdxSnippet(Snippet):
 
 
 class CreateTensorNewSnippet(Snippet):
-
   def __init__(self, tensor_name,
                tensor_shape=None,
                init_count=0,
