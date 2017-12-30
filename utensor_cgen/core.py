@@ -10,6 +10,7 @@ from .snippets import register_template
 from .composer import Composer
 from ._snippets_base import SnippetContainer, Snippet
 from ._types import TF_TYPES_MAP
+from .operators import OperatorFactory
 
 __all__ = ["CodeGenerator"]
 
@@ -40,6 +41,8 @@ class CodeGenerator(object):
     container.template_vars["placeholders"] = []
     container.add_header('"{}"'.format(header_fname))
 
+    opFactory = OperatorFactory()
+
     print("Parsing {}".format(self.pb_file))
     graph_info, layers = parse_pb(self.pb_file)
 
@@ -63,79 +66,10 @@ class CodeGenerator(object):
             idx_path = os.path.join(self.idx_dir, idx_fname)
             value = op_info["output_content"][out_tname]
             self._save_data(idx_path, value, out_dtype)
-        elif op_type == "Add":
-          inputs = [tname for tname, _, _ in op_info["input_tensor"]]
-          output, _, _ = op_info["output_tensor"][0]
-          tf_dtype = op_info["input_tensor"][0][1]
-          snippet = AddOpSnippet(inputs, output, tf_dtype=tf_dtype)
-          container.add_snippet(snippet)
-        elif op_type == "ArgMax":
-          inputs = [tname for tname, _, _ in op_info["input_tensor"]]
-          output, out_dtype, _ = op_info["output_tensor"][0]
-          _, in_dtype, _ = op_info["input_tensor"][0]
-          snippet = ArgMaxOpSnippet(inputs, output, in_dtype, out_dtype)
-          container.add_snippet(snippet)
-        elif op_type == "Dequantize":
-          inputs = [tname for tname, _, _ in op_info["input_tensor"]]
-          output, out_dtype, _ = op_info["output_tensor"][0]
-          snippet = DequantizeOpSnippet(inputs, output, out_dtype)
-          container.add_snippet(snippet)
-        elif op_type == "Max":
-          inputs = [tname for tname, _, _ in op_info["input_tensor"]]
-          output, out_dtype, out_shape = op_info["output_tensor"][0]
-          if len(out_shape) == 0:  # dirty hack for uTensor
-            out_shape = [1]
-          snippet = MaxOpSnippet(inputs, output, out_dtype, out_shape)
-          container.add_snippet(snippet)
-        elif op_type == "Min":
-          inputs = [tname for tname, _, _ in op_info["input_tensor"]]
-          output, out_dtype, out_shape = op_info["output_tensor"][0]
-          if len(out_shape) == 0:  # dirty hack for uTensor
-            out_shape = [1]
-          snippet = MinOpSnippet(inputs, output, out_dtype, out_shape)
-          container.add_snippet(snippet)
-        elif op_type == "QuantizeV2":
-          inputs = [tname for tname, _, _ in op_info["input_tensor"]]
-          outputs = [tname for tname, _, _ in op_info["output_tensor"]]
-          out_dtype = op_info["output_tensor"][0][1]
-          snippet = QuantizeV2OpSnippet(inputs, outputs, out_dtype)
-          container.add_snippet(snippet)
-        elif op_type == "QuantizedMatMul":
-          inputs = [tname for tname, _, _ in op_info["input_tensor"]]
-          outputs = [tname for tname, _, _ in op_info["output_tensor"]]
-          x_dtype = op_info["input_tensor"][0][1]
-          w_dtype = op_info["input_tensor"][1][1]
-          out_dtype = op_info["output_tensor"][0][1]
-          snippet = QuantizedMatMulOpSnippet(inputs, outputs, x_dtype, w_dtype, out_dtype)
-          container.add_snippet(snippet)
-        elif op_type == "QuantizedRelu":
-          inputs = [tname for tname, _, _ in op_info["input_tensor"]]
-          outputs = [tname for tname, _, _ in op_info["output_tensor"]]
-          _, in_dtype, _ = op_info["input_tensor"][0]
-          _, qout_dtype, _ = op_info["output_tensor"][0]
-          out_dtypes = [t[1] for t in op_info["output_tensor"][1:]]
-          snippet = QuantizedReluOpSnippet(inputs, outputs, in_dtype, out_dtypes, qout_dtype)
-          container.add_snippet(snippet)
-        elif op_type == "RequantizationRange":
-          inputs = [tname for tname, _, _ in op_info["input_tensor"]]
-          outputs = [tname for tname, _, _ in op_info["output_tensor"]]
-          _, out_dtype, _ = op_info["output_tensor"][0]
-          snippet = RequantizationRangeOpSnippet(inputs, outputs, out_dtype)
-          container.add_snippet(snippet)
-        elif op_type == "Requantize":
-          inputs = [tname for tname, _, _ in op_info["input_tensor"]]
-          outputs = [tname for tname, _, _ in op_info["output_tensor"]]
-          _, qout_dtype, _ = op_info["output_tensor"][0]
-          _, range_dtype, _ = op_info["output_tensor"][1]
-          snippet = RequantizeOpSnippet(inputs, outputs, qout_dtype, range_dtype)
-          container.add_snippet(snippet)
-        elif op_type == "Reshape":
-          inputs = [tname for tname, _, _ in op_info["input_tensor"]]
-          output, _, _ = op_info["output_tensor"][0]
-          snippet = ReshapeOpSnippet(inputs, output)
-          container.add_snippet(snippet)
         else:
-          raise ValueError("unsupported op type in uTensor: {}, try quantizing your graph".format(op_type))
+          snippet = opFactory.createOperatorSnippet(op_info)  
+          container.add_snippet(snippet)
+
       if self.debug_cmt:
         comments = ["<<< Graph Layer {}".format(layer_id), 
                     ">>> Graph Layer {}".format(layer_id+1)]
