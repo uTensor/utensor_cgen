@@ -1,3 +1,4 @@
+# -*- coding:utf8 -*-
 from .snippets import *  # pylint: disable=W0401
 
 
@@ -132,7 +133,7 @@ class OperatorFactory():
   def createOperatorSnippet(self, op_info):
     op_type = op_info["op_type"]
     if op_type not in self._operators:
-      err_msg = "unsupported op type in uTensor: {}, try quantizing your graph".format(op_type)
+      err_msg = "unsupported op type in uTensor: {}".format(op_type)
       raise ValueError(err_msg)
 
     op = self._operators[op_type](op_info)  # Create desired object

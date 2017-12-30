@@ -1,6 +1,5 @@
 # -*- coding:utf8 -*-
 import os
-import logging
 import numpy as np
 import idx2numpy as idx2np
 import tensorflow as tf
@@ -16,7 +15,7 @@ __all__ = ["CodeGenerator"]
 
 
 class CodeGenerator(object):
-  def __init__(self, pb_file: str, idx_dir: str, embed_data_dir: str, debug_cmt=False):
+  def __init__(self, pb_file, idx_dir, embed_data_dir, debug_cmt=False):
     self.pb_file = pb_file
     if not os.path.exists(idx_dir):
       os.makedirs(idx_dir)
@@ -24,7 +23,7 @@ class CodeGenerator(object):
     self.embed_data_dir = embed_data_dir.rstrip("/")
     self.debug_cmt = debug_cmt
 
-  def generate(self, src_fname: str):
+  def generate(self, src_fname):
     """Generate source and header files
     """
     fname, _ = os.path.splitext(src_fname)
@@ -84,7 +83,7 @@ class CodeGenerator(object):
     with open(src_fname, "w") as wf:
       wf.write(composer.compose())
 
-  def _prepare_tensor_name(self, tensor_name: str) -> str:
+  def _prepare_tensor_name(self, tensor_name):
     prepared = tensor_name.replace(":", "_").replace("/", "_")
     return prepared
 
