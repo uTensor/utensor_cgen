@@ -11,6 +11,7 @@ from .composer import Composer
 from ._snippets_base import SnippetContainer, Snippet
 from ._types import TF_TYPES_MAP
 from .operators import OperatorFactory
+from .optimizer import *
 
 __all__ = ["CodeGenerator"]
 
@@ -46,6 +47,12 @@ class CodeGenerator(object):
     print("Parsing {}".format(self.pb_file))
     graph_info, layers = parse_pb(self.pb_file)
 
+    ref_table = get_refc_table(graph_info)
+    # for i in ref_table:
+    #   print(i, " --> ", ref_table[i])
+    # exit()
+    
+
     # TODO better snippet construction abstraction
     for layer_id, layer in enumerate(layers, 1):
       for op_name in layer:
@@ -61,12 +68,13 @@ class CodeGenerator(object):
             idx_fname = "{}.idx".format(pre_tname)
             snippet = CreateTensorIdxSnippet(self.embed_data_dir, out_tname,
                                              idx_fname=idx_fname,
-                                             tf_dtype=out_dtype)
+                                             tf_dtype=out_dtype, init_count=ref_table[op_name])
             container.add_snippet(snippet)
             idx_path = os.path.join(self.idx_dir, idx_fname)
             value = op_info["output_content"][out_tname]
             self._save_data(idx_path, value, out_dtype)
         else:
+          op_info["out_ref_count"] = [ref_table[tname] for tname, _, _ in op_info["output_tensor"]]
           snippet = opFactory.createOperatorSnippet(op_info)  
           container.add_snippet(snippet)
 
