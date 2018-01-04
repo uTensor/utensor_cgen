@@ -66,7 +66,7 @@ def _prepare_inputs(inputs):
   return input_tnames
 
 
-def _permute_args(args: list, perm: list=None):
+def _permute_args(args, perm=None):
   if perm is None:
     perm = [i for i in range(len(args))]
   return [arg for arg in np.array(args)[perm]]

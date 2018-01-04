@@ -4,7 +4,7 @@ import numpy as np
 from tensorflow import Graph, GraphDef, Session, import_graph_def
 
 
-def _parse_tensor_name(tname: str) -> (str, int):
+def _parse_tensor_name(tname):
   """Adapt from TensorFlow source code
   """
   components = tname.split(":")
@@ -20,11 +20,11 @@ def _parse_tensor_name(tname: str) -> (str, int):
     raise ValueError("invalid tensor name: {}".format(tname))
 
 
-def _op_name(input_name: str) -> str:
+def _op_name(input_name):
   return _parse_tensor_name(input_name)[0]
 
 
-def _graph_def_to_map(graph_def: GraphDef) -> dict:
+def _graph_def_to_map(graph_def):
   """Return a mapping from operation name to a set
   of input operation names
   """
@@ -33,7 +33,7 @@ def _graph_def_to_map(graph_def: GraphDef) -> dict:
   return graph_d
 
 
-def _map_to_adjacent(graph_d: dict) -> (np.ndarray, dict):
+def _map_to_adjacent(graph_d):
   N = len(graph_d.keys())
   idx_map = dict((name, i) for i, name in enumerate(graph_d.keys()))
   inv_idx_map = dict((idx, name) for name, idx in idx_map.items())
@@ -47,7 +47,7 @@ def _map_to_adjacent(graph_d: dict) -> (np.ndarray, dict):
   return adj_mat, inv_idx_map
 
 
-def _graph_def_to_adjacent(graph_def: GraphDef) -> (np.ndarray, dict):
+def _graph_def_to_adjacent(graph_def):
   graph_d = _graph_def_to_map(graph_def)
   return _map_to_adjacent(graph_d)
 
@@ -69,7 +69,7 @@ def _parse_shape(t_shape):
   return shape
 
 
-def _parse_graph_nodes(graph_def: GraphDef) -> defaultdict:
+def _parse_graph_nodes(graph_def):
   """Parse GraphDef
   Fetch input tensors and output tensors name for reconstructing
   graph in uTensor Context object
@@ -107,7 +107,7 @@ def _parse_graph_nodes(graph_def: GraphDef) -> defaultdict:
   return graph_info
 
 
-def _parse_graph_layers(graph_def: GraphDef) -> list:
+def _parse_graph_layers(graph_def):
   """Devide graph into layers
 
   Argument
@@ -136,7 +136,7 @@ def _parse_graph_layers(graph_def: GraphDef) -> list:
   layers = []
   visited = set([])
   while (state_v > 0).sum() != 0:
-    state_v = adj_mat @ state_v
+    state_v = adj_mat.dot(state_v)
     node_idx = set(np.where(state_v == 0)[0])
     layer = [inv_idx_map[i] for i in node_idx - visited]
     layers.append(layer)
@@ -144,12 +144,12 @@ def _parse_graph_layers(graph_def: GraphDef) -> list:
   return layers
 
 
-def _is_freeze_graph(graph_def: GraphDef) -> bool:
+def _is_freeze_graph(graph_def):
   is_frozen = all(node.op not in ['VariableV2'] for node in graph_def.node)
   return is_frozen
 
 
-def _parse_graph_def(graph_def: GraphDef) -> (dict, list):
+def _parse_graph_def(graph_def):
   if not _is_freeze_graph(graph_def):
     raise ValueError("The graph is not frozen, freeze the graph first")
   layers = _parse_graph_layers(graph_def)

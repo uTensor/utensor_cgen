@@ -11,7 +11,7 @@ from ._pbparser_impl import _parse_graph_def
 __all__ = ["parse_pb"]
 
 
-def parse_pb(file_or_path, output_nodes=None) -> (dict, list):
+def parse_pb(file_or_path, output_nodes=None):
   """
   Arguments
   =========
@@ -20,9 +20,9 @@ def parse_pb(file_or_path, output_nodes=None) -> (dict, list):
 
   Returns
   =======
-  - graph_info <defaultdict>: a dict with information neccessary for 
+  - graph_info <defaultdict>: a dict with information neccessary for
     building context in uTensor
-  - layers <list>: list of layer which is a list of operation names 
+  - layers <list>: list of layer which is a list of operation names
     in the graph
 
   Note
