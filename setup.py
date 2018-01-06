@@ -9,8 +9,6 @@ with open(os.path.join(root_dir, "README.md")) as rf:
   long_desc = rf.read()
 with open(os.path.join(root_dir, "LICENSE")) as rf:
   license = rf.read()
-with open(os.path.join(root_dir, "requirements.txt")) as rf:
-  requirements = [line.strip() for line in rf.readlines()]
 
 version = __version__
 
@@ -30,7 +28,13 @@ setup(
         "console_scripts": [
             "utensor-cli=utensor_cgen.__main__:main"
         ]},
-    install_requires=requirements,
+    install_requires=[
+        'Jinja2',
+        'tensorflow',
+        'numpy',
+        'idx2numpy'
+    ],
+    zip_safe=False,
     classifiers=[
         "Development Status :: 4 - Beta",
         "Environment :: MacOS X",
