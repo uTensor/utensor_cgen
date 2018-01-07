@@ -1,5 +1,5 @@
 # -*- coding:utf8 -*-
-from collections import defaultdict
+from collections import defaultdict, namedtuple
 import numpy as np
 from tensorflow import Graph, GraphDef, Session, import_graph_def
 
@@ -89,26 +89,30 @@ def _parse_graph_nodes(graph_def):
   - thought the output tensor names is irrelevent for TensorFlow, but it
     is neccessary for uTensor
   """
+  OperationInfo = namedtuple('OperationInfo',
+                             field_names=['input_tensor', 'output_tensor',
+                                          'op_type', 'output_content'])
   graph = Graph()
   with graph.as_default():  # pylint: disable=E1129
     import_graph_def(graph_def, name="")
-  graph_info = defaultdict(lambda: {"output_content": {}})
+  graph_info = {}
   with Session(graph=graph):
     for node in graph_def.node:
       op = graph.get_operation_by_name(node.name)
-      op_info = graph_info[node.name]
-      op_info["input_tensor"] = [(t.name, t.dtype, _parse_shape(t.shape)) for t in op.inputs]
-      op_info["output_tensor"] = [(t.name, t.dtype, _parse_shape(t.shape)) for t in op.outputs]
-      op_info["op_type"] = node.op
+      input_tensor = [(t.name, t.dtype, _parse_shape(t.shape)) for t in op.inputs]
+      output_tensor = [(t.name, t.dtype, _parse_shape(t.shape)) for t in op.outputs]
+      op_type = node.op
+      output_content = {}
       if node.op in ["Const"]:
-        for out_tensor, _, _ in op_info["output_tensor"]:
-          tensor = graph.get_tensor_by_name(out_tensor)
-          op_info["output_content"][tensor.name] = tensor.eval()
+        for tensor_name, _, _ in output_tensor:
+          tensor = graph.get_tensor_by_name(tensor_name)
+          output_content[tensor_name] = tensor.eval()
+      graph_info[node.name] = OperationInfo(input_tensor, output_tensor, op_type, output_content)
   return graph_info
 
 
 def _parse_graph_layers(graph_def):
-  """Devide graph into layers
+  """Devide graph into layers (Fast way to find output nodes)
 
   Argument
   ========
@@ -147,6 +151,32 @@ def _parse_graph_layers(graph_def):
 def _is_freeze_graph(graph_def):
   is_frozen = all(node.op not in ['VariableV2'] for node in graph_def.node)
   return is_frozen
+
+
+def _bfs(graph_def, output_nodes=None):
+  if output_nodes is None:
+    output_nodes = _parse_graph_layers(graph_def)[-1]
+  graph = Graph()
+  with graph.as_default():
+    import_graph_def(graph_def, name='')
+
+  queue = output_nodes
+  visited = set([])
+  nodes = []
+
+  while queue:
+    node_name = queue.pop(0)
+    op = graph.get_operation_by_name(node_name)
+    input_ops = set([])
+    for tensor in op.inputs:
+      if tensor not in visited:
+        input_ops.add(tensor.op.name)
+    queue.extend(input_ops)
+
+    if node_name not in visited:
+      nodes.append(node_name)
+      visited.add(node_name)
+  return nodes
 
 
 def _parse_graph_def(graph_def):

@@ -49,13 +49,13 @@ class CodeGenerator(object):
     for layer_id, layer in enumerate(layers, 1):
       for op_name in layer:
         op_info = graph_info[op_name]
-        op_type = op_info["op_type"]
+        op_type = op_info.op_type
         if op_type == "Placeholder":
-          out_tname, _, _ = op_info["output_tensor"][0]
+          out_tname, _, _ = op_info.output_tensor[0]
           container.template_vars["placeholders"].append(out_tname)
           header_snippet.template_vars["placeholders"].append(out_tname)
         elif op_type == 'Const':
-          for out_tname, out_dtype, _ in op_info["output_tensor"]:
+          for out_tname, out_dtype, _ in op_info.output_tensor:
             pre_tname = self._prepare_tensor_name(out_tname)
             idx_fname = "{}.idx".format(pre_tname)
             snippet = CreateTensorIdxSnippet(self.embed_data_dir, out_tname,
@@ -63,7 +63,7 @@ class CodeGenerator(object):
                                              tf_dtype=out_dtype)
             container.add_snippet(snippet)
             idx_path = os.path.join(self.idx_dir, idx_fname)
-            value = op_info["output_content"][out_tname]
+            value = op_info.output_content[out_tname]
             self._save_data(idx_path, value, out_dtype)
         else:
           snippet = opFactory.createOperatorSnippet(op_info)  
