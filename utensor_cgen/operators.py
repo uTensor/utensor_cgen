@@ -46,9 +46,6 @@ class _MaxOperator(_Operator):
     _Operator.__init__(self)
     inputs = [tname for tname, _, _ in op_info["input_tensor"]]
     output, out_dtype, out_shape = op_info["output_tensor"][0]
-    #fixme
-    if len(out_shape) == 0:  # dirty hack for uTensor
-      out_shape = [1]
     init_count = op_info["out_ref_count"][0]
     self._snippet = MaxOpSnippet(inputs, output, init_count, out_dtype, out_shape)
 
@@ -58,8 +55,6 @@ class _MinOperator(_Operator):
     _Operator.__init__(self)
     inputs = [tname for tname, _, _ in op_info["input_tensor"]]
     output, out_dtype, out_shape = op_info["output_tensor"][0]
-    if len(out_shape) == 0:  # dirty hack for uTensor
-      out_shape = [1]
     init_count = op_info["out_ref_count"][0]
     self._snippet = MinOpSnippet(inputs, output, init_count, out_dtype, out_shape)
 

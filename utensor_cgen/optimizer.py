@@ -13,3 +13,5 @@ def get_refc_table(graph_info) -> Counter:
       #add to ref table
 
   return refc_table
+
+#def get_tensor_size(tensor_name, )
