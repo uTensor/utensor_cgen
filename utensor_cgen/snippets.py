@@ -1,6 +1,7 @@
 # -*- coding:utf8 -*-
-import tensorflow as tf
 import numpy as np
+import tensorflow as tf
+
 from ._snippets_base import Snippet, register_template  # pylint: disable=W0611
 from ._types import TF_TYPES_MAP
 

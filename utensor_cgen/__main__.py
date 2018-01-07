@@ -2,6 +2,7 @@
 # pylint: disable=C0301
 import argparse
 import os
+
 from .core import CodeGenerator
 
 

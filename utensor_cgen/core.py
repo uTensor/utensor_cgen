@@ -1,15 +1,16 @@
 # -*- coding:utf8 -*-
 import os
+
 import numpy as np
-import idx2numpy as idx2np
 import tensorflow as tf
+
+from ._snippets_base import Snippet, SnippetContainer
+from ._types import TF_TYPES_MAP
+from .composer import Composer
+from .operators import OperatorFactory
 from .pbparser import parse_pb
 from .snippets import *  # pylint: disable=W0401
 from .snippets import register_template
-from .composer import Composer
-from ._snippets_base import SnippetContainer, Snippet
-from ._types import TF_TYPES_MAP
-from .operators import OperatorFactory
 
 __all__ = ["CodeGenerator"]
 

@@ -1,5 +1,6 @@
 # -*- coding:utf8 -*-
 from collections import defaultdict, namedtuple
+
 import numpy as np
 from tensorflow import Graph, GraphDef, Session, import_graph_def
 

@@ -1,8 +1,10 @@
 # -*- coding:utf8 -*-
 import os
 from copy import deepcopy
+
 from jinja2 import Template
-from .snippets_cfg import SNIPPET_CONFIG, CONTAINER_CONFIG
+
+from .snippets_cfg import CONTAINER_CONFIG, SNIPPET_CONFIG
 
 __all__ = ["Snippet", "SnippetContainer"]
 

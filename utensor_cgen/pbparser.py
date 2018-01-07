@@ -4,8 +4,10 @@ Parser for Protobuf file of Tensorflow Graph
 """
 import io
 import sys
+
 import tensorflow as tf
 from tensorflow.python.framework import graph_util  # pylint: disable=E0611
+
 from ._pbparser_impl import _parse_graph_def
 
 __all__ = ["parse_pb"]
