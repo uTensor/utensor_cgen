@@ -3,10 +3,9 @@
 import argparse
 import os
 
-from .core import CodeGenerator
-
-
 def _main(pb_file, src_fname, idx_dir, embed_data_dir, debug_cmt):
+  from .core import CodeGenerator
+
   if embed_data_dir is None:
     embed_data_dir = os.path.join("/fs", idx_dir)
   generator = CodeGenerator(pb_file, idx_dir, embed_data_dir, debug_cmt)

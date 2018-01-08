@@ -16,3 +16,4 @@ numpy = "*"
 
 [dev-packages]
 
+pylint = "*"

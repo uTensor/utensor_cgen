@@ -1,8 +1,8 @@
 # -*- coding:utf8 -*-
-from collections import defaultdict, namedtuple
+from collections import namedtuple, defaultdict
 
 import numpy as np
-from tensorflow import Graph, GraphDef, Session, import_graph_def
+from tensorflow import Graph, Session, import_graph_def
 
 
 def _parse_tensor_name(tname):
@@ -70,7 +70,7 @@ def _parse_shape(t_shape):
   return shape
 
 
-def _parse_graph_nodes(graph_def):
+def _parse_graph_info(graph_def):
   """Parse GraphDef
   Fetch input tensors and output tensors name for reconstructing
   graph in uTensor Context object
@@ -154,7 +154,7 @@ def _is_freeze_graph(graph_def):
   return is_frozen
 
 
-def _bfs(graph_def, output_nodes=None):
+def _parse_graph_nodes_bfs(graph_def, output_nodes=None):
   if output_nodes is None:
     output_nodes = _parse_graph_layers(graph_def)[-1]
   graph = Graph()
@@ -163,7 +163,7 @@ def _bfs(graph_def, output_nodes=None):
 
   queue = output_nodes
   visited = set([])
-  nodes = []
+  ops_bfs = []
 
   while queue:
     node_name = queue.pop(0)
@@ -175,14 +175,23 @@ def _bfs(graph_def, output_nodes=None):
     queue.extend(input_ops)
 
     if node_name not in visited:
-      nodes.append(node_name)
+      ops_bfs.append(node_name)
       visited.add(node_name)
-  return nodes
+  return ops_bfs
 
 
-def _parse_graph_def(graph_def):
+def _parse_graph_def(graph_def, output_nodes=None):
   if not _is_freeze_graph(graph_def):
     raise ValueError("The graph is not frozen, freeze the graph first")
-  layers = _parse_graph_layers(graph_def)
-  graph_info = _parse_graph_nodes(graph_def)
-  return graph_info, layers
+  # layers = _parse_graph_layers(graph_def)
+  ops_bfs = _parse_graph_nodes_bfs(graph_def, output_nodes=output_nodes)
+  graph_info = _parse_graph_info(graph_def)
+  return graph_info, ops_bfs
+
+
+def _tensor_ref_count(graph_info):
+  tensor_ref_count = defaultdict(lambda: 0)
+  for op_info in graph_info.values:
+    for tname in op_info.input_tensor:
+      tensor_ref_count[tname] += 1
+  return dict(tensor_ref_count)

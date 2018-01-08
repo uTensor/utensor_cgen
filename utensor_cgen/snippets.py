@@ -60,6 +60,10 @@ class CreateTensorNewSnippet(Snippet):
     self.template_vars["sptr_name"] = sptr_name
     self.template_vars["create_sptr"] = create_sptr
 
+  def _to_shape_str(self, shape):
+    shape_str = ",".join([str(dim) for dim in shape])
+    return "{" + shape_str + "}"
+
 
 # TODO arguments premutation
 def _prepare_inputs(inputs):

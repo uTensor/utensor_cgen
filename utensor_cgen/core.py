@@ -3,13 +3,13 @@ import os
 
 import numpy as np
 import tensorflow as tf
+import idx2numpy as idx2np
 
 from ._snippets_base import Snippet, SnippetContainer
-from ._types import TF_TYPES_MAP
 from .composer import Composer
 from .operators import OperatorFactory
 from .pbparser import parse_pb
-from .snippets import *  # pylint: disable=W0401
+from .snippets import CreateTensorIdxSnippet, CommentSnippet
 from .snippets import register_template
 
 __all__ = ["CodeGenerator"]
@@ -44,35 +44,34 @@ class CodeGenerator(object):
     opFactory = OperatorFactory()
 
     print("Parsing {}".format(self.pb_file))
-    graph_info, layers = parse_pb(self.pb_file)
+    graph_info, ops_bfs = parse_pb(self.pb_file)
 
     # TODO better snippet construction abstraction
-    for layer_id, layer in enumerate(layers, 1):
-      for op_name in layer:
-        op_info = graph_info[op_name]
-        op_type = op_info.op_type
-        if op_type == "Placeholder":
-          out_tname, _, _ = op_info.output_tensor[0]
-          container.template_vars["placeholders"].append(out_tname)
-          header_snippet.template_vars["placeholders"].append(out_tname)
-        elif op_type == 'Const':
-          for out_tname, out_dtype, _ in op_info.output_tensor:
-            pre_tname = self._prepare_tensor_name(out_tname)
-            idx_fname = "{}.idx".format(pre_tname)
-            snippet = CreateTensorIdxSnippet(self.embed_data_dir, out_tname,
-                                             idx_fname=idx_fname,
-                                             tf_dtype=out_dtype)
-            container.add_snippet(snippet)
-            idx_path = os.path.join(self.idx_dir, idx_fname)
-            value = op_info.output_content[out_tname]
-            self._save_data(idx_path, value, out_dtype)
-        else:
-          snippet = opFactory.createOperatorSnippet(op_info)  
+    for op_id, op_name in enumerate(ops_bfs[::-1], 1):
+      op_info = graph_info[op_name]
+      op_type = op_info.op_type
+      if op_type == "Placeholder":
+        out_tname, _, _ = op_info.output_tensor[0]
+        container.template_vars["placeholders"].append(out_tname)
+        header_snippet.template_vars["placeholders"].append(out_tname)
+      elif op_type == 'Const':
+        for out_tname, out_dtype, _ in op_info.output_tensor:
+          pre_tname = self._prepare_tensor_name(out_tname)
+          idx_fname = "{}.idx".format(pre_tname)
+          snippet = CreateTensorIdxSnippet(self.embed_data_dir, out_tname,
+                                           idx_fname=idx_fname,
+                                           tf_dtype=out_dtype)
           container.add_snippet(snippet)
+          idx_path = os.path.join(self.idx_dir, idx_fname)
+          value = op_info.output_content[out_tname]
+          self._save_data(idx_path, value, out_dtype)
+      else:
+        snippet = opFactory.createOperatorSnippet(op_info)
+        container.add_snippet(snippet)
 
       if self.debug_cmt:
-        comments = ["<<< Graph Layer {}".format(layer_id), 
-                    ">>> Graph Layer {}".format(layer_id+1)]
+        comments = ["<<< Operation id {}: {}".format(op_id, op_name),
+                    ">>> Operation id {}: {}".format(op_id+1, op_name)]
         cmt_snippet = CommentSnippet(comments)
         container.add_snippet(cmt_snippet)
     composer.add_snippet(container)
