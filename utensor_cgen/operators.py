@@ -1,5 +1,5 @@
 # -*- coding:utf8 -*-
-from .snippets import *  # pylint: disable=W0401
+from .snippets import *  # pylint: disable=W0401,W0614
 
 
 class _Operator(object):

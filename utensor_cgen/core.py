@@ -10,7 +10,6 @@ from .composer import Composer
 from .operators import OperatorFactory
 from .pbparser import parse_pb
 from .snippets import CreateTensorIdxSnippet, CommentSnippet
-from .snippets import register_template
 
 __all__ = ["CodeGenerator"]
 
@@ -102,6 +101,3 @@ class CodeGenerator(object):
     with open(path, "wb") as fid:
       idx2np.convert_to_file(fid, value)
     print("saving {}".format(path))
-
-  def register_template(self, template_name, headers=None):
-    register_template(template_name, headers)
