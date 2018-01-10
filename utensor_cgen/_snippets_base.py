@@ -56,7 +56,6 @@ class SnippetContainer(SnippetBase):
     self._snippets = snippets
     for snp in self._snippets:
       self._headers.update(snp.headers)
-    self.template_vars["graph_name"] = "graph"
 
   def add_snippet(self, snippet):
     """Add snippet into containers

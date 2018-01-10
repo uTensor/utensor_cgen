@@ -1,6 +1,5 @@
 # -*- coding:utf8 -*-
 SNIPPET_CONFIG = {
-  "snippets/hello_world.cpp": set(["<stdio.h>"]),
   "snippets/create_tensor_idx.cpp": set(['"tensorIdxImporter.hpp"', '"context.hpp"', '"tensor.hpp"']),
   "snippets/create_tensor_new.cpp": set(['"context.hpp"', '"tensor.hpp"']),
   "snippets/add_op.cpp": set(['"MathOps.hpp"']),
@@ -15,7 +14,6 @@ SNIPPET_CONFIG = {
   "snippets/requant_op.cpp": set(['"MathOps.hpp"']),
   "snippets/requant_range_op.cpp": set(['"MathOps.hpp"']),
   "snippets/comments.cpp": set([]),
-  "snippets/headers.hpp": set([]),
   "snippets/get_ctx.hpp": set(['"context.hpp"', '"tensor.hpp"']),
   "containers/main.cpp": set([]),
   "containers/get_ctx.cpp": set([])

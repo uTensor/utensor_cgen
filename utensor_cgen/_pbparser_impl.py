@@ -183,7 +183,6 @@ def _parse_graph_nodes_bfs(graph_def, output_nodes=None):
 def _parse_graph_def(graph_def, output_nodes=None):
   if not _is_freeze_graph(graph_def):
     raise ValueError("The graph is not frozen, freeze the graph first")
-  # layers = _parse_graph_layers(graph_def)
   ops_bfs = _parse_graph_nodes_bfs(graph_def, output_nodes=output_nodes)
   graph_info = _parse_graph_info(graph_def)
   return graph_info, ops_bfs
@@ -191,7 +190,7 @@ def _parse_graph_def(graph_def, output_nodes=None):
 
 def _tensor_ref_count(graph_info):
   tensor_ref_count = defaultdict(lambda: 0)
-  for op_info in graph_info.values:
-    for tname in op_info.input_tensor:
+  for op_info in graph_info.values():
+    for tname, _, _ in op_info.input_tensor:
       tensor_ref_count[tname] += 1
   return dict(tensor_ref_count)

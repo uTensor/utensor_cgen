@@ -27,10 +27,7 @@ You can go to this [repo](https://github.com/pypa/pipenv) for detail information
 
 # Example
 
-1. `example.py`:
-    1. run `python3 example.py` and it should generate a `main.cpp` file.
-    2. compile it and run, you should see familier hello world message
-2. `simple_graph.pb`:
+- `simple_graph.pb`:
     1. install `utensor_cgen`
     2. run `utensor-cli simple_graph.pb`
     3. it will save constant tensor data in `idx_data/` and generate two files, `model.hpp` and `model.cpp`.

@@ -1,7 +1,14 @@
-{   {%if out_shape %}
-    ctx.add(new RamTensor<{{out_dtype}}>({ {%for shape in out_shape[:-1]%}{{shape}}, {%endfor%}{{out_shape[-1]}} }), "{{output}}");
+{   
+    RamTensor* out_tensor;
+    {%if out_shape %}
+    out_tensor = new RamTensor<{{out_dtype}}>({ {%for shape in out_shape[:-1]%}{{shape}}, {%endfor%}{{out_shape[-1]}} });
     {%else%}
-    ctx.add(new RamTensor<{{out_dtype}}>(), "{{output}}");
+    out_tensor = new RamTensor<{{out_dtype}}>();
+    {%endif%}
+    {%if ref_count %}
+    ctx.add(out_tensor, "{{output}}", {{ref_count}});
+    {%else%}
+    ctx.add(out_tensor, "{{output}}");
     {%endif%}
     ctx.push(new MaxOp(), 
              { {% for tname in inputs[:-1]%}"{{tname}}", {%endfor%}"{{inputs[-1]}}" },

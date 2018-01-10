@@ -90,4 +90,5 @@ def parse_pb(file_or_path, output_nodes=None):
     graph_def = graph_util.extract_sub_graph(graph_def, output_nodes)
 
   graph_info, ops_bfs = _parse_graph_def(graph_def)
-  return graph_info, ops_bfs
+  tensor_ref_count = _tensor_ref_count(graph_info)
+  return graph_info, ops_bfs, tensor_ref_count

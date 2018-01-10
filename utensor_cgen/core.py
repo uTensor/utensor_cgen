@@ -5,11 +5,11 @@ import numpy as np
 import tensorflow as tf
 import idx2numpy as idx2np
 
-from ._snippets_base import Snippet, SnippetContainer
 from .composer import Composer
 from .operators import OperatorFactory
 from .pbparser import parse_pb
-from .snippets import CreateTensorIdxSnippet, CommentSnippet
+from .snippets import (CreateTensorIdxSnippet, CommentSnippet,
+                       ContextHeaderSnippet, ContextSnippetsContainer)
 
 __all__ = ["CodeGenerator"]
 
@@ -28,22 +28,16 @@ class CodeGenerator(object):
     """
     fname, _ = os.path.splitext(src_fname)
     graph_name, _ = os.path.splitext(os.path.basename(self.pb_file))
-    header_fname = '{}.hpp'.format(fname)
-    header_snippet = Snippet("get_ctx.hpp")
-    header_snippet.template_vars["header_guard"] = "_{}_H".format(fname.upper())
-    header_snippet.template_vars["graph_name"] = graph_name
-    header_snippet.template_vars["placeholders"] = []
+    header_snippet = ContextHeaderSnippet(fname, graph_name)
 
     composer = Composer()
-    container = SnippetContainer("get_ctx.cpp")
-    container.template_vars["graph_name"] = graph_name
-    container.template_vars["placeholders"] = []
-    container.add_header('"{}"'.format(header_fname))
+    header_fname = '{}.hpp'.format(fname)
+    container = ContextSnippetsContainer(graph_name, header_fname)
 
     opFactory = OperatorFactory()
 
     print("Parsing {}".format(self.pb_file))
-    graph_info, ops_bfs = parse_pb(self.pb_file)
+    graph_info, ops_bfs, tensor_ref_count = parse_pb(self.pb_file)
 
     # TODO better snippet construction abstraction
     for op_id, op_name in enumerate(ops_bfs[::-1], 1):
@@ -51,7 +45,9 @@ class CodeGenerator(object):
       op_type = op_info.op_type
       if op_type == "Placeholder":
         out_tname, _, _ = op_info.output_tensor[0]
+        ref_count = tensor_ref_count[out_tname]
         container.template_vars["placeholders"].append(out_tname)
+        container.template_vars["ref_counts"].append(ref_count)
         header_snippet.template_vars["placeholders"].append(out_tname)
       elif op_type == 'Const':
         for out_tname, out_dtype, _ in op_info.output_tensor:
