@@ -16,13 +16,14 @@ __all__ = ["CodeGenerator"]
 
 
 class CodeGenerator(object):
-  def __init__(self, pb_file, idx_dir, embed_data_dir, debug_cmt=False):
+  def __init__(self, pb_file, idx_dir, embed_data_dir, debug_cmt=False, output_nodes=None):
     self.pb_file = pb_file
     if not os.path.exists(idx_dir):
       os.makedirs(idx_dir)
     self.idx_dir = idx_dir
     self.embed_data_dir = embed_data_dir.rstrip("/")
     self.debug_cmt = debug_cmt
+    self.output_nodes = output_nodes
 
   def generate(self, src_fname):
     """Generate source and header files
@@ -38,7 +39,7 @@ class CodeGenerator(object):
     opFactory = OperatorFactory()
 
     print("Parsing {}".format(self.pb_file))
-    ops_info, ops_bfs, output_nodes = parse_pb(self.pb_file)
+    ops_info, ops_bfs, output_nodes = parse_pb(self.pb_file, self.output_nodes)
     construct_order = Optimizer.optimize(ops_info, ops_bfs, output_nodes)
 
     # TODO better snippet construction abstraction
@@ -52,11 +53,13 @@ class CodeGenerator(object):
         header_snippet.template_vars["placeholders"].append(out_tname)
       elif op_type == 'Const':
         out_tname, out_dtype, _ = op_info.output_tensor[0]
+        ref_count = ref_counts[0]
         pre_tname = self._prepare_tensor_name(out_tname)
         idx_fname = "{}.idx".format(pre_tname)
         snippet = CreateTensorIdxSnippet(self.embed_data_dir, out_tname,
                                          idx_fname=idx_fname,
-                                         tf_dtype=out_dtype)
+                                         tf_dtype=out_dtype,
+                                         ref_count=ref_count)
         container.add_snippet(snippet)
         idx_path = os.path.join(self.idx_dir, idx_fname)
         value = op_info.output_content[out_tname]

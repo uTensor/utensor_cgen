@@ -19,7 +19,7 @@ class _AddOperator(_Operator):
     output, _, _ = op_info.output_tensor[0]
     _, tf_dtype, _ = op_info.input_tensor[0]
     ref_count = ref_counts[0]
-    self._snippet = AddOpSnippet(inputs, output, tf_dtype, to_eval)
+    self._snippet = AddOpSnippet(inputs, output, tf_dtype, ref_count, to_eval)
 
 
 class _ArgMaxOperator(_Operator):

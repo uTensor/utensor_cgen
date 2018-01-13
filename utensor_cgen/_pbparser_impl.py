@@ -161,7 +161,7 @@ def _parse_graph_nodes_bfs(graph_def, output_nodes=None):
   with graph.as_default():
     import_graph_def(graph_def, name='')
 
-  queue = output_nodes
+  queue = output_nodes.copy()
   visited = set([])
   ops_bfs = []
 

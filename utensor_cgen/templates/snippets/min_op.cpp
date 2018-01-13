@@ -3,19 +3,23 @@ S_TENSOR {{sptr_name}};
 {% endif %}
 {   
     RamTensor* out_tensor;
-    {%if out_shape %}
+    {% if out_shape %}
     out_tensor = new RamTensor<{{out_dtype}}>({ {%for shape in out_shape[:-1]%}{{shape}}, {%endfor%}{{out_shape[-1]}} });
-    {%else%}
+    {% else %}
     out_tensor = new RamTensor<{{out_dtype}}>();
-    {%endif%}
-    {%if ref_count%}
+    {% endif %}
+    {% if ref_count%}
     ctx.add(out_tensor, "{{output}}", {{ref_count}});
-    {%else%}
+    {% else %}
     ctx.add(out_tensor, "{{output}}");
-    {%endif%}
+    {% endif %}
     ctx.push(new MinOp(), 
              { {% for tname in inputs[:-1]%}"{{tname}}", {%endfor%}"{{inputs[-1]}}" },
              { "{{output}}" });
-    {% if create_sptr %}{{sptr_name}} = ctx.get("{{output}}");{% endif %}
-    {%if to_eval%}ctx.eval();{%endif%}
+    {% if create_sptr %}
+    {{sptr_name}} = ctx.get("{{output}}");
+    {% endif %}
+    {% if to_eval %}
+    ctx.eval();
+    {% endif %}
 }

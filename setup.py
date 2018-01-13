@@ -2,15 +2,12 @@
 # -*- coding:utf8 -*-
 import os
 from setuptools import setup, find_packages
-from utensor_cgen import __version__
 
 root_dir = os.path.abspath(os.path.dirname(__file__))
 with open(os.path.join(root_dir, "README.md")) as rf:
   long_desc = rf.read()
 with open(os.path.join(root_dir, "LICENSE")) as rf:
   license = rf.read()
-
-version = __version__
 
 setup(
     name='utensor_cgen',
@@ -27,7 +24,7 @@ setup(
     package_data={"utensor_cgen": ["templates/*"]},
     entry_points={
         "console_scripts": [
-            "utensor-cli=utensor_cgen.__main__:main"
+            "utensor-cli=utensor_cgen.__main__:cli"
         ]},
     install_requires=[
         'Jinja2',

@@ -3,7 +3,7 @@ from jinja2 import Environment, PackageLoader
 
 _loader = PackageLoader('utensor_cgen', 'templates')
 
-env = Environment(loader=_loader)
+env = Environment(loader=_loader, trim_blocks=True, lstrip_blocks=True)
 env.globals.update(zip=zip)
 
 del _loader

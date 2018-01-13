@@ -1,6 +1,6 @@
-{%if create_sptr%}
+{% if create_sptr %}
 S_TENSOR {%for sptr_name in sptr_names[:-1]%}{{sptr_name}}, {%endfor%} {{sptr_names[-1]}};
-{%endif%}
+{% endif %}
 {
     ctx.add(new RamTensor<{{qout_dtype}}>(), "{{outputs[0]}}", {{ref_counts[0]}});
     ctx.add(new RamTensor<{{range_dtype}}>({1}), "{{outputs[1]}}", {{ref_counts[1]}});
@@ -11,5 +11,7 @@ S_TENSOR {%for sptr_name in sptr_names[:-1]%}{{sptr_name}}, {%endfor%} {{sptr_na
     {%for sptr_name, output in zip(sptr_names, outputs)%}
     {{sptr_name}} = ctx.get("{{output}}");
     {%endfor%}
-    {%if to_eval%}ctx.eval();{%endif%}
+    {% if to_eval %}
+    ctx.eval();
+    {% endif %}
 }
