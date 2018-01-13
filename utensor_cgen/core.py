@@ -8,6 +8,7 @@ import idx2numpy as idx2np
 from .composer import Composer
 from .operators import OperatorFactory
 from .pbparser import parse_pb
+from .optimizer import Optimizer
 from .snippets import (CreateTensorIdxSnippet, CommentSnippet,
                        ContextHeaderSnippet, ContextSnippetsContainer)
 
@@ -37,31 +38,31 @@ class CodeGenerator(object):
     opFactory = OperatorFactory()
 
     print("Parsing {}".format(self.pb_file))
-    graph_info, ops_bfs, tensor_ref_count = parse_pb(self.pb_file)
+    ops_info, ops_bfs, output_nodes = parse_pb(self.pb_file)
+    construct_order = Optimizer.optimize(ops_info, ops_bfs, output_nodes)
 
     # TODO better snippet construction abstraction
-    for op_id, op_name in enumerate(ops_bfs[::-1], 1):
-      op_info = graph_info[op_name]
+    for op_id, (op_name, op_info, ref_counts, to_eval) in enumerate(construct_order, 1):
       op_type = op_info.op_type
       if op_type == "Placeholder":
         out_tname, _, _ = op_info.output_tensor[0]
-        ref_count = tensor_ref_count[out_tname]
+        ref_count = ref_counts[0]
         container.template_vars["placeholders"].append(out_tname)
         container.template_vars["ref_counts"].append(ref_count)
         header_snippet.template_vars["placeholders"].append(out_tname)
       elif op_type == 'Const':
-        for out_tname, out_dtype, _ in op_info.output_tensor:
-          pre_tname = self._prepare_tensor_name(out_tname)
-          idx_fname = "{}.idx".format(pre_tname)
-          snippet = CreateTensorIdxSnippet(self.embed_data_dir, out_tname,
-                                           idx_fname=idx_fname,
-                                           tf_dtype=out_dtype)
-          container.add_snippet(snippet)
-          idx_path = os.path.join(self.idx_dir, idx_fname)
-          value = op_info.output_content[out_tname]
-          self._save_data(idx_path, value, out_dtype)
+        out_tname, out_dtype, _ = op_info.output_tensor[0]
+        pre_tname = self._prepare_tensor_name(out_tname)
+        idx_fname = "{}.idx".format(pre_tname)
+        snippet = CreateTensorIdxSnippet(self.embed_data_dir, out_tname,
+                                         idx_fname=idx_fname,
+                                         tf_dtype=out_dtype)
+        container.add_snippet(snippet)
+        idx_path = os.path.join(self.idx_dir, idx_fname)
+        value = op_info.output_content[out_tname]
+        self._save_data(idx_path, value, out_dtype)
       else:
-        snippet = opFactory.createOperatorSnippet(op_info)
+        snippet = opFactory.createOperatorSnippet(op_info, ref_counts, to_eval)
         container.add_snippet(snippet)
 
       if self.debug_cmt:

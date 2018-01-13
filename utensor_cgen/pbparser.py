@@ -9,7 +9,7 @@ from collections import namedtuple
 import tensorflow as tf
 from tensorflow.python.framework import graph_util  # pylint: disable=E0611
 
-from ._pbparser_impl import _parse_graph_def, _tensor_ref_count
+from ._pbparser_impl import _parse_graph_def
 
 __all__ = ["parse_pb", "GraphDefParser"]
 
@@ -17,13 +17,12 @@ class GraphDefParser:
 
   GraphInfo = namedtuple(
     "GraphInfo",
-    field_names=["tensor_info", "ops_bfs", "tensor_ref_count"])
+    field_names=["graph_info", "ops_bfs", "output_nodes"])
 
   @classmethod
   def parse(cls, graph_def, output_nodes=None):
-    tensor_info, ops_bfs = _parse_graph_def(graph_def, output_nodes)
-    tensor_ref_count = _tensor_ref_count(tensor_info)
-    return cls.GraphInfo(tensor_info, ops_bfs, tensor_ref_count)
+    ops_info, ops_bfs = _parse_graph_def(graph_def, output_nodes)
+    return cls.GraphInfo(ops_info, ops_bfs, output_nodes)
 
 
 def parse_pb(file_or_path, output_nodes=None):
@@ -89,6 +88,5 @@ def parse_pb(file_or_path, output_nodes=None):
   if output_nodes is not None:
     graph_def = graph_util.extract_sub_graph(graph_def, output_nodes)
 
-  graph_info, ops_bfs = _parse_graph_def(graph_def)
-  tensor_ref_count = _tensor_ref_count(graph_info)
-  return graph_info, ops_bfs, tensor_ref_count
+  ops_info, ops_bfs, output_nodes = _parse_graph_def(graph_def, output_nodes)
+  return ops_info, ops_bfs, output_nodes

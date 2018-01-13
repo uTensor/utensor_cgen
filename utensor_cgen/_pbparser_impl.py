@@ -177,20 +177,12 @@ def _parse_graph_nodes_bfs(graph_def, output_nodes=None):
     if node_name not in visited:
       ops_bfs.append(node_name)
       visited.add(node_name)
-  return ops_bfs
+  return ops_bfs, output_nodes
 
 
 def _parse_graph_def(graph_def, output_nodes=None):
   if not _is_freeze_graph(graph_def):
     raise ValueError("The graph is not frozen, freeze the graph first")
-  ops_bfs = _parse_graph_nodes_bfs(graph_def, output_nodes=output_nodes)
-  graph_info = _parse_graph_info(graph_def)
-  return graph_info, ops_bfs
-
-
-def _tensor_ref_count(graph_info):
-  tensor_ref_count = defaultdict(lambda: 0)
-  for op_info in graph_info.values():
-    for tname, _, _ in op_info.input_tensor:
-      tensor_ref_count[tname] += 1
-  return dict(tensor_ref_count)
+  ops_bfs, output_nodes = _parse_graph_nodes_bfs(graph_def, output_nodes=output_nodes)
+  ops_info = _parse_graph_info(graph_def)
+  return ops_info, ops_bfs, output_nodes

@@ -49,10 +49,10 @@ class Snippet(SnippetBase):  # pylint: W0223
 class SnippetContainer(SnippetBase):
 
   def __init__(self, snippets=None):
-    if snippets is None:
-      snippets = []
     SnippetBase.__init__(self)
 
+    if snippets is None:
+      snippets = []
     self._snippets = snippets
     for snp in self._snippets:
       self._headers.update(snp.headers)
