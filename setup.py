@@ -14,7 +14,8 @@ version = __version__
 
 setup(
     name='utensor_cgen',
-    version=version,
+    version_format='{tag}.dev{commitcount}+{gitsha}',
+    setup_requires=['setuptools-git-version'],
     description="C code generation program for uTensor",
     long_description=long_desc,
     url="https://github.com/dboyliao/utensor_cgen",
