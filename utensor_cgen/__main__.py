@@ -1,9 +1,18 @@
 # -*- coding:utf8 -*-
 # pylint: disable=C0301
+from __future__ import print_function
 import argparse
 import os
+from pip.commands.show import search_packages_info
 
-def main(pb_file, src_fname, idx_dir, embed_data_dir, debug_cmt, output_nodes):
+def main(pb_file, src_fname, idx_dir, embed_data_dir, debug_cmt, output_nodes, version):
+  if version:
+    pkg_version = next(search_packages_info(['utensor_cgen']))["version"]
+    print("\033[33mutensor_cgen version: {}\033[0m".format(pkg_version))
+    return 0
+  if pb_file is None:
+    raise ValueError("No pb file given")
+
   from .core import CodeGenerator
 
   if embed_data_dir is None:
@@ -21,7 +30,7 @@ def _nargs(sep=','):
 
 def _build_parser():
   parser = argparse.ArgumentParser()
-  parser.add_argument("pb_file", metavar='MODEL.pb',
+  parser.add_argument("pb_file", metavar='MODEL.pb', nargs="?",
                       help="input protobuf file")
   parser.add_argument("-d", "--data-dir", dest='idx_dir',
                       metavar="DIR", default="idx_data",
@@ -39,6 +48,7 @@ def _build_parser():
   parser.add_argument("--debug-comment", dest="debug_cmt",
                       action="store_true",
                       help="Add debug comments in the output source file (default: %(default)s)")
+  parser.add_argument("-V", "--version", action="store_true", dest="version", help="show version")
   return parser
 
 
