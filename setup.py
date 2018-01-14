@@ -1,7 +1,8 @@
-#!/usr/bin/env python3
+#!/usr/bin/env python
 # -*- coding:utf8 -*-
 import os
-from setuptools import setup, find_packages
+
+from setuptools import find_packages, setup
 
 root_dir = os.path.abspath(os.path.dirname(__file__))
 with open(os.path.join(root_dir, "README.md")) as rf:

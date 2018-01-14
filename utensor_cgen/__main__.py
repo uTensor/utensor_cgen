@@ -1,9 +1,12 @@
 # -*- coding:utf8 -*-
 # pylint: disable=C0301
 from __future__ import print_function
+
 import argparse
 import os
+
 from pip.commands.show import search_packages_info
+
 
 def main(pb_file, src_fname, idx_dir, embed_data_dir, debug_cmt, output_nodes, version):
   if version:

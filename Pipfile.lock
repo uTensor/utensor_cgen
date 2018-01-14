@@ -161,6 +161,7 @@
                 "sha256:e721e53864f084f956f40f96124a74da0631ac13fbbd1ba99e8e2b5e9cafdf64",
                 "sha256:9515fe0a94e823fd90b08d22de45d7bde57c90edce705b22f5e1ecf7e1b653c8"
             ],
+            "markers": "python_version >= '3'",
             "version": "==0.30.0"
         }
     },

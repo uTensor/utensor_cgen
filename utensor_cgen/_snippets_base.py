@@ -1,9 +1,9 @@
 # -*- coding:utf8 -*-
-from copy import deepcopy
 from abc import ABC
+from copy import deepcopy
 
-from .template_env import env as _env
 from .snippets_cfg import SNIPPET_CONFIG
+from .template_env import env as _env
 
 __all__ = ["Snippet", "SnippetContainer"]
 

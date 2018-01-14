@@ -1,16 +1,16 @@
 # -*- coding:utf8 -*-
 import os
 
+import idx2numpy as idx2np
 import numpy as np
 import tensorflow as tf
-import idx2numpy as idx2np
 
 from .composer import Composer
 from .operators import OperatorFactory
-from .pbparser import parse_pb
 from .optimizer import Optimizer
-from .snippets import (CreateTensorIdxSnippet, CommentSnippet,
-                       ContextHeaderSnippet, ContextSnippetsContainer)
+from .pbparser import parse_pb
+from .snippets import (CommentSnippet, ContextHeaderSnippet,
+                       ContextSnippetsContainer, CreateTensorIdxSnippet)
 
 __all__ = ["CodeGenerator"]
 
