@@ -2,7 +2,7 @@
 S_TENSOR {{sptr_name}};
 {% endif %}
 {   
-    RamTensor* out_tensor;
+    RamTensor<{{out_dtype}}>* out_tensor;
     {% if out_shape %}
     out_tensor = new RamTensor<{{out_dtype}}>({ {%for shape in out_shape[:-1]%}{{shape}}, {%endfor%}{{out_shape[-1]}} });
     {% else %}

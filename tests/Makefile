@@ -17,6 +17,10 @@ $(TESTS):
 	 fi; \
 	 cd cpp; \
 	 utensor-cli ../test_quant_$@.pb -d idx_data -o $@_ctx.cpp;
+	 make TARGET=$@ cp
+
+cp:
+	cp $(TARGET)/cpp/*.{cpp,hpp} $(TARGET)/main.cpp ../../uTensor
 
 clean:
 	@for dname in $(TESTS); \
