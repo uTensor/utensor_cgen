@@ -154,7 +154,8 @@ def _is_freeze_graph(graph_def):
   return is_frozen
 
 
-def _parse_graph_nodes_bfs(graph_def, output_nodes=None):
+def _parse_graph_topologic_order(graph_def, output_nodes=None):
+  # https://en.wikipedia.org/wiki/Topological_sorting
   if output_nodes is None:
     output_nodes = _parse_graph_layers(graph_def)[-1]
   graph = Graph()
@@ -162,27 +163,36 @@ def _parse_graph_nodes_bfs(graph_def, output_nodes=None):
     import_graph_def(graph_def, name='')
 
   queue = output_nodes.copy()
-  visited = set([])
-  ops_bfs = []
+  visited = set()    # temporary mark
+  perm_visit = set() # Permanent mark
+  ops_bfs = [] # L
+
+  def visit(node_name):
+    if node_name in perm_visit:
+      return
+    if node_name in visited:
+      raise ValueError("Input graph is not a DAG")    
+
+    visited.add(node_name)
+    op = graph.get_operation_by_name(node_name)
+    
+    for tensor in op.inputs:
+      visit(tensor.op.name)
+    
+    perm_visit.add(node_name)
+    ops_bfs.insert(0, node_name)
 
   while queue:
     node_name = queue.pop(0)
-    op = graph.get_operation_by_name(node_name)
-    input_ops = set([])
-    for tensor in op.inputs:
-      if tensor not in visited:
-        input_ops.add(tensor.op.name)
-    queue.extend(input_ops)
+    visit(node_name)    
 
-    if node_name not in visited:
-      ops_bfs.append(node_name)
-      visited.add(node_name)
+  # ops_bfs.reverse()
   return ops_bfs, output_nodes
 
 
 def _parse_graph_def(graph_def, output_nodes=None):
   if not _is_freeze_graph(graph_def):
     raise ValueError("The graph is not frozen, freeze the graph first")
-  ops_bfs, output_nodes = _parse_graph_nodes_bfs(graph_def, output_nodes=output_nodes)
+  ops_bfs, output_nodes = _parse_graph_topologic_order(graph_def, output_nodes=output_nodes)
   ops_info = _parse_graph_info(graph_def)
   return ops_info, ops_bfs, output_nodes
