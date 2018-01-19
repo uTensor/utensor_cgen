@@ -8,3 +8,4 @@ dev_notes
 # tests
 tests/*/cpp
 */*/chkps
+*/*/idx_data
