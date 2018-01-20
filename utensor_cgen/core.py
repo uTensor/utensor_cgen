@@ -16,12 +16,13 @@ __all__ = ["CodeGenerator"]
 
 
 class CodeGenerator(object):
-  def __init__(self, pb_file, idx_dir, embed_data_dir, debug_cmt=False, output_nodes=None):
+  def __init__(self, pb_file, idx_dir, embed_data_dir, method, debug_cmt=False, output_nodes=None):
     self.pb_file = pb_file
     if not os.path.exists(idx_dir):
       os.makedirs(idx_dir)
     self.idx_dir = idx_dir
     self.embed_data_dir = embed_data_dir.rstrip("/")
+    self.method = method
     self.debug_cmt = debug_cmt
     self.output_nodes = output_nodes
 
@@ -40,7 +41,7 @@ class CodeGenerator(object):
 
     print("Parsing {}".format(self.pb_file))
     ops_info, ops_bfs, output_nodes = parse_pb(self.pb_file, self.output_nodes)
-    construct_order = Optimizer.optimize(ops_info, ops_bfs, output_nodes)
+    construct_order = Optimizer.optimize(ops_info, ops_bfs, output_nodes, self.method)
 
     # TODO better snippet construction abstraction
     for op_id, (op_name, op_info, ref_counts, to_eval) in enumerate(construct_order, 1):

@@ -8,7 +8,8 @@ import os
 from pip.commands.show import search_packages_info
 
 
-def main(pb_file, src_fname, idx_dir, embed_data_dir, debug_cmt, output_nodes, version):
+def main(pb_file, src_fname, idx_dir, embed_data_dir, 
+         debug_cmt, output_nodes, method, version):
   if version:
     pkg_version = next(search_packages_info(['utensor_cgen']))["version"]
     print("\033[33mutensor_cgen version: {}\033[0m".format(pkg_version))
@@ -20,7 +21,7 @@ def main(pb_file, src_fname, idx_dir, embed_data_dir, debug_cmt, output_nodes, v
 
   if embed_data_dir is None:
     embed_data_dir = os.path.join("/fs", idx_dir)
-  generator = CodeGenerator(pb_file, idx_dir, embed_data_dir, debug_cmt, output_nodes)
+  generator = CodeGenerator(pb_file, idx_dir, embed_data_dir, method, debug_cmt, output_nodes)
   generator.generate(src_fname)
 
 
@@ -48,10 +49,13 @@ def _build_parser():
                       type=_nargs(), metavar="node,node,...",
                       default=None,
                       help="list of output nodes")
+  parser.add_argument("-O", "--optimize-method", choices=['None', 'refcnt'],
+                      dest='method', default='refcnt', 
+                      help='optimization method (default: %(default)s)')
   parser.add_argument("--debug-comment", dest="debug_cmt",
                       action="store_true",
                       help="Add debug comments in the output source file (default: %(default)s)")
-  parser.add_argument("-V", "--version", action="store_true", dest="version", help="show version")
+  parser.add_argument("-v", "--version", action="store_true", dest="version", help="show version")
   return parser
 
 
