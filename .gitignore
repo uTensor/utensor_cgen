@@ -1,5 +1,5 @@
 # virtual env
-env
+.venv
 # dev
 dev_notes
 *.ipynb
@@ -8,3 +8,4 @@ dev_notes
 # tests
 tests/*/cpp
 */*/chkps
+*/*/idx_data

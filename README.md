@@ -1,22 +1,35 @@
-# Installation (Python3)
+# Installation (Python 2 & 3)
 
 ## `setup.py`
 
-run `python3 setup.py install`
+```
+python setup.py install
+```
 
 ## `pip`
 
-run `pip install utensor_cgen`
+```
+pip install utensor_cgen
+```
 
-This package is under beta development, using `virtualenv` is recommanded.
+# Develop Environment
+
+We use `pipenv` to setup the develop environment.
+
+You can go to this [repo](https://github.com/pypa/pipenv) for detail information about `pipenv`.
+
+## Setup with `pipenv`
+
+1. `# pipenv install`
+2. `# pipenv shell`
+    - this will spawn a subshell and activate the virtual environment for you
+    - You should be able to use the cli now
 
 # Example
-1. `example.py`:
-    1. run `python3 example.py` and it should generate a `main.cpp` file.
-    2. compile it and run, you should see familier hello world message
-2. `simple_graph.pb`:
-    1. install `utensor_cgen` by running `python3 setup.py install`
-    2. run `python3 -m utensor_cgen simple_graph.pb`
+
+- `simple_graph.pb`:
+    1. install `utensor_cgen`
+    2. run `utensor-cli simple_graph.pb`
     3. it will save constant tensor data in `idx_data/` and generate two files, `model.hpp` and `model.cpp`.
     4. compile your `uTensor` project with `model.hpp` and `model.cpp` and copy `idx_data/` to your SD card.
     5. You should have a running simple graph.
@@ -49,7 +62,7 @@ Following steps are a general guild for user how to porting a `TensorFlow` proto
 5. type alias in C/C++
     - ex: use `uint8_t` or `unsigned char`?
     - a lot more about this.... 
-6. `MANIFAST.in` for the `setup.py`
+6. (done) `MANIFAST.in` for the `setup.py`
 7. Relation among snippets/containers
     - shared template variables? (headers, shared placeholders...etc)
 8. Better configuration schema

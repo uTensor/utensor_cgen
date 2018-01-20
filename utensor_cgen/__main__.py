@@ -1,20 +1,40 @@
 # -*- coding:utf8 -*-
 # pylint: disable=C0301
+from __future__ import print_function
+
 import argparse
 import os
-from .core import CodeGenerator
+
+from pip.commands.show import search_packages_info
 
 
-def _main(pb_file, src_fname, idx_dir, embed_data_dir, debug_cmt):
+def main(pb_file, src_fname, idx_dir, embed_data_dir, 
+         debug_cmt, output_nodes, method, version):
+  if version:
+    pkg_version = next(search_packages_info(['utensor_cgen']))["version"]
+    print("\033[33mutensor_cgen version: {}\033[0m".format(pkg_version))
+    return 0
+  if pb_file is None:
+    raise ValueError("No pb file given")
+
+  from .core import CodeGenerator
+
   if embed_data_dir is None:
     embed_data_dir = os.path.join("/fs", idx_dir)
-  generator = CodeGenerator(pb_file, idx_dir, embed_data_dir, debug_cmt)
+  generator = CodeGenerator(pb_file, idx_dir, embed_data_dir, method, debug_cmt, output_nodes)
   generator.generate(src_fname)
+
+
+def _nargs(sep=','):
+  def parser(argstr):
+    print(argstr)
+    return argstr.split(sep)
+  return parser
 
 
 def _build_parser():
   parser = argparse.ArgumentParser()
-  parser.add_argument("pb_file", metavar='MODEL.pb',
+  parser.add_argument("pb_file", metavar='MODEL.pb', nargs="?",
                       help="input protobuf file")
   parser.add_argument("-d", "--data-dir", dest='idx_dir',
                       metavar="DIR", default="idx_data",
@@ -25,17 +45,25 @@ def _build_parser():
   parser.add_argument("-D", "--embed-data-dir", dest="embed_data_dir",
                       metavar="EMBED_DIR", default=None,
                       help="the data dir on the develop board (default: the value as the value of -d/data-dir flag)")
+  parser.add_argument("--output-nodes", dest="output_nodes",
+                      type=_nargs(), metavar="node,node,...",
+                      default=None,
+                      help="list of output nodes")
+  parser.add_argument("-O", "--optimize-method", choices=['None', 'refcnt'],
+                      dest='method', default='refcnt', 
+                      help='optimization method (default: %(default)s)')
   parser.add_argument("--debug-comment", dest="debug_cmt",
                       action="store_true",
                       help="Add debug comments in the output source file (default: %(default)s)")
+  parser.add_argument("-v", "--version", action="store_true", dest="version", help="show version")
   return parser
 
 
-def main():
+def cli():
   parser = _build_parser()
   args = vars(parser.parse_args())
-  _main(**args)
+  main(**args)
 
 
 if __name__ == "__main__":
-    main()
+    cli()

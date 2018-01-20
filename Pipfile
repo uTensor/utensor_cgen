@@ -1,0 +1,19 @@
+[[source]]
+
+url = "https://pypi.python.org/simple"
+verify_ssl = true
+name = "pypi"
+
+
+[packages]
+
+"jinja2" = "*"
+tensorflow = "*"
+numpy = "*"
+"idx2numpy" = "*"
+"e1839a8" = {path = ".", editable = true}
+
+
+[dev-packages]
+
+pylint = "*"
