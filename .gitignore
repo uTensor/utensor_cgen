@@ -4,8 +4,10 @@
 dev_notes
 *.ipynb
 !tests/test_cases.ipynb
+!tests/deep_mlp/end_to_end.ipynb
 *.egg*
 # tests
 tests/*/cpp
 */*/chkps
 */*/idx_data
+tests/deep_mlp/data
