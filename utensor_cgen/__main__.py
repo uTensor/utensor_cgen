@@ -11,7 +11,7 @@ def _get_pb_model_name(path):
   return os.path.basename(os.path.splitext(path)[0])
 
 def main(pb_file, src_fname, idx_dir, embed_data_dir, 
-         debug_cmt, output_nodes, method, version):
+         debug_cmt, output_nodes, method, version, model_dir):
   if version:
     pkg_version = next(search_packages_info(['utensor_cgen']))["version"]
     print("\033[33mutensor_cgen version: {}\033[0m".format(pkg_version))
@@ -19,12 +19,14 @@ def main(pb_file, src_fname, idx_dir, embed_data_dir,
   if pb_file is None:
     raise ValueError("No pb file given")
 
+  if not os.path.exists(model_dir):
+    os.makedirs(model_dir)
   # MODEL should default to pb_file
   if idx_dir != pb_file:
     idx_dir = os.path.join("constants", _get_pb_model_name(pb_file))
   
   if src_fname != pb_file:
-    src_fname = _get_pb_model_name(pb_file) + ".cpp"
+    src_fname =os.path.join(model_dir, _get_pb_model_name(pb_file) + ".cpp")
   
   from .core import CodeGenerator
 
@@ -49,6 +51,9 @@ def _build_parser():
   parser.add_argument("-d", "--data-dir", dest='idx_dir',
                       metavar="DIR", default="constants/%s" % model,
                       help="ouptut directory for tensor data idx files (defaults to protobuf name, e.g.: %(default)s)")
+  parser.add_argument("-m", "--model-dir", dest='model_dir',
+                      metavar="DIR", default="models",
+                      help="ouptut directory for tensor data idx files (default: %(default)s)")
   parser.add_argument("-o", "--output", dest="src_fname",
                       metavar="FILE.cpp", default="%s.cpp" % model,
                       help="output source file name, header file will be named accordingly. (defaults to protobuf name, e.g.: %(default)s)")
