@@ -31,7 +31,8 @@ class CodeGenerator(object):
     """
     fname, _ = os.path.splitext(src_fname)
     graph_name, _ = os.path.splitext(os.path.basename(self.pb_file))
-    header_snippet = ContextHeaderSnippet(fname, graph_name)
+    guard_name = fname.replace('/', '_')
+    header_snippet = ContextHeaderSnippet(guard_name, graph_name)
 
     composer = Composer()
     header_fname = '{}.hpp'.format(fname)
