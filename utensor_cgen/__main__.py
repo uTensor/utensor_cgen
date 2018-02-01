@@ -26,7 +26,7 @@ def main(pb_file, src_fname, idx_dir, embed_data_dir,
     idx_dir = os.path.join("constants", _get_pb_model_name(pb_file))
   
   if src_fname != pb_file:
-    src_fname =os.path.join(model_dir, _get_pb_model_name(pb_file) + ".cpp")
+    src_fname = os.path.join(model_dir, _get_pb_model_name(pb_file) + ".cpp")
   
   from .core import CodeGenerator
 

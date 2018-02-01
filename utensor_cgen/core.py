@@ -36,7 +36,8 @@ class CodeGenerator(object):
 
     composer = Composer()
     header_fname = '{}.hpp'.format(fname)
-    container = ContextSnippetsContainer(graph_name, header_fname)
+    header_name = os.path.basename(header_fname)
+    container = ContextSnippetsContainer(graph_name, header_name)
 
     opFactory = OperatorFactory()
 

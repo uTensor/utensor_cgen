@@ -1,4 +1,4 @@
-#include "deep_mlp.hpp"
+#include "quant_mnist.hpp"
 #include "tensorIdxImporter.hpp"
 #include "tensor.hpp"
 #include "mbed.h"

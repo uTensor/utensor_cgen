@@ -1,13 +1,11 @@
 # Installation (Python 2 & 3)
 
-## `setup.py`
-
+- installation with `setup.py`
 ```
 python setup.py install
 ```
 
-## `pip`
-
+- installation with `pip`
 ```
 pip install utensor_cgen
 ```
@@ -20,23 +18,14 @@ You can go to this [repo](https://github.com/pypa/pipenv) for detail information
 
 ## Setup with `pipenv`
 
-1. `# pipenv install`
+1. `# pipenv install -d`
 2. `# pipenv shell`
     - this will spawn a subshell and activate the virtual environment for you
     - You should be able to use the cli now
 
 # Example
 
-- `simple_graph.pb`:
-    1. install `utensor_cgen`
-    2. run `utensor-cli simple_graph.pb`
-    3. it will save constant tensor data in `idx_data/` and generate two files, `model.hpp` and `model.cpp`.
-    4. compile your `uTensor` project with `model.hpp` and `model.cpp` and copy `idx_data/` to your SD card.
-    5. You should have a running simple graph.
-
-<center>
-<img alt=simple-graph src=images/simple_graph.png />
-</center>
+Please refer to [tests/deep_mlp](https://github.com/uTensor/utensor_cgen/tree/develop/tests/deep_mlp) for detailed example
 
 # User Guild
 
