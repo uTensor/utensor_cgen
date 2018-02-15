@@ -18,8 +18,8 @@ You can go to this [repo](https://github.com/pypa/pipenv) for detail information
 
 ## Setup with `pipenv`
 
-1. `# pipenv install -d`
-2. `# pipenv shell`
+1. `$ pipenv install -d`
+2. `$ pipenv shell`
     - this will spawn a subshell and activate the virtual environment for you
     - You should be able to use the cli now
 
@@ -47,7 +47,7 @@ Following steps are a general guild for user how to porting a `TensorFlow` proto
 3. (done) Add template engine for richer flexibility
     - [jinja2](http://jinja.pocoo.org)
 4. (done?) core code generator implementation
-    - We need some refatoring, PRs are welcomed!
+    - We need some refactoring, PRs are welcomed!
 5. type alias in C/C++
     - ex: use `uint8_t` or `unsigned char`?
     - a lot more about this.... 
