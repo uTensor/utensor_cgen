@@ -131,6 +131,7 @@ class OperatorFactory():
                 "Dequantize": _DequantizeOperator,
                 "Max": _MaxOperator,
                 "Min": _MinOperator,
+                "QuantizedAdd", _AddOperator,
                 "QuantizeV2": _QuantizeV2Operator,
                 "QuantizedMatMul": _QuantizedMatMulOperator,
                 "QuantizedRelu": _QuantizedReluOperator,
