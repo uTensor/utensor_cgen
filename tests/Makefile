@@ -20,7 +20,7 @@ $(TESTS):
 	 make TARGET=$@ cp
 
 cp:
-	cp $(TARGET)/cpp/*.{cpp,hpp} $(TARGET)/main.cpp ../../uTensor
+	cp $(TARGET)/cpp/models/*.{cpp,hpp} $(TARGET)/main.cpp ../../uTensor
 
 clean:
 	@for dname in $(TESTS); \
