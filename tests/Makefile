@@ -16,7 +16,7 @@ $(TESTS):
 	 	mkdir cpp; \
 	 fi; \
 	 cd cpp; \
-	 utensor-cli ../test_quant_$@.pb -d idx_data -o $@_ctx.cpp;
+	 utensor-cli ../test_quant_$@.pb -m models -d idx_data -o $@_ctx.cpp;
 	 make TARGET=$@ cp
 
 cp:
