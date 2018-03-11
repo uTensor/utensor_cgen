@@ -1,3 +1,3 @@
-{%for comment in comments%}
+{% for comment in comments %}
 // {{comment}}
-{%endfor%}
+{% endfor %}

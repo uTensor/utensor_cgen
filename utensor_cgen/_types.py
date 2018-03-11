@@ -1,5 +1,6 @@
 # -*- coding:utf8 -*-
 from collections import namedtuple
+
 import tensorflow as tf
 
 _TYPE_MAP_VALUE = namedtuple("_TYPE_MAP_VALUE", ["importer_type_str", "tensor_type_str"])

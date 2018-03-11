@@ -1,7 +1,7 @@
 #include "const_ctx.hpp"
-#include "tensorIdxImporter.hpp"
-#include "uTensor_util.hpp"
-#include "test.hpp"
+#include "uTensor/loaders/tensorIdxImporter.hpp"
+#include "uTensor/util/uTensor_util.hpp"
+#include "TESTS/test.hpp"
 #include <mbed.h>
 #include <FATFileSystem.h>
 #include <SDBlockDevice.h>
@@ -43,6 +43,6 @@ void ConstTest::runAll(void) {
     timer_stop();
 
     Tensor* ref_x = t_import.float_import("/fs/idx_data/x_0.idx");
-    double err = meanAbsErr(ref_x, ptr_x);
+    double err = meanAbsErr<float>(ref_x, ptr_x);
     passed(err == 0);
 }
