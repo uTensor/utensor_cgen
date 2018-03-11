@@ -1,7 +1,7 @@
 #include "min_3_1_ctx.hpp"
-#include "tensorIdxImporter.hpp"
-#include "uTensor_util.hpp"
-#include "test.hpp"
+#include "uTensor/loaders/tensorIdxImporter.hpp"
+#include "uTensor/util/uTensor_util.hpp"
+#include "TESTS/test.hpp"
 #include <mbed.h>
 #include <FATFileSystem.h>
 #include <SDBlockDevice.h>
