@@ -1,7 +1,7 @@
 # -*- coding:utf8 -*-
 SNIPPET_CONFIG = {
-  "snippets/create_tensor_idx.cpp": set(['"uTensor/loaders/tensorIdxImporter.hpp"', 
-                                         '"uTensor/core/context.hpp"', 
+  "snippets/create_tensor_idx.cpp": set(['"uTensor/loaders/tensorIdxImporter.hpp"',
+                                         '"uTensor/core/context.hpp"',
                                          '"uTensor/core/tensor.hpp"']),
   "snippets/create_tensor_new.cpp": set(['"uTensor/core/context.hpp"', '"uTensor/core/tensor.hpp"']),
   "snippets/add_op.cpp": set(['"uTensor/ops/MathOps.hpp"']),
@@ -15,6 +15,7 @@ SNIPPET_CONFIG = {
   "snippets/reshape_op.cpp": set(['"uTensor/ops/ArrayOps.hpp"']),
   "snippets/requant_op.cpp": set(['"uTensor/ops/MathOps.hpp"']),
   "snippets/requant_range_op.cpp": set(['"uTensor/ops/MathOps.hpp"']),
+  "snippets/conv2d_op.cpp": set(['"uTensor/ops/MatrixOps.hpp"']),
   "snippets/comments.cpp": set([]),
   "snippets/get_ctx.hpp": set(['"uTensor/core/context.hpp"', '"uTensor/core/tensor.hpp"']),
   "containers/main.cpp": set([]),
