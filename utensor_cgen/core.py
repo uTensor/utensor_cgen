@@ -43,7 +43,7 @@ class CodeGenerator(object):
     opFactory = OperatorFactory()
 
     print("Parsing {}".format(self.pb_file))
-    ops_info, ops_bfs, output_nodes = parse_pb(self.pb_file, self.output_nodes)
+    ops_info, ops_bfs, output_nodes = parse_pb(self.pb_file, self.output_nodes, self.quantize_enabled)
     construct_order = Optimizer.optimize(ops_info, ops_bfs, output_nodes, self.method)
 
     # TODO better snippet construction abstraction

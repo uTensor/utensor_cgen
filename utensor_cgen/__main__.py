@@ -71,7 +71,7 @@ def _build_parser():
                       action="store_true",
                       help="Add debug comments in the output source file (default: %(default)s)")
   parser.add_argument("-Q", "--quantize", dest="quantize_flag",
-                      action="store_true", default=False
+                      action="store_true", default=False,
                       help="Quantize the TensorFlow graph")
   parser.add_argument("-v", "--version", action="store_true", dest="version", help="show version")
   return parser
