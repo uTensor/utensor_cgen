@@ -124,6 +124,19 @@ class _ReshapeOperator(_Operator):
     self._snippet = ReshapeOpSnippet(inputs, output, ref_count, to_eval)
 
 
+class _Conv2DOperator(_Operator):
+  def __init__(self, op_info, ref_counts, to_eval):
+    """
+    node.attr['strides'].list.i
+    node.attr['padding'].s.decode('utf8')
+    """
+    _Operator.__init__(self)
+    ref_count = ref_counts[0]
+    input_data, input_dtype, input_shape = op_info.input_tensor[0]
+    filter_data, filter_dtype, filter_shape = op_info.input_tensor[1]
+
+
+
 class OperatorFactory():
   # Can easily do something smarter
   _operators = {"Add": _AddOperator,

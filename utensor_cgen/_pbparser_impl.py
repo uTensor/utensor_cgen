@@ -92,7 +92,7 @@ def _parse_graph_info(graph_def):
   """
   OperationInfo = namedtuple('OperationInfo',
                              field_names=['input_tensor', 'output_tensor',
-                                          'op_type', 'output_content'])
+                                          'op_type', 'output_content', 'op_attr'])
   graph = Graph()
   with graph.as_default():  # pylint: disable=E1129
     import_graph_def(graph_def, name="")
@@ -104,11 +104,16 @@ def _parse_graph_info(graph_def):
       output_tensor = [(t.name, t.dtype, _parse_shape(t.shape)) for t in op.outputs]
       op_type = node.op
       output_content = {}
+      op_attr = node.attr
       if node.op in ["Const"]:
         for tensor_name, _, _ in output_tensor:
           tensor = graph.get_tensor_by_name(tensor_name)
           output_content[tensor_name] = tensor.eval()
-      graph_info[node.name] = OperationInfo(input_tensor, output_tensor, op_type, output_content)
+      graph_info[node.name] = OperationInfo(input_tensor,
+                                            output_tensor,
+                                            op_type,
+                                            output_content,
+                                            op_attr)
   return graph_info
 
 

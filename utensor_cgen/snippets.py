@@ -10,6 +10,7 @@ __all__ = ["CreateTensorIdxSnippet", "CreateTensorNewSnippet",
            "ArgMaxOpSnippet", "DequantizeOpSnippet",
            "QuantizedMatMulOpSnippet", "QuantizeV2OpSnippet",
            "QuantizedReluOpSnippet", "ReshapeOpSnippet",
+           "Conv2DOpSnippent",
            "RequantizationRangeOpSnippet", "RequantizeOpSnippet",
            "CommentSnippet", "ContextHeaderSnippet"]
 
@@ -288,6 +289,18 @@ class ReshapeOpSnippet(Snippet):
     Snippet.__init__(self)
     if ref_count:
       self.template_vars["ref_count"] = ref_count
+    self.template_vars["inputs"] = inputs
+    self.template_vars["output"] = output
+    self.template_vars["to_eval"] = to_eval
+
+
+class Conv2DOpSnippent(Snippet):
+  __template_name__ = "snippets/conv2d_op.cpp"
+
+  def __init__(self, inputs, output,
+               ref_count=0,
+               to_eval=False):
+    Snippet.__init__(self)
     self.template_vars["inputs"] = inputs
     self.template_vars["output"] = output
     self.template_vars["to_eval"] = to_eval
