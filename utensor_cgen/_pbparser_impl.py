@@ -198,6 +198,6 @@ def _parse_graph_topologic_order(graph_def, output_nodes=None):
 def _parse_graph_def(graph_def, output_nodes=None):
   if not _is_freeze_graph(graph_def):
     raise ValueError("The graph is not frozen, freeze the graph first")
-  ops_bfs, output_nodes = _parse_graph_topologic_order(graph_def, output_nodes=output_nodes)
+  ops_topo, output_nodes = _parse_graph_topologic_order(graph_def, output_nodes=output_nodes)
   ops_info = _parse_graph_info(graph_def)
-  return ops_info, ops_bfs, output_nodes
+  return ops_info, ops_topo, output_nodes
