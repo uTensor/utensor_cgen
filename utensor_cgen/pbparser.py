@@ -4,7 +4,6 @@ Parser for Protobuf file of Tensorflow Graph
 """
 import io
 import sys
-from collections import namedtuple
 
 import tensorflow as tf
 from tensorflow.python.framework import graph_util  # pylint: disable=E0611

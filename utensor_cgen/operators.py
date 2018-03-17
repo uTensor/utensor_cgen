@@ -126,14 +126,17 @@ class _ReshapeOperator(_Operator):
 
 class _Conv2DOperator(_Operator):
   def __init__(self, op_info, ref_counts, to_eval):
-    """
-    node.attr['strides'].list.i
-    node.attr['padding'].s.decode('utf8')
-    """
     _Operator.__init__(self)
-    ref_count = ref_counts[0]
-    input_data, input_dtype, input_shape = op_info.input_tensor[0]
-    filter_data, filter_dtype, filter_shape = op_info.input_tensor[1]
+    inputs = [tname for tname, _, _ in op_info.input_tensor]
+    outputs = [tname for tname, _, _ in op_info.output_tensor]
+    _, in_dtype, _ = op_info.input_tensor[0]
+    _, filter_dtype, _ = op_info.input_tensor[1]
+    _, out_dtype, _ = op_info.output_tensor[1]
+    strides = op_info.op_attr["strides"].list.i
+    padding = op_info.op_attr["padding"].s.decode("utf8")
+    self._snippet = Conv2DOpSnippent(inputs, outputs, strides, padding, 
+                                     in_dtype=in_dtype, filter_dtype=filter_dtype, out_dtype=out_dtype,
+                                     ref_counts=ref_counts, to_eval=to_eval)
 
 
 
@@ -149,7 +152,8 @@ class OperatorFactory():
                 "QuantizedRelu": _QuantizedReluOperator,
                 "RequantizationRange": _RequantizationRangeOperator,
                 "Requantize": _RequantizeOperator,
-                "Reshape": _ReshapeOperator}
+                "Reshape": _ReshapeOperator,
+                "QuantizedConv2D": _Conv2DOperator}
 
   def createOperatorSnippet(self, op_info, ref_counts, to_eval):
     op_type = op_info.op_type

@@ -297,12 +297,25 @@ class ReshapeOpSnippet(Snippet):
 class Conv2DOpSnippent(Snippet):
   __template_name__ = "snippets/conv2d_op.cpp"
 
-  def __init__(self, inputs, output,
-               ref_count=0,
+  def __init__(self, inputs, outputs, strides, padding,
+               in_dtype, filter_dtype, out_dtype,
+               ref_counts=None,
                to_eval=False):
     Snippet.__init__(self)
+    if ref_counts is None:
+      ref_counts = []
+    if ref_counts:
+      err_msg = ("incorrect number of ref_counts and outputs: {}, {}"
+                 .format(ref_counts, outputs))
+      assert len(ref_counts) == len(outputs), err_msg
     self.template_vars["inputs"] = inputs
-    self.template_vars["output"] = output
+    self.template_vars["outputs"] = outputs
+    self.template_vars["in_dtype"] = TF_TYPES_MAP[in_dtype].tensor_type_str
+    self.template_vars["filter_dtype"] = TF_TYPES_MAP[filter_dtype].tensor_type_str
+    self.template_vars["out_dtype"] = TF_TYPES_MAP[out_dtype].tensor_type_str
+    self.template_vars["strides"] = strides
+    self.template_vars["padding"] = padding
+    self.template_vars["ref_counts"] = ref_counts
     self.template_vars["to_eval"] = to_eval
 
 
