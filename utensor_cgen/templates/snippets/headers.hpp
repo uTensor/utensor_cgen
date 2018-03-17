@@ -1,4 +1,0 @@
-{%for header in headers %}
-#include {{header}}
-{%endfor%}
-

@@ -1,31 +1,31 @@
-# Installation (Python3)
+# Installation (Python 2 & 3)
 
-## `setup.py`
+- installation with `setup.py`
+```
+python setup.py install
+```
 
-1. `python3 setup.py bdist_wheel`
-2. `cd dist`
-3. `python3 -m pip install utensor_cgen-<whatever>.whl`
+- installation with `pip`
+```
+pip install utensor_cgen
+```
 
-## `pip`
+# Develop Environment
 
-1. run `python3 -m pip install utensor_cgen`
+We use `pipenv` to setup the develop environment.
 
-This package is under beta development, using `virtualenv` is recommanded.
+You can go to this [repo](https://github.com/pypa/pipenv) for detail information about `pipenv`.
+
+## Setup with `pipenv`
+
+1. `$ pipenv install -d`
+2. `$ pipenv shell`
+    - this will spawn a subshell and activate the virtual environment for you
+    - You should be able to use the cli now
 
 # Example
-1. `example.py`:
-    1. run `python3 example.py` and it should generate a `main.cpp` file.
-    2. compile it and run, you should see familier hello world message
-2. `simple_graph.pb`:
-    1. install `utensor_cgen` by running `python3 setup.py install`
-    2. run `python3 -m utensor_cgen simple_graph.pb`
-    3. it will save constant tensor data in `idx_data/` and generate two files, `model.hpp` and `model.cpp`.
-    4. compile your `uTensor` project with `model.hpp` and `model.cpp` and copy `idx_data/` to your SD card.
-    5. You should have a running simple graph.
 
-<center>
-<img alt=simple-graph src=images/simple_graph.png />
-</center>
+Please refer to [tests/deep_mlp](https://github.com/uTensor/utensor_cgen/tree/develop/tests/deep_mlp) for detailed example
 
 # User Guild
 
@@ -47,11 +47,11 @@ Following steps are a general guild for user how to porting a `TensorFlow` proto
 3. (done) Add template engine for richer flexibility
     - [jinja2](http://jinja.pocoo.org)
 4. (done?) core code generator implementation
-    - We need some refatoring, PRs are welcomed!
+    - We need some refactoring, PRs are welcomed!
 5. type alias in C/C++
     - ex: use `uint8_t` or `unsigned char`?
     - a lot more about this.... 
-6. `MANIFAST.in` for the `setup.py`
+6. (done) `MANIFAST.in` for the `setup.py`
 7. Relation among snippets/containers
     - shared template variables? (headers, shared placeholders...etc)
 8. Better configuration schema
