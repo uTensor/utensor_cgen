@@ -17,6 +17,9 @@ $(TESTS):
 	 	mkdir cpp; \
 	 fi; \
 	 cd cpp; \
+	 if [ ! -e idx_data ]; then \
+	 	mkdir idx_data; \
+	 fi; \
 	 utensor-cli ../test_quant_$@.pb -m models -d idx_data -o $@_ctx.cpp; \
 	 for file in ../output*.idx ; \
 	 do \
