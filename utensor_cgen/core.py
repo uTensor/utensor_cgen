@@ -42,8 +42,8 @@ class CodeGenerator(object):
     opFactory = OperatorFactory()
 
     print("Parsing {}".format(self.pb_file))
-    ops_info, ops_bfs, output_nodes = parse_pb(self.pb_file, self.output_nodes)
-    construct_order = Optimizer.optimize(ops_info, ops_bfs, output_nodes, self.method)
+    ops_info, ops_torder, output_nodes = parse_pb(self.pb_file, self.output_nodes)
+    construct_order = Optimizer.optimize(ops_info, ops_torder, output_nodes, self.method)
 
     # TODO better snippet construction abstraction
     for op_id, (op_name, op_info, ref_counts, to_eval) in enumerate(construct_order, 1):

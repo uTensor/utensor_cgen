@@ -165,7 +165,7 @@ def _parse_graph_topologic_order(graph_def, output_nodes=None):
   queue = output_nodes.copy()
   visited = set()    # temporary mark
   perm_visit = set() # Permanent mark
-  ops_bfs = [] # L
+  ops_torder = [] # L
 
   def visit(node_name):
     if node_name in perm_visit:
@@ -180,19 +180,19 @@ def _parse_graph_topologic_order(graph_def, output_nodes=None):
       visit(tensor.op.name)
     
     perm_visit.add(node_name)
-    ops_bfs.insert(0, node_name)
+    ops_torder.insert(0, node_name)
 
   while queue:
     node_name = queue.pop(0)
     visit(node_name)    
 
   # ops_bfs.reverse()
-  return ops_bfs, output_nodes
+  return ops_torder, output_nodes
 
 
 def _parse_graph_def(graph_def, output_nodes=None):
   if not _is_freeze_graph(graph_def):
     raise ValueError("The graph is not frozen, freeze the graph first")
-  ops_bfs, output_nodes = _parse_graph_topologic_order(graph_def, output_nodes=output_nodes)
+  ops_torder, output_nodes = _parse_graph_topologic_order(graph_def, output_nodes=output_nodes)
   ops_info = _parse_graph_info(graph_def)
-  return ops_info, ops_bfs, output_nodes
+  return ops_info, ops_torder, output_nodes
