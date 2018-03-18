@@ -131,11 +131,11 @@ class _Conv2DOperator(_Operator):
     outputs = [tname for tname, _, _ in op_info.output_tensor]
     _, in_dtype, _ = op_info.input_tensor[0]
     _, filter_dtype, _ = op_info.input_tensor[1]
-    _, out_dtype, _ = op_info.output_tensor[1]
+    out_dtypes= [out_dtype for _, out_dtype, _ in op_info.output_tensor]
     strides = op_info.op_attr["strides"].list.i
     padding = op_info.op_attr["padding"].s.decode("utf8")
     self._snippet = Conv2DOpSnippent(inputs, outputs, strides, padding, 
-                                     in_dtype=in_dtype, filter_dtype=filter_dtype, out_dtype=out_dtype,
+                                     in_dtype=in_dtype, filter_dtype=filter_dtype, out_dtypes=out_dtypes,
                                      ref_counts=ref_counts, to_eval=to_eval)
 
 

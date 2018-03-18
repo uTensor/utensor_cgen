@@ -298,7 +298,7 @@ class Conv2DOpSnippent(Snippet):
   __template_name__ = "snippets/conv2d_op.cpp"
 
   def __init__(self, inputs, outputs, strides, padding,
-               in_dtype, filter_dtype, out_dtype,
+               in_dtype, filter_dtype, out_dtypes,
                ref_counts=None,
                to_eval=False):
     Snippet.__init__(self)
@@ -312,7 +312,7 @@ class Conv2DOpSnippent(Snippet):
     self.template_vars["outputs"] = outputs
     self.template_vars["in_dtype"] = TF_TYPES_MAP[in_dtype].tensor_type_str
     self.template_vars["filter_dtype"] = TF_TYPES_MAP[filter_dtype].tensor_type_str
-    self.template_vars["out_dtype"] = TF_TYPES_MAP[out_dtype].tensor_type_str
+    self.template_vars["out_dtypes"] = [TF_TYPES_MAP[out_dtype].tensor_type_str for out_dtype in out_dtypes]
     self.template_vars["strides"] = strides
     self.template_vars["padding"] = padding
     self.template_vars["ref_counts"] = ref_counts
