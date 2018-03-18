@@ -1,12 +1,12 @@
 {
     {% if ref_counts %}
-    {%for tname, ref_count in zip(outputs, ref_counts)%}
-    ctx.add(new RamTensor<float>(), "{{tname}}", {{ref_count}});
-    {%endfor%}
+    ctx.add(new RamTensor<float>(), "{{outputs[0]}}", {{ref_counts[0]}});
+    ctx.add(new RamTensor<float>({1}), "{{outputs[1]}}", {{ref_counts[1]}});
+    ctx.add(new RamTensor<float>({1}), "{{outputs[2]}}", {{ref_counts[2]}});
     {% else %}
-    {%for tname in outputs%}
-    ctx.add(new RamTensor<float>(), "{{tname}}");
-    {%endfor%}
+    ctx.add(new RamTensor<float>(), "{{outputs[0]}}");
+    ctx.add(new RamTensor<float>({1}), "{{outputs[1]}}");
+    ctx.add(new RamTensor<float>({1}), "{{outputs[2]}}");
     {% endif %}
     ctx.push(new QntConvOp<{{in_dtype}}, {{filter_dtype}}, {{out_dtype}}>({ {% for s in strides[:-1]%}{{s}}, {%endfor%}{{strides[-1]}} }, {{padding}}), 
              { {% for tname in inputs[:-1]%}"{{tname}}", {%endfor%}"{{inputs[-1]}}" },
