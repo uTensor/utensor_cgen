@@ -12,7 +12,7 @@ __all__ = ["Snippet", "SnippetContainerBase",
            "QuantizedReluOpSnippet", "ReshapeOpSnippet",
            "Conv2DOpSnippent",
            "RequantizationRangeOpSnippet", "RequantizeOpSnippet",
-           "CommentSnippet", "ContextHeaderSnippet", "ContextSnippetsContainer"]
+           "CommentSnippet", "ContextHeaderSnippet","ContextSnippetsContainer",  "QuantizedAddOpSnippet"]
 
 
 class CreateTensorIdxSnippet(Snippet):
