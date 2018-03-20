@@ -16,7 +16,7 @@ __all__ = ["CodeGenerator"]
 
 
 class CodeGenerator(object):
-  def __init__(self, pb_file, idx_dir, embed_data_dir, method, debug_cmt=False, output_nodes=None):
+  def __init__(self, pb_file, idx_dir, embed_data_dir, method, debug_cmt=False, output_nodes=None, quantized_flag=False):
     self.pb_file = pb_file
     if not os.path.exists(idx_dir):
       os.makedirs(idx_dir)
@@ -25,6 +25,7 @@ class CodeGenerator(object):
     self.method = method
     self.debug_cmt = debug_cmt
     self.output_nodes = output_nodes
+    self.quantize_enabled = quantized_flag
 
   def generate(self, src_fname):
     """Generate source and header files
@@ -42,7 +43,7 @@ class CodeGenerator(object):
     opFactory = OperatorFactory()
 
     print("Parsing {}".format(self.pb_file))
-    ops_info, ops_bfs, output_nodes = parse_pb(self.pb_file, self.output_nodes)
+    ops_info, ops_bfs, output_nodes = parse_pb(self.pb_file, self.output_nodes, self.quantize_enabled)
     construct_order = Optimizer.optimize(ops_info, ops_bfs, output_nodes, self.method)
 
     # TODO better snippet construction abstraction

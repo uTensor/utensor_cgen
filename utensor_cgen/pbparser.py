@@ -25,7 +25,7 @@ class GraphDefParser:
     return cls.GraphInfo(ops_info, ops_bfs, output_nodes)
 
 
-def parse_pb(file_or_path, output_nodes=None):
+def parse_pb(file_or_path, output_nodes=None, quantize_enabled=False):
   """
   Arguments
   =========
@@ -84,6 +84,14 @@ def parse_pb(file_or_path, output_nodes=None):
   graph_def = tf.GraphDef()
   graph_def.ParseFromString(fid.read())
   fid.close()
+
+  if quantize_enabled:
+    from tensorflow.tools.graph_transforms import TransformGraph
+    if output_nodes is None:
+      target_output_nodes = []
+    # Target output nodes expects a list of targets
+    graph_def = TransformGraph(graph_def, [],
+                               target_output_nodes, ["sort_by_execution_order", "quantize_weights", "quantize_nodes"])
 
   if output_nodes is not None:
     graph_def = graph_util.extract_sub_graph(graph_def, output_nodes)

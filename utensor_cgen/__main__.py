@@ -11,7 +11,7 @@ def _get_pb_model_name(path):
   return os.path.basename(os.path.splitext(path)[0])
 
 def main(pb_file, src_fname, idx_dir, embed_data_dir, 
-         debug_cmt, output_nodes, method, version, model_dir):
+         debug_cmt, output_nodes, method, version, model_dir, quantize_flag):
   if version:
     pkg_version = next(search_packages_info(['utensor_cgen']))["version"]
     print("\033[33mutensor_cgen version: {}\033[0m".format(pkg_version))
@@ -33,8 +33,9 @@ def main(pb_file, src_fname, idx_dir, embed_data_dir,
 
   if embed_data_dir is None:
     embed_data_dir = os.path.join("/fs", idx_dir)
-  generator = CodeGenerator(pb_file, idx_dir, embed_data_dir, method, debug_cmt, output_nodes)
-  generator.generate(model_path)
+  generator = CodeGenerator(pb_file, idx_dir, embed_data_dir, method, debug_cmt, output_nodes, quantize_flag)
+  generator.generate(src_fname)
+
 
 
 def _nargs(sep=','):
@@ -71,6 +72,9 @@ def _build_parser():
   parser.add_argument("--debug-comment", dest="debug_cmt",
                       action="store_true",
                       help="Add debug comments in the output source file (default: %(default)s)")
+  parser.add_argument("-Q", "--quantize", dest="quantize_flag",
+                      action="store_true", default=False,
+                      help="Quantize the TensorFlow graph")
   parser.add_argument("-v", "--version", action="store_true", dest="version", help="show version")
   return parser
 
