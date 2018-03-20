@@ -1,7 +1,7 @@
 #include "reshape_7_ctx.hpp"
-#include "tensorIdxImporter.hpp" 
-#include "tensor.hpp"
-#include "test.hpp"
+#include "uTensor/core/tensor.hpp"
+#include "uTensor/loaders/tensorIdxImporter.hpp"
+#include "TESTS/test.hpp"
 #include <mbed.h>
 #include <FATFileSystem.h>
 #include <SDBlockDevice.h>

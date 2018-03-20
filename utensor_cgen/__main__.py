@@ -22,11 +22,12 @@ def main(pb_file, src_fname, idx_dir, embed_data_dir,
   if not os.path.exists(model_dir):
     os.makedirs(model_dir)
   # MODEL should default to pb_file
-  if idx_dir != pb_file:
+  if idx_dir is None:
     idx_dir = os.path.join("constants", _get_pb_model_name(pb_file))
   
-  if src_fname != pb_file:
-    src_fname = os.path.join(model_dir, _get_pb_model_name(pb_file) + ".cpp")
+  if src_fname is None:
+    src_fname = _get_pb_model_name(pb_file) + ".cpp"
+  model_path = os.path.join(model_dir, src_fname)
   
   from .core import CodeGenerator
 
@@ -34,6 +35,7 @@ def main(pb_file, src_fname, idx_dir, embed_data_dir,
     embed_data_dir = os.path.join("/fs", idx_dir)
   generator = CodeGenerator(pb_file, idx_dir, embed_data_dir, method, debug_cmt, output_nodes, quantize_flag)
   generator.generate(src_fname)
+
 
 
 def _nargs(sep=','):
@@ -49,14 +51,14 @@ def _build_parser():
   parser.add_argument("pb_file", metavar='%s.pb' % model, nargs="?",
                       help="input protobuf file")
   parser.add_argument("-d", "--data-dir", dest='idx_dir',
-                      metavar="DIR", default="constants/%s" % model,
-                      help="ouptut directory for tensor data idx files (defaults to protobuf name, e.g.: %(default)s)")
+                      metavar="DIR",
+                      help="ouptut directory for tensor data idx files (defaults to protobuf name, e.g.: constants/my_model)")
   parser.add_argument("-m", "--model-dir", dest='model_dir',
                       metavar="DIR", default="models",
                       help="ouptut directory for tensor data idx files (default: %(default)s)")
   parser.add_argument("-o", "--output", dest="src_fname",
-                      metavar="FILE.cpp", default="%s.cpp" % model,
-                      help="output source file name, header file will be named accordingly. (defaults to protobuf name, e.g.: %(default)s)")
+                      metavar="FILE.cpp",
+                      help="output source file name, header file will be named accordingly. (defaults to protobuf name, e.g.: my_model.cpp)")
   parser.add_argument("-D", "--embed-data-dir", dest="embed_data_dir",
                       metavar="EMBED_DIR", default=None,
                       help="the data dir on the develop board (default: the value as the value of -d/data-dir flag)")

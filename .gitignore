@@ -10,4 +10,5 @@ dev_notes
 tests/*/cpp
 */*/chkps
 */*/idx_data
+*/*/models
 tests/deep_mlp/data

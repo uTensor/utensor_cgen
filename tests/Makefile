@@ -16,11 +16,25 @@ $(TESTS):
 	 	mkdir cpp; \
 	 fi; \
 	 cd cpp; \
-	 utensor-cli ../test_quant_$@.pb -d idx_data -o $@_ctx.cpp;
-	 make TARGET=$@ cp
+	 utensor-cli ../test_quant_$@.pb -m models -d idx_data -o $@_ctx.cpp; \
+	 for file in ../output*.idx ; \
+	 do \
+	 	if [ -e $$file ]; then \
+	 		cp $$file idx_data/; \
+		fi; \
+	 done; \
+	 for file in ../input*.idx ; \
+	 do \
+		if [ -e $$file ]; then \
+	 		cp $$file idx_data/; \
+		fi; \
+	 done
+	@if [ "$$COPY" == "true" ]; then \
+		make -e TARGET=$@ cp; \
+	 fi
 
 cp:
-	cp $(TARGET)/cpp/*.{cpp,hpp} $(TARGET)/main.cpp ../../uTensor
+	cp $(TARGET)/cpp/models/*.{cpp,hpp} $(TARGET)/main.cpp ../../uTensor
 
 clean:
 	@for dname in $(TESTS); \
