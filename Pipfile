@@ -8,7 +8,7 @@ name = "pypi"
 [packages]
 
 "jinja2" = "*"
-tensorflow = "*"
+tensorflow = ">=1.6"
 numpy = "*"
 "idx2numpy" = "*"
 "e1839a8" = {path = ".", editable = true}
