@@ -1,18 +1,18 @@
 # -*- coding:utf8 -*-
 import numpy as np
-import tensorflow as tf
 
-from ._snippets_base import Snippet, SnippetContainer  # pylint: disable=W0611
+from ._base import Snippet, SnippetContainer  # pylint: disable=W0611
 from ._types import TF_TYPES_MAP
 
-__all__ = ["CreateTensorIdxSnippet", "CreateTensorNewSnippet",
+__all__ = ["Snippet", "SnippetContainer",
+           "CreateTensorIdxSnippet", "CreateTensorNewSnippet",
            "AddOpSnippet", "MinOpSnippet", "MaxOpSnippet",
            "ArgMaxOpSnippet", "DequantizeOpSnippet",
            "QuantizedMatMulOpSnippet", "QuantizeV2OpSnippet",
            "QuantizedReluOpSnippet", "ReshapeOpSnippet",
            "Conv2DOpSnippent",
            "RequantizationRangeOpSnippet", "RequantizeOpSnippet",
-           "CommentSnippet", "ContextHeaderSnippet"]
+           "CommentSnippet", "ContextHeaderSnippet", "ContextSnippetsContainer"]
 
 
 class CreateTensorIdxSnippet(Snippet):

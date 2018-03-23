@@ -5,12 +5,12 @@ import idx2numpy as idx2np
 import numpy as np
 import tensorflow as tf
 
-from .composer import Composer
 from .operators import OperatorFactory
 from .optimizer import Optimizer
-from .pbparser import parse_pb
+from .parser import parse_pb
 from .snippets import (CommentSnippet, ContextHeaderSnippet,
                        ContextSnippetsContainer, CreateTensorIdxSnippet)
+from .snippets.composer import Composer
 
 __all__ = ["CodeGenerator"]
 
