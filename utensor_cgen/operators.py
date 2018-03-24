@@ -52,6 +52,15 @@ class _MaxOperator(_Operator):
     ref_count = ref_counts[0]
     self._snippet = MaxOpSnippet(inputs, output, out_dtype, out_shape, ref_count, to_eval)
 
+class _QuantizedMaxPool(_Operator):
+  def __init__(self, op_info, ref_counts, to_eval):
+    _Operator.__init__(self)
+    inputs = [tname for tname, _, _ in op_info.input_tensor]
+    outputs = [tname for tname, _, _ in op_info.output_tensor]
+    _, out_dtype, _ = op_info.output_tensor[0]
+    #ref_count = ref_counts[0]
+    self._snippet = QuantizedMaxPoolSnippet(inputs, outputs, out_dtype, ref_counts, to_eval)
+
 
 class _MinOperator(_Operator):
   def __init__(self, op_info, ref_counts, to_eval):
@@ -91,7 +100,7 @@ class _QuantizedReluOperator(_Operator):
     inputs = [tname for tname, _, _ in op_info.input_tensor]
     outputs = [tname for tname, _, _ in op_info.output_tensor]
     _, in_dtype, _ = op_info.input_tensor[0]
-    _, qout_dtype, _ = op_info.output_tensor[0]
+    _, qout_dtype, _ = op_info.output_tensor[0]  #NT: why separate this out?
     out_dtypes = [t[1] for t in op_info.output_tensor[1:]]
     self._snippet = QuantizedReluOpSnippet(inputs, outputs, in_dtype, out_dtypes, qout_dtype, ref_counts, to_eval)
 
@@ -130,6 +139,7 @@ class OperatorFactory():
                 "ArgMax": _ArgMaxOperator,
                 "Dequantize": _DequantizeOperator,
                 "Max": _MaxOperator,
+                "QuantizedMaxPool": _QuantizedMaxPool,
                 "Min": _MinOperator,
                 "QuantizeV2": _QuantizeV2Operator,
                 "QuantizedMatMul": _QuantizedMatMulOperator,

@@ -7,7 +7,7 @@ from ._types import TF_TYPES_MAP
 
 __all__ = ["CreateTensorIdxSnippet", "CreateTensorNewSnippet",
            "AddOpSnippet", "MinOpSnippet", "MaxOpSnippet",
-           "ArgMaxOpSnippet", "DequantizeOpSnippet",
+           "ArgMaxOpSnippet", "DequantizeOpSnippet", "QuantizedMaxPoolSnippet",
            "QuantizedMatMulOpSnippet", "QuantizeV2OpSnippet",
            "QuantizedReluOpSnippet", "ReshapeOpSnippet",
            "RequantizationRangeOpSnippet", "RequantizeOpSnippet",
@@ -136,6 +136,24 @@ class MaxOpSnippet(Snippet):
     self.template_vars["out_shape"] = out_shape
     self.template_vars["to_eval"] = to_eval
 
+class QuantizedMaxPoolSnippet(Snippet):
+  __template_name__ = "snippets/qmax_pool_op.cpp"
+
+  def __init__(self, inputs, outputs, out_dtype,
+               ref_counts=None,
+               to_eval=False):
+    Snippet.__init__(self)
+    if ref_counts is None:
+      ref_counts = []
+    if ref_counts:
+      err_msg = ("incorrect number of ref_counts and outputs: {}, {}"
+                 .format(ref_counts, outputs))
+      assert len(ref_counts) == len(outputs), err_msg
+      self.template_vars['ref_counts'] = ref_counts
+    self.template_vars["inputs"] = inputs
+    self.template_vars["outputs"] = outputs
+    self.template_vars["out_dtype"] = TF_TYPES_MAP[out_dtype].tensor_type_str
+    self.template_vars["to_eval"] = to_eval
 
 class ArgMaxOpSnippet(Snippet):
   __template_name__ = "snippets/argmax_op.cpp"
@@ -178,6 +196,7 @@ class QuantizedMatMulOpSnippet(Snippet):
     if ref_counts is None:
       ref_counts = []
     # hack on different arguments order between tensorflow and uTensor
+    # NT: FIXME
     inputs = _permute_args(inputs, [0, 2, 3, 1, 4, 5])
     if ref_counts:
       err_msg = ("incorrect number of ref_counts and outputs: {}, {}"
