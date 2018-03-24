@@ -19,3 +19,4 @@ numpy = "*"
 
 pylint = "*"
 "flake8" = "*"
+pytest = "*"
