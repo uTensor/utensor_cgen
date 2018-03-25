@@ -76,10 +76,5 @@ def parse_pb(file_or_path, output_nodes=None):
   if output_nodes is not None:
     graph_def = graph_util.extract_sub_graph(graph_def, output_nodes)
 
-<<<<<<< HEAD:utensor_cgen/pbparser.py
-  ops_info, ops_tord, output_nodes = _parse_graph_def(graph_def, output_nodes)
-  return ops_info, ops_tord, output_nodes
-=======
   ops_info, ops_topo, output_nodes = _parse_graph_def(graph_def, output_nodes)
   return ops_info, ops_topo, output_nodes
->>>>>>> feature/cnn:utensor_cgen/parser/pbparser.py
