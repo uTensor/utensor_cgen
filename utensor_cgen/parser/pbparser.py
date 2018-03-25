@@ -4,25 +4,13 @@ Parser for Protobuf file of Tensorflow Graph
 """
 import io
 import sys
-from collections import namedtuple
 
 import tensorflow as tf
 from tensorflow.python.framework import graph_util  # pylint: disable=E0611
 
 from ._pbparser_impl import _parse_graph_def
 
-__all__ = ["parse_pb", "GraphDefParser"]
-
-class GraphDefParser:
-
-  GraphInfo = namedtuple(
-    "GraphInfo",
-    field_names=["graph_info", "ops_tord", "output_nodes"])
-
-  @classmethod
-  def parse(cls, graph_def, output_nodes=None):
-    ops_info, ops_tord = _parse_graph_def(graph_def, output_nodes)
-    return cls.GraphInfo(ops_info, ops_tord, output_nodes)
+__all__ = ["parse_pb"]
 
 
 def parse_pb(file_or_path, output_nodes=None):
@@ -88,5 +76,10 @@ def parse_pb(file_or_path, output_nodes=None):
   if output_nodes is not None:
     graph_def = graph_util.extract_sub_graph(graph_def, output_nodes)
 
+<<<<<<< HEAD:utensor_cgen/pbparser.py
   ops_info, ops_tord, output_nodes = _parse_graph_def(graph_def, output_nodes)
   return ops_info, ops_tord, output_nodes
+=======
+  ops_info, ops_topo, output_nodes = _parse_graph_def(graph_def, output_nodes)
+  return ops_info, ops_topo, output_nodes
+>>>>>>> feature/cnn:utensor_cgen/parser/pbparser.py

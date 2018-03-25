@@ -29,7 +29,7 @@ def main(pb_file, src_fname, idx_dir, embed_data_dir,
     src_fname = _get_pb_model_name(pb_file) + ".cpp"
   model_path = os.path.join(model_dir, src_fname)
   
-  from .core import CodeGenerator
+  from .code_generator import CodeGenerator
 
   if embed_data_dir is None:
     embed_data_dir = os.path.join("/fs", idx_dir)

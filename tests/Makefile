@@ -4,7 +4,8 @@ TESTS=add add_2 add_3 \
 	  max_1_1 max_1 max_2 max_3 max_3_1 \
 		max_pool_1 \
 	  reshape_2 reshape_3 reshape_4 \
-	  reshape_5 reshape_6 reshape_7
+	  reshape_5 reshape_6 reshape_7 \
+	  conv
 	  # uTensor does not support reshape_1 yet
 .PHONY: $(TESTS)
 
@@ -17,6 +18,9 @@ $(TESTS):
 	 	mkdir cpp; \
 	 fi; \
 	 cd cpp; \
+	 if [ ! -e idx_data ]; then \
+	 	mkdir idx_data; \
+	 fi; \
 	 utensor-cli ../test_quant_$@.pb -m models -d idx_data -o $@_ctx.cpp; \
 	 for file in ../output*.idx ; \
 	 do \

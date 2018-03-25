@@ -1,17 +1,18 @@
 # -*- coding:utf8 -*-
 import numpy as np
-import tensorflow as tf
 
-from ._snippets_base import Snippet, SnippetContainer  # pylint: disable=W0611
+from ._base import Snippet, SnippetContainer  # pylint: disable=W0611
 from ._types import TF_TYPES_MAP
 
-__all__ = ["CreateTensorIdxSnippet", "CreateTensorNewSnippet",
+__all__ = ["Snippet", "SnippetContainer",
+           "CreateTensorIdxSnippet", "CreateTensorNewSnippet",
            "AddOpSnippet", "MinOpSnippet", "MaxOpSnippet",
            "ArgMaxOpSnippet", "DequantizeOpSnippet", "QuantizedMaxPoolSnippet",
            "QuantizedMatMulOpSnippet", "QuantizeV2OpSnippet",
            "QuantizedReluOpSnippet", "ReshapeOpSnippet",
+           "Conv2DOpSnippent",
            "RequantizationRangeOpSnippet", "RequantizeOpSnippet",
-           "CommentSnippet", "ContextHeaderSnippet"]
+           "CommentSnippet", "ContextHeaderSnippet", "ContextSnippetsContainer"]
 
 
 class CreateTensorIdxSnippet(Snippet):
@@ -309,6 +310,31 @@ class ReshapeOpSnippet(Snippet):
       self.template_vars["ref_count"] = ref_count
     self.template_vars["inputs"] = inputs
     self.template_vars["output"] = output
+    self.template_vars["to_eval"] = to_eval
+
+
+class Conv2DOpSnippent(Snippet):
+  __template_name__ = "snippets/conv2d_op.cpp"
+
+  def __init__(self, inputs, outputs, strides, padding,
+               in_dtype, filter_dtype, out_dtypes,
+               ref_counts=None,
+               to_eval=False):
+    Snippet.__init__(self)
+    if ref_counts is None:
+      ref_counts = []
+    if ref_counts:
+      err_msg = ("incorrect number of ref_counts and outputs: {}, {}"
+                 .format(ref_counts, outputs))
+      assert len(ref_counts) == len(outputs), err_msg
+    self.template_vars["inputs"] = inputs
+    self.template_vars["outputs"] = outputs
+    self.template_vars["in_dtype"] = TF_TYPES_MAP[in_dtype].tensor_type_str
+    self.template_vars["filter_dtype"] = TF_TYPES_MAP[filter_dtype].tensor_type_str
+    self.template_vars["out_dtypes"] = [TF_TYPES_MAP[out_dtype].tensor_type_str for out_dtype in out_dtypes]
+    self.template_vars["strides"] = strides
+    self.template_vars["padding"] = padding
+    self.template_vars["ref_counts"] = ref_counts
     self.template_vars["to_eval"] = to_eval
 
 
