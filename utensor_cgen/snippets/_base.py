@@ -17,7 +17,7 @@ SNIPPET_CONFIG = {
   "snippets/argmax_op.cpp": set(['"uTensor/ops/MathOps.hpp"']),
   "snippets/dequantize_op.cpp": set(['"uTensor/ops/ArrayOps.hpp"']),
   "snippets/qmatmul_op.cpp": set(['"uTensor/ops/MatrixOps.hpp"']),
-  "snippets/qmax_pool_op.cpp": set(['"uTensor/ops/ArrayOps.hpp"']),
+  "snippets/qmax_pool_op.cpp": set(['"uTensor/ops/NnOps.hpp"']),
   "snippets/quantV2_op.cpp": set(['"uTensor/ops/ArrayOps.hpp"']),
   "snippets/qrelu_op.cpp": set(['"uTensor/ops/NnOps.hpp"']),
   "snippets/reshape_op.cpp": set(['"uTensor/ops/ArrayOps.hpp"']),

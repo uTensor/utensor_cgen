@@ -52,14 +52,19 @@ class _MaxOperator(_Operator):
     ref_count = ref_counts[0]
     self._snippet = MaxOpSnippet(inputs, output, out_dtype, out_shape, ref_count, to_eval)
 
+
 class _QuantizedMaxPool(_Operator):
   def __init__(self, op_info, ref_counts, to_eval):
     _Operator.__init__(self)
     inputs = [tname for tname, _, _ in op_info.input_tensor]
     outputs = [tname for tname, _, _ in op_info.output_tensor]
-    _, out_dtype, _ = op_info.output_tensor[0]
-    #ref_count = ref_counts[0]
-    self._snippet = QuantizedMaxPoolSnippet(inputs, outputs, out_dtype, ref_counts, to_eval)
+    _, dtype, _ = op_info.output_tensor[0]
+    ksize = op_info.op_attr['ksize'].list.i
+    strides = op_info.op_attr['strides'].list.i
+    padding = op_info.op_attr['padding'].s.decode('utf8')
+    self._snippet = QuantizedMaxPoolSnippet(inputs, outputs, dtype,
+                                            ksize, strides, padding,
+                                            ref_counts, to_eval)
 
 
 class _MinOperator(_Operator):

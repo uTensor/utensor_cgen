@@ -22,39 +22,10 @@ def parse_pb(file_or_path, output_nodes=None):
 
   Returns
   =======
-  - graph_info <defaultdict>: a dict with information neccessary for
+  - ops_info <dict>: a dict with information neccessary for
     building context in uTensor
-  - layers <list>: list of layer which is a list of operation names
-    in the graph
-
-  Note
-  ====
-  graph_info example:
-    { 'my_const': {
-        "input_tensor": set([]),
-        "output_tensor": set(["my_const:0"])
-        "output_content": {"my_const:0": 3.14},
-        "op_type": "Const"
-      },
-      'myop': {
-        "input_tensor": set(["input1:0", "input2:0"]),
-        "output_tensor": set(["my_op:0", "my_op:1"]),
-        "output_content": {},
-        "op_type": "MyOp"
-      },
-      ...
-    }
-
-  layers example:
-    `bottom` <--------> `top`
-      foo -
-            \\
-              tar - - var
-            /
-      bar -
-  the return list, layers, will be [['foo', 'bar'], ['tar'], ['var']]
-  That is, layers[0] is the bottom layer of the graph, layers[1] is the
-  second bottom layer of the graph, so on and so forth
+  - ops_topo <list>: list of op node names in topological sorted order
+  - output_nodes <list>: list of output node names
   """
   if sys.version_info.major < 3:
     file_type = (file, io.IOBase)  # pylint: disable=E0602

@@ -137,10 +137,12 @@ class MaxOpSnippet(Snippet):
     self.template_vars["out_shape"] = out_shape
     self.template_vars["to_eval"] = to_eval
 
+
 class QuantizedMaxPoolSnippet(Snippet):
   __template_name__ = "snippets/qmax_pool_op.cpp"
 
-  def __init__(self, inputs, outputs, out_dtype,
+  def __init__(self, inputs, outputs, dtype,
+               ksize, strides, padding,
                ref_counts=None,
                to_eval=False):
     Snippet.__init__(self)
@@ -153,8 +155,16 @@ class QuantizedMaxPoolSnippet(Snippet):
       self.template_vars['ref_counts'] = ref_counts
     self.template_vars["inputs"] = inputs
     self.template_vars["outputs"] = outputs
-    self.template_vars["out_dtype"] = TF_TYPES_MAP[out_dtype].tensor_type_str
+    self.template_vars["dtype"] = TF_TYPES_MAP[dtype].tensor_type_str
+    _, wind_cols, wind_rows, _ = ksize
+    _, col_stride, row_stride, _ = strides
+    self.template_vars["wind_cols"] = wind_cols
+    self.template_vars["wind_rows"] = wind_rows
+    self.template_vars["col_stride"] = col_stride
+    self.template_vars["row_stride"] = row_stride
+    self.template_vars["padding"] = padding
     self.template_vars["to_eval"] = to_eval
+
 
 class ArgMaxOpSnippet(Snippet):
   __template_name__ = "snippets/argmax_op.cpp"
