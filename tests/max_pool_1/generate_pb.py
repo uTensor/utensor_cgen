@@ -9,7 +9,7 @@ def generate():
   test_dir = os.path.abspath(os.path.dirname(__file__))
   graph = tf.Graph()
   with graph.as_default():
-    input_data = np.arange(0, (3 * 10 * 10 * 5)).reshape((3, 10, 10, 5))
+    input_data = np.arange(0, 1.0, 1.0 / (3 * 10 * 10 * 5)).reshape((3, 10, 10, 5))
     x = tf.constant(input_data, dtype=tf.float32, name="x")
     pool1 = tf.nn.max_pool(x, ksize=[1, 3, 3, 1], strides=[1, 2, 2, 1],
                            padding='VALID', name='pool1')
