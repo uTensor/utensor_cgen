@@ -48,12 +48,14 @@ class CodeGenerator(object):
     # TODO better snippet construction abstraction
     for op_id, (op_name, op_info, ref_counts, to_eval) in enumerate(construct_order, 1):
       op_type = op_info.op_type
-      if op_type == "Placeholder":
+      if op_type == "Placeholder" or op_type == "IteratorGetNext":
         out_tname, _, _ = op_info.output_tensor[0]
         ref_count = ref_counts[0]
         container.template_vars["placeholders"].append(out_tname)
         container.template_vars["ref_counts"].append(ref_count)
         header_snippet.template_vars["placeholders"].append(out_tname)
+      elif op_type == 'Iterator':
+        print("ignoring Iterator operator")
       elif op_type == 'Const':
         out_tname, out_dtype, _ = op_info.output_tensor[0]
         ref_count = ref_counts[0]
