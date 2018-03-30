@@ -26,11 +26,12 @@ def _no_optimize(ops_info, topo_order, output_nodes):
 
     # pass to remove dropout
     # might mess with ref_count
-    if op_info.op_type == "Dropout":
+    if op_info.op_type == "dropout":
       dropout_input_node = op_info.input_tensor[0]
       dropout_output_node = op_info.output_tensor[0]
       ops_info[dropout_input_node].output_tensor = findAndReplace(ops_info[dropout_input_node].output_tensor, dropout_input_node, dropout_output_node)
       ops_info[dropout_output_node].input_tensor = findAndReplace(ops_info[dropout_output_node].input_tensor, dropout_output_node, dropout_input_node)
+      print("dropout with name ", op_name, " has been removed")
       continue
 
     ref_cnts = [0 for _ in op_info.output_tensor]
