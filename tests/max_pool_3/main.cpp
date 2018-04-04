@@ -46,6 +46,6 @@ void MaxPoolTest3::runAll(void) {
 
     // compare the results
     double err = meanPercentErr<float>(ref_pool3, pool3.get());
-    printf("meanPercentErr: %f (<0.09?)\n", err);
-    passed(err < 0.09);
+    printf("meanPercentErr: %f (<0.03?)\n", err);
+    passed(err < 0.03);
 }
