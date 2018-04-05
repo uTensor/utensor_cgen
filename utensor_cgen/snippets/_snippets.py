@@ -1,17 +1,18 @@
 # -*- coding:utf8 -*-
 import numpy as np
-import tensorflow as tf
 
-from ._snippets_base import Snippet, SnippetContainer  # pylint: disable=W0611
+from ._base import Snippet, SnippetContainer  # pylint: disable=W0611
 from ._types import TF_TYPES_MAP
 
-__all__ = ["CreateTensorIdxSnippet", "CreateTensorNewSnippet",
+__all__ = ["Snippet", "SnippetContainer",
+           "CreateTensorIdxSnippet", "CreateTensorNewSnippet",
            "AddOpSnippet", "MinOpSnippet", "MaxOpSnippet",
-           "ArgMaxOpSnippet", "DequantizeOpSnippet",
+           "ArgMaxOpSnippet", "DequantizeOpSnippet", "QuantizedMaxPoolSnippet",
            "QuantizedMatMulOpSnippet", "QuantizeV2OpSnippet",
            "QuantizedReluOpSnippet", "ReshapeOpSnippet",
+           "Conv2DOpSnippent",
            "RequantizationRangeOpSnippet", "RequantizeOpSnippet",
-           "CommentSnippet", "ContextHeaderSnippet"]
+           "CommentSnippet", "ContextHeaderSnippet", "ContextSnippetsContainer"]
 
 
 class CreateTensorIdxSnippet(Snippet):
@@ -137,6 +138,34 @@ class MaxOpSnippet(Snippet):
     self.template_vars["to_eval"] = to_eval
 
 
+class QuantizedMaxPoolSnippet(Snippet):
+  __template_name__ = "snippets/qmax_pool_op.cpp"
+
+  def __init__(self, inputs, outputs, dtype,
+               ksize, strides, padding,
+               ref_counts=None,
+               to_eval=False):
+    Snippet.__init__(self)
+    if ref_counts is None:
+      ref_counts = []
+    if ref_counts:
+      err_msg = ("incorrect number of ref_counts and outputs: {}, {}"
+                 .format(ref_counts, outputs))
+      assert len(ref_counts) == len(outputs), err_msg
+      self.template_vars['ref_counts'] = ref_counts
+    self.template_vars["inputs"] = inputs
+    self.template_vars["outputs"] = outputs
+    self.template_vars["dtype"] = TF_TYPES_MAP[dtype].tensor_type_str
+    _, wind_cols, wind_rows, _ = ksize
+    _, col_stride, row_stride, _ = strides
+    self.template_vars["wind_cols"] = wind_cols
+    self.template_vars["wind_rows"] = wind_rows
+    self.template_vars["col_stride"] = col_stride
+    self.template_vars["row_stride"] = row_stride
+    self.template_vars["padding"] = padding
+    self.template_vars["to_eval"] = to_eval
+
+
 class ArgMaxOpSnippet(Snippet):
   __template_name__ = "snippets/argmax_op.cpp"
 
@@ -178,6 +207,7 @@ class QuantizedMatMulOpSnippet(Snippet):
     if ref_counts is None:
       ref_counts = []
     # hack on different arguments order between tensorflow and uTensor
+    # NT: FIXME
     inputs = _permute_args(inputs, [0, 2, 3, 1, 4, 5])
     if ref_counts:
       err_msg = ("incorrect number of ref_counts and outputs: {}, {}"
@@ -290,6 +320,31 @@ class ReshapeOpSnippet(Snippet):
       self.template_vars["ref_count"] = ref_count
     self.template_vars["inputs"] = inputs
     self.template_vars["output"] = output
+    self.template_vars["to_eval"] = to_eval
+
+
+class Conv2DOpSnippent(Snippet):
+  __template_name__ = "snippets/conv2d_op.cpp"
+
+  def __init__(self, inputs, outputs, strides, padding,
+               in_dtype, filter_dtype, out_dtypes,
+               ref_counts=None,
+               to_eval=False):
+    Snippet.__init__(self)
+    if ref_counts is None:
+      ref_counts = []
+    if ref_counts:
+      err_msg = ("incorrect number of ref_counts and outputs: {}, {}"
+                 .format(ref_counts, outputs))
+      assert len(ref_counts) == len(outputs), err_msg
+    self.template_vars["inputs"] = inputs
+    self.template_vars["outputs"] = outputs
+    self.template_vars["in_dtype"] = TF_TYPES_MAP[in_dtype].tensor_type_str
+    self.template_vars["filter_dtype"] = TF_TYPES_MAP[filter_dtype].tensor_type_str
+    self.template_vars["out_dtypes"] = [TF_TYPES_MAP[out_dtype].tensor_type_str for out_dtype in out_dtypes]
+    self.template_vars["strides"] = strides
+    self.template_vars["padding"] = padding
+    self.template_vars["ref_counts"] = ref_counts
     self.template_vars["to_eval"] = to_eval
 
 

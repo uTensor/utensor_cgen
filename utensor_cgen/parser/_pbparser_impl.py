@@ -92,7 +92,7 @@ def _parse_graph_info(graph_def):
   """
   OperationInfo = namedtuple('OperationInfo',
                              field_names=['input_tensor', 'output_tensor',
-                                          'op_type', 'output_content'])
+                                          'op_type', 'output_content', 'op_attr'])
   graph = Graph()
   with graph.as_default():  # pylint: disable=E1129
     import_graph_def(graph_def, name="")
@@ -104,11 +104,16 @@ def _parse_graph_info(graph_def):
       output_tensor = [(t.name, t.dtype, _parse_shape(t.shape)) for t in op.outputs]
       op_type = node.op
       output_content = {}
+      op_attr = node.attr
       if node.op in ["Const"]:
         for tensor_name, _, _ in output_tensor:
           tensor = graph.get_tensor_by_name(tensor_name)
           output_content[tensor_name] = tensor.eval()
-      graph_info[node.name] = OperationInfo(input_tensor, output_tensor, op_type, output_content)
+      graph_info[node.name] = OperationInfo(input_tensor,
+                                            output_tensor,
+                                            op_type,
+                                            output_content,
+                                            op_attr)
   return graph_info
 
 
@@ -165,7 +170,7 @@ def _parse_graph_topologic_order(graph_def, output_nodes=None):
   queue = output_nodes.copy()
   visited = set()    # temporary mark
   perm_visit = set() # Permanent mark
-  ops_bfs = [] # L
+  ops_torder = [] # L
 
   def visit(node_name):
     if node_name in perm_visit:
@@ -180,19 +185,19 @@ def _parse_graph_topologic_order(graph_def, output_nodes=None):
       visit(tensor.op.name)
     
     perm_visit.add(node_name)
-    ops_bfs.insert(0, node_name)
+    ops_torder.insert(0, node_name)
 
   while queue:
     node_name = queue.pop(0)
     visit(node_name)    
 
   # ops_bfs.reverse()
-  return ops_bfs, output_nodes
+  return ops_torder, output_nodes
 
 
 def _parse_graph_def(graph_def, output_nodes=None):
   if not _is_freeze_graph(graph_def):
     raise ValueError("The graph is not frozen, freeze the graph first")
-  ops_bfs, output_nodes = _parse_graph_topologic_order(graph_def, output_nodes=output_nodes)
+  ops_topo, output_nodes = _parse_graph_topologic_order(graph_def, output_nodes=output_nodes)
   ops_info = _parse_graph_info(graph_def)
-  return ops_info, ops_bfs, output_nodes
+  return ops_info, ops_topo, output_nodes
