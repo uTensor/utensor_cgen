@@ -1,5 +1,6 @@
 # -*- coding:utf8 -*-
 from collections import defaultdict, namedtuple
+from copy import deepcopy
 
 import numpy as np
 from tensorflow import Graph, Session, import_graph_def
@@ -167,7 +168,7 @@ def _parse_graph_topologic_order(graph_def, output_nodes=None):
   with graph.as_default():
     import_graph_def(graph_def, name='')
 
-  queue = output_nodes.copy()
+  queue = deepcopy(output_nodes)
   visited = set()    # temporary mark
   perm_visit = set() # Permanent mark
   ops_torder = [] # L

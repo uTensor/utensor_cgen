@@ -1,5 +1,5 @@
 # -*- coding:utf8 -*-
-from abc import ABC
+from abc import ABCMeta
 from copy import deepcopy
 
 from .template_env import env as _env
@@ -31,7 +31,8 @@ SNIPPET_CONFIG = {
 }
 
 
-class SnippetBase(ABC):
+class SnippetBase(object):
+  __metaclass__ = ABCMeta
   __template_name__ = None
 
   def __init__(self):
