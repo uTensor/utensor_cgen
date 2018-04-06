@@ -53,6 +53,20 @@ class _MaxOperator(_Operator):
     self._snippet = MaxOpSnippet(inputs, output, out_dtype, out_shape, ref_count, to_eval)
 
 
+class _QuantizedMaxPool(_Operator):
+  def __init__(self, op_info, ref_counts, to_eval):
+    _Operator.__init__(self)
+    inputs = [tname for tname, _, _ in op_info.input_tensor]
+    outputs = [tname for tname, _, _ in op_info.output_tensor]
+    _, dtype, _ = op_info.output_tensor[0]
+    ksize = op_info.op_attr['ksize'].list.i
+    strides = op_info.op_attr['strides'].list.i
+    padding = op_info.op_attr['padding'].s.decode('utf8')
+    self._snippet = QuantizedMaxPoolSnippet(inputs, outputs, dtype,
+                                            ksize, strides, padding,
+                                            ref_counts, to_eval)
+
+
 class _MinOperator(_Operator):
   def __init__(self, op_info, ref_counts, to_eval):
     _Operator.__init__(self)
@@ -91,7 +105,7 @@ class _QuantizedReluOperator(_Operator):
     inputs = [tname for tname, _, _ in op_info.input_tensor]
     outputs = [tname for tname, _, _ in op_info.output_tensor]
     _, in_dtype, _ = op_info.input_tensor[0]
-    _, qout_dtype, _ = op_info.output_tensor[0]
+    _, qout_dtype, _ = op_info.output_tensor[0]  #NT: why separate this out?
     out_dtypes = [t[1] for t in op_info.output_tensor[1:]]
     self._snippet = QuantizedReluOpSnippet(inputs, outputs, in_dtype, out_dtypes, qout_dtype, ref_counts, to_eval)
 
@@ -124,19 +138,36 @@ class _ReshapeOperator(_Operator):
     self._snippet = ReshapeOpSnippet(inputs, output, ref_count, to_eval)
 
 
+class _Conv2DOperator(_Operator):
+  def __init__(self, op_info, ref_counts, to_eval):
+    _Operator.__init__(self)
+    inputs = [tname for tname, _, _ in op_info.input_tensor]
+    outputs = [tname for tname, _, _ in op_info.output_tensor]
+    _, in_dtype, _ = op_info.input_tensor[0]
+    _, filter_dtype, _ = op_info.input_tensor[1]
+    out_dtypes = [out_dtype for _, out_dtype, _ in op_info.output_tensor]
+    strides = op_info.op_attr["strides"].list.i
+    padding = op_info.op_attr["padding"].s.decode("utf8")
+    self._snippet = Conv2DOpSnippent(inputs, outputs, strides, padding,
+                                     in_dtype=in_dtype, filter_dtype=filter_dtype, out_dtypes=out_dtypes,
+                                     ref_counts=ref_counts, to_eval=to_eval)
+
+
 class OperatorFactory():
   # Can easily do something smarter
   _operators = {"Add": _AddOperator,
                 "ArgMax": _ArgMaxOperator,
                 "Dequantize": _DequantizeOperator,
                 "Max": _MaxOperator,
+                "QuantizedMaxPool": _QuantizedMaxPool,
                 "Min": _MinOperator,
                 "QuantizeV2": _QuantizeV2Operator,
                 "QuantizedMatMul": _QuantizedMatMulOperator,
                 "QuantizedRelu": _QuantizedReluOperator,
                 "RequantizationRange": _RequantizationRangeOperator,
                 "Requantize": _RequantizeOperator,
-                "Reshape": _ReshapeOperator}
+                "Reshape": _ReshapeOperator,
+                "QuantizedConv2D": _Conv2DOperator}
 
   def createOperatorSnippet(self, op_info, ref_counts, to_eval):
     op_type = op_info.op_type
