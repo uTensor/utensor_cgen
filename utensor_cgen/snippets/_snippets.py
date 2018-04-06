@@ -1,10 +1,10 @@
 # -*- coding:utf8 -*-
 import numpy as np
 
-from ._base import Snippet, SnippetContainer  # pylint: disable=W0611
+from ._base import Snippet, SnippetContainerBase  # pylint: disable=W0611
 from ._types import TF_TYPES_MAP
 
-__all__ = ["Snippet", "SnippetContainer",
+__all__ = ["Snippet", "SnippetContainerBase",
            "CreateTensorIdxSnippet", "CreateTensorNewSnippet",
            "AddOpSnippet", "MinOpSnippet", "MaxOpSnippet",
            "ArgMaxOpSnippet", "DequantizeOpSnippet", "QuantizedMaxPoolSnippet",
@@ -17,6 +17,9 @@ __all__ = ["Snippet", "SnippetContainer",
 
 class CreateTensorIdxSnippet(Snippet):
   __template_name__ = "snippets/create_tensor_idx.cpp"
+  __headers__ = set(['"uTensor/loaders/tensorIdxImporter.hpp"',
+                     '"uTensor/core/context.hpp"',
+                     '"uTensor/core/tensor.hpp"'])
 
   def __init__(self, data_dir, tensor_name, tf_dtype,
                ref_count=0,
@@ -45,6 +48,7 @@ class CreateTensorIdxSnippet(Snippet):
 
 class CreateTensorNewSnippet(Snippet):
   __template_name__ = "snippets/create_tensor_new.cpp"
+  __headers__ = set(['"uTensor/core/context.hpp"', '"uTensor/core/tensor.hpp"'])
 
   def __init__(self, tensor_name, tf_dtype,
                tensor_shape=None,
@@ -90,6 +94,7 @@ def _permute_args(args, perm=None):
 
 class AddOpSnippet(Snippet):
   __template_name__ = "snippets/add_op.cpp"
+  __headers__ = set(['"uTensor/ops/MathOps.hpp"'])
 
   def __init__(self, inputs, output, tf_dtype,
                ref_count=0,
@@ -106,6 +111,7 @@ class AddOpSnippet(Snippet):
 
 class MinOpSnippet(Snippet):
   __template_name__ = "snippets/min_op.cpp"
+  __headers__ = set(['"uTensor/ops/MathOps.hpp"'])
 
   def __init__(self, inputs, output, out_dtype,
                out_shape=None,
@@ -123,6 +129,7 @@ class MinOpSnippet(Snippet):
 
 class MaxOpSnippet(Snippet):
   __template_name__ = "snippets/max_op.cpp"
+  __headers__ = set(['"uTensor/ops/MathOps.hpp"'])
 
   def __init__(self, inputs, output, out_dtype,
                out_shape=None,
@@ -140,6 +147,7 @@ class MaxOpSnippet(Snippet):
 
 class QuantizedMaxPoolSnippet(Snippet):
   __template_name__ = "snippets/qmax_pool_op.cpp"
+  __headers__ = set(['"uTensor/ops/NnOps.hpp"'])
 
   def __init__(self, inputs, outputs, dtype,
                ksize, strides, padding,
@@ -168,6 +176,7 @@ class QuantizedMaxPoolSnippet(Snippet):
 
 class ArgMaxOpSnippet(Snippet):
   __template_name__ = "snippets/argmax_op.cpp"
+  __headers__ = set(['"uTensor/ops/MathOps.hpp"'])
 
   def __init__(self, inputs, output, in_dtype, out_dtype,
                ref_count=0,
@@ -184,6 +193,7 @@ class ArgMaxOpSnippet(Snippet):
 
 class DequantizeOpSnippet(Snippet):
   __template_name__ = "snippets/dequantize_op.cpp"
+  __headers__ = set(['"uTensor/ops/ArrayOps.hpp"'])
 
   def __init__(self, inputs, output, out_dtype,
                ref_count=0,
@@ -199,6 +209,7 @@ class DequantizeOpSnippet(Snippet):
 
 class QuantizedMatMulOpSnippet(Snippet):
   __template_name__ = "snippets/qmatmul_op.cpp"
+  __headers__ = set(['"uTensor/ops/MatrixOps.hpp"'])
 
   def __init__(self, inputs, outputs, x_dtype, w_dtype, out_dtype,
                ref_counts=None,
@@ -224,6 +235,7 @@ class QuantizedMatMulOpSnippet(Snippet):
 
 class QuantizeV2OpSnippet(Snippet):
   __template_name__ = "snippets/quantV2_op.cpp"
+  __headers__ = set(['"uTensor/ops/ArrayOps.hpp"'])
 
   def __init__(self, inputs, outputs, out_dtype,
                ref_counts=None,
@@ -244,6 +256,7 @@ class QuantizeV2OpSnippet(Snippet):
 
 class QuantizedReluOpSnippet(Snippet):
   __template_name__ = "snippets/qrelu_op.cpp"
+  __headers__ = set(['"uTensor/ops/NnOps.hpp"'])
 
   def __init__(self, inputs, outputs, in_dtype, out_dtypes, qout_dtype,
                ref_counts=None,
@@ -266,6 +279,7 @@ class QuantizedReluOpSnippet(Snippet):
 
 class RequantizationRangeOpSnippet(Snippet):
   __template_name__ = "snippets/requant_range_op.cpp"
+  __headers__ = set(['"uTensor/ops/MathOps.hpp"'])
 
   def __init__(self, inputs, outputs, out_dtype,
                ref_counts=None,
@@ -286,6 +300,7 @@ class RequantizationRangeOpSnippet(Snippet):
 
 class RequantizeOpSnippet(Snippet):
   __template_name__ = "snippets/requant_op.cpp"
+  __headers__ = set(['"uTensor/ops/MathOps.hpp"'])
 
   def __init__(self, inputs, outputs, qout_dtype, range_dtype,
                ref_counts=None,
@@ -311,6 +326,7 @@ class RequantizeOpSnippet(Snippet):
 
 class ReshapeOpSnippet(Snippet):
   __template_name__ = "snippets/reshape_op.cpp"
+  __headers__ = set(['"uTensor/ops/ArrayOps.hpp"'])
 
   def __init__(self, inputs, output,
                ref_count=0,
@@ -325,6 +341,7 @@ class ReshapeOpSnippet(Snippet):
 
 class Conv2DOpSnippent(Snippet):
   __template_name__ = "snippets/conv2d_op.cpp"
+  __headers__ = set(['"uTensor/ops/MatrixOps.hpp"'])
 
   def __init__(self, inputs, outputs, strides, padding,
                in_dtype, filter_dtype, out_dtypes,
@@ -350,6 +367,7 @@ class Conv2DOpSnippent(Snippet):
 
 class CommentSnippet(Snippet):
   __template_name__ = "snippets/comments.cpp"
+  __headers__ = set([])
 
   def __init__(self, comments):
     Snippet.__init__(self)
@@ -358,6 +376,7 @@ class CommentSnippet(Snippet):
 
 class ContextHeaderSnippet(Snippet):
   __template_name__ = "snippets/get_ctx.hpp"
+  __headers__ = set(['"uTensor/core/context.hpp"', '"uTensor/core/tensor.hpp"'])
 
   def __init__(self, guard_name, graph_name, placeholders=None):
     Snippet.__init__(self)
@@ -368,13 +387,14 @@ class ContextHeaderSnippet(Snippet):
     self.template_vars["placeholders"] = placeholders
 
 
-class ContextSnippetsContainer(SnippetContainer):
+class ContextSnippetsContainer(SnippetContainerBase):
   __template_name__ = "containers/get_ctx.cpp"
+  __headers__ = set([])
 
   def __init__(self,
                graph_name, ctx_header_name, 
                snippets=None, placeholders=None, ref_counts=None):
-    SnippetContainer.__init__(self, snippets)
+    SnippetContainerBase.__init__(self, snippets)
     if placeholders is None:
       placeholders = []
     if ref_counts is None:
