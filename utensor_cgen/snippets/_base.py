@@ -4,44 +4,29 @@ from copy import deepcopy
 
 from .template_env import env as _env
 
-__all__ = ["Snippet", "SnippetContainer"]
+__all__ = ["Snippet", "SnippetContainerBase"]
 
-SNIPPET_CONFIG = {
-  "snippets/create_tensor_idx.cpp": set(['"uTensor/loaders/tensorIdxImporter.hpp"',
-                                         '"uTensor/core/context.hpp"',
-                                         '"uTensor/core/tensor.hpp"']),
-  "snippets/create_tensor_new.cpp": set(['"uTensor/core/context.hpp"', '"uTensor/core/tensor.hpp"']),
-  "snippets/add_op.cpp": set(['"uTensor/ops/MathOps.hpp"']),
-  "snippets/min_op.cpp": set(['"uTensor/ops/MathOps.hpp"']),
-  "snippets/max_op.cpp": set(['"uTensor/ops/MathOps.hpp"']),
-  "snippets/argmax_op.cpp": set(['"uTensor/ops/MathOps.hpp"']),
-  "snippets/dequantize_op.cpp": set(['"uTensor/ops/ArrayOps.hpp"']),
-  "snippets/qmatmul_op.cpp": set(['"uTensor/ops/MatrixOps.hpp"']),
-  "snippets/qmax_pool_op.cpp": set(['"uTensor/ops/NnOps.hpp"']),
-  "snippets/quantV2_op.cpp": set(['"uTensor/ops/ArrayOps.hpp"']),
-  "snippets/qrelu_op.cpp": set(['"uTensor/ops/NnOps.hpp"']),
-  "snippets/reshape_op.cpp": set(['"uTensor/ops/ArrayOps.hpp"']),
-  "snippets/requant_op.cpp": set(['"uTensor/ops/MathOps.hpp"']),
-  "snippets/requant_range_op.cpp": set(['"uTensor/ops/MathOps.hpp"']),
-  "snippets/conv2d_op.cpp": set(['"uTensor/ops/MatrixOps.hpp"']),
-  "snippets/comments.cpp": set([]),
-  "snippets/get_ctx.hpp": set(['"uTensor/core/context.hpp"', '"uTensor/core/tensor.hpp"']),
-  "containers/main.cpp": set([]),
-  "containers/get_ctx.cpp": set([])
-}
+_SUPPORT_SNIPPETS = [
+  "snippets/create_tensor_idx.cpp", "snippets/create_tensor_new.cpp", "snippets/add_op.cpp",
+  "snippets/min_op.cpp", "snippets/max_op.cpp", "snippets/argmax_op.cpp",
+  "snippets/dequantize_op.cpp", "snippets/qmatmul_op.cpp", "snippets/qmax_pool_op.cpp",
+  "snippets/quantV2_op.cpp", "snippets/qrelu_op.cpp", "snippets/reshape_op.cpp",
+  "snippets/requant_op.cpp", "snippets/requant_range_op.cpp", "snippets/conv2d_op.cpp",
+  "snippets/comments.cpp", "snippets/get_ctx.hpp", "containers/get_ctx.cpp"
+]
 
 
 class SnippetBase(object):
   __metaclass__ = ABCMeta
   __template_name__ = None
+  __headers__ = None
 
   def __init__(self):
-    headers = SNIPPET_CONFIG.get(self.__template_name__, None)
-    if headers is None:
+    if self.__template_name__ not in _SUPPORT_SNIPPETS:
       raise ValueError('unknown template name: {}'.format(self.__template_name__))
-    self._headers = headers
+    if not isinstance(self.__headers__, set):
+      raise ValueError('__headers__ should be of type set, get {}'.format(type(self.__headers__)))
     self.template_vars = {}
-
 
   @property
   def template_name(self):
@@ -55,13 +40,15 @@ class SnippetBase(object):
 
   @property
   def headers(self):
-    return deepcopy(self._headers)
+    if self.__headers__ is None:
+      raise ValueError('No __headers__ found, all snippet class should overwrite this class attribute')
+    return deepcopy(self.__headers__)
 
   def add_header(self, header):
-    self._headers.add(header)
+    self.__headers__.add(header)
 
   def remove_header(self, header):
-    self._headers.remove(header)
+    self.__headers__.remove(header)
 
 
 class Snippet(SnippetBase):  # pylint: W0223
@@ -70,7 +57,7 @@ class Snippet(SnippetBase):  # pylint: W0223
     return self.template.render(**self.template_vars)
 
 
-class SnippetContainer(SnippetBase):
+class SnippetContainerBase(SnippetBase):
 
   def __init__(self, snippets=None):
     SnippetBase.__init__(self)
@@ -79,7 +66,7 @@ class SnippetContainer(SnippetBase):
       snippets = []
     self._snippets = snippets
     for snp in self._snippets:
-      self._headers.update(snp.headers)
+      self.__headers__.update(snp.headers)
 
   def add_snippet(self, snippet):
     """Add snippet into containers
@@ -87,7 +74,7 @@ class SnippetContainer(SnippetBase):
     if not isinstance(snippet, Snippet):
       msg = "expecting Snippet object, get {}".format(type(snippet))
       raise TypeError(msg)
-    self._headers.update(snippet.headers)
+    self.__headers__.update(snippet.headers)
     self._snippets.append(snippet)
 
   def render(self):
