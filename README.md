@@ -23,6 +23,8 @@ You can go to this [repo](https://github.com/pypa/pipenv) for detail information
     - this will spawn a subshell and activate the virtual environment for you
     - You should be able to use the cli now
 
+**Note**: If you have trouble with installation with `pipenv`, try to remove `Pipfile.lock` first and run `pipenv install -d` again.
+
 # Example
 
 Please refer to [tests/deep_mlp](https://github.com/uTensor/utensor_cgen/tree/develop/tests/deep_mlp) for detailed example
