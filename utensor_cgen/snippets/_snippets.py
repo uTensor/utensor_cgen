@@ -235,6 +235,7 @@ class QuantizedMatMulOpSnippet(Snippet):
 
 class QuantizedAddOpSnippet(Snippet):
   __template_name__ = "snippets/qadd_op.cpp"
+  __headers__ = set(['"uTensor/ops/MathOps.hpp"'])
 
   def __init__(self, inputs, outputs, x_dtype, w_dtype, out_dtype,
                ref_counts=None,
