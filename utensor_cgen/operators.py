@@ -98,6 +98,15 @@ class _QuantizedMatMulOperator(_Operator):
     _, out_dtype, _ = op_info.output_tensor[0]
     self._snippet = QuantizedMatMulOpSnippet(inputs, outputs, x_dtype, w_dtype, out_dtype, ref_counts, to_eval)
 
+class _QuantizedAddOperator(_Operator):
+  def __init__(self, op_info, ref_counts, to_eval):
+    _Operator.__init__(self)
+    inputs = [tname for tname, _, _ in op_info.input_tensor]
+    outputs = [tname for tname, _, _ in op_info.output_tensor]
+    _, x_dtype, _ = op_info.input_tensor[0]
+    _, w_dtype, _ = op_info.input_tensor[1]
+    _, out_dtype, _ = op_info.output_tensor[0]
+    self._snippet = QuantizedAddOpSnippet(inputs, outputs, x_dtype, w_dtype, out_dtype, ref_counts, to_eval)
 
 class _QuantizedReluOperator(_Operator):
   def __init__(self, op_info, ref_counts, to_eval):
@@ -164,6 +173,7 @@ class OperatorFactory():
                 "QuantizeV2": _QuantizeV2Operator,
                 "QuantizedMatMul": _QuantizedMatMulOperator,
                 "QuantizedRelu": _QuantizedReluOperator,
+                "QuantizedAdd": _QuantizedAddOperator,
                 "RequantizationRange": _RequantizationRangeOperator,
                 "Requantize": _RequantizeOperator,
                 "Reshape": _ReshapeOperator,

@@ -12,7 +12,7 @@ _SUPPORT_SNIPPETS = [
   "snippets/dequantize_op.cpp", "snippets/qmatmul_op.cpp", "snippets/qmax_pool_op.cpp",
   "snippets/quantV2_op.cpp", "snippets/qrelu_op.cpp", "snippets/reshape_op.cpp",
   "snippets/requant_op.cpp", "snippets/requant_range_op.cpp", "snippets/conv2d_op.cpp",
-  "snippets/comments.cpp", "snippets/get_ctx.hpp", "containers/get_ctx.cpp"
+  "snippets/comments.cpp", "snippets/get_ctx.hpp", "containers/get_ctx.cpp", "snippets/qadd_op.cpp"
 ]
 
 
