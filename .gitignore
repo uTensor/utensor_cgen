@@ -1,5 +1,6 @@
 # virtual env
 .venv
+venv
 # dev
 dev_notes
 *.ipynb
