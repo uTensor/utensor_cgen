@@ -14,17 +14,21 @@ def generate():
         x = tf.constant(np.array([1, 2, 3, 4]), dtype=tf.float32, name="x")
         y = tf.constant(np.array([1, 1, 1, 1]), dtype=tf.float32, name="y")
         z = tf.add(x, y, name="z")
+    
+    transformed_graph_def = None
     with tf.Session(graph=graph) as sess:
         # Force the quantization
         transformed_graph_def = TransformGraph(sess.graph_def, [],
                                                ["z"], ["quantize_weights", "quantize_nodes"])
-        
+    graph2 = tf.Graph()
+    with tf.Session(graph=graph2) as sess:
         # Load the transformed graph into current context
         tf.import_graph_def(transformed_graph_def, name="")
         
         save_consts(sess, test_dir)
         save_graph(graph, "test_quantized_add", test_dir)
-        np_z = z.eval()
+        z_1 = sess.graph.get_tensor_by_name(sess.graph.get_operation_by_name("z").outputs[0].name)
+        np_z = z_1.eval()
         save_idx(np_z, os.path.join(test_dir, "output_z.idx"))
 
 if __name__ == '__main__':
