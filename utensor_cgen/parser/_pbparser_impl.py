@@ -4,6 +4,7 @@ from copy import deepcopy
 
 import numpy as np
 from tensorflow import Graph, Session, import_graph_def
+from tensorflow.contrib.util import make_ndarray
 
 
 def _parse_tensor_name(tname):
@@ -108,8 +109,7 @@ def _parse_graph_info(graph_def):
       op_attr = node.attr
       if node.op in ["Const"]:
         for tensor_name, _, _ in output_tensor:
-          tensor = graph.get_tensor_by_name(tensor_name)
-          output_content[tensor_name] = tensor.eval()
+          output_content[tensor_name] = make_ndarray(node.attr['value'].tensor)
       graph_info[node.name] = OperationInfo(input_tensor,
                                             output_tensor,
                                             op_type,
