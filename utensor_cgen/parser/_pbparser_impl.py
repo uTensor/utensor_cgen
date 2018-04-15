@@ -7,30 +7,44 @@ from tensorflow import Graph, Session, import_graph_def
 from tensorflow.contrib.util import make_ndarray
 
 
+def _sanitize_op_name(op_name):
+  """
+  Sanitize the op name
+
+  - ignore '^' character of control input
+  """
+  if op_name.startswith('^'):
+    return op_name[1:]
+  return op_name
+
+
 def _parse_tensor_name(tname):
   """Adapt from TensorFlow source code
+
+  tensor name --> (op_name, index)
   """
   components = tname.split(":")
   if len(components) == 2:
+    op_name = _sanitize_op_name(components[0])
     try:
       output_index = int(components[1])
     except ValueError:
       raise ValueError("invalid output index: {}".format(tname))
-    return (components[0], output_index)
+    return (op_name, output_index)
   elif len(components) == 1:
-    return (components[0], 0)
+    op_name = _sanitize_op_name(components[0])
+    return (op_name, 0)
   else:
     raise ValueError("invalid tensor name: {}".format(tname))
-
-
-def _op_name(input_name):
-  return _parse_tensor_name(input_name)[0]
 
 
 def _graph_def_to_map(graph_def):
   """Return a mapping from operation name to a set
   of input operation names
   """
+  def _op_name(input_name):
+    return _parse_tensor_name(input_name)[0]
+
   graph_d = dict((node.name, set(map(_op_name, node.input)))
                  for node in graph_def.node)
   return graph_d
