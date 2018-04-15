@@ -13,7 +13,7 @@ from ._pbparser_impl import _parse_graph_def
 __all__ = ["parse_pb"]
 
 
-def parse_pb(file_or_path, output_nodes=None):
+def parse_pb(file_or_path, output_nodes):
   """
   Arguments
   =========
@@ -44,8 +44,8 @@ def parse_pb(file_or_path, output_nodes=None):
   graph_def.ParseFromString(fid.read())
   fid.close()
 
-  if output_nodes is not None:
-    graph_def = graph_util.extract_sub_graph(graph_def, output_nodes)
+  sub_graph_def = graph_util.extract_sub_graph(graph_def,
+                                               output_nodes)
 
-  ops_info, ops_topo, output_nodes = _parse_graph_def(graph_def, output_nodes)
-  return ops_info, ops_topo, output_nodes
+  ops_info, ops_topo = _parse_graph_def(sub_graph_def, output_nodes)
+  return ops_info, ops_topo
