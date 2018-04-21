@@ -1,10 +1,19 @@
 #-*- coding:utf8 -*-
+from abc import ABCMeta, abstractclassmethod
 from collections import defaultdict
 
-__all__ = ['Optimizer']
+__all__ = ['RefCntOptimizer']
 
 
 class Optimizer(object):
+  __metaclass__ = ABCMeta
+
+  @abstractclassmethod
+  def optimize(cls, ops_info, topo_order, output_nodes):
+    raise NotImplementedError('You should overwrite optimize method for all optimzer')
+
+
+class RefCntOptimizer(Optimizer):
 
   @classmethod
   def optimize(cls, ops_info, topo_order, output_nodes, method='None'):

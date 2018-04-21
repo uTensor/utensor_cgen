@@ -5,8 +5,9 @@ import re
 import numpy as np
 import idx2numpy as idx2np
 import tensorflow as tf
+from .parser.utils import log_graph
 
-__all__ = ["save_idx", "save_consts", "save_graph"]
+__all__ = ["save_idx", "save_consts", "save_graph", "log_graph"]
 
 
 def save_idx(arr, fname):
