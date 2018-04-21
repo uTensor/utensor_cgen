@@ -6,7 +6,7 @@ import tensorflow as tf
 
 
 def generate():
-  """the reshape op will be used in this case since tensorflow will flatten 
+  """the reshape op will be used in this case since tensorflow will flatten
   the input tensor and find the min/max value for quantized matmul
   """
   test_dir = os.path.dirname(__file__)
@@ -19,6 +19,9 @@ def generate():
                     dtype=tf.float32,
                     name='w')
     y = tf.matmul(x, w, name='y')
+
+  with open(os.path.join(test_dir, 'output_nodes.txt'), 'w') as fid:
+    fid.write(y.op.name)
 
   np_x = 0.5 * np.random.randn(1, 5).astype(np.float32)
   with tf.Session(graph=graph) as sess:

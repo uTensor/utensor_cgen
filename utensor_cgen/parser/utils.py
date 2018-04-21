@@ -2,6 +2,21 @@
 from collections import defaultdict
 from copy import deepcopy
 
+import tensorflow as tf
+
+from ._pbparser_impl import _parse_tensor_name
+
+
+def log_graph(graph_or_graph_def, logdir):
+  if isinstance(graph_or_graph_def, tf.GraphDef):
+    graph = tf.Graph()
+    with graph.as_default():
+      tf.import_graph_def(graph_or_graph_def, name='')
+  else:
+    graph = graph_or_graph_def
+  tf.summary.FileWriter(logdir, graph=graph).close()
+
+
 def clusters_by_name_scopes(op_infos, name_scope_prefix=None):
   """
   Arguements
@@ -17,16 +32,28 @@ def clusters_by_name_scopes(op_infos, name_scope_prefix=None):
       a dictionary of found name_scopes as key and list of
       operation names as value
   """
-  op_infos_copy = deepcopy(op_infos)
+  op_infos = deepcopy(op_infos)
   if name_scope_prefix is not None:
-    op_infos_copy = [op_info for op_info in op_infos_copy
-                     if op_info.node_name.startswith(name_scope_prefix)]
-  current_name_scope = op_infos[0].node_name.split('/')[0]
-  name_scope_map = defaultdict(lambda: [])
+    op_infos = [op_info for op_info in op_infos
+                if op_info.node_name.startswith(name_scope_prefix)]
 
+  name_scope_map = defaultdict(lambda: [])
   visited = set([])
-  for op_info in op_infos_copy:
-    cluster = []
-    queue = []
+  for op_info in op_infos:
+    current_name_scope = op_infos[0].node_name.split('/')[0]
     if op_info.node_name in visited:
       continue
+    queue = [_parse_tensor_name(tensor[0])[0]
+             for tensor in op_info.input_tensor + op_info.output_tensor]
+    cluster = set([])
+    while len(queue) > 0:
+      op_name = queue.pop(0)
+      cluster.add(op_name)
+      input_tensors = op_info[op_name].input_tensor
+      output_tensors = op_info[op_name].output_tensor
+      all_ops = [_parse_tensor_name(tensor[0])[0]
+                 for tensor in input_tensors + output_tensors]
+      queue.extend(all_ops)
+    name_scope_map[current_name_scope] = cluster
+    visited.update(cluster)
+  return name_scope_map

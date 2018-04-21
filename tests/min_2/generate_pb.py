@@ -12,11 +12,14 @@ def generate():
     x = tf.constant(np.random.rand(2, 2, 2), dtype=tf.float32, name="x")
     min_x = tf.reduce_min(x, axis=1, name="min_x_2")
 
+  with open(os.path.join(test_dir, 'output_nodes.txt'), 'w') as fid:
+    fid.write(min_x.op.name)
+
   with tf.Session(graph=graph) as sess:
     save_consts(sess, test_dir)
     save_graph(graph, "test_min_2", test_dir)
     np_min_x = min_x.eval()
-    save_idx(np_min_x, os.path.join(test_dir, "min_2/output_min_x2.idx"))
+    save_idx(np_min_x, os.path.join(test_dir, "output_min_x2.idx"))
 
 
 if __name__ == "__main__":

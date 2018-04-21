@@ -12,6 +12,9 @@ def generate():
     x = tf.constant(np.array([1, 2, 3, 4]), dtype=tf.float32, name="x")
     y = tf.constant(np.array([1, 1, 1, 1]), dtype=tf.float32, name="y")
     z = tf.add(x, y, name="z")
+  # write output nodes
+  with open(os.path.join(test_dir, 'output_nodes.txt'), 'w') as fid:
+    fid.write(z.op.name)
 
   with tf.Session(graph=graph) as sess:
     save_consts(sess, test_dir)

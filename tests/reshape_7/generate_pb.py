@@ -14,6 +14,9 @@ def generate():
                     name='x')
     output_x = tf.reshape(x, shape=[-1], name="output_x")
 
+  with open(os.path.join(test_dir, 'output_nodes.txt'), 'w') as fid:
+    fid.write(output_x.op.name)
+
   with tf.Session(graph=graph) as sess:
     save_consts(sess, test_dir)
     save_graph(graph, 'test_reshape_7', test_dir)

@@ -290,7 +290,7 @@ def quantize_weight_eightbit(input_node, quantization_mode):
 
   sess = session.Session()
   with sess.as_default():
-    quantize_op = array_ops.quantize_v2(
+    quantize_op = array_ops.quantize(
         float_tensor,
         min_value,
         max_value,

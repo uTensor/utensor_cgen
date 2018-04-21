@@ -6,8 +6,10 @@ import argparse
 import os
 import pkg_resources
 
+
 def _get_pb_model_name(path):
   return os.path.basename(os.path.splitext(path)[0])
+
 
 def main(pb_file, src_fname, idx_dir, embed_data_dir,
          debug_cmt, output_nodes, method, version, model_dir):
@@ -38,7 +40,6 @@ def main(pb_file, src_fname, idx_dir, embed_data_dir,
 
 def _nargs(sep=','):
   def parser(argstr):
-    print(argstr)
     return argstr.split(sep)
   return parser
 

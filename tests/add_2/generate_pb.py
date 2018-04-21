@@ -20,6 +20,9 @@ def generate():
     b = tf.constant(1, dtype=tf.float32, name='b')
     z = tf.add(x, b, name='z')
 
+  with open(os.path.join(test_dir, 'output_nodes.txt'), 'w') as fid:
+    fid.write(z.op.name)
+
   with tf.Session(graph=graph) as sess:
     save_consts(sess, test_dir)
     save_graph(graph, "test_add_2", test_dir)

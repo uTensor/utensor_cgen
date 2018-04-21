@@ -28,13 +28,15 @@ def generate():
   with tf.Session(graph=train_graph) as sess:
     tf.global_variables_initializer().run()
     for step in range(1, 10001):
-      _, l = sess.run([train_op, loss])
+      _, l = sess.run([train_op, loss]) # noqa
       if step % 1000 == 0:
         print("step:", step)
         print("loss:", l)
     const_graphdef = graph_util.convert_variables_to_constants(sess,
                                                                train_graph.as_graph_def(),
                                                                ["yhat"])
+    with open(os.path.join(test_dir, 'output_nodes.txt'), 'w') as fid:
+      fid.write("yhat")
     graph = tf.Graph()
     with graph.as_default():
       tf.import_graph_def(const_graphdef, name='')
