@@ -55,7 +55,8 @@ def _refcnt_optimize(ops_info, topo_order, output_nodes):
 def _tensor_ref_count(ops_info):
   tensor_ref_count = defaultdict(lambda: 0)
   for op_info in ops_info.values():
-    for tname, _, _ in op_info.input_tensor:
+    for tensor_info in op_info.input_tensor:
+      tname = tensor_info.name
       tensor_ref_count[tname] += 1
   return tensor_ref_count
 

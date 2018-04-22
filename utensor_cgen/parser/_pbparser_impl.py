@@ -6,6 +6,7 @@ import numpy as np
 from tensorflow import Graph, Session, import_graph_def
 from tensorflow.contrib.util import make_ndarray
 
+__all__ = ['OperationInfo', 'TensorInfo']
 
 def _parse_shape(t_shape):
   try:
@@ -19,6 +20,9 @@ OperationInfo = namedtuple('OperationInfo',
                            field_names=['node_name',
                                         'input_tensor', 'output_tensor',
                                         'op_type', 'output_content', 'op_attr'])
+
+TensorInfo = namedtuple('TensorInfo',
+                        field_names=['name', 'dtype', 'shape'])
 
 
 def _parse_graph_info(graph_def):
@@ -48,8 +52,8 @@ def _parse_graph_info(graph_def):
   with Session(graph=graph):
     for node in graph_def.node:
       op = graph.get_operation_by_name(node.name)
-      input_tensor = [(t.name, t.dtype, _parse_shape(t.shape)) for t in op.inputs]
-      output_tensor = [(t.name, t.dtype, _parse_shape(t.shape)) for t in op.outputs]
+      input_tensor = [TensorInfo(t.name, t.dtype, _parse_shape(t.shape)) for t in op.inputs]
+      output_tensor = [TensorInfo(t.name, t.dtype, _parse_shape(t.shape)) for t in op.outputs]
       op_type = node.op
       output_content = {}
       op_attr = node.attr

@@ -8,9 +8,11 @@ import sys
 import tensorflow as tf
 from tensorflow.python.framework import graph_util  # pylint: disable=E0611
 
-from ._pbparser_impl import _parse_graph_def
+from ._pbparser_impl import (_parse_graph_def,
+                             OperationInfo,
+                             TensorInfo)
 
-__all__ = ["parse_pb"]
+__all__ = ["parse_pb", "OperationInfo", "TensorInfo"]
 
 
 def parse_pb(file_or_path, output_nodes):
