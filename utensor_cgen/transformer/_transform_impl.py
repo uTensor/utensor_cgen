@@ -7,7 +7,7 @@ from ..parser.utils import parse_tensor_name
 
 class _DropoutFuseTransformer(object):
 
-  _PATTERN = re.compile(r'(dropout[_\w\d]*)/.*')
+  _NAMESCOPE_PATTERN = re.compile(r'(dropout[_\w\d]*)/.*')
 
   def transform(self, ops_info, topo_orders, output_nodes):
     """
@@ -22,7 +22,7 @@ class _DropoutFuseTransformer(object):
   def _find_dropout_ns(self, ops_info, topo_orders):
     dropout_ns = defaultdict(lambda: [])
     for name in topo_orders:
-      match = self._PATTERN.match(name)
+      match = self._NAMESCOPE_PATTERN.match(name)
       if match:
         ns = match.group(1)
         dropout_ns[ns].append(name)
@@ -35,7 +35,7 @@ class _DropoutFuseTransformer(object):
     """
     input_ops_map = defaultdict(lambda: set([]))
     for op_name in ops_info:
-      match = self._PATTERN.match(op_name)
+      match = self._NAMESCOPE_PATTERN.match(op_name)
       if match:
         ns = match.group(1)
         cluster_ops = dropout_clusters[ns]
@@ -53,7 +53,7 @@ class _DropoutFuseTransformer(object):
       for input_tensor in ops_info[op_name].input_tensor:
         input_tname = input_tensor[0]
         in_op_name, _ = parse_tensor_name(input_tname)
-        match = self._PATTERN.match(in_op_name)
+        match = self._NAMESCOPE_PATTERN.match(in_op_name)
         if match:
           ns = match.group(1)
           if op_name not in dropout_clusters[ns]:
@@ -67,7 +67,7 @@ class _DropoutFuseTransformer(object):
 
 class _BatchNormFuseTransformer(object):
 
-  _PATTERN = re.compile(r'(BatchNorm[_\w\d]*)/.*')
+  _NAMESCOPE_PATTERN = re.compile(r'(BatchNorm[_\w\d]*)/.*')
 
   def transform(self, ops_info, topo_orders, output_nodes):
     pass

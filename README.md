@@ -40,7 +40,7 @@ Following steps are a general guild for user how to porting a `TensorFlow` proto
         - it should output one qunatized pb file, say `quantized_graph.pb`
 2. install `utensor_cgent`
     - run `python3 setupt.py install`
-3. run `utensor-cli quantized_graph.pb`, where `quantized_graph.pb` is the output pb file you get from step **1**
+3. run `utensor-cli quantized_graph.pb --output-nodes=NODE,NODE,...`, where `quantized_graph.pb` is the output pb file you get from step **1**
     - run `utensor-cli -h` for help
 
 # TODOs
