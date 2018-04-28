@@ -1,9 +1,13 @@
+# -*- coding:utf8 -*-
 from abc import ABCMeta, abstractmethod
 from collections import defaultdict
+from functools import wraps
 import re
 
 from ..parser import OperationInfo, TensorInfo
 from ..parser.utils import parse_tensor_name
+
+__all__ = ["NamescopeTransformer", "Transformer"]
 
 
 class _DropoutTransformer(object):
@@ -49,27 +53,14 @@ class _DropoutTransformer(object):
             tname = in_tensor[0]
             in_op_name, _ = parse_tensor_name(tname)
             if in_op_name not in cluster_ops and ns not in input_ops_map:
+              in_op_info = ops_info[in_op_name]
+              # NOTE ignore the input if the name starts with "keep_prob" and
+              # it's a placeholder
+              if in_op_info.node_name.startswith('keep_prob') and \
+                 in_op_info.op_type == 'Placeholder':
+                 continue
               input_ops_map[ns] = ops_info[in_op_name].output_tensor[0]
-              break
     return input_ops_map
-
-  # def _get_output_map(self, ops_info, dropout_clusters):
-  #   """
-  #   return dict
-  #   dropout_name -> output_tensor_name
-  #   """
-  #   output_ops_map = {}
-  #   for op_name in ops_info:
-  #     for input_tensor_info in ops_info[op_name].input_tensor:
-  #       in_tname = input_tensor_info.name
-  #       in_op_name, _ = parse_tensor_name(in_tname)
-  #       match = self._NAMESCOPE_PATTERN.match(in_op_name)
-  #       if match:
-  #         ns = match.group(1)
-  #         if op_name not in dropout_clusters[ns] and ns not in output_ops_map:
-  #           output_ops_map[ns] = input_tensor_info.name
-  #           break
-  #   return output_ops_map
 
   def _transform(self, ops_info, topo_orders, output_nodes):
     # TODO return new ops_info, topo_orders and output_nodes
@@ -115,15 +106,74 @@ class _BatchNormTransformer(object):
   _NAMESCOPE_PATTERN = re.compile(r'(BatchNorm[_\w\d]*)/.*')
 
   def transform(self, ops_info, topo_orders, output_nodes):
+    # TODO implement this!
     pass
 
 
 class Transformer(object):
   __metaclass__ = ABCMeta
 
+  # NOTE maybe move the pruning to metaclasss is a cleaner solution?
+  # though the function closure works well here.
+  def __new__(cls, *args, **kwargs):
+    self = object.__new__(cls)
+    ori_transform = self.transform
+
+    @wraps(ori_transform)
+    def transform(ops_info, topo_orders, output_nodes):
+      # after each transformation, we prune the graph.
+      # what we do with pruning is like removing unneeded nodes
+      # or clean up garbages
+      (new_ops_info,
+       new_topo_orders,
+       new_output_nodes) = ori_transform(ops_info,
+                                         topo_orders,
+                                         output_nodes)
+      (new_ops_info_clean,
+       new_topo_orders_clean,
+       new_output_nodes_clean) = self.prune_graph(new_ops_info,
+                                                  new_topo_orders,
+                                                  new_output_nodes)
+      return (new_ops_info_clean,
+              new_topo_orders_clean,
+              new_output_nodes_clean)
+    self.transform = transform
+    return self
+
   @abstractmethod
   def transform(self, ops_info, topo_orders, output_nodes):
     raise NotImplementedError('You should overwrite transform method for all transformer')
+
+  def prune_graph(self, ops_info, topo_orders, output_nodes):
+    ops_info, topo_orders, output_nodes = self._clean_up_placeholders(ops_info,
+                                                                      topo_orders,
+                                                                      output_nodes)
+    return ops_info, topo_orders, output_nodes
+
+  def _clean_up_placeholders(self, ops_info, topo_orders, output_nodes):
+    # remove placeholders which output to nowhere
+    new_ops_info = {}
+    new_topo_orders = []
+    for this_op_name in topo_orders:
+      this_op_info = ops_info[this_op_name]
+      if this_op_info.op_type == "Placeholder":
+        if not self._is_needed(this_op_name, ops_info, topo_orders):
+          continue
+      new_ops_info[this_op_name] = this_op_info
+      new_topo_orders.append(this_op_name)
+    return new_ops_info, new_topo_orders, output_nodes
+
+  def _is_needed(self, this_op_name, ops_info, topo_orders):
+    this_op_info = ops_info[this_op_name]
+    out_op_names = [parse_tensor_name(tensor_info.name)[0]
+                    for tensor_info in this_op_info.output_tensor]
+    for out_op_name in out_op_names:
+      for op_name in filter(lambda name: name != this_op_name, topo_orders):
+        in_tensor_infos = ops_info[op_name].input_tensor
+        in_tnames = [parse_tensor_name(tensor_info.name)[0] for tensor_info in in_tensor_infos]
+        if out_op_name in in_tnames:
+          return True
+    return False
 
 
 class NamescopeTransformer(Transformer):
