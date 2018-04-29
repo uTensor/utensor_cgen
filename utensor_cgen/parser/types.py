@@ -8,14 +8,22 @@ import tensorflow as tf
 @attr.s
 class TensorInfo(object):
   name = attr.ib(validator=validators.instance_of(str))
-  dtype = attr.ib(validator=validators.instance_of(type(tf.float32)))
-  shape = attr.ib(validator=validators.instance_of(list))
+  dtype = attr.ib(validator=validators.instance_of(tf.DType))
+  shape = attr.ib()
 
+  @shape.validator
+  def check(self, attribute, value):
+    if value is not None and not isinstance(value, list):
+      raise ValueError('shape must be None or list')
+
+  # legacy code: to make it works like namedtuple
   def __iter__(self):
-    # legacy code
     # TODO remove all such code in utensor
     #   name, dtype, shape = tensor_info
     return iter((self.name, self.dtype, self.shape))
+
+  def __getitem__(self, k):
+    return (self.name, self.dtype, self.shape)[k]
 
 
 @attr.s
