@@ -5,8 +5,8 @@ from copy import deepcopy
 import numpy as np
 from tensorflow import Graph, Session, import_graph_def
 from tensorflow.contrib.util import make_ndarray
+from utensor_cgen.parser.types import OperationInfo, TensorInfo
 
-__all__ = ['OperationInfo', 'TensorInfo']
 
 def _parse_shape(t_shape):
   try:
@@ -14,15 +14,6 @@ def _parse_shape(t_shape):
   except ValueError:
     shape = None
   return shape
-
-
-OperationInfo = namedtuple('OperationInfo',
-                           field_names=['node_name',
-                                        'input_tensor', 'output_tensor',
-                                        'op_type', 'output_content', 'op_attr'])
-
-TensorInfo = namedtuple('TensorInfo',
-                        field_names=['name', 'dtype', 'shape'])
 
 
 def _parse_graph_info(graph_def):
@@ -58,7 +49,8 @@ def _parse_graph_info(graph_def):
       output_content = {}
       op_attr = node.attr
       if node.op in ["Const"]:
-        for tensor_name, _, _ in output_tensor:
+        for tensor_info in output_tensor:
+          tensor_name = tensor_info.name
           output_content[tensor_name] = make_ndarray(node.attr['value'].tensor)
       graph_info[node.name] = OperationInfo(node_name=node.name,
                                             input_tensor=input_tensor,

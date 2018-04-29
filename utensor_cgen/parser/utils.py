@@ -4,6 +4,7 @@ from copy import deepcopy
 
 import tensorflow as tf
 
+
 def log_graph(graph_or_graph_def, logdir):
   if isinstance(graph_or_graph_def, tf.GraphDef):
     graph = tf.Graph()

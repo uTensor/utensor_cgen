@@ -47,7 +47,8 @@ def _refcnt_optimize(ops_info, topo_order, output_nodes):
       to_eval = False
     else:
       to_eval = True
-    ref_counts = [refcnt_table[out_tname] for out_tname, _, _ in op_info.output_tensor]
+    ref_counts = [refcnt_table[out_tname] for out_tname in
+                  [tensor_info.name for tensor_info in op_info.output_tensor]]
     optimized_order.append((op_name, op_info, ref_counts, to_eval))
   return optimized_order
 

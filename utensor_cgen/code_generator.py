@@ -52,7 +52,7 @@ class CodeGenerator(object):
     for op_id, (op_name, op_info, ref_counts, to_eval) in enumerate(construct_order, 1):
       op_type = op_info.op_type
       if op_type == "Placeholder":
-        out_tname, _, _ = op_info.output_tensor[0]
+        out_tname = op_info.output_tensor[0].name
         ref_count = ref_counts[0]
         container.template_vars["placeholders"].append(out_tname)
         container.template_vars["ref_counts"].append(ref_count)

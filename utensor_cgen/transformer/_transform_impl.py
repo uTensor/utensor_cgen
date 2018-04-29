@@ -49,8 +49,8 @@ class _DropoutTransformer(object):
         ns = match.group(1)
         cluster_ops = dropout_clusters[ns]
         for name in cluster_ops:
-          for in_tensor in ops_info[name].input_tensor:
-            tname = in_tensor[0]
+          for in_tensor_info in ops_info[name].input_tensor:
+            tname = in_tensor_info.name
             in_op_name, _ = parse_tensor_name(tname)
             if in_op_name not in cluster_ops and ns not in input_ops_map:
               in_op_info = ops_info[in_op_name]
