@@ -6,15 +6,6 @@ from .template_env import env as _env
 
 __all__ = ["Snippet", "SnippetContainerBase"]
 
-_SUPPORT_SNIPPETS = [
-  "snippets/create_tensor_idx.cpp", "snippets/create_tensor_new.cpp", "snippets/add_op.cpp",
-  "snippets/min_op.cpp", "snippets/max_op.cpp", "snippets/argmax_op.cpp",
-  "snippets/dequantize_op.cpp", "snippets/qmatmul_op.cpp", "snippets/qmax_pool_op.cpp",
-  "snippets/quantV2_op.cpp", "snippets/qrelu_op.cpp", "snippets/reshape_op.cpp",
-  "snippets/requant_op.cpp", "snippets/requant_range_op.cpp", "snippets/conv2d_op.cpp",
-  "snippets/comments.cpp", "snippets/get_ctx.hpp", "containers/get_ctx.cpp", "snippets/qadd_op.cpp"
-]
-
 
 class SnippetBase(object):
   __metaclass__ = ABCMeta
@@ -22,8 +13,10 @@ class SnippetBase(object):
   __headers__ = None
 
   def __init__(self):
-    if self.__template_name__ not in _SUPPORT_SNIPPETS:
-      raise ValueError('unknown template name: {}'.format(self.__template_name__))
+    if self.__template_name__ is None:
+      raise ValueError('No {}.__template_name__ not defined'.format(type(self)))
+    if self.__headers__ is None:
+      raise ValueError('No {}.__headers__ not defined'.format(type(self)))
     if not isinstance(self.__headers__, set):
       raise ValueError('__headers__ should be of type set, get {}'.format(type(self.__headers__)))
     self.template_vars = {}
