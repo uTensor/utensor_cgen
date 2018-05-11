@@ -53,11 +53,10 @@ def save_graph(graph, graph_name="graph", out_dir="."):
 
 def prepare_meta_graph(meta_graph_path, output_nodes, chkp_path=None):
   """
-  Freeze and quantize the graph from meta graph
+  Cleanup and freeze the graph from meta graph
 
   1. remove training nodes
   2. convert variable to constants
-  3. quantize the graph
   """
   graph = tf.Graph()
   saver = tf.train.import_meta_graph(meta_graph_path,
@@ -71,8 +70,4 @@ def prepare_meta_graph(meta_graph_path, output_nodes, chkp_path=None):
     sub_graph_def = graph_util.convert_variables_to_constants(sess=sess,
                                                               input_graph_def=graph_def,
                                                               output_node_names=output_nodes)
-    trans_graph_def = TransformGraph(input_graph_def=sub_graph_def,
-                                     inputs=[],
-                                     outputs=output_nodes,
-                                     transforms=["quantize_weights", "quantize_nodes"])
-  return trans_graph_def
+  return sub_graph_def
