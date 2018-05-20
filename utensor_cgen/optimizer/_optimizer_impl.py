@@ -1,5 +1,5 @@
 #-*- coding:utf8 -*-
-from abc import ABCMeta, abstractclassmethod
+from abc import ABCMeta, abstractmethod
 from collections import defaultdict
 
 __all__ = ['RefCntOptimizer']
@@ -8,7 +8,8 @@ __all__ = ['RefCntOptimizer']
 class Optimizer(object):
   __metaclass__ = ABCMeta
 
-  @abstractclassmethod
+  @classmethod
+  @abstractmethod
   def optimize(cls, ops_info, topo_order, output_nodes):
     raise NotImplementedError('You should overwrite optimize method for all optimzer')
 

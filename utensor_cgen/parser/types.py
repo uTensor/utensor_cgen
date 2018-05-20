@@ -1,4 +1,5 @@
 # -*- coding: utf8 -*-
+import six
 import attr
 from attr import validators
 import numpy as np
@@ -7,7 +8,7 @@ import tensorflow as tf
 
 @attr.s
 class TensorInfo(object):
-  name = attr.ib(validator=validators.instance_of(str))
+  name = attr.ib(validator=validators.instance_of(six.text_type))
   dtype = attr.ib(validator=validators.instance_of(tf.DType))
   shape = attr.ib()
 
@@ -28,7 +29,7 @@ class TensorInfo(object):
 
 @attr.s
 class OperationInfo(object):
-  node_name = attr.ib(type=str)
+  node_name = attr.ib(type=six.text_type)
 
   input_tensor = attr.ib(validator=validators.instance_of(list))
 
@@ -44,14 +45,14 @@ class OperationInfo(object):
     if not all([isinstance(v, TensorInfo) for v in value]):
       raise ValueError('Expecting a list of TensorInfo for output_tensor')
 
-  op_type = attr.ib(validator=validators.instance_of(str))
+  op_type = attr.ib(validator=validators.instance_of(six.text_type))
 
   output_content = attr.ib(validator=validators.instance_of(dict))
 
   @output_content.validator
   def check(self, attribute, value):
-    if not all([isinstance(k, str) for k in value.keys()]):
-      raise ValueError('All key for output_content should be of type str')
+    if not all([isinstance(k, six.text_type) for k in value.keys()]):
+      raise ValueError('All key for output_content should be of type six.text_type')
     if not all([isinstance(v, np.ndarray) for v in value.values()]):
       raise ValueError('All value of output_content should be of type numpy.ndarray')
 
