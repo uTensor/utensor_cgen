@@ -5,6 +5,7 @@ from copy import deepcopy
 import numpy as np
 from tensorflow import Graph, Session, import_graph_def
 from tensorflow.contrib.util import make_ndarray
+from utensor_cgen.parser.types import OperationInfo, TensorInfo
 
 
 def _parse_shape(t_shape):
@@ -13,12 +14,6 @@ def _parse_shape(t_shape):
   except ValueError:
     shape = None
   return shape
-
-
-OperationInfo = namedtuple('OperationInfo',
-                           field_names=['node_name',
-                                        'input_tensor', 'output_tensor',
-                                        'op_type', 'output_content', 'op_attr'])
 
 
 def _parse_graph_info(graph_def):
@@ -48,13 +43,14 @@ def _parse_graph_info(graph_def):
   with Session(graph=graph):
     for node in graph_def.node:
       op = graph.get_operation_by_name(node.name)
-      input_tensor = [(t.name, t.dtype, _parse_shape(t.shape)) for t in op.inputs]
-      output_tensor = [(t.name, t.dtype, _parse_shape(t.shape)) for t in op.outputs]
+      input_tensor = [TensorInfo(t.name, t.dtype, _parse_shape(t.shape)) for t in op.inputs]
+      output_tensor = [TensorInfo(t.name, t.dtype, _parse_shape(t.shape)) for t in op.outputs]
       op_type = node.op
       output_content = {}
       op_attr = node.attr
       if node.op in ["Const"]:
-        for tensor_name, _, _ in output_tensor:
+        for tensor_info in output_tensor:
+          tensor_name = tensor_info.name
           output_content[tensor_name] = make_ndarray(node.attr['value'].tensor)
       graph_info[node.name] = OperationInfo(node_name=node.name,
                                             input_tensor=input_tensor,
@@ -99,13 +95,13 @@ def _parse_graph_topologic_order(graph_def, output_nodes):
   while queue:
     node_name = queue.pop(0)
     visit(node_name)
-  return ops_torder, output_nodes
+  return ops_torder
 
 
 def _parse_graph_def(graph_def, output_nodes):
   if not _is_freeze_graph(graph_def):
     raise ValueError("The graph is not frozen, freeze the graph first")
-  ops_topo, output_nodes = _parse_graph_topologic_order(graph_def=graph_def,
-                                                        output_nodes=output_nodes)
+  ops_topo = _parse_graph_topologic_order(graph_def=graph_def,
+                                          output_nodes=output_nodes)
   ops_info = _parse_graph_info(graph_def)
   return ops_info, ops_topo

@@ -5,8 +5,12 @@ import re
 import numpy as np
 import idx2numpy as idx2np
 import tensorflow as tf
+from tensorflow.python.framework import graph_util
+from tensorflow.tools.graph_transforms import TransformGraph
 
-__all__ = ["save_idx", "save_consts", "save_graph"]
+from .parser.utils import log_graph
+
+__all__ = ["save_idx", "save_consts", "save_graph", "log_graph"]
 
 
 def save_idx(arr, fname):
@@ -45,3 +49,25 @@ def save_graph(graph, graph_name="graph", out_dir="."):
   with tf.gfile.FastGFile(graph_fname, "wb") as fid:
     fid.write(graph.as_graph_def().SerializeToString())
   print("{} saved".format(graph_fname))
+
+
+def prepare_meta_graph(meta_graph_path, output_nodes, chkp_path=None):
+  """
+  Cleanup and freeze the graph from meta graph
+
+  1. remove training nodes
+  2. convert variable to constants
+  """
+  graph = tf.Graph()
+  saver = tf.train.import_meta_graph(meta_graph_path,
+                                     clear_devices=True,
+                                     graph=graph)
+  if chkp_path is None:
+    chkp_path = meta_graph_path.replace(".meta", "")
+  with tf.Session(graph=graph) as sess:
+    saver.restore(sess, chkp_path)
+    graph_def = graph_util.remove_training_nodes(sess.graph_def)
+    sub_graph_def = graph_util.convert_variables_to_constants(sess=sess,
+                                                              input_graph_def=graph_def,
+                                                              output_node_names=output_nodes)
+  return sub_graph_def

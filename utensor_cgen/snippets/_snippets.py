@@ -9,10 +9,12 @@ __all__ = ["Snippet", "SnippetContainerBase",
            "AddOpSnippet", "MinOpSnippet", "MaxOpSnippet",
            "ArgMaxOpSnippet", "DequantizeOpSnippet", "QuantizedMaxPoolSnippet",
            "QuantizedMatMulOpSnippet", "QuantizeV2OpSnippet",
-           "QuantizedReluOpSnippet", "ReshapeOpSnippet",
+           "QuantizedReluOpSnippet",
+           "ReshapeOpSnippet", "QuantizedReshapeOpSnippet",
            "Conv2DOpSnippent",
            "RequantizationRangeOpSnippet", "RequantizeOpSnippet",
-           "CommentSnippet", "ContextHeaderSnippet","ContextSnippetsContainer",  "QuantizedAddOpSnippet"]
+           "CommentSnippet", "ContextHeaderSnippet",
+           "ContextSnippetsContainer", "QuantizedAddOpSnippet"]
 
 
 class CreateTensorIdxSnippet(Snippet):
@@ -362,6 +364,21 @@ class ReshapeOpSnippet(Snippet):
       self.template_vars["ref_count"] = ref_count
     self.template_vars["inputs"] = inputs
     self.template_vars["output"] = output
+    self.template_vars["to_eval"] = to_eval
+
+
+class QuantizedReshapeOpSnippet(Snippet):
+  __template_name__ = "snippets/qreshape_op.cpp"
+  __headers__ = set(['"uTensor/ops/ArrayOps.hpp"'])
+
+  def __init__(self, inputs, outputs,
+               ref_counts=None,
+               to_eval=False):
+    Snippet.__init__(self)
+    if ref_counts:
+      self.template_vars["ref_counts"] = ref_counts
+    self.template_vars["inputs"] = inputs
+    self.template_vars["outputs"] = outputs
     self.template_vars["to_eval"] = to_eval
 
 

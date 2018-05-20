@@ -15,9 +15,9 @@ class _Operator(object):
 class _AddOperator(_Operator):
   def __init__(self, op_info, ref_counts, to_eval):
     _Operator.__init__(self)
-    inputs = [tname for tname, _, _ in op_info.input_tensor]
-    output, _, _ = op_info.output_tensor[0]
-    _, tf_dtype, _ = op_info.input_tensor[0]
+    inputs = [tensor_info.name for tensor_info in op_info.input_tensor]
+    output = op_info.output_tensor[0].name
+    tf_dtype = op_info.input_tensor[0].dtype
     ref_count = ref_counts[0]
     self._snippet = AddOpSnippet(inputs, output, tf_dtype, ref_count, to_eval)
 
@@ -147,6 +147,17 @@ class _ReshapeOperator(_Operator):
     self._snippet = ReshapeOpSnippet(inputs, output, ref_count, to_eval)
 
 
+class _QuantizedReshapeOperator(_Operator):
+  def __init__(self, op_info, ref_counts, to_eval):
+    _Operator.__init__(self)
+    inputs = [t_info.name for t_info in op_info.input_tensor]
+    outputs = [t_info.name for t_info in op_info.output_tensor]
+    self._snippet = QuantizedReshapeOpSnippet(inputs=inputs,
+                                              outputs=outputs,
+                                              ref_counts=ref_counts,
+                                              to_eval=to_eval)
+
+
 class _Conv2DOperator(_Operator):
   def __init__(self, op_info, ref_counts, to_eval):
     _Operator.__init__(self)
@@ -177,6 +188,7 @@ class OperatorFactory():
                 "RequantizationRange": _RequantizationRangeOperator,
                 "Requantize": _RequantizeOperator,
                 "Reshape": _ReshapeOperator,
+                "QuantizedReshape": _QuantizedReshapeOperator,
                 "QuantizedConv2D": _Conv2DOperator}
 
   def createOperatorSnippet(self, op_info, ref_counts, to_eval):

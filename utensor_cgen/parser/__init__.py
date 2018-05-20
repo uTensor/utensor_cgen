@@ -1,2 +1,2 @@
-from .pbparser import parse_pb
-from ._pbparser_impl import OperationInfo
+from .pbparser import *
+from .types import OperationInfo, TensorInfo

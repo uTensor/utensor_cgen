@@ -25,7 +25,6 @@ def parse_pb(file_or_path, output_nodes):
   - ops_info <dict>: a dict with information neccessary for
     building context in uTensor
   - ops_topo <list>: list of op node names in topological sorted order
-  - output_nodes <list>: list of output node names
   """
   if sys.version_info.major < 3:
     file_type = (file, io.IOBase)  # pylint: disable=E0602

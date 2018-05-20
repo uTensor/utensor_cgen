@@ -1,10 +1,19 @@
 #-*- coding:utf8 -*-
+from abc import ABCMeta, abstractclassmethod
 from collections import defaultdict
 
-__all__ = ['Optimizer']
+__all__ = ['RefCntOptimizer']
 
 
 class Optimizer(object):
+  __metaclass__ = ABCMeta
+
+  @abstractclassmethod
+  def optimize(cls, ops_info, topo_order, output_nodes):
+    raise NotImplementedError('You should overwrite optimize method for all optimzer')
+
+
+class RefCntOptimizer(Optimizer):
 
   @classmethod
   def optimize(cls, ops_info, topo_order, output_nodes, method='None'):
@@ -38,7 +47,8 @@ def _refcnt_optimize(ops_info, topo_order, output_nodes):
       to_eval = False
     else:
       to_eval = True
-    ref_counts = [refcnt_table[out_tname] for out_tname, _, _ in op_info.output_tensor]
+    ref_counts = [refcnt_table[out_tname] for out_tname in
+                  [tensor_info.name for tensor_info in op_info.output_tensor]]
     optimized_order.append((op_name, op_info, ref_counts, to_eval))
   return optimized_order
 
@@ -46,7 +56,8 @@ def _refcnt_optimize(ops_info, topo_order, output_nodes):
 def _tensor_ref_count(ops_info):
   tensor_ref_count = defaultdict(lambda: 0)
   for op_info in ops_info.values():
-    for tname, _, _ in op_info.input_tensor:
+    for tensor_info in op_info.input_tensor:
+      tname = tensor_info.name
       tensor_ref_count[tname] += 1
   return tensor_ref_count
 

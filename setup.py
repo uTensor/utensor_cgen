@@ -31,7 +31,8 @@ setup(
         'Jinja2',
         'tensorflow',
         'numpy',
-        'idx2numpy'
+        'idx2numpy',
+        'attr'
     ],
     zip_safe=False,
     classifiers=[

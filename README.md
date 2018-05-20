@@ -40,8 +40,13 @@ Following steps are a general guild for user how to porting a `TensorFlow` proto
         - it should output one qunatized pb file, say `quantized_graph.pb`
 2. install `utensor_cgent`
     - run `python3 setupt.py install`
-3. run `utensor-cli quantized_graph.pb`, where `quantized_graph.pb` is the output pb file you get from step **1**
+3. run `utensor-cli quantized_graph.pb --output-nodes=NODE,NODE,...`, where `quantized_graph.pb` is the output pb file you get from step **1**
     - run `utensor-cli -h` for help
+
+# Known Limitations
+
+- If you want to use dropout with placeholders for the `keep_prob`, you have to name the `keep_prob` placeholder by any name that starts with "keep_prob".
+    - You can still use any input tensor with name starts with "keep_prob" as long as it's not the output tensor of a placeholder node. 
 
 # TODOs
 1. (done) Freezed graph protobuff parser
