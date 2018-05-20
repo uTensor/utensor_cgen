@@ -5,6 +5,7 @@ from __future__ import print_function
 import argparse
 import os
 import pkg_resources
+import sys
 
 
 def _get_pb_model_name(path):
@@ -12,11 +13,7 @@ def _get_pb_model_name(path):
 
 
 def main(pb_file, src_fname, idx_dir, embed_data_dir,
-         debug_cmt, output_nodes, method, version, model_dir):
-  if version:
-    pkg_version = pkg_resources.get_distribution('utensor_cgen').version
-    print("\033[33mutensor_cgen version: {}\033[0m".format(pkg_version))
-    return 0
+         debug_cmt, output_nodes, method, model_dir):
   if pb_file is None:
     raise ValueError("No pb file given")
 
@@ -45,9 +42,9 @@ def _nargs(sep=','):
 
 
 def _build_parser():
-  model = "my_model"
+  pkg_version = pkg_resources.get_distribution('utensor_cgen').version
   parser = argparse.ArgumentParser()
-  parser.add_argument("pb_file", metavar='%s.pb' % model,
+  parser.add_argument("pb_file", metavar='MODEL.pb',
                       help="input protobuf file")
   parser.add_argument("-d", "--data-dir", dest='idx_dir',
                       metavar="DIR",
@@ -66,12 +63,14 @@ def _build_parser():
                       required=True,
                       help="list of output nodes (required)")
   parser.add_argument("-O", "--optimize-method", choices=['None', 'refcnt'],
-                      dest='method', default='refcnt', 
+                      dest='method', default='refcnt',
                       help='optimization method (default: %(default)s)')
   parser.add_argument("--debug-comment", dest="debug_cmt",
                       action="store_true",
                       help="Add debug comments in the output source file (default: %(default)s)")
-  parser.add_argument("-v", "--version", action="store_true", dest="version", help="show version")
+  parser.add_argument("-v", "--version", action="version",
+                      version="utensor-cli {}".format(pkg_version),
+                      help="show version")
   return parser
 
 
