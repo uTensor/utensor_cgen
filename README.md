@@ -33,15 +33,11 @@ Please refer to [tests/deep_mlp](https://github.com/uTensor/utensor_cgen/tree/de
 
 Following steps are a general guild for user how to porting a `TensorFlow` protobuf file into a `uTensor` implementation:
 
-1. Freeze and quantize your graph
-    - [Freezing](https://www.tensorflow.org/extend/tool_developers/#freezing)
-    - [Quantization](https://www.tensorflow.org/performance/quantization)
-        - An alternative is to use the [`quantize_graph.py`](https://github.com/tensorflow/tensorflow/blob/master/tensorflow/tools/quantization/quantize_graph.py) script
-        - it should output one qunatized pb file, say `quantized_graph.pb`
-2. install `utensor_cgent`
+1. install `utensor_cgent`
     - run `python3 setupt.py install`
-3. run `utensor-cli quantized_graph.pb --output-nodes=NODE,NODE,...`, where `quantized_graph.pb` is the output pb file you get from step **1**
+2. run `utensor-cli graph.pb --output-nodes=NODE,NODE,...`
     - run `utensor-cli -h` for help
+    - the `graph.pb` is the pb file of *original* graph (not quantized)
 
 # Known Limitations
 
