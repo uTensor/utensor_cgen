@@ -18,6 +18,9 @@ def generate():
     pool = tf.nn.max_pool(x, ksize=[1, 3, 3, 1], strides=[1, 2, 2, 1],
                           padding='VALID', name='pool2')
 
+  with open(os.path.join(test_dir, 'output_nodes.txt'), 'w') as fid:
+    fid.write(pool.op.name)
+
   with tf.Session(graph=graph) as sess:
     save_consts(sess, test_dir)
     save_graph(graph, 'test_max_pool_2', test_dir)

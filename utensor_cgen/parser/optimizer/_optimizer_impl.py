@@ -1,6 +1,9 @@
 #-*- coding:utf8 -*-
 from collections import defaultdict
 
+__all__ = ['Optimizer']
+
+
 class Optimizer(object):
 
   @classmethod

@@ -4,16 +4,19 @@ TESTS=add add_2 add_3 \
 	  max_1_1 max_1 max_2 max_3 max_3_1 \
 	  max_pool_1 max_pool_2 max_pool_3 \
 	  max_pool_4 max_pool_5 max_pool_6 \
-	  reshape_2 reshape_3 reshape_4 \
-	  reshape_5 reshape_6 reshape_7 \
+	  reshape_2 reshape_3 \
 	  conv
-	  # uTensor does not support reshape_1 yet
+	  # uTensor does not support reshape_1 reshape_4 reshape_5 reshape_6 reshape_7 yet
+	  # see uTensor issue #97
 .PHONY: $(TESTS)
 
 all:
 	make $(TESTS)
 
 $(TESTS):
+	@python $@/generate_pb.py
+	@python quantize_graph.py --input=$@/test_$@.pb --output=$@/test_quant_$@.pb \
+	 --mode=eightbit --output_node_names=`cat $@/output_nodes.txt`
 	@cd $@; \
 	 if [ ! -e cpp ]; then \
 	 	mkdir cpp; \
@@ -22,7 +25,7 @@ $(TESTS):
 	 if [ ! -e idx_data ]; then \
 	 	mkdir idx_data; \
 	 fi; \
-	 utensor-cli ../test_quant_$@.pb -m models -d idx_data -o $@_ctx.cpp; \
+	 utensor-cli ../test_quant_$@.pb -m models -d idx_data -o $@_ctx.cpp --output-nodes=`cat ../output_nodes.txt`; \
 	 for file in ../output*.idx ; \
 	 do \
 	 	if [ -e $$file ]; then \
@@ -38,12 +41,6 @@ $(TESTS):
 	@if [ "$$COPY" == "true" ]; then \
 		make -e TARGET=$@ cp; \
 	 fi
-
-%_pb:
-	TEST_TARGET="$$(echo $@ | sed 's/_pb//g')"; \
-	python $$TEST_TARGET/generate_pb.py; \
-	python quantize_graph.py --input="$$TEST_TARGET/test_$$TEST_TARGET.pb" \
-	--output="$$TEST_TARGET/test_quant_$$TEST_TARGET.pb" --mode=eightbit --output_node_names=$$OUT_NODES
 
 cp:
 	cp $(TARGET)/cpp/models/*.{cpp,hpp} $(TARGET)/main.cpp ../../uTensor

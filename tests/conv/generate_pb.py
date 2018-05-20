@@ -13,14 +13,17 @@ def generate():
     x = tf.constant(np.random.random((3, 5, 5, 3)),
                     dtype=tf.float32,
                     name="x")
-    w_filter = tf.constant(np.random.random((3, 3, 3, 2)), 
+    w_filter = tf.constant(np.random.random((3, 3, 3, 2)),
                            dtype=tf.float32,
                            name="w_filter")
-    out_conv = tf.nn.conv2d(x, w_filter, 
-                            strides=[1, 2, 2, 1], 
-                            padding='VALID', 
+    out_conv = tf.nn.conv2d(x, w_filter,
+                            strides=[1, 2, 2, 1],
+                            padding='VALID',
                             name="out_conv")
-  
+
+  with open(os.path.join(test_dir, 'output_nodes.txt'), 'w') as fid:
+    fid.write(out_conv.op.name)
+
   with tf.Session(graph=graph) as sess:
     save_consts(sess, test_dir)
     save_graph(graph, "test_conv", test_dir)

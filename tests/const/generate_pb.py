@@ -9,7 +9,10 @@ def generate():
   test_dir = os.path.dirname(__file__)
   graph = tf.Graph()
   with graph.as_default():
-    tf.constant(np.arange(10), dtype=tf.float32, name="x")
+    x = tf.constant(np.arange(10), dtype=tf.float32, name="x")
+
+  with open(os.path.join(test_dir, 'output_nodes.txt'), 'w') as fid:
+    fid.write(x.op.name)
 
   with tf.Session(graph=graph) as sess:
     save_consts(sess, test_dir)

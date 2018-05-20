@@ -11,7 +11,10 @@ def generate():
   with graph.as_default():
     x = tf.placeholder(tf.float32, name="x")
     one = tf.constant(1.0, dtype=tf.float32, name="one")
-    tf.add(x, one, name="y")
+    y = tf.add(x, one, name="y")
+
+  with open(os.path.join(test_dir, 'output_nodes.txt'), 'w') as fid:
+    fid.write(y.op.name)
 
   with tf.Session(graph=graph) as sess:
     save_consts(sess, test_dir)

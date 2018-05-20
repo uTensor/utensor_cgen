@@ -6,7 +6,7 @@ import numpy as np
 import tensorflow as tf
 
 from .operators import OperatorFactory
-from .optimizer import Optimizer
+from .parser.optimizer import Optimizer
 from .parser import parse_pb
 from .snippets import (CommentSnippet, ContextHeaderSnippet,
                        ContextSnippetsContainer, CreateTensorIdxSnippet)
@@ -16,15 +16,15 @@ __all__ = ["CodeGenerator"]
 
 
 class CodeGenerator(object):
-  def __init__(self, pb_file, idx_dir, embed_data_dir, method, debug_cmt=False, output_nodes=None):
+  def __init__(self, pb_file, idx_dir, embed_data_dir, method, output_nodes, debug_cmt=False):
     self.pb_file = pb_file
     if not os.path.exists(idx_dir):
       os.makedirs(idx_dir)
     self.idx_dir = idx_dir
     self.embed_data_dir = embed_data_dir.rstrip("/")
     self.method = method
-    self.debug_cmt = debug_cmt
     self.output_nodes = output_nodes
+    self.debug_cmt = debug_cmt
 
   def generate(self, src_fname):
     """Generate source and header files
@@ -42,8 +42,8 @@ class CodeGenerator(object):
     opFactory = OperatorFactory()
 
     print("Parsing {}".format(self.pb_file))
-    ops_info, ops_torder, output_nodes = parse_pb(self.pb_file, self.output_nodes)
-    construct_order = Optimizer.optimize(ops_info, ops_torder, output_nodes, self.method)
+    ops_info, ops_torder = parse_pb(self.pb_file, self.output_nodes)
+    construct_order = Optimizer.optimize(ops_info, ops_torder, self.output_nodes, self.method)
 
     # TODO better snippet construction abstraction
     for op_id, (op_name, op_info, ref_counts, to_eval) in enumerate(construct_order, 1):
@@ -73,7 +73,7 @@ class CodeGenerator(object):
 
       if self.debug_cmt:
         comments = ["<<< Operation id {}: {}".format(op_id, op_name),
-                    ">>> Operation id {}: {}".format(op_id+1, op_name)]
+                    ">>> Operation id {}: {}".format(op_id + 1, op_name)]
         cmt_snippet = CommentSnippet(comments)
         container.add_snippet(cmt_snippet)
     composer.add_snippet(container)

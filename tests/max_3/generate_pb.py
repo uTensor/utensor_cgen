@@ -12,6 +12,9 @@ def generate():
     x = tf.constant(np.random.rand(2, 2, 2), dtype=tf.float32, name="x")
     max_x3 = tf.reduce_max(x, axis=-1, name="max_x3")
 
+  with open(os.path.join(test_dir, 'output_nodes.txt'), 'w') as fid:
+    fid.write(max_x3.op.name)
+
   with tf.Session(graph=graph) as sess:
     save_consts(sess, test_dir)
     save_graph(graph, "test_max_3", test_dir)

@@ -12,6 +12,9 @@ def generate():
     x = tf.constant(np.random.rand(2, 2, 2), dtype=tf.float32, name="x")
     min_x = tf.reduce_min(x, axis=2, name="min_x_3_1")
 
+  with open(os.path.join(test_dir, 'output_nodes.txt'), 'w') as fid:
+    fid.write(min_x.op.name)
+
   with tf.Session(graph=graph) as sess:
     save_consts(sess, test_dir)
     save_graph(graph, "test_min_3_1", test_dir)

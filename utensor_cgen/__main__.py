@@ -6,10 +6,12 @@ import argparse
 import os
 import pkg_resources
 
+
 def _get_pb_model_name(path):
   return os.path.basename(os.path.splitext(path)[0])
 
-def main(pb_file, src_fname, idx_dir, embed_data_dir, 
+
+def main(pb_file, src_fname, idx_dir, embed_data_dir,
          debug_cmt, output_nodes, method, version, model_dir):
   if version:
     pkg_version = pkg_resources.get_distribution('utensor_cgen').version
@@ -23,22 +25,21 @@ def main(pb_file, src_fname, idx_dir, embed_data_dir,
   # MODEL should default to pb_file
   if idx_dir is None:
     idx_dir = os.path.join("constants", _get_pb_model_name(pb_file))
-  
+
   if src_fname is None:
     src_fname = _get_pb_model_name(pb_file) + ".cpp"
   model_path = os.path.join(model_dir, src_fname)
-  
+
   from .code_generator import CodeGenerator
 
   if embed_data_dir is None:
     embed_data_dir = os.path.join("/fs", idx_dir)
-  generator = CodeGenerator(pb_file, idx_dir, embed_data_dir, method, debug_cmt, output_nodes)
+  generator = CodeGenerator(pb_file, idx_dir, embed_data_dir, method, output_nodes, debug_cmt)
   generator.generate(model_path)
 
 
 def _nargs(sep=','):
   def parser(argstr):
-    print(argstr)
     return argstr.split(sep)
   return parser
 
@@ -46,7 +47,7 @@ def _nargs(sep=','):
 def _build_parser():
   model = "my_model"
   parser = argparse.ArgumentParser()
-  parser.add_argument("pb_file", metavar='%s.pb' % model, nargs="?",
+  parser.add_argument("pb_file", metavar='%s.pb' % model,
                       help="input protobuf file")
   parser.add_argument("-d", "--data-dir", dest='idx_dir',
                       metavar="DIR",
@@ -61,9 +62,9 @@ def _build_parser():
                       metavar="EMBED_DIR", default=None,
                       help="the data dir on the develop board (default: the value as the value of -d/data-dir flag)")
   parser.add_argument("--output-nodes", dest="output_nodes",
-                      type=_nargs(), metavar="node,node,...",
-                      default=None,
-                      help="list of output nodes")
+                      type=_nargs(), metavar="NODE_NAME,NODE_NAME,...",
+                      required=True,
+                      help="list of output nodes (required)")
   parser.add_argument("-O", "--optimize-method", choices=['None', 'refcnt'],
                       dest='method', default='refcnt', 
                       help='optimization method (default: %(default)s)')

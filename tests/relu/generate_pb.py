@@ -12,6 +12,9 @@ def generate():
     x = tf.constant(0.5 * np.random.randn(5, 5), name="x", dtype=tf.float32)
     relu = tf.nn.relu(x, name="relu")
 
+  with open(os.path.join(test_dir, 'output_nodes.txt'), 'w') as fid:
+    fid.write(relu.op.name)
+
   with tf.Session(graph=graph) as sess:
     save_consts(sess, test_dir)
     save_graph(graph, "test_relu", test_dir)

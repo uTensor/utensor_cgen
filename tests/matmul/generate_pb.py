@@ -13,6 +13,9 @@ def generate():
     x = tf.constant(np.ones((3, 1)) / 3, dtype=tf.float32, name="x")
     z = tf.matmul(w, x, name='z')
 
+  with open(os.path.join(test_dir, 'output_nodes.txt'), 'w') as fid:
+    fid.write(z.op.name)
+
   with tf.Session(graph=graph) as sess:
     save_consts(sess, test_dir)
     save_graph(graph, "test_matmul", test_dir)
