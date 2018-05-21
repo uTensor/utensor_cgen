@@ -1,8 +1,15 @@
 # Installation (Python 2 & 3)
 
 - installation with `setup.py`
+
+for users:
 ```
 python setup.py install
+```
+
+for developers:
+```
+python setup.py develop
 ```
 
 - installation with `pip`
@@ -42,7 +49,8 @@ Following steps are a general guild for user how to porting a `TensorFlow` proto
 # Known Limitations
 
 - If you want to use dropout with placeholders for the `keep_prob`, you have to name the `keep_prob` placeholder by any name that starts with "keep_prob".
-    - You can still use any input tensor with name starts with "keep_prob" as long as it's not the output tensor of a placeholder node. 
+    - You can still use any input tensor with name starts with "keep_prob" as long as it's not the output tensor of a placeholder node.
+    - You can't wrap `dropout` in any `namescope` 
 
 # TODOs
 1. (done) Freezed graph protobuff parser
