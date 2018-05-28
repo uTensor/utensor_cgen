@@ -5,7 +5,7 @@ from copy import deepcopy
 import numpy as np
 from tensorflow import Graph, Session, import_graph_def
 from tensorflow.contrib.util import make_ndarray
-from utensor_cgen.parser.types import OperationInfo, TensorInfo
+from utensor_cgen.ir.types import OperationInfo, TensorInfo
 
 
 def _parse_shape(t_shape):
@@ -66,7 +66,7 @@ def _is_freeze_graph(graph_def):
   return is_frozen
 
 
-def _parse_graph_topologic_order(graph_def, output_nodes):
+def _parse_graph_topologic_order_tf(graph_def, output_nodes):
   # https://en.wikipedia.org/wiki/Topological_sorting
   graph = Graph()
   with graph.as_default():
@@ -101,7 +101,7 @@ def _parse_graph_topologic_order(graph_def, output_nodes):
 def _parse_graph_def(graph_def, output_nodes):
   if not _is_freeze_graph(graph_def):
     raise ValueError("The graph is not frozen, freeze the graph first")
-  ops_topo = _parse_graph_topologic_order(graph_def=graph_def,
-                                          output_nodes=output_nodes)
+  ops_topo = _parse_graph_topologic_order_tf(graph_def=graph_def,
+                                             output_nodes=output_nodes)
   ops_info = _parse_graph_info(graph_def)
   return ops_info, ops_topo
