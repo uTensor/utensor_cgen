@@ -14,15 +14,51 @@ from tensorflow.core.framework.types_pb2 import DataType as _DataType
 from tensorflow.contrib.util import make_ndarray
 from tensorflow.tools.graph_transforms import TransformGraph
 
+from .utils import parse_tensor_name
+
 
 __all__ = ['TensorInfo', 'OperationInfo', 'uTensorGraph']
 
-class _NoShallowCopy(object):
+class _NoShallowCopyMixin(object):
+
   def __copy__(self):
     raise NotImplementedError('shallow copy is not allowed for type %s' % type(self))
 
+
+class IRBase(object):
+
+  def _tf_attr_to_dict(self, op_attr):
+    ret_d = {}
+    for key, attr in op_attr.items():
+      assert self._is_protobuf_obj(attr), \
+        'Expecting a protobuf object for %s, get a %s' % (key, type(attr))
+      value_name = attr.WhichOneof('value')
+      value = getattr(attr, value_name)
+      value = self._tf_convert_to_py_generic(value)
+      # FIXME: a dict is not a very consice data structure
+      # Maybe we should come up with some other kind of object
+      # when we add PyTorch support in uTensor cli
+      ret_d[key] = {'value_name': value_name,
+                    'value': value}
+    return ret_d
+
+  def _tf_convert_to_py_generic(self, value):
+    if self._is_py_generic_type(value):
+      return value
+    # TODO: convert protobuf object to generic python representation
+    #    generic representation := using only python builtin types or types
+    #                              defined in utensor_cgen
+    return value
+  
+  def _is_py_generic_type(self, value):
+    return type(value).__module__ == '__builtin__'
+  
+  def _is_protobuf_obj(self, value):
+    return hasattr(value, 'CopyFrom')
+
+
 @attr.s
-class TensorInfo(_NoShallowCopy):
+class TensorInfo(IRBase, _NoShallowCopyMixin):
   name = attr.ib(validator=validators.instance_of(six.text_type))
   dtype = attr.ib(validator=validators.instance_of(tf.DType))
 
@@ -38,8 +74,15 @@ class TensorInfo(_NoShallowCopy):
     if value not in ['tensorflow']:
       raise ValueError('Unsupport backend: {}'.format(value))
 
-  tensor_attr = attr.ib(default=attr.Factory(dict),
-                        validator=validators.instance_of(dict))
+  tensor_attr = attr.ib(default=None)
+
+  def __attrs_post_init__(self):
+    if self.op_attr and self._is_protobuf_obj(self.op_attr):
+      if self.backend == 'tensorflow':
+        # parse tensorflow NodeDef.attr (a protobuf map)
+        self.op_attr = self._tf_attr_to_dict(self.op_attr)
+      else:
+        raise ValueError('Only support tensorflow now, FIX THIS!')
 
   def __deepcopy__(self):
     new_tensor_attr = {}
@@ -68,7 +111,8 @@ class TensorInfo(_NoShallowCopy):
 
 
 @attr.s
-class OperationInfo(_NoShallowCopy):
+class OperationInfo(IRBase, _NoShallowCopyMixin):
+  
   name = attr.ib(validator=validators.instance_of(six.text_type))
 
   input_tensors = attr.ib(validator=validators.instance_of(list))
@@ -97,41 +141,23 @@ class OperationInfo(_NoShallowCopy):
   op_attr = attr.ib(default=None)
 
   def __attrs_post_init__(self):
-    if self.op_attr:
+    if self.op_attr and self._is_protobuf_obj(self.op_attr):
       if self.backend == 'tensorflow':
         # parse tensorflow NodeDef.attr (a protobuf map)
         self.op_attr = self._tf_attr_to_dict(self.op_attr)
       else:
         raise ValueError('Only support tensorflow now, FIX THIS!')
-
-  def _tf_attr_to_dict(self, op_attr):
-    ret_d = {}
-    for key, attr in op_attr.items():
-      value_name = attr.WhichOneof('value')
-      value = getattr(attr, value_name)
-      value = self._tf_convert_to_py_generic(value)
-      # FIXME: a dict is not a very consice data structure
-      # Maybe we should come up with some other kind of object
-      # when we add PyTorch support in uTensor cli
-      ret_d[key] = {'value_name': value_name,
-                    'value': value}
-    return ret_d
-
-  def _tf_convert_to_py_generic(self, value):
-    if self._is_py_generic_type(value):
-      return value
-    assert hasattr(value, 'CopyFrom'), \
-      'Expecting a protobuf object, get %s: %s' % (type(value), value)
-    # TODO: convert protobuf object to generic python representation
-    # generic representation := using only python builtin types or types
-    #                           defined in utensor_cgen
-    return value
   
-  def _is_py_generic_type(self, value):
-    return type(value).__module__ == '__builtin__'
+  def __deepcopy__(self):
+    return OperationInfo(namd=self.name,
+                         input_tensors=deepcopy(self.input_tensors),
+                         output_tensors=deepcopy(self.output_tensors),
+                         op_type=self.op_type,
+                         backend=self.backend,
+                         op_attr=deepcopy(self.op_attr))
 
 
-class uTensorGraph(object):
+class uTensorGraph(IRBase, _NoShallowCopyMixin):
   """
   Attributes
   ==========
@@ -141,14 +167,16 @@ class uTensorGraph(object):
   _backend : str
   """
   def __init__(self, graph=None, output_nodes=None):
+    assert isinstance(output_nodes, (list, None)), \
+        "output_nodes should be of type %s or None, get %s" % (list, type(output_nodes))
     if graph is None:
       # empty graph
       self.ops_info = {}
       self.topo_order = []
       self.output_nodes = []
     elif isinstance(graph, tf.GraphDef):
-      assert isinstance(output_nodes, list), \
-        "output_nodes should be of type %s, get %s" % (list, type(output_nodes))
+      if not output_nodes:
+        raise ValueError('No output_nodes given')
       self._init_from_graph_def(graph, output_nodes)
       self.output_nodes = output_nodes
     else:
@@ -179,6 +207,34 @@ class uTensorGraph(object):
   @property
   def ops(self):
     return [self.ops_info[name] for name in self.topo_order]
+  
+  def _topologic_order_graph(self, ugraph):
+    # https://en.wikipedia.org/wiki/Topological_sorting
+    queue = deepcopy(ugraph.output_nodes)
+    visited = set()    # temporary mark
+    perm_visit = set()  # Permanent mark
+    ops_torder = []  # L
+
+    def visit(node_name):
+      if node_name in perm_visit:
+        return
+      if node_name in visited:
+        raise ValueError("Input graph is not a DAG")
+
+      visited.add(node_name)
+      op_info = ugraph.ops_info[node_name]
+
+      for t_info in op_info.input_tensors:
+        op_name = parse_tensor_name(t_info.name)[0]
+        visit(op_name)
+
+      perm_visit.add(node_name)
+      ops_torder.insert(0, node_name)
+
+    while queue:
+      node_name = queue.pop(0)
+      visit(node_name)
+    return ops_torder
 
   @staticmethod
   def _parse_tf_tshape(t_shape):
@@ -187,22 +243,13 @@ class uTensorGraph(object):
     except ValueError:
       shape = None
     return shape
-  
-  def __deepcopy__(self):
-    new_graph = uTensorGraph()
-    new_ops_info = dict((k, deepcopy(v)) for k, v in self.ops_info.items())
-    new_topo_order = [name for name in self.topo_order]
-
-    new_graph.ops_info = new_ops_info
-    new_graph.topo_order = new_topo_order
-    new_graph.output_nodes = self.output_nodes
-    new_graph._backend = self._backend
-    return new_graph
 
   # tensorflow
   def _init_from_graph_def(self, graph_def, output_nodes):
     """Tensorflow
     """
+    if not self._tf_is_freeze_graph(graph_def):
+      raise ValueError('Given graph_def is not freezed')
     self._backend = 'tensorflow'
     self.ops_info = {}
     self.topo_order = []
@@ -236,3 +283,18 @@ class uTensorGraph(object):
       op_info.op_attr['_device'] = node.device
       self.ops_info[node.name] = op_info
       self.topo_order.append(node.name)
+  
+  def _tf_is_freeze_graph(self, graph_def):
+    is_frozen = all(node.op not in ['VariableV2'] for node in graph_def.node)
+    return is_frozen
+
+  def __deepcopy__(self):
+    new_graph = uTensorGraph()
+    new_ops_info = dict((k, deepcopy(v)) for k, v in self.ops_info.items())
+    new_topo_order = [name for name in self.topo_order]
+
+    new_graph.ops_info = new_ops_info
+    new_graph.topo_order = new_topo_order
+    new_graph.output_nodes = self.output_nodes
+    new_graph._backend = self._backend
+    return new_graph

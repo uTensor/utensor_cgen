@@ -10,15 +10,12 @@ __all__ = ['OptimizerFactory']
 class RefCntOptimizer(Transformer):
 
   def transform(self, ugraph):
-    """
-    [(op_name, op_info, ref_counts, to_eval), ...]
+    """Optimization with reference count
     """
     self.prune_graph = False
     return self._transform(ugraph)
   
   def _transform(self, ugraph):
-    """Optimization with reference count
-    """
     new_graph = deepcopy(ugraph)
     refcnt_table = _tensor_ref_count(new_ugraph.ops_info)
     for op_name in new_graph.topo_order[::-1]:
