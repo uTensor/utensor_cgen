@@ -13,7 +13,8 @@ from .transformer import NamescopeTransformer
 from .optimizer import RefCntOptimizer
 from .parser import parse_pb
 from .snippets import (CommentSnippet, ContextHeaderSnippet,
-                       ContextSnippetsContainer, CreateTensorIdxSnippet)
+                       ContextSnippetsContainer, CreateTensorIdxSnippet,
+                      CreateTensorBinarySnippet)
 from .snippets.composer import Composer
 
 __all__ = ["CodeGenerator"]
@@ -66,17 +67,21 @@ class CodeGenerator(object):
         container.template_vars["ref_counts"].append(ref_count)
         header_snippet.template_vars["placeholders"].append(out_tname)
       elif op_type == 'Const':
-        out_tname, out_dtype, _ = op_info.output_tensor[0]
+        out_tname, out_dtype, tensor_shape = op_info.output_tensor[0]
         ref_count = ref_counts[0]
         pre_tname = self._prepare_tensor_name(out_tname)
         idx_fname = "{}.idx".format(pre_tname)
-        snippet = CreateTensorIdxSnippet(self.embed_data_dir, out_tname,
-                                         idx_fname=idx_fname,
+        value = op_info.output_content[out_tname]
+        #snippet = CreateTensorIdxSnippet(self.embed_data_dir, out_tname,
+        #                                 idx_fname=idx_fname,
+        #                                 tf_dtype=out_dtype,
+        #                                 ref_count=ref_count)*/
+        snippet = CreateTensorBinarySnippet(out_tname, tensor_shape=tensor_shape,
                                          tf_dtype=out_dtype,
+                                            val_array=value,
                                          ref_count=ref_count)
         container.add_snippet(snippet)
         idx_path = os.path.join(self.idx_dir, idx_fname)
-        value = op_info.output_content[out_tname]
         self._save_data(idx_path, value, out_dtype)
       else:
         snippet = opFactory.createOperatorSnippet(op_info, ref_counts, to_eval)

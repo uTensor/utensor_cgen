@@ -14,7 +14,8 @@ __all__ = ["Snippet", "SnippetContainerBase",
            "Conv2DOpSnippent",
            "RequantizationRangeOpSnippet", "RequantizeOpSnippet",
            "CommentSnippet", "ContextHeaderSnippet",
-           "ContextSnippetsContainer", "QuantizedAddOpSnippet"]
+           "ContextSnippetsContainer", "QuantizedAddOpSnippet",
+           "CreateTensorBinarySnippet"]
 
 
 class CreateTensorIdxSnippet(Snippet):
@@ -48,11 +49,11 @@ class CreateTensorIdxSnippet(Snippet):
     self.template_vars["to_eval"] = to_eval
 
 class CreateTensorBinarySnippet(Snippet):
-  __template_name__ = "snippets/create_tensor_new.cpp"
+  __template_name__ = "snippets/create_tensor_binary.cpp"
   __headers__ = set(['"uTensor/core/context.hpp"',
                      '"uTensor/core/tensor.hpp"'])
 
-  def __init__(self, data_dir, tensor_name, tf_dtype,
+  def __init__(self, tensor_name, tf_dtype, val_array,tensor_shape=None,
                ref_count=0,
                sptr_name=None,
                create_sptr=False,
@@ -67,10 +68,22 @@ class CreateTensorBinarySnippet(Snippet):
     if create_sptr:
       self.template_vars["create_sptr"] = create_sptr
       self.template_vars["sptr_name"] = sptr_name
+    self.template_vars["tensor_type"] = "BinaryTensor"
     self.template_vars["tensor_name"] = tensor_name
     self.template_vars["tensor_shape"] = self._to_shape_str(tensor_shape)
+    self.template_vars["tensor_length"] = np.prod(tensor_shape)
     self.template_vars["dtype"] = TF_TYPES_MAP[tf_dtype].tensor_type_str
     self.template_vars["to_eval"] = to_eval
+    if val_array.size > 2:
+        self.template_vars["arr"] = 1
+        self.template_vars["valarr"] = val_array.flatten()
+    else:
+        self.template_vars["valarr"] = val_array.flatten()
+
+  def _to_shape_str(self, shape):
+    shape_str = ",".join([str(dim) for dim in shape])
+    return "{" + shape_str + "}"
+
 
 
 class CreateTensorNewSnippet(Snippet):
