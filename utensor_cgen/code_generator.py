@@ -59,7 +59,7 @@ class CodeGenerator(object):
     quant_ugraph = self._transform_graph(ugraph)
     print('Graph transormation done')
 
-    # # FIXME: adapting new IR
+    # FIXME: adapting new IR
     for op_id, (op_name, op_info, ref_counts, to_eval) in enumerate(construct_order, 1):
       op_type = op_info.op_type
       if op_type == "Placeholder":

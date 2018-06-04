@@ -47,7 +47,7 @@ class NonOptimizer(Transformer):
 class OptimizerFactory(Transformer):
 
   _OPTIMIZE_METHODS = {
-    'None': NonOptimizer
+    'None': NonOptimizer,
     'refcnt': RefCntOptimizer
   }
 

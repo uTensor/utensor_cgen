@@ -14,6 +14,7 @@ from tensorflow.core.framework.types_pb2 import DataType as _DataType
 from tensorflow.contrib.util import make_ndarray
 from tensorflow.tools.graph_transforms import TransformGraph
 
+from .converter import ConverterFactory
 from .utils import parse_tensor_name
 
 
@@ -26,35 +27,13 @@ class _NoShallowCopyMixin(object):
 
 
 class IRBase(object):
-
-  def _tf_attr_to_dict(self, op_attr):
-    ret_d = {}
-    for key, attr in op_attr.items():
-      assert self._is_protobuf_obj(attr), \
-        'Expecting a protobuf object for %s, get a %s' % (key, type(attr))
-      value_name = attr.WhichOneof('value')
-      value = getattr(attr, value_name)
-      value = self._tf_convert_to_py_generic(value)
-      # FIXME: a dict is not a very consice data structure
-      # Maybe we should come up with some other kind of object
-      # when we add PyTorch support in uTensor cli
-      ret_d[key] = {'value_name': value_name,
-                    'value': value}
-    return ret_d
-
-  def _tf_convert_to_py_generic(self, value):
-    if self._is_py_generic_type(value):
-      return value
-    # TODO: convert protobuf object to generic python representation
-    #    generic representation := using only python builtin types or types
-    #                              defined in utensor_cgen
-    return value
-  
+  # shared helper functions
   def _is_py_generic_type(self, value):
     return type(value).__module__ == '__builtin__'
   
   def _is_protobuf_obj(self, value):
-    return hasattr(value, 'CopyFrom')
+    return (hasattr(value, 'CopyFrom') or
+            type(value).__module__.startswith('google.protobuf'))
 
 
 @attr.s
@@ -75,24 +54,25 @@ class TensorInfo(IRBase, _NoShallowCopyMixin):
       raise ValueError('Unsupport backend: {}'.format(value))
 
   tensor_attr = attr.ib(default=None)
-
+  
   def __attrs_post_init__(self):
-    if self.op_attr and self._is_protobuf_obj(self.op_attr):
-      if self.backend == 'tensorflow':
-        # parse tensorflow NodeDef.attr (a protobuf map)
-        self.op_attr = self._tf_attr_to_dict(self.op_attr)
-      else:
-        raise ValueError('Only support tensorflow now, FIX THIS!')
+    if not self.tensor_attr:
+      self.tensor_attr = {}
+      return
 
-  def __deepcopy__(self):
+    tensor_attr = {}
+    if self._is_protobuf_obj(self.tensor_attr):
+      for key, attr in self.tensor_attr.items():
+        if self._is_protobuf_obj(attr):
+          cvt = ConverterFactory(attr)
+          attr = cvt.get_generic_value()
+        tensor_attr[key] = attr
+    self.tensor_attr = tensor_attr
+
+  def __deepcopy__(self, memo):
     new_tensor_attr = {}
     for k, value in self.tensor_attr.items():
-      if hasattr(value, 'CopyFrom'):
-        # protobuf object
-        new_value = type(value)()
-        new_value.CopyFrom(value)
-      else:
-        new_value = deepcopy(value)
+      new_value = deepcopy(value, memo)
       new_tensor_attr[k] = new_value
     return TensorInfo(name=self.name,
                       dtype=self.dtype,
@@ -112,7 +92,7 @@ class TensorInfo(IRBase, _NoShallowCopyMixin):
 
 @attr.s
 class OperationInfo(IRBase, _NoShallowCopyMixin):
-  
+
   name = attr.ib(validator=validators.instance_of(six.text_type))
 
   input_tensors = attr.ib(validator=validators.instance_of(list))
@@ -141,20 +121,26 @@ class OperationInfo(IRBase, _NoShallowCopyMixin):
   op_attr = attr.ib(default=None)
 
   def __attrs_post_init__(self):
-    if self.op_attr and self._is_protobuf_obj(self.op_attr):
-      if self.backend == 'tensorflow':
-        # parse tensorflow NodeDef.attr (a protobuf map)
-        self.op_attr = self._tf_attr_to_dict(self.op_attr)
-      else:
-        raise ValueError('Only support tensorflow now, FIX THIS!')
+    if not self.op_attr:
+      self.op_attr = {}
+      return
+
+    if self._is_protobuf_obj(self.op_attr):
+      op_attr = {}
+      for key, attr in self.op_attr.items():
+        if self._is_protobuf_obj(attr):
+          cvt = ConverterFactory(attr)
+          attr = cvt.get_generic_value()
+        op_attr[key] = attr
+      self.op_attr = op_attr
   
-  def __deepcopy__(self):
-    return OperationInfo(namd=self.name,
-                         input_tensors=deepcopy(self.input_tensors),
-                         output_tensors=deepcopy(self.output_tensors),
+  def __deepcopy__(self, memo):
+    return OperationInfo(name=self.name,
+                         input_tensors=deepcopy(self.input_tensors, memo),
+                         output_tensors=deepcopy(self.output_tensors, memo),
                          op_type=self.op_type,
                          backend=self.backend,
-                         op_attr=deepcopy(self.op_attr))
+                         op_attr=deepcopy(self.op_attr, memo))
 
 
 class uTensorGraph(IRBase, _NoShallowCopyMixin):
@@ -167,7 +153,7 @@ class uTensorGraph(IRBase, _NoShallowCopyMixin):
   _backend : str
   """
   def __init__(self, graph=None, output_nodes=None):
-    assert isinstance(output_nodes, (list, None)), \
+    assert isinstance(output_nodes, list) or output_nodes is None, \
         "output_nodes should be of type %s or None, get %s" % (list, type(output_nodes))
     if graph is None:
       # empty graph
@@ -193,22 +179,23 @@ class uTensorGraph(IRBase, _NoShallowCopyMixin):
       for key, obj in op_info.op_attr.items():
         if key.startswith('_'):
           continue
-        value_name = obj['value_name']
-        value = obj['value']
+        value_name = obj.value_name
+        value = obj.value
         attr_value = _AttrValue(**{value_name: value})
         attr[key] = attr_value
-      tf_node = graph_def.node.add(name=op_info.node_name,
-                                   op=op_info.op_type,
-                                   input=[in_tensor.name for in_tensor in op_info.input_tensors],
-                                   device=op_info.op_attr.get('_device', ''),
-                                   attr=attr)
+      graph_def.node.add(name=op_info.node_name,
+                         op=op_info.op_type,
+                         input=[in_tensor.name for in_tensor in op_info.input_tensors],
+                         device=op_info.op_attr.get('_device', ''),
+                         attr=attr)
     return graph_def
   
   @property
   def ops(self):
     return [self.ops_info[name] for name in self.topo_order]
   
-  def _topologic_order_graph(self, ugraph):
+  @staticmethod
+  def _topologic_order_graph(ugraph):
     # https://en.wikipedia.org/wiki/Topological_sorting
     queue = deepcopy(ugraph.output_nodes)
     visited = set()    # temporary mark
@@ -288,9 +275,9 @@ class uTensorGraph(IRBase, _NoShallowCopyMixin):
     is_frozen = all(node.op not in ['VariableV2'] for node in graph_def.node)
     return is_frozen
 
-  def __deepcopy__(self):
+  def __deepcopy__(self, memo):
     new_graph = uTensorGraph()
-    new_ops_info = dict((k, deepcopy(v)) for k, v in self.ops_info.items())
+    new_ops_info = dict((k, deepcopy(v, memo)) for k, v in self.ops_info.items())
     new_topo_order = [name for name in self.topo_order]
 
     new_graph.ops_info = new_ops_info
