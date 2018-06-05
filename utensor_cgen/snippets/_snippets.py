@@ -85,7 +85,6 @@ class CreateTensorBinarySnippet(Snippet):
     return "{" + shape_str + "}"
 
 
-
 class CreateTensorNewSnippet(Snippet):
   __template_name__ = "snippets/create_tensor_new.cpp"
   __headers__ = set(['"uTensor/core/context.hpp"', '"uTensor/core/tensor.hpp"'])
