@@ -15,7 +15,7 @@ __all__ = ["Snippet", "SnippetContainerBase",
            "RequantizationRangeOpSnippet", "RequantizeOpSnippet",
            "CommentSnippet", "ContextHeaderSnippet",
            "ContextSnippetsContainer", "QuantizedAddOpSnippet",
-           "CreateTensorBinarySnippet"]
+           "CreateTensorBinarySnippet", "ContextWeightHeaderSnippet"]
 
 
 class CreateTensorIdxSnippet(Snippet):
@@ -466,6 +466,26 @@ class ContextHeaderSnippet(Snippet):
     self.template_vars["header_guard"] = "_{}_H".format(guard_name.upper())
     self.template_vars["graph_name"] = graph_name
     self.template_vars["placeholders"] = placeholders
+
+class ContextWeightHeaderSnippet(Snippet):
+  __template_name__ = "snippets/weight_header.hpp"
+  __headers__ = set(['"uTensor/core/context.hpp"', '"uTensor/core/tensor.hpp"'])
+
+  def __init__(self, guard_name):
+    Snippet.__init__(self)
+    self.template_vars["header_guard"] = "_{}_H".format(guard_name.upper())
+    self.template_vars['valarr'] = [] 
+
+  def addvar(self, var_name, type, shape, value):
+      buffer = {}
+      length = np.prod(shape)
+      buffer['type'] =  TF_TYPES_MAP[type].tensor_type_str 
+      buffer['value'] = value.flatten()
+      buffer['length'] = length 
+      buffer['name'] = var_name 
+      if length > 2:
+        buffer['arr'] = 1 
+      self.template_vars['valarr'].append(buffer)
 
 
 class ContextSnippetsContainer(SnippetContainerBase):
