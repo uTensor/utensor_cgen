@@ -168,7 +168,7 @@ class AttrListValueConverter(Converter, TFConverterMixin):
         is_valid = True
         if not isinstance(value, list):
           is_valid = False
-        if isinstance(value, list):
+        else:
           for v in value:
             if not isinstance(v, vtype):
               is_valid = False
@@ -185,7 +185,8 @@ class AttrListValueConverter(Converter, TFConverterMixin):
     name_attrs_value = attr.ib(factory=list)
     @name_attrs_value.validator
     def check(self, attrib, value):
-      self._is_list_of(NameAttrListConverter.__utensor_generic_type__)(self, attrib, value)
+      _is_list_of = type(self).__dict__['_is_list_of']
+      _is_list_of(NameAttrListConverter.__utensor_generic_type__)(self, attrib, value)
   __utensor_generic_type__ = GenericType
   
   @classmethod
