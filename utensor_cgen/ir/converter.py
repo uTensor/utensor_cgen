@@ -65,10 +65,13 @@ def _check_generic_type(conv_func):
 
 
 # converters
-class TensorProtoConverter(Converter, TFConverterMixin):
-  __tfproto_type__ = _TensorProto
+class GenericTensorConverterMixin(Converter):
   __utensor_generic_type__ = np.ndarray
-  
+
+
+class TensorProtoConverter(GenericTensorConverterMixin, TFConverterMixin):
+  __tfproto_type__ = _TensorProto
+
   @classmethod
   @_check_generic_type
   def get_tf_value(cls, value):
@@ -79,9 +82,13 @@ class TensorProtoConverter(Converter, TFConverterMixin):
   def get_generic_value(cls, value):
     return make_ndarray(value)
 
-class DataTypeConverter(Converter, TFConverterMixin):
-  __tfproto_type__ = _DataType
+
+class GenericDataTypeConverterMixin(Converter):
   __utensor_generic_type__ = np.dtype
+
+
+class DataTypeConverter(GenericDataTypeConverterMixin, TFConverterMixin):
+  __tfproto_type__ = _DataType
   
   @classmethod
   @_check_generic_type
@@ -92,27 +99,43 @@ class DataTypeConverter(Converter, TFConverterMixin):
   @_check_tf_type
   def get_generic_value(cls, value):
     dtype = _DType(value)
-    return dtype.as_numpy_dtype()
+    np_dtype = dtype.as_numpy_dtype()
+    return self._handle_qtype(np_dtype)
+  
+  def _handle_qtype(self, dtype):
+    if dtype.fields is None:
+      return dtype
+    if dtype[0] in [np.uint8]:
+      return np.uint8
+    else:
+      raise TypeError('Unsupport numpy dtype: %s' % dtype)
 
-class TensorShapeConverter(Converter, TFConverterMixin):
-  __tfproto_type__ = _TensorShapeProto
 
+class GenericTensorShapeMixin(Converter):
   @attr.s
   class GenericType(object):
-    list_view = attr.ib(factory=list)
+    list_view = attr.ib()
     
     @list_view.validator
-    def check(self, attrib, value):
+    def check(self, attrib, a_list):
+      if a_list is None:
+        # unknown shape
+        return
+      if not isinstance(a_list, list):
+        raise ValueError('list_view should be a list')
+      # check the values in the list
       is_valid = True
-      if not isinstance(value, list):
-        is_valid = False
-      for v in value:
-        if v is None or isinstance(v, int):
+      for v in a_list:
+        if isinstance(v, (int, type(None))):
           continue
         is_valid = False
       if not is_valid:
-        raise ValueError("Invalid value type for %s" % type(self))
+        raise ValueError("Invalid value type for %s" % a_list)
   __utensor_generic_type__ = GenericType
+
+
+class TensorShapeConverter(GenericTensorShapeMixin, TFConverterMixin):
+  __tfproto_type__ = _TensorShapeProto
 
   @classmethod
   @_check_generic_type
@@ -122,7 +145,11 @@ class TensorShapeConverter(Converter, TFConverterMixin):
   @classmethod
   @_check_tf_type
   def get_generic_value(cls, value):
-    list_view = tensor_shape.TensorShape(value).as_list()
+    try:
+      list_view = tensor_shape.TensorShape(value).as_list()
+    except ValueError:
+      # unknown shape
+      list_view = None
     return cls.GenericType(list_view=list_view)
 
 class AttrValueConverter(Converter, TFConverterMixin):
@@ -142,6 +169,20 @@ class AttrValueConverter(Converter, TFConverterMixin):
                    NameAttrListConverter.__utensor_generic_type__)
       if not isinstance(value, all_types):
         raise ValueError("Expecting %s, get %s" % (all_types, type(value)))
+    
+    def __attrs_post_init__(self):
+      if self.value_name == 'tensor':
+        self.value = self._handle_quant_array(self.value)
+    
+    def _handle_quant_array(self, np_array):
+      dtype = np_array.dtype
+      if dtype.fields is None:
+        return np_array
+      elif dtype[0] in [np.uint8]:
+        return np_array.astype(np.uint8)
+      else:
+        raise ValueError('Unsupported numpy dtype: %s' % dtype)
+
   __utensor_generic_type__ = GenericType
 
   @classmethod
@@ -155,6 +196,8 @@ class AttrValueConverter(Converter, TFConverterMixin):
   def get_generic_value(cls, tf_value):
     value_name = tf_value.WhichOneof('value')
     value = getattr(tf_value, value_name)
+    if isinstance(value, np.ndarray):
+      value = self._handle_quant_array(value)
     return cls.__utensor_generic_type__(value_name=value_name,
                                         value=ConverterFactory.get_generic_value(value))
 
@@ -218,6 +261,7 @@ class AttrListValueConverter(Converter, TFConverterMixin):
       'name_attrs_value': [ConverterFactory.get_generic_value(v) for v in tf_value.func]
     }
     return cls.__utensor_generic_type__(**kwargs)
+
 
 class NameAttrListConverter(Converter, TFConverterMixin):
   __tfproto_type__ = _NameAttrList
@@ -295,6 +339,9 @@ class ConverterFactory(object):
   @classmethod
   def get_generic_value(cls, tf_value):
     value_type = type(tf_value)
+    if value_type in cls._GENERIC2TF_MAP:
+      # already generic type
+      return tf_value
     cvt = cls._TF2GENERIC_MAP.get(value_type, None)
     if not cvt:
       raise ValueError('Unknown tf value type: %s' % value_type)
@@ -303,6 +350,9 @@ class ConverterFactory(object):
   @classmethod
   def get_tf_value(cls, generic):
     value_type = type(generic)
+    if value_type in cls._TF2GENERIC_MAP:
+      # already tf type
+      return generic
     cvt = cls._GENERIC2TF_MAP.get(value_type, None)
     if not cvt:
       raise ValueError('Unknown generic type: %s' % value_type)

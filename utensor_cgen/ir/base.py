@@ -1,6 +1,7 @@
 # -*- coding: utf8 -*-
 import six
 from copy import deepcopy
+import re
 
 import attr
 from attr import validators
@@ -14,11 +15,12 @@ from tensorflow.core.framework.types_pb2 import DataType as _DataType
 from tensorflow.contrib.util import make_ndarray
 from tensorflow.tools.graph_transforms import TransformGraph
 
-from .converter import ConverterFactory
-from .utils import parse_tensor_name
+from .converter import ConverterFactory, AttrValueConverter
+from utensor_cgen.utils import parse_tensor_name
 
 
 __all__ = ['TensorInfo', 'OperationInfo', 'uTensorGraph']
+
 
 class _NoShallowCopyMixin(object):
 
@@ -38,47 +40,25 @@ class IRBase(object):
 
 @attr.s
 class TensorInfo(IRBase, _NoShallowCopyMixin):
+  """
+  name : str
+  dtype : numpy.dtype
+  shape : list
+  """
   name = attr.ib(validator=validators.instance_of(six.text_type))
-  dtype = attr.ib(validator=validators.instance_of(tf.DType))
-
-  shape = attr.ib()
+  dtype = attr.ib(validator=validators.instance_of(np.dtype))
+  shape = attr.ib(validator=validators.instance_of((list, type(None))))
   @shape.validator
-  def check(self, attrib, value):
-    if value is not None and not isinstance(value, list):
-      raise ValueError('shape must be None or list')
-
-  backend = attr.ib()
-  @backend.validator
-  def check(self, attrib, value):
-    if value not in ['tensorflow']:
-      raise ValueError('Unsupport backend: {}'.format(value))
-
-  tensor_attr = attr.ib(default=None)
-  
-  def __attrs_post_init__(self):
-    if not self.tensor_attr:
-      self.tensor_attr = {}
-      return
-
-    tensor_attr = {}
-    if self._is_protobuf_obj(self.tensor_attr):
-      for key, attr in self.tensor_attr.items():
-        if self._is_protobuf_obj(attr):
-          cvt = ConverterFactory(attr)
-          attr = cvt.get_generic_value()
-        tensor_attr[key] = attr
-    self.tensor_attr = tensor_attr
+  def check(self, attrib, values):
+    if values is not None:
+      for v in values:
+        assert isinstance(v, (int, type(None))), \
+          "shape should be a list of integers"
 
   def __deepcopy__(self, memo):
-    new_tensor_attr = {}
-    for k, value in self.tensor_attr.items():
-      new_value = deepcopy(value, memo)
-      new_tensor_attr[k] = new_value
     return TensorInfo(name=self.name,
                       dtype=self.dtype,
-                      shape=self.shape,
-                      backend=self.backend,
-                      tensor_attr=new_tensor_attr)
+                      shape=deepcopy(self.shape, memo))
 
   # legacy code: to make it works like namedtuple
   def __iter__(self):
@@ -92,7 +72,14 @@ class TensorInfo(IRBase, _NoShallowCopyMixin):
 
 @attr.s
 class OperationInfo(IRBase, _NoShallowCopyMixin):
-
+  """
+  name : str
+  input_tensors : List[TensorInfo]
+  output_tensors : List[TensorInfo]
+  op_type : str
+  backend : str
+  op_attr : dict
+  """
   name = attr.ib(validator=validators.instance_of(six.text_type))
 
   input_tensors = attr.ib(validator=validators.instance_of(list))
@@ -101,37 +88,27 @@ class OperationInfo(IRBase, _NoShallowCopyMixin):
     if not all([isinstance(v, TensorInfo) for v in value]):
       raise ValueError('Expecting a list of TensorInfo for input_tensor')
 
-  output_tensors = attr.ib()
+  output_tensors = attr.ib(validator=validators.instance_of(list))
   @output_tensors.validator
   def check(self, attribute, value):
-    assert isinstance(value, list), \
-      "output_tensor should be of type %s, get %s" % (list, type(value))
     if not all([isinstance(v, TensorInfo) for v in value]):
       raise ValueError('Expecting a list of TensorInfo for output_tensor')
 
   op_type = attr.ib(validator=validators.instance_of(six.text_type))
 
-  backend = attr.ib()
+  backend = attr.ib(validator=validators.instance_of(six.text_type))
   @backend.validator
   def check(self, attribute, value):
     if value not in ['tensorflow']:
       raise ValueError('Unsupported backend: {}'.format(value))
 
-  # misc dict
-  op_attr = attr.ib(default=None)
+  op_attr = attr.ib(factory=dict)
 
   def __attrs_post_init__(self):
-    if not self.op_attr:
-      self.op_attr = {}
-      return
-
-    if self._is_protobuf_obj(self.op_attr):
+    if self.op_attr:
       op_attr = {}
-      for key, attr in self.op_attr.items():
-        if self._is_protobuf_obj(attr):
-          cvt = ConverterFactory(attr)
-          attr = cvt.get_generic_value()
-        op_attr[key] = attr
+      for k, v in self.op_attr.items():
+        op_attr[k] = ConverterFactory.get_generic_value(v)
       self.op_attr = op_attr
   
   def __deepcopy__(self, memo):
@@ -150,23 +127,31 @@ class uTensorGraph(IRBase, _NoShallowCopyMixin):
   ops_info : dict
   topo_order : list
   output_nodes : list
-  _backend : str
+  backend : str
   """
+  KWPARSER_PATTERN = re.compile(r'^([^\d\W][\w\d_]*)__([^\d\W][\w\d_]*)')
+
   def __init__(self, graph=None, output_nodes=None):
-    assert isinstance(output_nodes, list) or output_nodes is None, \
-        "output_nodes should be of type %s or None, get %s" % (list, type(output_nodes))
+    if output_nodes is None:
+      output_nodes = []
     if graph is None:
-      # empty graph
       self.ops_info = {}
       self.topo_order = []
       self.output_nodes = []
-    elif isinstance(graph, tf.GraphDef):
+      self._backend = ''
+      return
+    assert isinstance(output_nodes, list), \
+        "output_nodes should be of type %s, get %s" % (list, type(output_nodes))
+    if isinstance(graph, tf.GraphDef):
       if not output_nodes:
         raise ValueError('No output_nodes given')
       self._init_from_graph_def(graph, output_nodes)
-      self.output_nodes = output_nodes
     else:
       raise ValueError('Only support tensorflow now')
+  
+  @property
+  def backend(self):
+    return self._backend
 
   @property
   def graph_def(self):
@@ -177,16 +162,16 @@ class uTensorGraph(IRBase, _NoShallowCopyMixin):
       op_info = self.ops_info[node_name]
       attr = {}
       for key, obj in op_info.op_attr.items():
-        if key.startswith('_'):
+        if self.KWPARSER_PATTERN.match(key):
           continue
         value_name = obj.value_name
-        value = obj.value
-        attr_value = _AttrValue(**{value_name: value})
+        tf_value = ConverterFactory.get_tf_value(obj.value)
+        attr_value = _AttrValue(**{value_name: tf_value})
         attr[key] = attr_value
-      graph_def.node.add(name=op_info.node_name,
+      graph_def.node.add(name=op_info.name,
                          op=op_info.op_type,
                          input=[in_tensor.name for in_tensor in op_info.input_tensors],
-                         device=op_info.op_attr.get('_device', ''),
+                         device=op_info.op_attr.get('tensorflow__device', ''),
                          attr=attr)
     return graph_def
   
@@ -240,6 +225,7 @@ class uTensorGraph(IRBase, _NoShallowCopyMixin):
     self._backend = 'tensorflow'
     self.ops_info = {}
     self.topo_order = []
+    self.output_nodes = output_nodes
     graph = tf.Graph()
     with graph.as_default():
       tf.import_graph_def(graph_def, name='')
@@ -250,14 +236,12 @@ class uTensorGraph(IRBase, _NoShallowCopyMixin):
     for node in graph_def.node:
       op = graph.get_operation_by_name(node.name)
       in_tensors = [TensorInfo(name=tensor.name,
-                               dtype=tensor.dtype,
-                               shape=self._parse_tf_tshape(tensor.shape),
-                               backend='tensorflow')
+                               dtype=np.dtype(tensor.dtype.as_numpy_dtype),
+                               shape=self._parse_tf_tshape(tensor.shape))
                     for tensor in op.inputs]
       out_tensors = [TensorInfo(name=tensor.name,
-                                dtype=tensor.dtype,
-                                shape=self._parse_tf_tshape(tensor.shape),
-                                backend='tensorflow')
+                                dtype=np.dtype(tensor.dtype.as_numpy_dtype),
+                                shape=self._parse_tf_tshape(tensor.shape))
                      for tensor in op.outputs]
       op_type = node.op
       op_attr = node.attr
@@ -267,7 +251,7 @@ class uTensorGraph(IRBase, _NoShallowCopyMixin):
                               op_type=op_type,
                               backend='tensorflow',
                               op_attr=op_attr)
-      op_info.op_attr['_device'] = node.device
+      op_info.op_attr['tensorflow__device'] = node.device
       self.ops_info[node.name] = op_info
       self.topo_order.append(node.name)
   

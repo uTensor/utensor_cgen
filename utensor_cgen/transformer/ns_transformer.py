@@ -1,26 +1,32 @@
 # -*- coding:utf8 -*-
+r"""Namescope Transformer
+
+Transformers that get rid of namescope/nodes which are not needed 
+for inference
+"""
 from collections import defaultdict
 from copy import deepcopy
 import re
 
 from utensor_cgen.ir import uTensorGraph, OperationInfo
-from utensor_cgen.ir.utils import parse_tensor_name
+from utensor_cgen.utils import parse_tensor_name
 from .base import Transformer
 
-__all__ = ["NamescopeTransformer"]
+__all__ = ["DropoutTransformer", "BatchNormTransformer"]
 
 
-class _DropoutTransformer(Transformer):
+class DropoutTransformer(Transformer):
   """Remove Dropout Op
   """
-  _NAMESCOPE_PATTERN = re.compile(r'(dropout[_\w\d]*)/.*')
+  KWARGS_NAMESCOPE = 'dropout'
+  TARGET_NODENAME_PATTERN = re.compile(r'(dropout[_\w\d]*)/.*')
 
   def transform(self, ugraph):
     dropout_input_map = self._find_input(ugraph)
     new_ops_info = {}
     new_topo_order = []
     for node_name in ugraph.topo_order:
-      match = self._NAMESCOPE_PATTERN.match(node_name)
+      match = self.TARGET_NODENAME_PATTERN.match(node_name)
       if match:
         # ignore all dropout nodes
         continue
@@ -31,10 +37,11 @@ class _DropoutTransformer(Transformer):
       op_attr = deepcopy(op_info.op_attr)
       for i, t_info in enumerate(in_t_infos):
         op_name = parse_tensor_name(t_info.name)[0]
-        match = self._NAMESCOPE_PATTERN.match(op_name)
+        match = self.TARGET_NODENAME_PATTERN.match(op_name)
         if match:
           name_scope = match.group(1)
-          dropout_in = dropout_input_map[name_scope]
+          # assume there should be only on input except keep_prob
+          dropout_in = dropout_input_map[name_scope].input_tensors[0]
           in_t_infos.pop(i)
           in_t_infos.insert(i, dropout_in)
       new_op_info = OperationInfo(name=op_info.name,
@@ -46,7 +53,7 @@ class _DropoutTransformer(Transformer):
       new_ops_info[node_name] = new_op_info
       new_topo_order.append(node_name)
     new_graph = uTensorGraph()
-    new_graph.ops_info = new_op_info
+    new_graph.ops_info = new_ops_info
     new_graph.topo_order = new_topo_order
     new_graph.output_nodes = deepcopy(ugraph.output_nodes)
     new_graph._backend = ugraph._backend
@@ -55,17 +62,19 @@ class _DropoutTransformer(Transformer):
   def _find_dropout_clusters(self, ugraph):
     clusters = defaultdict(lambda: [])
     for node_name in ugraph.topo_order:
-      match = self._NAMESCOPE_PATTERN.match(node_name)
+      match = self.TARGET_NODENAME_PATTERN.match(node_name)
       if match:
         name_scope = match.group(1)
         clusters[name_scope].append(node_name)
     return dict(clusters)
 
   def _find_input(self, ugraph):
+    """dropout_name --> input_op_info
+    """
     clusters = self._find_dropout_clusters(ugraph)
     input_map = {}
     for node_name in ugraph.topo_order:
-      match = self._NAMESCOPE_PATTERN.match(node_name)
+      match = self.TARGET_NODENAME_PATTERN.match(node_name)
       if match:
         name_scope = match.group(1)
         cluster = clusters[name_scope]
@@ -77,41 +86,12 @@ class _DropoutTransformer(Transformer):
     return input_map
 
 
-class _BatchNormTransformer(Transformer):
+class BatchNormTransformer(Transformer):
   """Replace Batch Norm namescope with uTensor Op
   """
-
-  _NAMESCOPE_PATTERN = re.compile(r'(BatchNorm[_\w\d]*)/.*')
-
-  def transform(self, graph_def, output_nodes):
-    # TODO implement this!
-    pass
-
-
-class NamescopeTransformer(Transformer):
-
-  _DELEGATION_MAP = {
-    "dropout": _DropoutTransformer,
-    "BatchNorm": _BatchNormTransformer
-  }
-
-  def __init__(self, target_name_scope, *args, **kwargs):
-    if target_name_scope not in self._DELEGATION_MAP:
-      raise ValueError('Unsupport namescope: {}'.format(target_name_scope))
-    self._target_ns = target_name_scope
-    self._delegate = self._DELEGATION_MAP[target_name_scope](*args, **kwargs)
+  KWARGS_NAMESCOPE = 'batch_norm'
+  TARGET_NODENAME_PATTERN = re.compile(r'(BatchNorm[_\w\d]*)/.*')
 
   def transform(self, ugraph):
-    new_graph = self._delegate.transform(ugraph)
-    return new_grap
-
-  @classmethod
-  def register_transformer(cls, target_name_scope, transformer, overwrite=False):
-    assert isinstance(transformer, Transformer), \
-      "expecting Transformer object, get {}".format(type(transformer))
-    assert target_name_scope not in cls._DELEGATION_MAP or overwrite, \
-      "Registering existing transformer without overwriting"
-    cls._DELEGATION_MAP[target_name_scope] = transformer
-
-  def __repr__(self):
-    return "NamescopeTransformer('{}')".format(self._target_ns)
+    # TODO: implement this!
+    pass
