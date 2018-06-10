@@ -13,7 +13,6 @@ class _Operator(object):
     return self._snippet
 
 
-# TODO: adapting new IR
 class _AddOperator(_Operator):
   def __init__(self, op_info):
     _Operator.__init__(self)

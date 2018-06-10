@@ -68,7 +68,6 @@ class CodeGenerator(object):
                                          self.trans_kwargs)
     print('Graph transormation done')
 
-    # TODO: adapting new IR
     for op_id, op_name in enumerate(quant_ugraph.topo_order):
       op_info = quant_ugraph.ops_info[op_name]
       op_type = op_info.op_type
