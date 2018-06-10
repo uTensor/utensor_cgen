@@ -219,8 +219,7 @@ class QuantizedMatMulOpSnippet(Snippet):
     Snippet.__init__(self)
     if ref_counts is None:
       ref_counts = []
-    # hack on different arguments order between tensorflow and uTensor
-    # NT: FIXME
+    # FIXME: hack on different arguments order between tensorflow and uTensor
     inputs = _permute_args(inputs, [0, 2, 3, 1, 4, 5])
     if ref_counts:
       err_msg = ("incorrect number of ref_counts and outputs: {}, {}"

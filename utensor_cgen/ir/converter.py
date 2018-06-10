@@ -103,6 +103,10 @@ class DataTypeConverter(GenericDataTypeConverterMixin, TFConverterMixin):
     return self._handle_qtype(np_dtype)
   
   def _handle_qtype(self, dtype):
+    """Mapping qantized dtype to np.uint8
+
+    FIXME: I'm not sure if it's a good idea
+    """
     if dtype.fields is None:
       return dtype
     if dtype[0] in [np.uint8]:
