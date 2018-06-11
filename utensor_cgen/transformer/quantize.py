@@ -8,8 +8,6 @@ class QuantizeTransformer(Transformer):
   KWARGS_NAMESCOPE = 'quantize'
 
   def transform(self, ugraph):
-    assert ugraph.backend == 'tensorflow', \
-      'Only support quantization for tensorflow backend graph'
     graph_def = ugraph.graph_def
     quant_graph_def = TransformGraph(input_graph_def=graph_def,
                                      inputs=[],

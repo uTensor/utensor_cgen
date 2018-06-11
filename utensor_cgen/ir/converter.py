@@ -80,7 +80,18 @@ class TensorProtoConverter(GenericTensorConverterMixin, TFConverterMixin):
   @classmethod
   @_check_tf_type
   def get_generic_value(cls, value):
-    return make_ndarray(value)
+    """quantized numpy array is mapped to np.uint8 typed
+
+    FIXME: I'm not sure if it's a good idea
+    """
+    np_array = make_ndarray(value)
+    dtype = np_array.dtype
+    if dtype.fields is None:
+      return np_array
+    elif dtype[0] in [np.uint8, np.int8]:
+      return np_array.astype(dtype[0])
+    else:
+      raise ValueError('Unsupported numpy dtype: %s' % dtype)
 
 
 class GenericDataTypeConverterMixin(Converter):
@@ -88,21 +99,22 @@ class GenericDataTypeConverterMixin(Converter):
 
 
 class DataTypeConverter(GenericDataTypeConverterMixin, TFConverterMixin):
-  __tfproto_type__ = _DataType
+  __tfproto_type__ = int # _DataType is an enum type
   
   @classmethod
   @_check_generic_type
   def get_tf_value(cls, value):
-    return _tf_as_dtype(value)
+    return _tf_as_dtype(value).as_datatype_enum
   
   @classmethod
   @_check_tf_type
   def get_generic_value(cls, value):
     dtype = _DType(value)
-    np_dtype = dtype.as_numpy_dtype()
-    return self._handle_qtype(np_dtype)
+    np_dtype = np.dtype(dtype.as_numpy_dtype)
+    return cls._handle_qtype(np_dtype)
   
-  def _handle_qtype(self, dtype):
+  @classmethod
+  def _handle_qtype(cls, dtype):
     """Mapping qantized dtype to np.uint8
 
     FIXME: I'm not sure if it's a good idea
@@ -110,7 +122,9 @@ class DataTypeConverter(GenericDataTypeConverterMixin, TFConverterMixin):
     if dtype.fields is None:
       return dtype
     if dtype[0] in [np.uint8]:
-      return np.uint8
+      return np.dtype('uint8')
+    elif dtype[0] in [np.int8]:
+      return np.dtype('int8')
     else:
       raise TypeError('Unsupport numpy dtype: %s' % dtype)
 
@@ -173,19 +187,6 @@ class AttrValueConverter(Converter, TFConverterMixin):
                    NameAttrListConverter.__utensor_generic_type__)
       if not isinstance(value, all_types):
         raise ValueError("Expecting %s, get %s" % (all_types, type(value)))
-    
-    def __attrs_post_init__(self):
-      if self.value_name == 'tensor':
-        self.value = self._handle_quant_array(self.value)
-    
-    def _handle_quant_array(self, np_array):
-      dtype = np_array.dtype
-      if dtype.fields is None:
-        return np_array
-      elif dtype[0] in [np.uint8]:
-        return np_array.astype(np.uint8)
-      else:
-        raise ValueError('Unsupported numpy dtype: %s' % dtype)
 
   __utensor_generic_type__ = GenericType
 
