@@ -23,7 +23,7 @@ class CreateTensorIdxSnippet(Snippet):
                      '"uTensor/core/context.hpp"',
                      '"uTensor/core/tensor.hpp"'])
 
-  def __init__(self, data_dir, tensor_name, tf_dtype,
+  def __init__(self, data_dir, tensor_name, np_dtype,
                ref_count=0,
                idx_fname=None,
                sptr_name=None,
@@ -31,8 +31,8 @@ class CreateTensorIdxSnippet(Snippet):
                to_eval=False):
     if create_sptr and sptr_name is None:
       raise ValueError("sptr_name can't be None if create_sptr is True")
-    if tf_dtype not in NP_TYPES_MAP:
-      raise ValueError("unsupport data type in uTensor: {}".format(tf_dtype))
+    if np_dtype not in NP_TYPES_MAP:
+      raise ValueError("unsupport data type in uTensor: {}".format(np_dtype))
     if idx_fname is None:
       idx_fname = "{}.idx".format(tensor_name.replace(":", "_").replace("/", "_"))
     Snippet.__init__(self)
@@ -44,7 +44,7 @@ class CreateTensorIdxSnippet(Snippet):
       self.template_vars["sptr_name"] = sptr_name
     self.template_vars["idx_path"] = idx_path
     self.template_vars["tensor_name"] = tensor_name
-    self.template_vars["importer_dtype"] = NP_TYPES_MAP[tf_dtype].importer_type_str
+    self.template_vars["importer_dtype"] = NP_TYPES_MAP[np_dtype].importer_type_str
     self.template_vars["to_eval"] = to_eval
 
 
@@ -52,7 +52,7 @@ class CreateTensorNewSnippet(Snippet):
   __template_name__ = "snippets/create_tensor_new.cpp"
   __headers__ = set(['"uTensor/core/context.hpp"', '"uTensor/core/tensor.hpp"'])
 
-  def __init__(self, tensor_name, tf_dtype,
+  def __init__(self, tensor_name, np_dtype,
                tensor_shape=None,
                ref_count=0,
                idx_fname=None,
@@ -61,8 +61,8 @@ class CreateTensorNewSnippet(Snippet):
                to_eval=False):
     if create_sptr and sptr_name is None:
       raise ValueError("sptr_name can't be None if create_sptr is True")
-    if tf_dtype not in NP_TYPES_MAP:
-      raise ValueError("unsupport data type in uTensor: {}".format(tf_dtype))
+    if np_dtype not in NP_TYPES_MAP:
+      raise ValueError("unsupport data type in uTensor: {}".format(np_dtype))
     if idx_fname is None:
       idx_fname = "{}.idx".format(tensor_name.replace(":", "_").replace("/", "_"))
 
@@ -74,7 +74,7 @@ class CreateTensorNewSnippet(Snippet):
       self.template_vars["sptr_name"] = sptr_name
     self.template_vars["tensor_name"] = tensor_name
     self.template_vars["tensor_shape"] = self._to_shape_str(tensor_shape)
-    self.template_vars["dtype"] = NP_TYPES_MAP[tf_dtype].tensor_type_str
+    self.template_vars["dtype"] = NP_TYPES_MAP[np_dtype].tensor_type_str
     self.template_vars["to_eval"] = to_eval
 
   def _to_shape_str(self, shape):
@@ -98,14 +98,14 @@ class AddOpSnippet(Snippet):
   __template_name__ = "snippets/add_op.cpp"
   __headers__ = set(['"uTensor/ops/MathOps.hpp"'])
 
-  def __init__(self, inputs, output, tf_dtype,
+  def __init__(self, inputs, output, np_dtype,
                ref_count=0,
                to_eval=False):
     Snippet.__init__(self)
     if ref_count:
       self.template_vars["ref_count"] = ref_count
-    self.template_vars["in_dtype"] = NP_TYPES_MAP[tf_dtype].tensor_type_str
-    self.template_vars["out_dtype"] = NP_TYPES_MAP[tf_dtype].tensor_type_str
+    self.template_vars["in_dtype"] = NP_TYPES_MAP[np_dtype].tensor_type_str
+    self.template_vars["out_dtype"] = NP_TYPES_MAP[np_dtype].tensor_type_str
     self.template_vars["inputs"] = inputs
     self.template_vars["output"] = output
     self.template_vars["to_eval"] = to_eval

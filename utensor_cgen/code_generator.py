@@ -22,7 +22,7 @@ class CodeGenerator(object):
   def __init__(self, model_file,
                idx_dir,
                embed_data_dir,
-               methods,
+               trans_methods,
                output_nodes,
                debug_cmt=False,
                **trans_kwargs):
@@ -31,7 +31,7 @@ class CodeGenerator(object):
       os.makedirs(idx_dir)
     self.idx_dir = idx_dir
     self.embed_data_dir = embed_data_dir.rstrip("/")
-    self.methods = methods
+    self.trans_methods = trans_methods
     self.output_nodes = output_nodes
     self.debug_cmt = debug_cmt
     self.trans_kwargs = trans_kwargs
@@ -64,7 +64,7 @@ class CodeGenerator(object):
     ugraph = uTensorGraph(graph_def, self.output_nodes)
     print("Transforming graph: {}".format(self.model_file))
     quant_ugraph = self._transform_graph(ugraph,
-                                         self.methods,
+                                         self.trans_methods,
                                          self.trans_kwargs)
     print('Graph transormation done')
 
@@ -84,7 +84,7 @@ class CodeGenerator(object):
         idx_fname = "{}.idx".format(pre_tname)
         snippet = CreateTensorIdxSnippet(self.embed_data_dir, out_tname,
                                          idx_fname=idx_fname,
-                                         tf_dtype=out_dtype,
+                                         np_dtype=out_dtype,
                                          ref_count=ref_count)
         container.add_snippet(snippet)
         idx_path = os.path.join(self.idx_dir, idx_fname)
@@ -127,8 +127,9 @@ class CodeGenerator(object):
     return prepared
 
   def _tf_save_data(self, path, value):
-    if value.shape == ():
-      value = np.array([value])
+    np_array = value.np_array
+    if np_array.shape == ():
+      np_array = np.array([np_array])
     with open(path, "wb") as fid:
-      idx2np.convert_to_file(fid, value)
+      idx2np.convert_to_file(fid, np_array)
     print("saving {}".format(path))

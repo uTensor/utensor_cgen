@@ -13,7 +13,7 @@ def _get_pb_model_name(path):
 
 
 def main(pb_file, src_fname, idx_dir, embed_data_dir,
-         debug_cmt, output_nodes, methods, model_dir):
+         debug_cmt, output_nodes, trans_methods, model_dir):
   if pb_file is None:
     raise ValueError("No pb file given")
 
@@ -31,7 +31,7 @@ def main(pb_file, src_fname, idx_dir, embed_data_dir,
 
   if embed_data_dir is None:
     embed_data_dir = os.path.join("/fs", idx_dir)
-  generator = CodeGenerator(pb_file, idx_dir, embed_data_dir, methods, output_nodes, debug_cmt)
+  generator = CodeGenerator(pb_file, idx_dir, embed_data_dir, trans_methods, output_nodes, debug_cmt)
   generator.generate(model_path)
 
 
@@ -62,7 +62,7 @@ def _build_parser():
                       type=_nargs(), metavar="NODE_NAME,NODE_NAME,...",
                       required=True,
                       help="list of output nodes (required)")
-  parser.add_argument("-O", "--optimize-methods", dest='methods', 
+  parser.add_argument("-O", "--transform-methods", dest='trans_methods', 
                       type=_nargs(), default='dropout,quantize,refcnt',
                       help='optimization methods (default: %(default)s)',
                       metavar='METHOD,METHOD,...')

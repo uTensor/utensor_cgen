@@ -66,7 +66,15 @@ def _check_generic_type(conv_func):
 
 # converters
 class GenericTensorConverterMixin(Converter):
-  __utensor_generic_type__ = np.ndarray
+  @attr.s
+  class GenericType(object):
+    np_array = attr.ib(validator=validators.instance_of(np.ndarray))
+    dtype = attr.ib(default=None)
+    
+    def __attrs_post_init__(self):
+      if self.dtype is None:
+        self.dtype = self.np_array.dtype
+  __utensor_generic_type__ = GenericType
 
 
 class TensorProtoConverter(GenericTensorConverterMixin, TFConverterMixin):
@@ -75,7 +83,7 @@ class TensorProtoConverter(GenericTensorConverterMixin, TFConverterMixin):
   @classmethod
   @_check_generic_type
   def get_tf_value(cls, value):
-    return make_tensor_proto(value)
+    return make_tensor_proto(value.np_array, dtype=value.dtype)
   
   @classmethod
   @_check_tf_type
@@ -87,11 +95,13 @@ class TensorProtoConverter(GenericTensorConverterMixin, TFConverterMixin):
     np_array = make_ndarray(value)
     dtype = np_array.dtype
     if dtype.fields is None:
-      return np_array
+      pass
     elif dtype[0] in [np.uint8, np.int8]:
-      return np_array.astype(dtype[0])
+      np_array = np_array.astype(dtype[0])
     else:
       raise ValueError('Unsupported numpy dtype: %s' % dtype)
+    return cls.__utensor_generic_type__(np_array=np_array,
+                                        dtype=dtype)
 
 
 class GenericDataTypeConverterMixin(Converter):

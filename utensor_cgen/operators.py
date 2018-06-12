@@ -19,7 +19,8 @@ class _AddOperator(_Operator):
     inputs = [tensor_info.name for tensor_info in op_info.input_tensors]
     output = op_info.output_tensors[0].name
     tf_dtype = op_info.input_tensors[0].dtype
-    parser = NamescopedKWArgsParser(RefCntOptimizer.KWARGS_NAMESCOPE, op_info.op_attr)
+    parser = NamescopedKWArgsParser(RefCntOptimizer.KWARGS_NAMESCOPE, 
+                                    op_info.op_attr)
     ref_count = parser.get('ref_counts', [0])[0]
     to_eval = parser.get('to_eval', False)
     self._snippet = AddOpSnippet(inputs, output, tf_dtype, ref_count, to_eval)
@@ -28,10 +29,12 @@ class _AddOperator(_Operator):
 class _ArgMaxOperator(_Operator):
   def __init__(self, op_info):
     _Operator.__init__(self)
-    inputs = [tname for tname, _, _ in op_info.input_tensors]
-    output, out_dtype, _ = op_info.output_tensors[0]
-    _, in_dtype, _ = op_info.input_tensors[0]
-    parser = NamescopedKWArgsParser(RefCntOptimizer.KWARGS_NAMESCOPE, op_info.op_attr)
+    inputs = [tensor_info.name for tensor_info in op_info.input_tensors]
+    out_tensor_info = op_info.output_tensors[0]
+    output, out_dtype = out_tensor_info.name, out_tensor_info.dtype
+    in_dtype = op_info.input_tensors[0].dtype
+    parser = NamescopedKWArgsParser(RefCntOptimizer.KWARGS_NAMESCOPE, 
+                                    op_info.op_attr)
     ref_count = parser.get('ref_counts', [0])[0]
     to_eval = parser.get('to_eval', False)
     self._snippet = ArgMaxOpSnippet(inputs, output, in_dtype, out_dtype, ref_count, to_eval)
@@ -40,9 +43,11 @@ class _ArgMaxOperator(_Operator):
 class _DequantizeOperator(_Operator):
   def __init__(self, op_info):
     _Operator.__init__(self)
-    inputs = [tname for tname, _, _ in op_info.input_tensors]
-    output, out_dtype, _ = op_info.output_tensors[0]
-    parser = NamescopedKWArgsParser(RefCntOptimizer.KWARGS_NAMESCOPE, op_info.op_attr)
+    inputs = [tensor_info.name for tensor_info in op_info.input_tensors]
+    out_tensor_info = op_info.output_tensors[0]
+    output, out_dtype = out_tensor_info.name, out_tensor_info.dtype
+    parser = NamescopedKWArgsParser(RefCntOptimizer.KWARGS_NAMESCOPE, 
+                                    op_info.op_attr)
     ref_count = parser.get('ref_counts', [0])[0]
     to_eval = parser.get('to_eval', False)
     self._snippet = DequantizeOpSnippet(inputs, output, out_dtype, ref_count, to_eval)
@@ -51,12 +56,16 @@ class _DequantizeOperator(_Operator):
 class _MaxOperator(_Operator):
   def __init__(self, op_info):
     _Operator.__init__(self)
-    inputs = [tname for tname, _, _ in op_info.input_tensors]
-    output, out_dtype, out_shape = op_info.output_tensors[0]
+    inputs = [tensor_info.name for tensor_info in op_info.input_tensors]
+    out_tensor_info = op_info.output_tensors[0]
+    output, out_dtype, out_shape = (out_tensor_info.name,
+                                    out_tensor_info.dtype,
+                                    out_tensor_info.shape)
     # FIXME: automatic alloc for uTensor fail
     if not out_shape:
       out_shape = [1]
-    parser = NamescopedKWArgsParser(RefCntOptimizer.KWARGS_NAMESCOPE, op_info.op_attr)
+    parser = NamescopedKWArgsParser(RefCntOptimizer.KWARGS_NAMESCOPE, 
+                                    op_info.op_attr)
     ref_count = parser.get('ref_counts', [0])[0]
     to_eval = parser.get('to_eval', False)
     self._snippet = MaxOpSnippet(inputs, output, out_dtype, out_shape, ref_count, to_eval)
@@ -65,13 +74,14 @@ class _MaxOperator(_Operator):
 class _QuantizedMaxPool(_Operator):
   def __init__(self, op_info):
     _Operator.__init__(self)
-    inputs = [tname for tname, _, _ in op_info.input_tensors]
-    outputs = [tname for tname, _, _ in op_info.output_tensors]
-    _, dtype, _ = op_info.output_tensors[0]
+    inputs = [tensor_info.name for tensor_info in op_info.input_tensors]
+    outputs = [tensor_info.name for tensor_info in op_info.output_tensors]
+    dtype = op_info.output_tensors[0].dtype
     ksize = op_info.op_attr['ksize'].value.ints_value
     strides = op_info.op_attr['strides'].value.ints_value
     padding = op_info.op_attr['padding'].value.decode('utf8')
-    parser = NamescopedKWArgsParser(RefCntOptimizer.KWARGS_NAMESCOPE, op_info.op_attr)
+    parser = NamescopedKWArgsParser(RefCntOptimizer.KWARGS_NAMESCOPE, 
+                                    op_info.op_attr)
     ref_counts = parser.get('ref_counts', [])
     to_eval = parser.get('to_eval', False)
     self._snippet = QuantizedMaxPoolSnippet(inputs, outputs, dtype,
@@ -82,12 +92,16 @@ class _QuantizedMaxPool(_Operator):
 class _MinOperator(_Operator):
   def __init__(self, op_info):
     _Operator.__init__(self)
-    inputs = [tname for tname, _, _ in op_info.input_tensors]
-    output, out_dtype, out_shape = op_info.output_tensors[0]
+    inputs = [tensor_info.name for tensor_info in op_info.input_tensors]
+    out_info = op_info.output_tensors[0]
+    output, out_dtype, out_shape = (out_info.name,
+                                    out_info.dtype,
+                                    out_info.shape)
     # FIXME: automatic alloc for uTensor fail
     if not out_shape:
       out_shape = [1]
-    parser = NamescopedKWArgsParser(RefCntOptimizer.KWARGS_NAMESCOPE, op_info.op_attr)
+    parser = NamescopedKWArgsParser(RefCntOptimizer.KWARGS_NAMESCOPE,
+                                    op_info.op_attr)
     ref_count = parser.get('ref_counts', [0])[0]
     to_eval = parser.get('to_eval', False)
     self._snippet = MinOpSnippet(inputs, output, out_dtype, out_shape, ref_count, to_eval)
@@ -96,11 +110,11 @@ class _MinOperator(_Operator):
 class _QuantizeV2Operator(_Operator):
   def __init__(self, op_info):
     _Operator.__init__(self)
-    inputs = [tname for tname, _, _ in op_info.input_tensors]
-    outputs = [tname for tname, _, _ in op_info.output_tensors]
-    _, out_dtype, _ = op_info.output_tensors[0]
+    inputs = [tensor_info.name for tensor_info in op_info.input_tensors]
+    outputs = [tensor_info.name for tensor_info in op_info.output_tensors]
+    out_dtype = op_info.output_tensors[0].dtype
     parser = NamescopedKWArgsParser(RefCntOptimizer.KWARGS_NAMESCOPE,
-                          op_info.op_attr)
+                                    op_info.op_attr)
     ref_counts = parser.get('ref_counts', [])
     to_eval = parser.get('to_eval', False)
     self._snippet = QuantizeV2OpSnippet(inputs, outputs, out_dtype, ref_counts, to_eval)
@@ -109,13 +123,14 @@ class _QuantizeV2Operator(_Operator):
 class _QuantizedMatMulOperator(_Operator):
   def __init__(self, op_info):
     _Operator.__init__(self)
-    inputs = [tname for tname, _, _ in op_info.input_tensors]
-    outputs = [tname for tname, _, _ in op_info.output_tensors]
-    _, x_dtype, _ = op_info.input_tensors[0]
-    _, w_dtype, _ = op_info.input_tensors[1]
-    _, out_dtype, _ = op_info.output_tensors[0]
+    inputs = [tensor_info.name for tensor_info in op_info.input_tensors]
+    outputs = [tensor_info.name for tensor_info in op_info.output_tensors]
+    in_tensor_info = op_info.input_tensors[0]
+    x_dtype, w_dtype, out_dtype = (op_info.input_tensors[0].dtype,
+                                   op_info.input_tensors[1].dtype,
+                                   op_info.output_tensors[0].dtype)
     parser = NamescopedKWArgsParser(RefCntOptimizer.KWARGS_NAMESCOPE,
-                          op_info.op_attr)
+                                    op_info.op_attr)
     ref_counts = parser.get('ref_counts', [])
     to_eval = parser.get('to_eval', False)
     self._snippet = QuantizedMatMulOpSnippet(inputs, outputs,
@@ -125,13 +140,13 @@ class _QuantizedMatMulOperator(_Operator):
 class _QuantizedAddOperator(_Operator):
   def __init__(self, op_info):
     _Operator.__init__(self)
-    inputs = [tname for tname, _, _ in op_info.input_tensors]
-    outputs = [tname for tname, _, _ in op_info.output_tensors]
-    _, x_dtype, _ = op_info.input_tensors[0]
-    _, w_dtype, _ = op_info.input_tensors[1]
-    _, out_dtype, _ = op_info.output_tensors[0]
+    inputs = [tensor_info.name for tensor_info in op_info.input_tensors]
+    outputs = [tensor_info.name for tensor_info in op_info.output_tensors]
+    x_dtype, w_dtype, out_dtype = (op_info.input_tensors[0].dtype,
+                                   op_info.input_tensors[1].dtype,
+                                   op_info.output_tensors[0].dtype)
     parser = NamescopedKWArgsParser(RefCntOptimizer.KWARGS_NAMESCOPE,
-                          op_info.op_attr)
+                                    op_info.op_attr)
     ref_counts = parser.get('ref_counts', [])
     to_eval = parser.get('to_eval', False)
     self._snippet = QuantizedAddOpSnippet(inputs, outputs, 
@@ -141,11 +156,12 @@ class _QuantizedAddOperator(_Operator):
 class _QuantizedReluOperator(_Operator):
   def __init__(self, op_info):
     _Operator.__init__(self)
-    inputs = [tname for tname, _, _ in op_info.input_tensors]
-    outputs = [tname for tname, _, _ in op_info.output_tensors]
-    _, in_dtype, _ = op_info.input_tensors[0]
-    _, qout_dtype, _ = op_info.output_tensors[0]  #NT: why separate this out?
-    out_dtypes = [t[1] for t in op_info.output_tensors[1:]]
+    inputs = [tensor_info.name for tensor_info in op_info.input_tensors]
+    outputs = [tensor_info.name for tensor_info in op_info.output_tensors]
+    in_dtype, qout_dtype = (op_info.input_tensors[0].dtype,
+                            op_info.output_tensors[0].dtype)  #NT: why separate this out?
+                                                              #DB: I don't know, it's in the uTensor C code
+    out_dtypes = [tensor_info.dtype for tensor_info in op_info.output_tensors[1:]]
     parser = NamescopedKWArgsParser(RefCntOptimizer.KWARGS_NAMESCOPE,
                                     op_info.op_attr)
     ref_counts = parser.get('ref_counts', [])
@@ -158,9 +174,9 @@ class _QuantizedReluOperator(_Operator):
 class _RequantizationRangeOperator(_Operator):
   def __init__(self, op_info):
     _Operator.__init__(self)
-    inputs = [tname for tname, _, _ in op_info.input_tensors]
-    outputs = [tname for tname, _, _ in op_info.output_tensors]
-    _, out_dtype, _ = op_info.output_tensors[0]
+    inputs = [tensor_info.name for tensor_info in op_info.input_tensors]
+    outputs = [tensor_info.name for tensor_info in op_info.output_tensors]
+    out_dtype = op_info.output_tensors[0].dtype
     parser = NamescopedKWArgsParser(RefCntOptimizer.KWARGS_NAMESCOPE,
                                     op_info.op_attr)
     ref_counts = parser.get('ref_counts', [])
@@ -172,12 +188,12 @@ class _RequantizationRangeOperator(_Operator):
 class _RequantizeOperator(_Operator):
   def __init__(self, op_info):
     _Operator.__init__(self)
-    inputs = [tname for tname, _, _ in op_info.input_tensors]
-    outputs = [tname for tname, _, _ in op_info.output_tensors]
-    _, qout_dtype, _ = op_info.output_tensors[0]
-    _, range_dtype, _ = op_info.output_tensors[1]
+    inputs = [tensor_info.name for tensor_info in op_info.input_tensors]
+    outputs = [tensor_info.name for tensor_info in op_info.output_tensors]
+    qout_dtype = op_info.output_tensors[0].dtype
+    range_dtype = op_info.output_tensors[1].dtype
     parser = NamescopedKWArgsParser(RefCntOptimizer.KWARGS_NAMESCOPE,
-                          op_info.op_attr)
+                                    op_info.op_attr)
     ref_counts = parser.get('ref_counts', [])
     to_eval = parser.get('to_eval', False)
     self._snippet = RequantizeOpSnippet(inputs, outputs,
@@ -188,10 +204,10 @@ class _RequantizeOperator(_Operator):
 class _ReshapeOperator(_Operator):
   def __init__(self, op_info):
     _Operator.__init__(self)
-    inputs = [tname for tname, _, _ in op_info.input_tensors]
-    output, _, _ = op_info.output_tensors[0]
+    inputs = [tensor_info.name for tensor_info in op_info.input_tensors]
+    output = op_info.output_tensors[0].name
     parser = NamescopedKWArgsParser(RefCntOptimizer.KWARGS_NAMESCOPE,
-                          op_info.op_attr)
+                                    op_info.op_attr)
     ref_count = parser.get('ref_counts', [0])[0]
     to_eval = parser.get('to_eval', False)
     self._snippet = ReshapeOpSnippet(inputs, output, ref_count, to_eval)
@@ -200,10 +216,10 @@ class _ReshapeOperator(_Operator):
 class _QuantizedReshapeOperator(_Operator):
   def __init__(self, op_info):
     _Operator.__init__(self)
-    inputs = [t_info.name for t_info in op_info.input_tensors]
-    outputs = [t_info.name for t_info in op_info.output_tensors]
+    inputs = [tensor_info.name for tensor_info in op_info.input_tensors]
+    outputs = [tensor_info.name for tensor_info in op_info.output_tensors]
     parser = NamescopedKWArgsParser(RefCntOptimizer.KWARGS_NAMESCOPE,
-                          op_info.op_attr)
+                                    op_info.op_attr)
     ref_counts = parser.get('ref_counts', [])
     to_eval = parser.get('to_eval', False)
     self._snippet = QuantizedReshapeOpSnippet(inputs=inputs,
@@ -215,15 +231,15 @@ class _QuantizedReshapeOperator(_Operator):
 class _Conv2DOperator(_Operator):
   def __init__(self, op_info):
     _Operator.__init__(self)
-    inputs = [tname for tname, _, _ in op_info.input_tensors]
-    outputs = [tname for tname, _, _ in op_info.output_tensors]
-    _, in_dtype, _ = op_info.input_tensors[0]
-    _, filter_dtype, _ = op_info.input_tensors[1]
-    out_dtypes = [out_dtype for _, out_dtype, _ in op_info.output_tensors]
+    inputs = [tensor_info.name for tensor_info in op_info.input_tensors]
+    outputs = [tensor_info.name for tensor_info in op_info.output_tensors]
+    in_dtype, filter_dtype = (op_info.input_tensors[0].dtype,
+                              op_info.input_tensors[1].dtype)
+    out_dtypes = [tensor_info.dtype for tensor_info in op_info.output_tensors]
     strides = op_info.op_attr["strides"].value.ints_value
     padding = op_info.op_attr["padding"].value.decode('utf8')
     parser = NamescopedKWArgsParser(RefCntOptimizer.KWARGS_NAMESCOPE,
-                          op_info.op_attr)
+                                    op_info.op_attr)
     ref_counts = parser.get('ref_counts', [])
     to_eval = parser.get('to_eval', False)
     self._snippet = Conv2DOpSnippent(inputs, outputs, strides, padding,

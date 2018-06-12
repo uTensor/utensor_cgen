@@ -29,13 +29,10 @@ class _NoShallowCopyMixin(object):
 
 
 class IRBase(object):
-  # shared helper functions
-  def _is_py_generic_type(self, value):
-    return type(value).__module__ == '__builtin__'
-  
-  def _is_protobuf_obj(self, value):
-    return (hasattr(value, 'CopyFrom') or
-            type(value).__module__.startswith('google.protobuf'))
+
+  @property
+  def all_supported_backends(self):
+    return ['tensorflow']
 
 
 @attr.s
@@ -49,9 +46,9 @@ class TensorInfo(IRBase, _NoShallowCopyMixin):
   dtype = attr.ib(validator=validators.instance_of(np.dtype))
   shape = attr.ib(validator=validators.instance_of((list, type(None))))
   @shape.validator
-  def check(self, attrib, values):
-    if values is not None:
-      for v in values:
+  def check(self, attrib, shape_values):
+    if shape_values is not None:
+      for v in shape_values:
         assert isinstance(v, (int, type(None))), \
           "shape should be a list of integers"
 
@@ -77,7 +74,7 @@ class OperationInfo(IRBase, _NoShallowCopyMixin):
   input_tensors : List[TensorInfo]
   output_tensors : List[TensorInfo]
   op_type : str
-  backend : str
+  backend : str {"tensorflow", 'pytorch'(future work)}
   op_attr : dict
   """
   name = attr.ib(validator=validators.instance_of(six.text_type))
@@ -127,7 +124,7 @@ class uTensorGraph(IRBase, _NoShallowCopyMixin):
   ops_info : dict
   topo_order : list
   output_nodes : list
-  backend : str
+  backend : str {"tensorflow", 'pytorch'(future work)}
   """
   KWPARSER_PATTERN = re.compile(r'^([^\d\W][\w\d_]*)__([^\d\W][\w\d_]*)')
 
