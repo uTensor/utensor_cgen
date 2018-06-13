@@ -7,6 +7,7 @@ import numpy as np
 from .snippets import *  # pylint: disable=W0401,W0614
 from utensor_cgen.utils import NamescopedKWArgsParser
 from utensor_cgen.transformer.optimizer import RefCntOptimizer
+from utensor_cgen.logger import logger
 
 class _Operator(object):
   def __init__(self):
@@ -283,7 +284,7 @@ class _ConstOperator(_Operator):
       np_array = np.array([np_array])
     with open(path, "wb") as fid:
       idx2np.convert_to_file(fid, np_array)
-    print("saving {}".format(path))
+    logger.info("saving %s", path)
 
 class OperatorFactory():
   # Can easily do something smarter

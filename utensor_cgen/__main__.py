@@ -1,11 +1,8 @@
 # -*- coding:utf8 -*-
 # pylint: disable=C0301
-from __future__ import print_function
-
 import argparse
 import os
 import pkg_resources
-import sys
 
 
 def _get_pb_model_name(path):
