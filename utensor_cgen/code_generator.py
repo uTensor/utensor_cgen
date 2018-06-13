@@ -2,7 +2,6 @@
 import os
 from tempfile import NamedTemporaryFile
 
-import idx2numpy as idx2np
 import numpy as np
 import tensorflow as tf
 from tensorflow.core.framework.graph_pb2 import GraphDef
@@ -77,21 +76,10 @@ class CodeGenerator(object):
         container.template_vars["placeholders"].append(out_tname)
         container.template_vars["ref_counts"].append(ref_count)
         header_snippet.template_vars["placeholders"].append(out_tname)
-      elif op_type == 'Const':
-        out_tname, out_dtype, _ = op_info.output_tensors[0]
-        ref_count = 0 #ref_counts[0]
-        pre_tname = self._tf_prepare_tensor_name(out_tname)
-        idx_fname = "{}.idx".format(pre_tname)
-        snippet = CreateTensorIdxSnippet(self.embed_data_dir, out_tname,
-                                         idx_fname=idx_fname,
-                                         np_dtype=out_dtype,
-                                         ref_count=ref_count)
-        container.add_snippet(snippet)
-        idx_path = os.path.join(self.idx_dir, idx_fname)
-        value = op_info.op_attr['value'].value
-        self._tf_save_data(idx_path, value)
       else:
-        snippet = opFactory.createOperatorSnippet(op_info)
+        snippet = opFactory.createOperatorSnippet(op_info,
+                                                  idx_dir=self.idx_dir,
+                                                  embeded_data_dir=self.embed_data_dir)
         container.add_snippet(snippet)
 
       if self.debug_cmt:
@@ -119,17 +107,3 @@ class CodeGenerator(object):
       graph_def = tf.GraphDef()
       graph_def.ParseFromString(fid.read())
     return graph_def
-
-  def _tf_prepare_tensor_name(self, tensor_name):
-    """Replace all ':' and '/' with '_' in a given tensor name
-    """
-    prepared = tensor_name.replace(":", "_").replace("/", "_")
-    return prepared
-
-  def _tf_save_data(self, path, value):
-    np_array = value.np_array
-    if np_array.shape == ():
-      np_array = np.array([np_array])
-    with open(path, "wb") as fid:
-      idx2np.convert_to_file(fid, np_array)
-    print("saving {}".format(path))

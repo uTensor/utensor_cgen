@@ -57,15 +57,6 @@ class TensorInfo(IRBase, _NoShallowCopyMixin):
                       dtype=self.dtype,
                       shape=deepcopy(self.shape, memo))
 
-  # legacy code: to make it works like namedtuple
-  def __iter__(self):
-    # TODO remove all such code in utensor
-    #   name, dtype, shape = tensor_info
-    return iter((self.name, self.dtype, self.shape))
-
-  def __getitem__(self, k):
-    return (self.name, self.dtype, self.shape)[k]
-
 
 @attr.s
 class OperationInfo(IRBase, _NoShallowCopyMixin):

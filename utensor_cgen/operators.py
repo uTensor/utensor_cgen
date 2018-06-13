@@ -1,4 +1,9 @@
 # -*- coding:utf8 -*-
+import os
+
+import idx2numpy as idx2np
+import numpy as np
+
 from .snippets import *  # pylint: disable=W0401,W0614
 from utensor_cgen.utils import NamescopedKWArgsParser
 from utensor_cgen.transformer.optimizer import RefCntOptimizer
@@ -14,7 +19,7 @@ class _Operator(object):
 
 
 class _AddOperator(_Operator):
-  def __init__(self, op_info):
+  def __init__(self, op_info, **kwargs):
     _Operator.__init__(self)
     inputs = [tensor_info.name for tensor_info in op_info.input_tensors]
     output = op_info.output_tensors[0].name
@@ -27,7 +32,7 @@ class _AddOperator(_Operator):
 
 
 class _ArgMaxOperator(_Operator):
-  def __init__(self, op_info):
+  def __init__(self, op_info, **kwargs):
     _Operator.__init__(self)
     inputs = [tensor_info.name for tensor_info in op_info.input_tensors]
     out_tensor_info = op_info.output_tensors[0]
@@ -41,7 +46,7 @@ class _ArgMaxOperator(_Operator):
 
 
 class _DequantizeOperator(_Operator):
-  def __init__(self, op_info):
+  def __init__(self, op_info, **kwargs):
     _Operator.__init__(self)
     inputs = [tensor_info.name for tensor_info in op_info.input_tensors]
     out_tensor_info = op_info.output_tensors[0]
@@ -54,7 +59,7 @@ class _DequantizeOperator(_Operator):
 
 
 class _MaxOperator(_Operator):
-  def __init__(self, op_info):
+  def __init__(self, op_info, **kwargs):
     _Operator.__init__(self)
     inputs = [tensor_info.name for tensor_info in op_info.input_tensors]
     out_tensor_info = op_info.output_tensors[0]
@@ -72,7 +77,7 @@ class _MaxOperator(_Operator):
 
 
 class _QuantizedMaxPool(_Operator):
-  def __init__(self, op_info):
+  def __init__(self, op_info, **kwargs):
     _Operator.__init__(self)
     inputs = [tensor_info.name for tensor_info in op_info.input_tensors]
     outputs = [tensor_info.name for tensor_info in op_info.output_tensors]
@@ -90,7 +95,7 @@ class _QuantizedMaxPool(_Operator):
 
 
 class _MinOperator(_Operator):
-  def __init__(self, op_info):
+  def __init__(self, op_info, **kwargs):
     _Operator.__init__(self)
     inputs = [tensor_info.name for tensor_info in op_info.input_tensors]
     out_info = op_info.output_tensors[0]
@@ -108,7 +113,7 @@ class _MinOperator(_Operator):
 
 
 class _QuantizeV2Operator(_Operator):
-  def __init__(self, op_info):
+  def __init__(self, op_info, **kwargs):
     _Operator.__init__(self)
     inputs = [tensor_info.name for tensor_info in op_info.input_tensors]
     outputs = [tensor_info.name for tensor_info in op_info.output_tensors]
@@ -121,7 +126,7 @@ class _QuantizeV2Operator(_Operator):
 
 
 class _QuantizedMatMulOperator(_Operator):
-  def __init__(self, op_info):
+  def __init__(self, op_info, **kwargs):
     _Operator.__init__(self)
     inputs = [tensor_info.name for tensor_info in op_info.input_tensors]
     outputs = [tensor_info.name for tensor_info in op_info.output_tensors]
@@ -138,7 +143,7 @@ class _QuantizedMatMulOperator(_Operator):
                                              ref_counts, to_eval)
 
 class _QuantizedAddOperator(_Operator):
-  def __init__(self, op_info):
+  def __init__(self, op_info, **kwargs):
     _Operator.__init__(self)
     inputs = [tensor_info.name for tensor_info in op_info.input_tensors]
     outputs = [tensor_info.name for tensor_info in op_info.output_tensors]
@@ -154,7 +159,7 @@ class _QuantizedAddOperator(_Operator):
                                           ref_counts, to_eval)
 
 class _QuantizedReluOperator(_Operator):
-  def __init__(self, op_info):
+  def __init__(self, op_info, **kwargs):
     _Operator.__init__(self)
     inputs = [tensor_info.name for tensor_info in op_info.input_tensors]
     outputs = [tensor_info.name for tensor_info in op_info.output_tensors]
@@ -172,7 +177,7 @@ class _QuantizedReluOperator(_Operator):
 
 
 class _RequantizationRangeOperator(_Operator):
-  def __init__(self, op_info):
+  def __init__(self, op_info, **kwargs):
     _Operator.__init__(self)
     inputs = [tensor_info.name for tensor_info in op_info.input_tensors]
     outputs = [tensor_info.name for tensor_info in op_info.output_tensors]
@@ -186,7 +191,7 @@ class _RequantizationRangeOperator(_Operator):
 
 
 class _RequantizeOperator(_Operator):
-  def __init__(self, op_info):
+  def __init__(self, op_info, **kwargs):
     _Operator.__init__(self)
     inputs = [tensor_info.name for tensor_info in op_info.input_tensors]
     outputs = [tensor_info.name for tensor_info in op_info.output_tensors]
@@ -202,7 +207,7 @@ class _RequantizeOperator(_Operator):
 
 
 class _ReshapeOperator(_Operator):
-  def __init__(self, op_info):
+  def __init__(self, op_info, **kwargs):
     _Operator.__init__(self)
     inputs = [tensor_info.name for tensor_info in op_info.input_tensors]
     output = op_info.output_tensors[0].name
@@ -214,7 +219,7 @@ class _ReshapeOperator(_Operator):
 
 
 class _QuantizedReshapeOperator(_Operator):
-  def __init__(self, op_info):
+  def __init__(self, op_info, **kwargs):
     _Operator.__init__(self)
     inputs = [tensor_info.name for tensor_info in op_info.input_tensors]
     outputs = [tensor_info.name for tensor_info in op_info.output_tensors]
@@ -229,7 +234,7 @@ class _QuantizedReshapeOperator(_Operator):
 
 
 class _Conv2DOperator(_Operator):
-  def __init__(self, op_info):
+  def __init__(self, op_info, **kwargs):
     _Operator.__init__(self)
     inputs = [tensor_info.name for tensor_info in op_info.input_tensors]
     outputs = [tensor_info.name for tensor_info in op_info.output_tensors]
@@ -246,6 +251,39 @@ class _Conv2DOperator(_Operator):
                                      in_dtype=in_dtype, filter_dtype=filter_dtype, out_dtypes=out_dtypes,
                                      ref_counts=ref_counts, to_eval=to_eval)
 
+class _ConstOperator(_Operator):
+
+  def __init__(self, op_info, **kwargs):
+    out_tensor_info = op_info.output_tensors[0]
+    out_tname, out_dtype = (out_tensor_info.name,
+                            out_tensor_info.dtype)
+    ref_count = 0 #ref_counts[0]
+    pre_tname = self._tf_prepare_tensor_name(out_tname)
+    idx_fname = "{}.idx".format(pre_tname)
+    idx_dir = kwargs['idx_dir']
+    embed_data_dir = kwargs.get('embed_data_dir',
+                                os.path.join("/fs", idx_dir))
+    self._snippet = CreateTensorIdxSnippet(embed_data_dir, out_tname,
+                                           idx_fname=idx_fname,
+                                           np_dtype=out_dtype,
+                                           ref_count=ref_count)
+    idx_path = os.path.join(idx_dir, idx_fname)
+    value = op_info.op_attr['value'].value
+    self._tf_save_data(idx_path, value)
+
+  def _tf_prepare_tensor_name(self, tensor_name):
+    """Replace all ':' and '/' with '_' in a given tensor name
+    """
+    prepared = tensor_name.replace(":", "_").replace("/", "_")
+    return prepared
+  
+  def _tf_save_data(self, path, value):
+    np_array = value.np_array
+    if np_array.shape == ():
+      np_array = np.array([np_array])
+    with open(path, "wb") as fid:
+      idx2np.convert_to_file(fid, np_array)
+    print("saving {}".format(path))
 
 class OperatorFactory():
   # Can easily do something smarter
@@ -263,13 +301,14 @@ class OperatorFactory():
                 "Requantize": _RequantizeOperator,
                 "Reshape": _ReshapeOperator,
                 "QuantizedReshape": _QuantizedReshapeOperator,
-                "QuantizedConv2D": _Conv2DOperator}
+                "QuantizedConv2D": _Conv2DOperator,
+                "Const": _ConstOperator}
 
-  def createOperatorSnippet(self, op_info):
+  def createOperatorSnippet(self, op_info, **kwargs):
     op_type = op_info.op_type
     if op_type not in self._operators:
       err_msg = "unsupported op type in uTensor: {}".format(op_type)
       raise ValueError(err_msg)
 
-    op = self._operators[op_type](op_info)  # Create desired object
+    op = self._operators[op_type](op_info, **kwargs)  # Create desired object
     return op.snippet  # Ops know how to create their snippets
