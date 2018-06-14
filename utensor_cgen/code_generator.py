@@ -1,43 +1,53 @@
 # -*- coding:utf8 -*-
 import os
 from tempfile import NamedTemporaryFile
+import logging
 
-import idx2numpy as idx2np
 import numpy as np
 import tensorflow as tf
 from tensorflow.core.framework.graph_pb2 import GraphDef
 from tensorflow.tools.graph_transforms import TransformGraph
 
 from .operators import OperatorFactory
-from .transformer import NamescopeTransformer
-from .optimizer import RefCntOptimizer
-from .parser import parse_pb
+from .transformer.pipline import TransformerPipeline
+from .ir import uTensorGraph
 from .snippets import (CommentSnippet, ContextHeaderSnippet,
                        ContextSnippetsContainer, CreateTensorIdxSnippet)
 from .snippets.composer import Composer
 
 __all__ = ["CodeGenerator"]
-
+_logger = logging.getLogger('utensor-cli')
 
 class CodeGenerator(object):
-  def __init__(self, pb_file, idx_dir, embed_data_dir, method, output_nodes, 
+  def __init__(self, model_file,
+               idx_dir,
+               embed_data_dir,
+               trans_methods,
+               output_nodes,
                debug_cmt=False,
-               clear_tmp_file=True):
-    self.pb_file = pb_file
+               **trans_kwargs):
+    self.model_file = model_file
     if not os.path.exists(idx_dir):
       os.makedirs(idx_dir)
     self.idx_dir = idx_dir
     self.embed_data_dir = embed_data_dir.rstrip("/")
-    self.method = method
+    self.trans_methods = trans_methods
     self.output_nodes = output_nodes
     self.debug_cmt = debug_cmt
-    self.clear_tmp_file = clear_tmp_file
+    self.trans_kwargs = trans_kwargs
 
   def generate(self, src_fname):
+    _, ext = os.path.splitext(self.model_file)
+    if ext == '.pb':
+      self._generate_from_pb(src_fname)
+    else:
+      raise ValueError('Support only pb file')
+
+  def _generate_from_pb(self, src_fname):
     """Generate source and header files
     """
     fname, _ = os.path.splitext(src_fname)
-    graph_name, _ = os.path.splitext(os.path.basename(self.pb_file))
+    graph_name, _ = os.path.splitext(os.path.basename(self.model_file))
     guard_name = fname.replace('/', '_')
     header_snippet = ContextHeaderSnippet(guard_name, graph_name)
 
@@ -48,38 +58,28 @@ class CodeGenerator(object):
 
     opFactory = OperatorFactory()
 
-    print("Transforming graph: {}".format(self.pb_file))
-    new_pb_file = self._transform_graph(self.pb_file)
-    print("Parsing new pb file {}".format(new_pb_file))
-    ops_info, topo_orders = parse_pb(new_pb_file, self.output_nodes)
-    if self.clear_tmp_file:
-      os.remove(new_pb_file)
-    construct_order = RefCntOptimizer.optimize(ops_info, topo_orders, self.output_nodes, self.method)
+    graph_def = self._tf_load_graph_def(self.model_file)
+    self._expect_non_quantized(graph_def)
+    ugraph = uTensorGraph(graph_def, self.output_nodes)
+    _logger.info("Transforming graph: %s", self.model_file)
+    quant_ugraph = self._transform_graph(ugraph,
+                                         self.trans_methods,
+                                         self.trans_kwargs)
+    _logger.info('Graph transormation done')
 
-    # TODO better snippet construction abstraction
-    for op_id, (op_name, op_info, ref_counts, to_eval) in enumerate(construct_order, 1):
+    for op_id, op_name in enumerate(quant_ugraph.topo_order):
+      op_info = quant_ugraph.ops_info[op_name]
       op_type = op_info.op_type
       if op_type == "Placeholder":
-        out_tname = op_info.output_tensor[0].name
-        ref_count = ref_counts[0]
+        out_tname = op_info.output_tensors[0].name
+        ref_count = 0 #ref_counts[0]
         container.template_vars["placeholders"].append(out_tname)
         container.template_vars["ref_counts"].append(ref_count)
         header_snippet.template_vars["placeholders"].append(out_tname)
-      elif op_type == 'Const':
-        out_tname, out_dtype, _ = op_info.output_tensor[0]
-        ref_count = ref_counts[0]
-        pre_tname = self._prepare_tensor_name(out_tname)
-        idx_fname = "{}.idx".format(pre_tname)
-        snippet = CreateTensorIdxSnippet(self.embed_data_dir, out_tname,
-                                         idx_fname=idx_fname,
-                                         tf_dtype=out_dtype,
-                                         ref_count=ref_count)
-        container.add_snippet(snippet)
-        idx_path = os.path.join(self.idx_dir, idx_fname)
-        value = op_info.output_content[out_tname]
-        self._save_data(idx_path, value, out_dtype)
       else:
-        snippet = opFactory.createOperatorSnippet(op_info, ref_counts, to_eval)
+        snippet = opFactory.createOperatorSnippet(op_info,
+                                                  idx_dir=self.idx_dir,
+                                                  embeded_data_dir=self.embed_data_dir)
         container.add_snippet(snippet)
 
       if self.debug_cmt:
@@ -89,48 +89,38 @@ class CodeGenerator(object):
         container.add_snippet(cmt_snippet)
     composer.add_snippet(container)
 
-    print("Generate header file: {}".format(header_fname))
+    _logger.info("Generate header file: %s", header_fname)
     with open(header_fname, "w") as wf:
       wf.write('// Auto generated by utensor-cli\n\n')
       wf.write(header_snippet.render())
-    print("Generate source file: {}".format(src_fname))
+    _logger.info("Generate source file: %s", src_fname)
     with open(src_fname, "w") as wf:
       wf.write('// Auto generated by utensor-cli\n\n')
       wf.write(composer.compose())
+  
+  @classmethod
+  def _expect_non_quantized(cls, graph_def):
+    is_quantized = False
+    for node in graph_def.node:
+      if node.op in ["Dequantize", "QuantizedMaxPool",
+                     "QuantizeV2", "QuantizedMatMul",
+                     "QuantizedRelu", "QuantizedAdd",
+                     "RequantizationRange",
+                     "Requantize",
+                     "QuantizedReshape",
+                     "QuantizedConv2D"]:
+        is_quantized = True
+        break
+    if is_quantized:
+      _logger.warning(("Expecting non-quantized graph, "
+                        "graph transformation/optimization might not work properly"))
 
-  def _transform_graph(self, pb_file):
-    with tf.gfile.FastGFile(pb_file, 'rb') as fid:
-      graph_def = GraphDef()
+  def _transform_graph(self, ugraph, methods, trans_kwargs):
+    pipeline = TransformerPipeline(methods, trans_kwargs)
+    return pipeline.transform(ugraph)
+
+  def _tf_load_graph_def(self, pb_fname):
+    with tf.gfile.FastGFile(pb_fname, 'rb') as fid:
+      graph_def = tf.GraphDef()
       graph_def.ParseFromString(fid.read())
-    with NamedTemporaryFile(mode='wb',
-                            prefix='uTensor_',
-                            delete=False,
-                            suffix='.pb') as temp_file:
-      dropout_transformer = NamescopeTransformer('dropout')
-      new_graph_def = dropout_transformer.transform(graph_def, self.output_nodes)
-      quant_graph_def = TransformGraph(input_graph_def=new_graph_def,
-                                       inputs=[],
-                                       outputs=self.output_nodes,
-                                       transforms=["quantize_weights", "quantize_nodes"])
-      temp_file.write(quant_graph_def.SerializeToString())
-    return temp_file.name
-
-  def _prepare_tensor_name(self, tensor_name):
-    prepared = tensor_name.replace(":", "_").replace("/", "_")
-    return prepared
-
-  def _save_data(self, path, value, tf_dtype):
-    if tf_dtype in [tf.uint8, tf.qint8, tf.quint8]:
-      np_dtype = np.uint8
-    elif tf_dtype in [tf.int32, tf.qint32]:
-      np_dtype = np.int32
-    else:
-      np_dtype = np.float32
-
-    if value.shape == ():
-      value = np.array([value], dtype=np_dtype)
-    else:
-      value = value.astype(np_dtype)
-    with open(path, "wb") as fid:
-      idx2np.convert_to_file(fid, value)
-    print("saving {}".format(path))
+    return graph_def
