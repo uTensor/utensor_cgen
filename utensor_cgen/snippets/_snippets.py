@@ -53,9 +53,10 @@ class CreateTensorBinarySnippet(Snippet):
   __headers__ = set(['"uTensor/core/context.hpp"',
                      '"uTensor/core/tensor.hpp"'])
 
-  def __init__(self, tensor_name, tf_dtype, val_array,tensor_shape=None,
+  def __init__(self, tensor_name, tf_dtype, tensor_shape=None,
                ref_count=0,
                sptr_name=None,
+               inline_name=None,
                create_sptr=False,
                to_eval=False):
     if create_sptr and sptr_name is None:
@@ -74,11 +75,7 @@ class CreateTensorBinarySnippet(Snippet):
     self.template_vars["tensor_length"] = np.prod(tensor_shape)
     self.template_vars["dtype"] = TF_TYPES_MAP[tf_dtype].tensor_type_str
     self.template_vars["to_eval"] = to_eval
-    if val_array.size > 2:
-        self.template_vars["arr"] = 1
-        self.template_vars["valarr"] = val_array.flatten()
-    else:
-        self.template_vars["valarr"] = val_array.flatten()
+    self.template_vars["inline_name"] = inline_name
 
   def _to_shape_str(self, shape):
     shape_str = ",".join([str(dim) for dim in shape])
@@ -470,20 +467,19 @@ class ContextWeightHeaderSnippet(Snippet):
   __template_name__ = "snippets/weight_header.hpp"
   __headers__ = set(['"uTensor/core/context.hpp"', '"uTensor/core/tensor.hpp"'])
 
-  def __init__(self, guard_name):
+  def __init__(self):
     Snippet.__init__(self)
-    self.template_vars["header_guard"] = "_{}_H".format(guard_name.upper())
     self.template_vars['valarr'] = [] 
 
-  def addvar(self, var_name, type, shape, value):
+  def addvar(self, inline_name, type, shape, value):
       buffer = {}
       length = np.prod(shape)
       buffer['type'] =  TF_TYPES_MAP[type].tensor_type_str 
       buffer['value'] = value.flatten()
       buffer['length'] = length 
-      buffer['name'] = var_name 
+      buffer['inline_name'] = inline_name 
       if length > 2:
-        buffer['arr'] = 1 
+        buffer['arr'] = 1
       self.template_vars['valarr'].append(buffer)
 
 
@@ -492,7 +488,7 @@ class ContextSnippetsContainer(SnippetContainerBase):
   __headers__ = set([])
 
   def __init__(self,
-               graph_name, ctx_header_name, 
+               graph_name, ctx_header_name, ctx_weightheader_name,
                snippets=None, placeholders=None, ref_counts=None):
     SnippetContainerBase.__init__(self, snippets)
     if placeholders is None:
@@ -507,3 +503,4 @@ class ContextSnippetsContainer(SnippetContainerBase):
     self.template_vars["placeholders"] = placeholders
     self.template_vars["ref_counts"] = ref_counts
     self.add_header('"{}"'.format(ctx_header_name))
+    self.add_header('"{}"'.format(ctx_weightheader_name))
