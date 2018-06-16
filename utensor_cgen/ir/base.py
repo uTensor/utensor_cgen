@@ -90,7 +90,7 @@ class OperationInfo(IRBase, _NoShallowCopyMixin):
     if value not in ['tensorflow']:
       raise ValueError('Unsupported backend: {}'.format(value))
 
-  op_attr = attr.ib(factory=dict)
+  op_attr = attr.ib(factory=dict, converter=dict)
 
   def __attrs_post_init__(self):
     if self.op_attr:
