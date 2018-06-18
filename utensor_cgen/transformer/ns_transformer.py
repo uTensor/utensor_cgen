@@ -41,9 +41,9 @@ class DropoutTransformer(Transformer):
         if match:
           name_scope = match.group(1)
           # assume there should be only on input except keep_prob
-          dropout_in = dropout_input_map[name_scope].input_tensors[0]
+          dropout_in_tensor = dropout_input_map[name_scope]
           in_t_infos.pop(i)
-          in_t_infos.insert(i, dropout_in)
+          in_t_infos.insert(i, dropout_in_tensor)
       new_op_info = OperationInfo(name=op_info.name,
                                   input_tensors=in_t_infos,
                                   output_tensors=out_t_infos,
@@ -69,7 +69,11 @@ class DropoutTransformer(Transformer):
     return dict(clusters)
 
   def _find_input(self, ugraph):
-    """dropout_name --> input_op_info
+    """dropout_name --> input_tensor_info
+
+    input_tensor_info := the tensor info of a tensor which is not generated
+                         in the dropout namescope but is consumed by ops in
+                         dropout namescope with name not starts with 'keep_prob'
     """
     clusters = self._find_dropout_clusters(ugraph)
     input_map = {}
@@ -79,10 +83,12 @@ class DropoutTransformer(Transformer):
         name_scope = match.group(1)
         cluster = clusters[name_scope]
         op_info = ugraph.ops_info[node_name]
-        in_op_names = [parse_tensor_name(in_tensor.name)[0] for in_tensor in op_info.input_tensors]
-        for in_op_name in in_op_names:
+        for in_tensor_info in op_info.input_tensors:
+          in_op_name = parse_tensor_name(in_tensor_info.name)[0]
           if in_op_name not in cluster and not in_op_name.startswith('keep_prob'):
-            input_map[name_scope] = ugraph.ops_info[in_op_name]
+            input_map[name_scope] = in_tensor_info
+            # assuming there is only one input for dropout
+            break
     return input_map
 
 
