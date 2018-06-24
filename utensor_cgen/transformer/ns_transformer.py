@@ -15,12 +15,13 @@ from .base import Transformer
 __all__ = ["DropoutTransformer", "BatchNormTransformer", "InlineTransformer"]
 
 class InlineTransformer(Transformer):
-  KWARGS_NAMESCOPE = 'inline'
+  METHOD_NAME = 'inline'
+  KWARGS_NAMESCOPE = '_inline'
   TARGET_NODENAME_PATTERN = re.compile(r'(const[_\w\d]*)/.*')
 
 
   def transform(self, ugraph):
-    #self.prune_graph = False
+    self.prune_graph = False
     for node_name in ugraph.topo_order:
       op_type = ugraph.ops_info[node_name].op_type
       if op_type == 'Const':

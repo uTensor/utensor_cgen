@@ -11,7 +11,8 @@ class TransformerPipeline(object):
     RefCntOptimizer.METHOD_NAME: RefCntOptimizer,
     DropoutTransformer.METHOD_NAME: DropoutTransformer,
     BatchNormTransformer.METHOD_NAME: BatchNormTransformer,
-    QuantizeTransformer.METHOD_NAME: QuantizeTransformer
+    QuantizeTransformer.METHOD_NAME: QuantizeTransformer,
+    InlineTransformer.METHOD_NAME: InlineTransformer
   }
 
   def __init__(self, methods, kwargs):
