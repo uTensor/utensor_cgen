@@ -2,7 +2,7 @@
 import numpy as np
 
 from ._base import Snippet, SnippetContainerBase  # pylint: disable=W0611
-from ._types import TF_TYPES_MAP
+from ._types import NP_TYPES_MAP
 
 __all__ = ["Snippet", "SnippetContainerBase",
            "CreateTensorIdxSnippet", "CreateTensorNewSnippet",
@@ -15,16 +15,17 @@ __all__ = ["Snippet", "SnippetContainerBase",
            "RequantizationRangeOpSnippet", "RequantizeOpSnippet",
            "CommentSnippet", "ContextHeaderSnippet",
            "ContextSnippetsContainer", "QuantizedAddOpSnippet",
-           "CreateTensorBinarySnippet", "ContextWeightHeaderSnippet"]
+           "CreateTensorBinarySnippet", "WeightSnippet",
+           "ContextGlobalArrayContainer"]
 
-
+# TODO: Better abstraction, i.e a better backend for code generation
 class CreateTensorIdxSnippet(Snippet):
   __template_name__ = "snippets/create_tensor_idx.cpp"
   __headers__ = set(['"uTensor/loaders/tensorIdxImporter.hpp"',
                      '"uTensor/core/context.hpp"',
                      '"uTensor/core/tensor.hpp"'])
 
-  def __init__(self, data_dir, tensor_name, tf_dtype,
+  def __init__(self, data_dir, tensor_name, np_dtype,
                ref_count=0,
                idx_fname=None,
                sptr_name=None,
@@ -32,8 +33,8 @@ class CreateTensorIdxSnippet(Snippet):
                to_eval=False):
     if create_sptr and sptr_name is None:
       raise ValueError("sptr_name can't be None if create_sptr is True")
-    if tf_dtype not in TF_TYPES_MAP:
-      raise ValueError("unsupport data type in uTensor: {}".format(tf_dtype))
+    if np_dtype not in NP_TYPES_MAP:
+      raise ValueError("unsupport data type in uTensor: {}".format(np_dtype))
     if idx_fname is None:
       idx_fname = "{}.idx".format(tensor_name.replace(":", "_").replace("/", "_"))
     Snippet.__init__(self)
@@ -45,7 +46,7 @@ class CreateTensorIdxSnippet(Snippet):
       self.template_vars["sptr_name"] = sptr_name
     self.template_vars["idx_path"] = idx_path
     self.template_vars["tensor_name"] = tensor_name
-    self.template_vars["importer_dtype"] = TF_TYPES_MAP[tf_dtype].importer_type_str
+    self.template_vars["importer_dtype"] = NP_TYPES_MAP[np_dtype].importer_type_str
     self.template_vars["to_eval"] = to_eval
 
 class CreateTensorBinarySnippet(Snippet):
@@ -61,7 +62,7 @@ class CreateTensorBinarySnippet(Snippet):
                to_eval=False):
     if create_sptr and sptr_name is None:
       raise ValueError("sptr_name can't be None if create_sptr is True")
-    if tf_dtype not in TF_TYPES_MAP:
+    if tf_dtype not in NP_TYPES_MAP:
       raise ValueError("unsupport data type in uTensor: {}".format(tf_dtype))
     Snippet.__init__(self)
     if ref_count:
@@ -73,7 +74,7 @@ class CreateTensorBinarySnippet(Snippet):
     self.template_vars["tensor_name"] = tensor_name
     self.template_vars["tensor_shape"] = self._to_shape_str(tensor_shape)
     self.template_vars["tensor_length"] = np.prod(tensor_shape)
-    self.template_vars["dtype"] = TF_TYPES_MAP[tf_dtype].tensor_type_str
+    self.template_vars["dtype"] = NP_TYPES_MAP[tf_dtype].tensor_type_str
     self.template_vars["to_eval"] = to_eval
     self.template_vars["inline_name"] = inline_name
 
@@ -86,7 +87,7 @@ class CreateTensorNewSnippet(Snippet):
   __template_name__ = "snippets/create_tensor_new.cpp"
   __headers__ = set(['"uTensor/core/context.hpp"', '"uTensor/core/tensor.hpp"'])
 
-  def __init__(self, tensor_name, tf_dtype,
+  def __init__(self, tensor_name, np_dtype,
                tensor_shape=None,
                ref_count=0,
                idx_fname=None,
@@ -95,8 +96,8 @@ class CreateTensorNewSnippet(Snippet):
                to_eval=False):
     if create_sptr and sptr_name is None:
       raise ValueError("sptr_name can't be None if create_sptr is True")
-    if tf_dtype not in TF_TYPES_MAP:
-      raise ValueError("unsupport data type in uTensor: {}".format(tf_dtype))
+    if np_dtype not in NP_TYPES_MAP:
+      raise ValueError("unsupport data type in uTensor: {}".format(np_dtype))
     if idx_fname is None:
       idx_fname = "{}.idx".format(tensor_name.replace(":", "_").replace("/", "_"))
 
@@ -108,7 +109,7 @@ class CreateTensorNewSnippet(Snippet):
       self.template_vars["sptr_name"] = sptr_name
     self.template_vars["tensor_name"] = tensor_name
     self.template_vars["tensor_shape"] = self._to_shape_str(tensor_shape)
-    self.template_vars["dtype"] = TF_TYPES_MAP[tf_dtype].tensor_type_str
+    self.template_vars["dtype"] = NP_TYPES_MAP[np_dtype].tensor_type_str
     self.template_vars["to_eval"] = to_eval
 
   def _to_shape_str(self, shape):
@@ -132,14 +133,14 @@ class AddOpSnippet(Snippet):
   __template_name__ = "snippets/add_op.cpp"
   __headers__ = set(['"uTensor/ops/MathOps.hpp"'])
 
-  def __init__(self, inputs, output, tf_dtype,
+  def __init__(self, inputs, output, np_dtype,
                ref_count=0,
                to_eval=False):
     Snippet.__init__(self)
     if ref_count:
       self.template_vars["ref_count"] = ref_count
-    self.template_vars["in_dtype"] = TF_TYPES_MAP[tf_dtype].tensor_type_str
-    self.template_vars["out_dtype"] = TF_TYPES_MAP[tf_dtype].tensor_type_str
+    self.template_vars["in_dtype"] = NP_TYPES_MAP[np_dtype].tensor_type_str
+    self.template_vars["out_dtype"] = NP_TYPES_MAP[np_dtype].tensor_type_str
     self.template_vars["inputs"] = inputs
     self.template_vars["output"] = output
     self.template_vars["to_eval"] = to_eval
@@ -158,7 +159,7 @@ class MinOpSnippet(Snippet):
       self.template_vars["ref_count"] = ref_count
     self.template_vars["inputs"] = inputs
     self.template_vars["output"] = output
-    self.template_vars["out_dtype"] = TF_TYPES_MAP[out_dtype].tensor_type_str
+    self.template_vars["out_dtype"] = NP_TYPES_MAP[out_dtype].tensor_type_str
     self.template_vars["out_shape"] = out_shape
     self.template_vars["to_eval"] = to_eval
 
@@ -176,7 +177,7 @@ class MaxOpSnippet(Snippet):
       self.template_vars["ref_count"] = ref_count
     self.template_vars["inputs"] = inputs
     self.template_vars["output"] = output
-    self.template_vars["out_dtype"] = TF_TYPES_MAP[out_dtype].tensor_type_str
+    self.template_vars["out_dtype"] = NP_TYPES_MAP[out_dtype].tensor_type_str
     self.template_vars["out_shape"] = out_shape
     self.template_vars["to_eval"] = to_eval
 
@@ -199,7 +200,7 @@ class QuantizedMaxPoolSnippet(Snippet):
       self.template_vars['ref_counts'] = ref_counts
     self.template_vars["inputs"] = inputs
     self.template_vars["outputs"] = outputs
-    self.template_vars["dtype"] = TF_TYPES_MAP[dtype].tensor_type_str
+    self.template_vars["dtype"] = NP_TYPES_MAP[dtype].tensor_type_str
     _, wind_cols, wind_rows, _ = ksize
     _, col_stride, row_stride, _ = strides
     self.template_vars["wind_cols"] = wind_cols
@@ -222,8 +223,8 @@ class ArgMaxOpSnippet(Snippet):
       self.template_vars["ref_count"] = ref_count
     self.template_vars["inputs"] = inputs
     self.template_vars["output"] = output
-    self.template_vars["in_dtype"] = TF_TYPES_MAP[in_dtype].tensor_type_str
-    self.template_vars["out_dtype"] = TF_TYPES_MAP[out_dtype].tensor_type_str
+    self.template_vars["in_dtype"] = NP_TYPES_MAP[in_dtype].tensor_type_str
+    self.template_vars["out_dtype"] = NP_TYPES_MAP[out_dtype].tensor_type_str
     self.template_vars["to_eval"] = to_eval
 
 
@@ -239,7 +240,7 @@ class DequantizeOpSnippet(Snippet):
       self.template_vars["ref_count"] = ref_count
     self.template_vars["inputs"] = inputs
     self.template_vars["output"] = output
-    self.template_vars["out_dtype"] = TF_TYPES_MAP[out_dtype].tensor_type_str
+    self.template_vars["out_dtype"] = NP_TYPES_MAP[out_dtype].tensor_type_str
     self.template_vars["to_eval"] = to_eval
 
 
@@ -253,8 +254,7 @@ class QuantizedMatMulOpSnippet(Snippet):
     Snippet.__init__(self)
     if ref_counts is None:
       ref_counts = []
-    # hack on different arguments order between tensorflow and uTensor
-    # NT: FIXME
+    # FIXME: hack on different arguments order between tensorflow and uTensor
     inputs = _permute_args(inputs, [0, 2, 3, 1, 4, 5])
     if ref_counts:
       err_msg = ("incorrect number of ref_counts and outputs: {}, {}"
@@ -263,9 +263,9 @@ class QuantizedMatMulOpSnippet(Snippet):
       self.template_vars['ref_counts'] = ref_counts
     self.template_vars["inputs"] = inputs
     self.template_vars["outputs"] = outputs
-    self.template_vars["x_dtype"] = TF_TYPES_MAP[x_dtype].tensor_type_str
-    self.template_vars["w_dtype"] = TF_TYPES_MAP[w_dtype].tensor_type_str
-    self.template_vars["out_dtype"] = TF_TYPES_MAP[out_dtype].tensor_type_str
+    self.template_vars["x_dtype"] = NP_TYPES_MAP[x_dtype].tensor_type_str
+    self.template_vars["w_dtype"] = NP_TYPES_MAP[w_dtype].tensor_type_str
+    self.template_vars["out_dtype"] = NP_TYPES_MAP[out_dtype].tensor_type_str
     self.template_vars["to_eval"] = to_eval
 
 
@@ -289,9 +289,9 @@ class QuantizedAddOpSnippet(Snippet):
 
     self.template_vars["inputs"] = inputs
     self.template_vars["outputs"] = outputs
-    self.template_vars["x_dtype"] = TF_TYPES_MAP[x_dtype].tensor_type_str
-    self.template_vars["w_dtype"] = TF_TYPES_MAP[w_dtype].tensor_type_str
-    self.template_vars["out_dtype"] = TF_TYPES_MAP[out_dtype].tensor_type_str
+    self.template_vars["x_dtype"] = NP_TYPES_MAP[x_dtype].tensor_type_str
+    self.template_vars["w_dtype"] = NP_TYPES_MAP[w_dtype].tensor_type_str
+    self.template_vars["out_dtype"] = NP_TYPES_MAP[out_dtype].tensor_type_str
     self.template_vars["to_eval"] = to_eval
 
 
@@ -312,7 +312,7 @@ class QuantizeV2OpSnippet(Snippet):
       self.template_vars["ref_counts"] = ref_counts
     self.template_vars["inputs"] = inputs
     self.template_vars["outputs"] = outputs
-    self.template_vars["out_dtype"] = TF_TYPES_MAP[out_dtype].tensor_type_str
+    self.template_vars["out_dtype"] = NP_TYPES_MAP[out_dtype].tensor_type_str
     self.template_vars["to_eval"] = to_eval
 
 
@@ -332,9 +332,9 @@ class QuantizedReluOpSnippet(Snippet):
       assert len(ref_counts) == len(outputs), err_msg
     self.template_vars["inputs"] = inputs
     self.template_vars["outputs"] = outputs
-    self.template_vars["in_dtype"] = TF_TYPES_MAP[in_dtype].tensor_type_str
-    self.template_vars["out_dtypes"] = [TF_TYPES_MAP[out_dtype].tensor_type_str for out_dtype in out_dtypes]
-    self.template_vars["qout_dtype"] = TF_TYPES_MAP[qout_dtype].tensor_type_str
+    self.template_vars["in_dtype"] = NP_TYPES_MAP[in_dtype].tensor_type_str
+    self.template_vars["out_dtypes"] = [NP_TYPES_MAP[out_dtype].tensor_type_str for out_dtype in out_dtypes]
+    self.template_vars["qout_dtype"] = NP_TYPES_MAP[qout_dtype].tensor_type_str
     self.template_vars["ref_counts"] = ref_counts
     self.template_vars["to_eval"] = to_eval
 
@@ -355,7 +355,7 @@ class RequantizationRangeOpSnippet(Snippet):
       assert len(ref_counts) == len(outputs), err_msg
     self.template_vars["inputs"] = inputs
     self.template_vars["outputs"] = outputs
-    self.template_vars["out_dtype"] = TF_TYPES_MAP[out_dtype].tensor_type_str
+    self.template_vars["out_dtype"] = NP_TYPES_MAP[out_dtype].tensor_type_str
     self.template_vars["ref_counts"] = ref_counts
     self.template_vars["to_eval"] = to_eval
 
@@ -380,8 +380,8 @@ class RequantizeOpSnippet(Snippet):
       assert len(ref_counts) == len(outputs), err_msg
     self.template_vars["inputs"] = inputs
     self.template_vars["outputs"] = outputs
-    self.template_vars["qout_dtype"] = TF_TYPES_MAP[qout_dtype].tensor_type_str
-    self.template_vars["range_dtype"] = TF_TYPES_MAP[range_dtype].tensor_type_str
+    self.template_vars["qout_dtype"] = NP_TYPES_MAP[qout_dtype].tensor_type_str
+    self.template_vars["range_dtype"] = NP_TYPES_MAP[range_dtype].tensor_type_str
     self.template_vars["ref_counts"] = ref_counts
     self.template_vars["to_eval"] = to_eval
 
@@ -433,9 +433,9 @@ class Conv2DOpSnippent(Snippet):
       assert len(ref_counts) == len(outputs), err_msg
     self.template_vars["inputs"] = inputs
     self.template_vars["outputs"] = outputs
-    self.template_vars["in_dtype"] = TF_TYPES_MAP[in_dtype].tensor_type_str
-    self.template_vars["filter_dtype"] = TF_TYPES_MAP[filter_dtype].tensor_type_str
-    self.template_vars["out_dtypes"] = [TF_TYPES_MAP[out_dtype].tensor_type_str for out_dtype in out_dtypes]
+    self.template_vars["in_dtype"] = NP_TYPES_MAP[in_dtype].tensor_type_str
+    self.template_vars["filter_dtype"] = NP_TYPES_MAP[filter_dtype].tensor_type_str
+    self.template_vars["out_dtypes"] = [NP_TYPES_MAP[out_dtype].tensor_type_str for out_dtype in out_dtypes]
     self.template_vars["strides"] = strides
     self.template_vars["padding"] = padding
     self.template_vars["ref_counts"] = ref_counts
@@ -463,24 +463,25 @@ class ContextHeaderSnippet(Snippet):
     self.template_vars["graph_name"] = graph_name
     self.template_vars["placeholders"] = placeholders
 
-class ContextWeightHeaderSnippet(Snippet):
-  __template_name__ = "snippets/weight_header.hpp"
-  __headers__ = set(['"uTensor/core/context.hpp"', '"uTensor/core/tensor.hpp"'])
+class WeightSnippet(Snippet):
+  __template_name__ = "snippets/weight_snippet.hpp"
+  __headers__ = set([])
 
-  def __init__(self):
-    Snippet.__init__(self)
-    self.template_vars['valarr'] = [] 
-
-  def addvar(self, inline_name, type, shape, value):
-      buffer = {}
+  def __init__(self, inline_name, type, shape, value):
+      Snippet.__init__(self)
       length = np.prod(shape)
-      buffer['type'] =  TF_TYPES_MAP[type].tensor_type_str 
-      buffer['value'] = value.flatten()
-      buffer['length'] = length 
-      buffer['inline_name'] = inline_name 
-      if length > 2:
-        buffer['arr'] = 1
-      self.template_vars['valarr'].append(buffer)
+      self.template_vars['type'] =  NP_TYPES_MAP[type].tensor_type_str 
+      self.template_vars['value'] = value
+      self.template_vars['length'] = length 
+      self.template_vars['inline_name'] = inline_name 
+
+
+class ContextGlobalArrayContainer(SnippetContainerBase):
+  __template_name__ = "containers/weight_header.hpp"
+  __headers__ = set([])
+
+  def __init__(self, snippets=None):
+    SnippetContainerBase.__init__(self, snippets)
 
 
 class ContextSnippetsContainer(SnippetContainerBase):

@@ -5,45 +5,6 @@ from copy import deepcopy
 import tensorflow as tf
 
 
-def log_graph(graph_or_graph_def, logdir):
-  if isinstance(graph_or_graph_def, tf.GraphDef):
-    graph = tf.Graph()
-    with graph.as_default():
-      tf.import_graph_def(graph_or_graph_def, name='')
-  else:
-    graph = graph_or_graph_def
-  tf.summary.FileWriter(logdir, graph=graph).close()
-
-
-def _sanitize_op_name(op_name):
-  """
-  Sanitize the op name
-  - ignore '^' character of control input
-  """
-  if op_name.startswith('^'):
-    return op_name[1:]
-  return op_name
-
-
-def parse_tensor_name(tname):
-  """Adapt from TensorFlow source code
-  tensor name --> (op_name, index)
-  """
-  components = tname.split(":")
-  if len(components) == 2:
-    op_name = _sanitize_op_name(components[0])
-    try:
-      output_index = int(components[1])
-    except ValueError:
-      raise ValueError("invalid output index: {}".format(tname))
-    return (op_name, output_index)
-  elif len(components) == 1:
-    op_name = _sanitize_op_name(components[0])
-    return (op_name, 0)
-  else:
-    raise ValueError("invalid tensor name: {}".format(tname))
-
-
 def clusters_by_name_scopes(op_infos, name_scope_prefix=None):
   """
   Arguements
