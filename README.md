@@ -46,6 +46,12 @@ Following steps are a general guild for user how to porting a `TensorFlow` proto
     - run `utensor-cli -h` for help
     - the `graph.pb` is the pb file of *original* graph (not quantized)
 
+# How to test (for Developer)
+
+1. follow the steps in [setup](#setup-with-pipenv) section
+2. run `make tests`
+    - Or you can use `pipenv run pytest tests` instead
+
 # Known Limitations
 
 - If you want to use dropout with placeholders for the `keep_prob`, you have to name the `keep_prob` placeholder by any name that starts with "keep_prob".
