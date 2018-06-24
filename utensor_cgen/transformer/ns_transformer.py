@@ -21,7 +21,6 @@ class InlineTransformer(Transformer):
 
 
   def transform(self, ugraph):
-    self.prune_graph = False
     for node_name in ugraph.topo_order:
       op_type = ugraph.ops_info[node_name].op_type
       if op_type == 'Const':

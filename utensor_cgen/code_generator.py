@@ -80,10 +80,12 @@ class CodeGenerator(object):
         container.template_vars["ref_counts"].append(ref_count)
         header_snippet.template_vars["placeholders"].append(out_tname)
       else:
+        # TODO: the operator may correspond to multiple snippets (such as InlinTensor)
+        # weight_container is passed to function for workaround
         snippet = opFactory.createOperatorSnippet(op_info,
                                                   idx_dir=self.idx_dir,
                                                   embeded_data_dir=self.embed_data_dir,
-                                                  weight_container = weight_container)
+                                                  weight_container=weight_container)
         container.add_snippet(snippet)
 
       if self.debug_cmt:
