@@ -32,7 +32,8 @@ class InlineTransformer(Transformer):
 class DropoutTransformer(Transformer):
   """Remove Dropout Op
   """
-  KWARGS_NAMESCOPE = 'dropout'
+  METHOD_NAME = 'dropout'
+  KWARGS_NAMESCOPE = '_dropout'
   TARGET_NODENAME_PATTERN = re.compile(r'(dropout[_\w\d]*)/.*')
 
   def transform(self, ugraph):
@@ -110,7 +111,8 @@ class DropoutTransformer(Transformer):
 class BatchNormTransformer(Transformer):
   """Replace Batch Norm namescope with uTensor Op
   """
-  KWARGS_NAMESCOPE = 'batch_norm'
+  METHOD_NAME = 'batch_norm'
+  KWARGS_NAMESCOPE = '_batch_norm'
   TARGET_NODENAME_PATTERN = re.compile(r'(BatchNorm[_\w\d]*)/.*')
 
   def transform(self, ugraph):

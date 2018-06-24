@@ -7,7 +7,8 @@ __all__ = ['QuantizeTransformer']
 
 class QuantizeTransformer(Transformer):
 
-  KWARGS_NAMESCOPE = 'quantize'
+  METHOD_NAME = 'quantize'
+  KWARGS_NAMESCOPE = '_quantize'
 
   def transform(self, ugraph):
     graph_def = ugraph.graph_def

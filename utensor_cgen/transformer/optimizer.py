@@ -10,7 +10,8 @@ __all__ = ['RefCntOptimizer']
 
 class RefCntOptimizer(Transformer):
   
-  KWARGS_NAMESCOPE = 'refcnt'
+  METHOD_NAME = 'refcnt'
+  KWARGS_NAMESCOPE = '_refcnt'
 
   def __init__(self, **kwargs):
     self.prune_graph = False

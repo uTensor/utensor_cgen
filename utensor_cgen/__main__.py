@@ -28,6 +28,7 @@ def main(pb_file, src_fname, idx_dir, embed_data_dir,
 
   if embed_data_dir is None:
     embed_data_dir = os.path.join("/fs", idx_dir)
+  # TODO: pass transformation kwargs to codegenerator (better argument parser)
   generator = CodeGenerator(pb_file, idx_dir, embed_data_dir, trans_methods, output_nodes, debug_cmt)
   generator.generate(model_path)
 
