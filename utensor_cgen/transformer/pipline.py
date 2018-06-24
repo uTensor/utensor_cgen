@@ -7,10 +7,10 @@ from utensor_cgen.utils import NamescopedKWArgsParser
 class TransformerPipeline(object):
 
   _TRANSFORMER_MAP = {
-    RefCntOptimizer.KWARGS_NAMESCOPE: RefCntOptimizer,
-    DropoutTransformer.KWARGS_NAMESCOPE: DropoutTransformer,
-    BatchNormTransformer.KWARGS_NAMESCOPE: BatchNormTransformer,
-    QuantizeTransformer.KWARGS_NAMESCOPE: QuantizeTransformer
+    RefCntOptimizer.METHOD_NAME: RefCntOptimizer,
+    DropoutTransformer.METHOD_NAME: DropoutTransformer,
+    BatchNormTransformer.METHOD_NAME: BatchNormTransformer,
+    QuantizeTransformer.METHOD_NAME: QuantizeTransformer
   }
 
   def __init__(self, methods, kwargs):
