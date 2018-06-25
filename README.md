@@ -36,7 +36,7 @@ You can go to this [repo](https://github.com/pypa/pipenv) for detail information
 
 Please refer to [tests/deep_mlp](https://github.com/uTensor/utensor_cgen/tree/develop/tests/deep_mlp) for detailed example
 
-# User Guild
+# User Guide
 
 Following steps are a general guild for user how to porting a `TensorFlow` protobuf file into a `uTensor` implementation:
 

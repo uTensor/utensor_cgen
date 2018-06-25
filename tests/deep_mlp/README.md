@@ -2,8 +2,11 @@
 
 It's an end-to-end example of deploying a multilayer perceptron trained with `TensorFlow` to `mbed` device.
 
+# 
+
 1. install `utensor_cgen`
     - you can find instructions for installation [here](https://github.com/uTensor/utensor_cgen#installation-python-2--3)
+    - If you are using `pipenv`, make sure you ran `pipenv shell` first.
     - After installation, run `utensor-cli -v` to test the installation
 2. open [`end_to_end.ipynb`](end_to_end.ipynb) with `jupyter notebook`
     - In this notebook, you will see how to training, serializing and quantizing a `TensorFlow` computational graph (`tf.Graph`) into a protobuf file
