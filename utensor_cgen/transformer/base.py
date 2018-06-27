@@ -14,6 +14,7 @@ class Transformer(object):
   """
   __metaclass__ = ABCMeta
   KWARGS_NAMESCOPE = None
+  METHOD_NAME = None
 
   def __new__(cls,
               prune_graph=True,

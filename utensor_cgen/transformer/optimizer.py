@@ -10,12 +10,15 @@ __all__ = ['RefCntOptimizer']
 
 class RefCntOptimizer(Transformer):
   
-  KWARGS_NAMESCOPE = 'refcnt'
+  METHOD_NAME = 'refcnt'
+  KWARGS_NAMESCOPE = '_refcnt'
+
+  def __init__(self, **kwargs):
+    self.prune_graph = False
 
   def transform(self, ugraph):
     """Optimization with reference count
     """
-    self.prune_graph = False
     return self._transform(ugraph)
   
   def _transform(self, ugraph):

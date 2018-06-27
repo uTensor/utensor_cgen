@@ -36,7 +36,7 @@ You can go to this [repo](https://github.com/pypa/pipenv) for detail information
 
 Please refer to [tests/deep_mlp](https://github.com/uTensor/utensor_cgen/tree/develop/tests/deep_mlp) for detailed example
 
-# User Guild
+# User Guide
 
 Following steps are a general guild for user how to porting a `TensorFlow` protobuf file into a `uTensor` implementation:
 
@@ -45,6 +45,12 @@ Following steps are a general guild for user how to porting a `TensorFlow` proto
 2. run `utensor-cli graph.pb --output-nodes=NODE,NODE,...`
     - run `utensor-cli -h` for help
     - the `graph.pb` is the pb file of *original* graph (not quantized)
+
+# How to test (for Developer)
+
+1. follow the steps in [setup](#setup-with-pipenv) section
+2. run `make tests`
+    - Or you can use `pipenv run pytest tests` instead
 
 # Known Limitations
 

@@ -348,7 +348,7 @@ class ConverterFactory(object):
   }
   _TF2GENERIC_MAP.update(_BUILTIN_MAP)
 
-  _GENERIC2TF_MAP = dict((v.__utensor_generic_type__, v) for v in _TF2GENERIC_MAP.values())
+  _GENERIC2TF_MAP = dict((c.__utensor_generic_type__, c) for c in _TF2GENERIC_MAP.values())
   _GENERIC2TF_MAP.update(_BUILTIN_MAP)
 
   @classmethod
@@ -372,3 +372,18 @@ class ConverterFactory(object):
     if not cvt:
       raise ValueError('Unknown generic type: %s' % value_type)
     return cvt.get_tf_value(generic)
+  
+  @classmethod
+  def all_supported_tf_types(cls):
+    return cls._TF2GENERIC_MAP.keys()
+  
+  @classmethod
+  def all_generic_types(cls):
+    return cls._GENERIC2TF_MAP.keys()
+
+  @classmethod
+  def TF2GENERIC_MAP(cls):
+    type_map = {}
+    for converter in cls._TF2GENERIC_MAP.values():
+      type_map[converter.__tfproto_type__] = converter.__utensor_generic_type__
+    return type_map

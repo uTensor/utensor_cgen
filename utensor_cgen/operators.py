@@ -258,7 +258,9 @@ class _ConstOperator(_Operator):
     out_tensor_info = op_info.output_tensors[0]
     out_tname, out_dtype = (out_tensor_info.name,
                             out_tensor_info.dtype)
-    ref_count = 0 #ref_counts[0]
+    parser = NamescopedKWArgsParser(RefCntOptimizer.KWARGS_NAMESCOPE,
+                                    op_info.op_attr)
+    ref_count = parser.get('ref_counts', [0])[0]
     pre_tname = self._tf_prepare_tensor_name(out_tname)
     idx_fname = "{}.idx".format(pre_tname)
     idx_dir = kwargs['idx_dir']

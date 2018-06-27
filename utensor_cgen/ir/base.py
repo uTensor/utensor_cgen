@@ -67,6 +67,13 @@ class OperationInfo(IRBase, _NoShallowCopyMixin):
   op_type : str
   backend : str {"tensorflow", 'pytorch'(future work)}
   op_attr : dict
+
+  Note
+  ====
+  - `op_attr` will be a dictionary with key as str and value as generic
+    types defined in `converter.ConverterFactor.all_generic_types`. The
+    only exception is the key which match regex pattern r'_[^_]*'. The 
+    values of such keys will be saved as-is without any type conversion.
   """
   name = attr.ib(validator=validators.instance_of(six.text_type))
 
@@ -93,10 +100,15 @@ class OperationInfo(IRBase, _NoShallowCopyMixin):
   op_attr = attr.ib(factory=dict, converter=dict)
 
   def __attrs_post_init__(self):
+    skip_pattern = re.compile(r'_[^_]*')
     if self.op_attr:
       op_attr = {}
       for k, v in self.op_attr.items():
-        op_attr[k] = ConverterFactory.get_generic_value(v)
+        match = skip_pattern.match(k)
+        if match:
+          op_attr[k] = v
+        else:
+          op_attr[k] = ConverterFactory.get_generic_value(v)
       self.op_attr = op_attr
   
   def __deepcopy__(self, memo):

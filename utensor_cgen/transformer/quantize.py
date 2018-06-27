@@ -3,9 +3,12 @@ from tensorflow.tools.graph_transforms import TransformGraph
 from utensor_cgen.ir.base import uTensorGraph
 from .base import Transformer
 
+__all__ = ['QuantizeTransformer']
+
 class QuantizeTransformer(Transformer):
 
-  KWARGS_NAMESCOPE = 'quantize'
+  METHOD_NAME = 'quantize'
+  KWARGS_NAMESCOPE = '_quantize'
 
   def transform(self, ugraph):
     graph_def = ugraph.graph_def
