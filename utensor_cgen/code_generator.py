@@ -10,10 +10,12 @@ from tensorflow.tools.graph_transforms import TransformGraph
 
 from .operators import OperatorFactory
 from .transformer.pipline import TransformerPipeline
+from .transformer.optimizer import RefCntOptimizer
 from .ir import uTensorGraph
 from .snippets import (CommentSnippet, ContextHeaderSnippet,
                        ContextSnippetsContainer, CreateTensorIdxSnippet)
 from .snippets.composer import Composer
+from .utils import NamescopedKWArgsParser
 
 __all__ = ["CodeGenerator"]
 _logger = logging.getLogger('utensor-cli')
@@ -70,9 +72,12 @@ class CodeGenerator(object):
     for op_id, op_name in enumerate(quant_ugraph.topo_order):
       op_info = quant_ugraph.ops_info[op_name]
       op_type = op_info.op_type
+      # TODO: better abstraction for snippet
       if op_type == "Placeholder":
+        parser = NamescopedKWArgsParser(RefCntOptimizer.KWARGS_NAMESCOPE, 
+                                        op_info.op_attr)
         out_tname = op_info.output_tensors[0].name
-        ref_count = 0 #ref_counts[0]
+        ref_count = parser.get('ref_counts', [0])[0]
         container.template_vars["placeholders"].append(out_tname)
         container.template_vars["ref_counts"].append(ref_count)
         header_snippet.template_vars["placeholders"].append(out_tname)
