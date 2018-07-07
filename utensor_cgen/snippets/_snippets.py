@@ -472,7 +472,7 @@ class WeightSnippet(Snippet):
       length = np.prod(shape)
       self.template_vars['type'] =  NP_TYPES_MAP[type].tensor_type_str 
       self.template_vars['value'] = value
-      self.template_vars['length'] = length 
+      self.template_vars['length'] = int(length) 
       self.template_vars['inline_name'] = inline_name 
 
 
