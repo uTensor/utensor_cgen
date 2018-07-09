@@ -1,22 +1,18 @@
 [[source]]
-
 url = "https://pypi.python.org/simple"
 verify_ssl = true
 name = "pypi"
 
-
 [packages]
-
 "jinja2" = "*"
 tensorflow = ">=1.6"
 numpy = "*"
 "idx2numpy" = "*"
 "e1839a8" = {path = ".", editable = true}
-"flake8" = "*"
-
+attrs = "*"
 
 [dev-packages]
-
 pylint = "*"
 "flake8" = "*"
 pytest = "*"
+rope = "*"

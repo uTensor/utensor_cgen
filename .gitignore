@@ -1,5 +1,6 @@
 # virtual env
 .venv
+venv
 # dev
 dev_notes
 *.ipynb
@@ -12,4 +13,5 @@ tests/*/cpp
 */*/chkps
 */*/idx_data
 */*/models
-tests/deep_mlp/data
+tests/deep_mlp/data 
+.vscode

@@ -6,9 +6,9 @@ from setuptools import find_packages, setup
 
 root_dir = os.path.abspath(os.path.dirname(__file__))
 with open(os.path.join(root_dir, "README.md")) as rf:
-  long_desc = rf.read()
+    long_desc = rf.read()
 with open(os.path.join(root_dir, "LICENSE")) as rf:
-  license = rf.read()
+    license = rf.read()
 
 setup(
     name='utensor_cgen',
@@ -31,7 +31,8 @@ setup(
         'Jinja2',
         'tensorflow',
         'numpy',
-        'idx2numpy'
+        'idx2numpy',
+        'attrs'
     ],
     zip_safe=False,
     classifiers=[

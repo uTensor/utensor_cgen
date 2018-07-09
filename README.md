@@ -1,8 +1,15 @@
 # Installation (Python 2 & 3)
 
 - installation with `setup.py`
+
+for users:
 ```
 python setup.py install
+```
+
+for developers:
+```
+python setup.py develop
 ```
 
 - installation with `pip`
@@ -23,23 +30,33 @@ You can go to this [repo](https://github.com/pypa/pipenv) for detail information
     - this will spawn a subshell and activate the virtual environment for you
     - You should be able to use the cli now
 
+**Note**: If you have trouble with installation with `pipenv`, try to remove `Pipfile.lock` first and run `pipenv install -d` again.
+
 # Example
 
 Please refer to [tests/deep_mlp](https://github.com/uTensor/utensor_cgen/tree/develop/tests/deep_mlp) for detailed example
 
-# User Guild
+# User Guide
 
 Following steps are a general guild for user how to porting a `TensorFlow` protobuf file into a `uTensor` implementation:
 
-1. Freeze and quantize your graph
-    - [Freezing](https://www.tensorflow.org/extend/tool_developers/#freezing)
-    - [Quantization](https://www.tensorflow.org/performance/quantization)
-        - An alternative is to use the [`quantize_graph.py`](https://github.com/tensorflow/tensorflow/blob/master/tensorflow/tools/quantization/quantize_graph.py) script
-        - it should output one qunatized pb file, say `quantized_graph.pb`
-2. install `utensor_cgent`
+1. install `utensor_cgent`
     - run `python3 setupt.py install`
-3. run `utensor-cli quantized_graph.pb`, where `quantized_graph.pb` is the output pb file you get from step **1**
+2. run `utensor-cli graph.pb --output-nodes=NODE,NODE,...`
     - run `utensor-cli -h` for help
+    - the `graph.pb` is the pb file of *original* graph (not quantized)
+
+# How to test (for Developer)
+
+1. follow the steps in [setup](#setup-with-pipenv) section
+2. run `make tests`
+    - Or you can use `pipenv run pytest tests` instead
+
+# Known Limitations
+
+- If you want to use dropout with placeholders for the `keep_prob`, you have to name the `keep_prob` placeholder by any name that starts with "keep_prob".
+    - You can still use any input tensor with name starts with "keep_prob" as long as it's not the output tensor of a placeholder node.
+    - You can't wrap `dropout` in any `namescope` 
 
 # TODOs
 1. (done) Freezed graph protobuff parser
