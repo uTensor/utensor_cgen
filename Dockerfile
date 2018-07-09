@@ -1,9 +1,9 @@
 FROM ubuntu
 
-ENV UTENSOR_CGEN_BRANCH=develop
-ENV PIPENV_VENV_IN_PROJECT=1
-ENV LC_ALL=C.UTF-8
-ENV LANG=C.UTF-8
+ENV UTENSOR_CGEN_BRANCH=develop \
+    PIPENV_VENV_IN_PROJECT=1 \
+    LC_ALL=C.UTF-8 \
+    LANG=C.UTF-8
 
 RUN apt-get update && \
     apt-get install -y \

@@ -32,6 +32,15 @@ You can go to this [repo](https://github.com/pypa/pipenv) for detail information
 
 **Note**: If you have trouble with installation with `pipenv`, try to remove `Pipfile.lock` first and run `pipenv install -d` again.
 
+# If `pipenv` Failed...
+
+1. You can use `docker`
+    - run `docker pull dboyliao/utensor-cli`
+2. Run the docker image
+    - `docker run -it dboyliao/utensor-cli`
+
+Please refer to `docker` [documentation](https://docs.docker.com/get-started/) for detail.
+
 # Example
 
 Please refer to [tests/deep_mlp](https://github.com/uTensor/utensor_cgen/tree/develop/tests/deep_mlp) for detailed example
