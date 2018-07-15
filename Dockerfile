@@ -7,6 +7,7 @@ ENV UTENSOR_CGEN_BRANCH=develop \
 
 RUN apt-get update && \
     apt-get install -y \
+    cmake \
     python3-pip \
     git && \
     cd /root && \

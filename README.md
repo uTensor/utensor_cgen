@@ -1,43 +1,44 @@
 # Installation (Python 2 & 3)
 
-- installation with `setup.py`
+## For Users
 
-for users:
+- with `setup.py`
 ```
 python setup.py install
 ```
 
-for developers:
-```
-python setup.py develop
-```
-
-- installation with `pip`
+- with `pip`
 ```
 pip install utensor_cgen
 ```
 
-# Develop Environment
+## For Developers:
 
-We use `pipenv` to setup the develop environment.
+- with `pip`
+```
+pip instal -e .[dev]
+```
+
+- with `pipenv`
+    1. `$ PIPENV_VENV_IN_PROJECT=1 pipenv install -d`
+    2. `$ pipenv shell`
+        - this will spawn a subshell and activate the virtual environment for you
+        - You should be able to use the cli now  
 
 You can go to this [repo](https://github.com/pypa/pipenv) for detail information about `pipenv`.
 
-## Setup with `pipenv`
+**Note**: If you have trouble with installation using `pipenv`, try `PIPENV_VENV_IN_PROJECT=1 pipenv install -d --skip-lock`
 
-1. `$ pipenv install -d`
-2. `$ pipenv shell`
-    - this will spawn a subshell and activate the virtual environment for you
-    - You should be able to use the cli now
-
-**Note**: If you have trouble with installation with `pipenv`, try to remove `Pipfile.lock` first and run `pipenv install -d` again.
-
-# If `pipenv` Failed...
+### If All Fails...
 
 1. You can use `docker`
-    - run `docker pull dboyliao/utensor-cli`
+    - run `docker pull dboyliao/utensor-cli` for a pre-build docker image
+    - or run `docker build -t <user_name>/utensor-cli .` to build the docker image
+      by yourself, where `<user_name>` can be any user name you want.
 2. Run the docker image
     - `docker run -it dboyliao/utensor-cli`
+    - or `docker run -it <user_name>/utensor-cli` if you want to use the image you just
+      build.
 
 Please refer to `docker` [documentation](https://docs.docker.com/get-started/) for detail.
 
@@ -68,19 +69,14 @@ Following steps are a general guild for user how to porting a `TensorFlow` proto
     - You can't wrap `dropout` in any `namescope` 
 
 # TODOs
-1. (done) Freezed graph protobuff parser
-2. (done)Tensor snippets for [`uTensor`](https://github.com/neil-tan/uTensor)
-3. (done) Add template engine for richer flexibility
-    - [jinja2](http://jinja.pocoo.org)
-4. (done?) core code generator implementation
+1. (done?) core code generator implementation
     - We need some refactoring, PRs are welcomed!
-5. type alias in C/C++
+2. type alias in C/C++
     - ex: use `uint8_t` or `unsigned char`?
     - a lot more about this.... 
-6. (done) `MANIFAST.in` for the `setup.py`
-7. Relation among snippets/containers
+3. Relation among snippets/containers
     - shared template variables? (headers, shared placeholders...etc)
-8. Better configuration schema
+4. Better configuration schema
     - json
     - yaml
     - or ?
