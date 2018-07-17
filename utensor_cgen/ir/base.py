@@ -1,23 +1,25 @@
 # -*- coding: utf8 -*-
-import six
-from copy import deepcopy
 import re
+from copy import deepcopy
+
+import six
 
 import attr
-from attr import validators
 import numpy as np
 import tensorflow as tf
-from tensorflow.core.framework.tensor_pb2 import TensorProto as _TensorProto
-from tensorflow.core.framework.tensor_shape_pb2 import TensorShapeProto as _TensorShapeProto
-from tensorflow.core.framework.attr_value_pb2 import (AttrValue as _AttrValue,
-                                                      NameAttrList as _NameAttrList)
-from tensorflow.core.framework.types_pb2 import DataType as _DataType
+from attr.validators import instance_of
 from tensorflow.contrib.util import make_ndarray
+from tensorflow.core.framework.attr_value_pb2 import AttrValue as _AttrValue
+from tensorflow.core.framework.attr_value_pb2 import (
+    NameAttrList as _NameAttrList)
+from tensorflow.core.framework.tensor_pb2 import TensorProto as _TensorProto
+from tensorflow.core.framework.tensor_shape_pb2 import (
+    TensorShapeProto as _TensorShapeProto)
+from tensorflow.core.framework.types_pb2 import DataType as _DataType
 from tensorflow.tools.graph_transforms import TransformGraph
-
-from .converter import ConverterFactory, AttrValueConverter
 from utensor_cgen.utils import parse_tensor_name
 
+from .converter import AttrValueConverter, ConverterFactory
 
 __all__ = ['TensorInfo', 'OperationInfo', 'uTensorGraph']
 
@@ -42,9 +44,9 @@ class TensorInfo(IRBase, _NoShallowCopyMixin):
   dtype : numpy.dtype
   shape : list
   """
-  name = attr.ib(validator=validators.instance_of(six.text_type))
-  dtype = attr.ib(validator=validators.instance_of(np.dtype))
-  shape = attr.ib(validator=validators.instance_of((list, type(None))))
+  name = attr.ib(validator=instance_of(six.text_type))
+  dtype = attr.ib(validator=instance_of(np.dtype))
+  shape = attr.ib(validator=instance_of((list, type(None))))
   @shape.validator
   def check(self, attrib, shape_values):
     if shape_values is not None:
@@ -75,23 +77,23 @@ class OperationInfo(IRBase, _NoShallowCopyMixin):
     only exception is the key which match regex pattern r'_[^_]*'. The 
     values of such keys will be saved as-is without any type conversion.
   """
-  name = attr.ib(validator=validators.instance_of(six.text_type))
+  name = attr.ib(type=str)
 
-  input_tensors = attr.ib(validator=validators.instance_of(list))
+  input_tensors = attr.ib(validator=instance_of(list))
   @input_tensors.validator
   def check(self, attribute, value):
     if not all([isinstance(v, TensorInfo) for v in value]):
       raise ValueError('Expecting a list of TensorInfo for input_tensor')
 
-  output_tensors = attr.ib(validator=validators.instance_of(list))
+  output_tensors = attr.ib(validator=instance_of(list))
   @output_tensors.validator
   def check(self, attribute, value):
     if not all([isinstance(v, TensorInfo) for v in value]):
       raise ValueError('Expecting a list of TensorInfo for output_tensor')
 
-  op_type = attr.ib(validator=validators.instance_of(six.text_type))
+  op_type = attr.ib(type=str)
 
-  backend = attr.ib(validator=validators.instance_of(six.text_type))
+  backend = attr.ib(type=str)
   @backend.validator
   def check(self, attribute, value):
     if value not in ['tensorflow']:
