@@ -1,4 +1,5 @@
 FROM ubuntu
+LABEL maintainer="Dboy Liao <qmalliao@gmail.com>"
 
 ENV UTENSOR_CGEN_BRANCH=develop \
     PIPENV_VENV_IN_PROJECT=1 \
