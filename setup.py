@@ -34,6 +34,9 @@ setup(
         'idx2numpy',
         'attrs'
     ],
+    extras_require={
+        'dev': ['pytest']
+    },
     zip_safe=False,
     classifiers=[
         "Development Status :: 4 - Beta",
