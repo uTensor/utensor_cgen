@@ -2,8 +2,9 @@
 import argparse
 import os
 
-import click
 import pkg_resources
+
+import click
 from click.types import FuncParamType
 
 
@@ -11,6 +12,9 @@ def _nargs(sep=','):
   def parser(argstr):
     return argstr.split(sep)
   return parser
+
+def _get_pb_model_name(path):
+  return os.path.basename(os.path.splitext(path)[0])
 
 @click.group(name='utensor-cli')
 @click.help_option('-h', '--help')
@@ -29,10 +33,9 @@ def cli():
               metavar="FILE.cpp",
               help="output source file name, header file will be named accordingly. (defaults to protobuf name, e.g.: my_model.cpp)")
 @click.option('-d', '--data-dir',
-            default='models',
-            metavar='DIR',
-            help="ouptut directory for tensor data idx files",
-            show_default=True)
+              metavar='DIR',
+              help="ouptut directory for tensor data idx files",
+              show_default=True)
 @click.option('-D', '--embed-data-dir',
               metavar='EMBED_DIR',
               help=("the data dir on the develop board "
@@ -42,12 +45,12 @@ def cli():
               help="Add debug comments in the output source file",
               show_default=True)
 @click.option("--output-nodes",
-              type=FuncParamType(_nargs),
+              type=FuncParamType(_nargs()),
               metavar="NODE_NAME,NODE_NAME,...",
               required=True,
               help="list of output nodes")
 @click.option("-O", "--transform-methods", 
-              type=FuncParamType(_nargs),
+              type=FuncParamType(_nargs()),
               default='dropout,quantize,refcnt',
               help='optimization methods',
               metavar='METHOD,METHOD,...',
@@ -57,17 +60,40 @@ def cli():
               default="models",
               help="ouptut directory for tensor data idx files",
               show_default=True)
-def convet_graph(pb_file, src_fname, idx_dir, embed_data_dir,
-                 debug_cmt, output_nodes, trans_methods, model_dir):
-  pass
+def convet_graph(pb_file, output, data_dir, embed_data_dir,
+                 debug_comment, output_nodes, transform_methods, model_dir):
+  from utensor_cgen.code_generator import CodeGenerator
+
+  if pb_file is None:
+    raise ValueError("No pb file given")
+
+  if not os.path.exists(model_dir):
+    os.makedirs(model_dir)
+  # MODEL should default to pb_file
+  if data_dir is None:
+    data_dir = os.path.join("constants", _get_pb_model_name(pb_file))
+
+  if output is None:
+    output = _get_pb_model_name(pb_file) + ".cpp"
+  model_path = os.path.join(model_dir, output)
+
+  if embed_data_dir is None:
+    embed_data_dir = os.path.join("/fs", data_dir)
+  # TODO: pass transformation kwargs to codegenerator (better argument parser)
+  generator = CodeGenerator(pb_file, data_dir, embed_data_dir, transform_methods, output_nodes, debug_comment)
+  generator.generate(model_path)
 
 
 @cli.command(name='show')
 @click.help_option('-h', '--help')
 @click.argument('pb_file', required=True, metavar='MODEL.pb')
 def show_pb_file(pb_file):
-  pass
-
+  import tensorflow as tf
+  graph_def = tf.GraphDef()
+  with open(pb_file, 'rb') as fid:
+    graph_def.ParseFromString(fid.read())
+  for node in graph_def.node:
+    print(node.name)
 
 if __name__ == '__main__':
   cli()
