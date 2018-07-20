@@ -32,7 +32,8 @@ setup(
         'tensorflow',
         'numpy',
         'idx2numpy',
-        'attrs'
+        'attrs',
+        'click'
     ],
     extras_require={
         'dev': ['pytest']
