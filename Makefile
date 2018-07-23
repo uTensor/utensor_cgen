@@ -5,7 +5,11 @@ tests:
 	make test_utils test_ir test_transformer
 
 test_%:
-	pipenv run pytest tests/$@ -vv -s | tee -a tests_log.txt
+	@if [ -d .venv ]; then \
+		 pipenv run pytest tests/$@ -vv -s | tee -a tests_log.txt; \
+	 else \
+	 	 pytest tests/$@ -vv -s | tee -a tests_log.txt; \
+	 fi;
 
 clean:
 	rm -f tests_log.txt

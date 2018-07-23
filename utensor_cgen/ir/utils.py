@@ -45,3 +45,17 @@ def clusters_by_name_scopes(op_infos, name_scope_prefix=None):
     name_scope_map[current_name_scope] = cluster
     visited.update(cluster)
   return name_scope_map
+
+
+def is_list_of(vtype):
+  def check(inst, attrib, value):
+    is_valid = True
+    if not isinstance(value, list):
+      is_valid = False
+    else:
+      for v in value:
+        if not isinstance(v, vtype):
+          is_valid = False
+    if not is_valid:
+      raise TypeError('Expecting list of type %s, get %s' % (vtype, value))
+  return check
