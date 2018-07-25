@@ -61,7 +61,7 @@ def _build_parser():
                       required=True,
                       help="list of output nodes (required)")
   parser.add_argument("-O", "--transform-methods", dest='trans_methods', 
-                      type=_nargs(), default='dropout,quantize,refcnt',
+                      type=_nargs(), default='dropout,quantize,refcnt,inline',
                       help='optimization methods (default: %(default)s)',
                       metavar='METHOD,METHOD,...')
   parser.add_argument("--debug-comment", dest="debug_cmt",

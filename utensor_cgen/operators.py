@@ -252,6 +252,39 @@ class _Conv2DOperator(_Operator):
                                      in_dtype=in_dtype, filter_dtype=filter_dtype, out_dtypes=out_dtypes,
                                      ref_counts=ref_counts, to_eval=to_eval)
 
+class _InlineOperator(_Operator):
+  
+  def __init__(self, op_info, **kwargs):
+    out_tensor_info = op_info.output_tensors[0]
+    out_tname, out_dtype, tensor_shape = (out_tensor_info.name,
+                            out_tensor_info.dtype,
+                            out_tensor_info.shape)
+    ref_count = 0 #ref_counts[0]
+    pre_tname = self._prepare_tensor_name(out_tname)
+    inline_tname = self._prepare_inline_array_name(out_tname)
+    value = op_info.op_attr['value'].value.np_array.flatten()
+    self._snippet = CreateTensorBinarySnippet(out_tname, tensor_shape=tensor_shape,
+                                         tf_dtype=out_dtype,
+                                         sptr_name=pre_tname,
+                                         inline_name=inline_tname,
+                                         ref_count=ref_count)
+
+    weight_snippet = WeightSnippet(inline_tname,
+                                  out_dtype,
+                                  tensor_shape,
+                                  value)
+    weight_container = kwargs['weight_container']                             
+    weight_container.add_snippet(weight_snippet)
+
+  def _prepare_tensor_name(self, tensor_name):
+    prepared = tensor_name.replace(":", "_").replace("/", "_")
+    return prepared
+
+  def _prepare_inline_array_name(self, tensor_name):
+    inline = tensor_name.replace(":", "_").replace("/", "_")
+    preapred = "inline_{}".format(inline)
+    return preapred
+
 class _ConstOperator(_Operator):
 
   def __init__(self, op_info, **kwargs):
@@ -305,7 +338,8 @@ class OperatorFactory():
                 "Reshape": _ReshapeOperator,
                 "QuantizedReshape": _QuantizedReshapeOperator,
                 "QuantizedConv2D": _Conv2DOperator,
-                "Const": _ConstOperator}
+                "Const": _ConstOperator,
+                "Inline": _InlineOperator}
 
   def createOperatorSnippet(self, op_info, **kwargs):
     op_type = op_info.op_type
