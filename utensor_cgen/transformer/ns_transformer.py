@@ -12,8 +12,22 @@ from utensor_cgen.ir import uTensorGraph, OperationInfo
 from utensor_cgen.utils import parse_tensor_name
 from .base import Transformer
 
-__all__ = ["DropoutTransformer", "BatchNormTransformer"]
+__all__ = ["DropoutTransformer", "BatchNormTransformer", "InlineTransformer"]
 
+class InlineTransformer(Transformer):
+  METHOD_NAME = 'inline'
+  KWARGS_NAMESCOPE = '_inline'
+  TARGET_NODENAME_PATTERN = re.compile(r'(const[_\w\d]*)/.*')
+
+
+  def transform(self, ugraph):
+    for node_name in ugraph.topo_order:
+      op_type = ugraph.ops_info[node_name].op_type
+      if op_type == 'Const':
+        op_info = ugraph.ops_info[node_name]
+        op_info.op_type = 'Inline'
+    
+    return ugraph
 
 class DropoutTransformer(Transformer):
   """Remove Dropout Op
@@ -23,6 +37,7 @@ class DropoutTransformer(Transformer):
   TARGET_NODENAME_PATTERN = re.compile(r'(dropout[_\w\d]*)/.*')
 
   def transform(self, ugraph):
+
     dropout_input_map = self._find_input(ugraph)
     new_ops_info = {}
     new_topo_order = []

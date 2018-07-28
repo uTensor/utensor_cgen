@@ -1,5 +1,6 @@
 from .optimizer import RefCntOptimizer
 from .ns_transformer import DropoutTransformer, BatchNormTransformer
+from .ns_transformer import InlineTransformer
 from .quantize import QuantizeTransformer
 from .base import Transformer
 from utensor_cgen.utils import NamescopedKWArgsParser
@@ -10,7 +11,8 @@ class TransformerPipeline(object):
     RefCntOptimizer.METHOD_NAME: RefCntOptimizer,
     DropoutTransformer.METHOD_NAME: DropoutTransformer,
     BatchNormTransformer.METHOD_NAME: BatchNormTransformer,
-    QuantizeTransformer.METHOD_NAME: QuantizeTransformer
+    QuantizeTransformer.METHOD_NAME: QuantizeTransformer,
+    InlineTransformer.METHOD_NAME: InlineTransformer
   }
 
   def __init__(self, methods, kwargs):
