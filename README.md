@@ -52,7 +52,7 @@ Following steps are a general guild for user how to porting a `TensorFlow` proto
 
 1. install `utensor_cgent`
     - run `python3 setupt.py install`
-2. run `utensor-cli graph.pb --output-nodes=NODE,NODE,...`
+2. run `utensor-cli convert --output-nodes='NODE,NODE,...' graph.pb`
     - run `utensor-cli -h` for help
     - the `graph.pb` is the pb file of *original* graph (not quantized)
 
