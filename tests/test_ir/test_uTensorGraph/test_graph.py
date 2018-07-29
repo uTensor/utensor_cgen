@@ -45,3 +45,10 @@ def test_op_info():
     assert isinstance(generic_tensor,
                       TensorProtoConverter.__utensor_generic_type__)
     assert (generic_tensor.np_array == np_array).all()
+
+def test_in_out_nodes(graph_tuple):
+    ugraph = uTensorGraph(*graph_tuple)    
+    x3 = ugraph.ops_info['x3']
+    assert x3.ugraph is ugraph
+    assert len(x3.input_nodes) == 2
+    assert [str(op.name) for op in x3.input_nodes] == ['x2', 'bias2']

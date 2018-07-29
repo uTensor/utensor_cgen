@@ -66,6 +66,8 @@ class OperationInfo(IRBase, _NoShallowCopyMixin):
   name : str
   input_tensors : List[TensorInfo]
   output_tensors : List[TensorInfo]
+  input_nodes : Set[OperationInfo]
+  output_nodes : Set[OperationInfo]
   op_type : str
   backend : str {"tensorflow", 'pytorch'(future work)}
   op_attr : dict
@@ -100,6 +102,8 @@ class OperationInfo(IRBase, _NoShallowCopyMixin):
       raise ValueError('Unsupported backend: {}'.format(value))
 
   op_attr = attr.ib(factory=dict, converter=dict)
+  
+  ugraph = attr.ib(default=None, init=False)
 
   def __attrs_post_init__(self):
     skip_pattern = re.compile(r'_[^_]*')
@@ -113,13 +117,24 @@ class OperationInfo(IRBase, _NoShallowCopyMixin):
           op_attr[k] = ConverterFactory.get_generic_value(v)
       self.op_attr = op_attr
   
+  @property
+  def input_nodes(self):
+    if self.backend == 'tensorflow':
+      node_names = set([parse_tensor_name(t_info.name)[0]
+                        for t_info in self.input_tensors])
+    else:
+      raise RuntimeError('Only support tensorflow backend, get %s' % self.backend)
+    return [self.ugraph.ops_info[node_name] for node_name in node_names]
+  
   def __deepcopy__(self, memo):
-    return OperationInfo(name=self.name,
-                         input_tensors=deepcopy(self.input_tensors, memo),
-                         output_tensors=deepcopy(self.output_tensors, memo),
-                         op_type=self.op_type,
-                         backend=self.backend,
-                         op_attr=deepcopy(self.op_attr, memo))
+    op_info = OperationInfo(name=self.name,
+                            input_tensors=deepcopy(self.input_tensors, memo),
+                            output_tensors=deepcopy(self.output_tensors, memo),
+                            op_type=self.op_type,
+                            backend=self.backend,
+                            op_attr=deepcopy(self.op_attr, memo))
+    op_info.ugraph = self.ugraph
+    return op_info
 
 
 class uTensorGraph(IRBase, _NoShallowCopyMixin):
@@ -245,6 +260,9 @@ class uTensorGraph(IRBase, _NoShallowCopyMixin):
                                 dtype=np.dtype(tensor.dtype.as_numpy_dtype),
                                 shape=self._parse_tf_tshape(tensor.shape))
                      for tensor in op.outputs]
+      input_node_names = set([self.ops_info[parse_tensor_name(t_info.name)[0]].name
+                              for t_info in in_tensors])
+      input_nodes = [self.ops_info[node_name] for node_name in input_node_names]
       op_type = node.op
       op_attr = node.attr
       op_info = OperationInfo(name=node.name,
@@ -254,6 +272,7 @@ class uTensorGraph(IRBase, _NoShallowCopyMixin):
                               backend='tensorflow',
                               op_attr=op_attr)
       op_info.op_attr['tensorflow__device'] = node.device
+      op_info.ugraph = self
       self.ops_info[node.name] = op_info
       self.topo_order.append(node.name)
   
