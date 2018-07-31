@@ -16,7 +16,7 @@ def fusion_graph_tuple():
     input0 = tf.placeholder(dtype=tf.float32,
                                    name='input0')
     input1 = tf.placeholder(dtype=tf.float32,
-                                   name='inpu1')
+                                   name='input1')
     node_add0 = tf.add(input0, input1, name="node_add0")
     node_add1 = tf.add(node_add0, input1, name="node_add1")
     node_add2 = tf.add(node_add1, input1, name="node_add2")
