@@ -2,14 +2,27 @@ import tensorflow as tf
 from utensor_cgen.ir import uTensorGraph, OperationInfo
 from copy import deepcopy
 
+def print_topo_order(graph):
+  for it_node in graph.topo_order:
+    #print(it_node)
+    print(it_node, " : ", graph.ops_info[it_node].op_type)
+
 def compare_topological_orders(graph0, graph1):
   if(len(graph0.topo_order) != len(graph1.topo_order)):
+    print("======graph0 topo")
+    print_topo_order(graph0)
+    print("======graph1 topo")
+    print_topo_order(graph1)
     return False
 
   for node0, node1 in zip(graph0.topo_order, graph1.topo_order):
     op_type0 = graph0.ops_info[node0].op_type
     op_type1 = graph1.ops_info[node1].op_type
     if(op_type0 != op_type1):
+      print("======graph0 topo")
+      print_topo_order(graph0)
+      print("======graph1 topo")
+      print_topo_order(graph1)
       return False
   return True
 
@@ -80,14 +93,6 @@ def remove_node(graph, node_name):
   #trigger edge recount  ## probably don't need this
 
 def tensorInfo_from_name(graph, edge_name):
-  print("======topological content=========")
-  for it_node in graph.topo_order:
-    print(it_node)
-  print("======ops_info content=========")
-  for op_name in graph.ops_info:
-    print(graph.ops_info[op_name].name)
-  exit()
-
   for it_node in graph.topo_order:
     for t in graph.ops_info[it_node].input_tensors:
       if t.name == edge_name:
@@ -107,11 +112,12 @@ def subgraph_replace(graph, matcher_subgraph, dropin_subgraph):
   [dropin_input_tensors, dropin_output_tensors] = subgraph_trace_exposed_edges(dropin_subgraph)
   assert (len(input_tensors) != len(dropin_input_tensors) or len(output_tensors) != len(dropin_output_tensors))
   #TODO:
-  ## FIXME: killed the nodes way too early in a referenced based system
+  graph_backup = deepcopy(graph)
   for node in graph.topo_order[start_index:(end_index+1)]:
     remove_node(graph, node)
 
-  graph.topo_order[start_index:start_index] = dropin_subgraph.topo_order
+  #graph.topo_order[start_index:start_index] = dropin_subgraph.topo_order
+  graph.topo_order[start_index:start_index] = [dropin_subgraph.topo_order[0]] #single node support
   #support fusing into a single node for now
   #TODO:
   #optimization pass: generate input/output attribute for each op
@@ -120,8 +126,8 @@ def subgraph_replace(graph, matcher_subgraph, dropin_subgraph):
   #pass manager/config
   assert (len(dropin_subgraph.topo_order) != 1), "only fusing to 1 node is implemented"
   dropin_node_name = dropin_subgraph.topo_order[0]
-  input_tensor_infos = [tensorInfo_from_name(graph, t_name) for t_name in input_tensors]
-  output_tensor_infos = [tensorInfo_from_name(graph, t_name) for t_name in output_tensors]
+  input_tensor_infos = [tensorInfo_from_name(graph_backup, t_name) for t_name in input_tensors]
+  output_tensor_infos = [tensorInfo_from_name(graph_backup, t_name) for t_name in output_tensors]
   new_op_info = OperationInfo(name=dropin_subgraph.ops_info[dropin_node_name].name,
                             input_tensors=input_tensor_infos,
                             output_tensors=output_tensor_infos,
@@ -160,8 +166,11 @@ def test_fusion_support_functions(fusion_graph_tuple):
 
 def test_fusion_transformer(fusion_graph_tuple):
   (ugraph, usubgraph, ureplacement, uexpected) = fusion_graph_tuple
-
+  print("======ugraph content")
+  print_topo_order(ugraph)
   assert subgraph_replace(ugraph, usubgraph, ureplacement), "pattern not found"
+  print("======usubgraph content")
+  print_topo_order(usubgraph)
+  print("======ureplacement content")
+  print_topo_order(ureplacement)
   assert compare_topological_orders(ugraph, uexpected), "ugraph does not equal to uexpected"
-  #print ugraph.topo_order
-  #print uexpected.topo_order
