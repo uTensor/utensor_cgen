@@ -72,7 +72,6 @@ class DropoutTransformer(Transformer):
       new_topo_order.append(node_name)
     new_graph.ops_info = new_ops_info
     new_graph.topo_order = new_topo_order
-    new_graph.setup_in_out_nodes()
     new_graph.output_nodes = deepcopy(ugraph.output_nodes)
     new_graph._backend = ugraph._backend
     return new_graph
