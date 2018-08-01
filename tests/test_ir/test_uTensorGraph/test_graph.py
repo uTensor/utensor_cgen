@@ -1,10 +1,11 @@
 from copy import deepcopy
 
-import tensorflow as tf
 import numpy as np
+import tensorflow as tf
 
-from utensor_cgen.ir import uTensorGraph, OperationInfo
+from utensor_cgen.ir import OperationInfo, uTensorGraph
 from utensor_cgen.ir.converter import TensorProtoConverter
+
 
 def test_ugraph_topo_order(graph_tuple):
     graph_def, output_nodes = graph_tuple
@@ -50,5 +51,9 @@ def test_in_out_nodes(graph_tuple):
     ugraph = uTensorGraph(*graph_tuple)    
     x3 = ugraph.ops_info['x3']
     assert x3.ugraph is ugraph
-    assert len(x3.input_nodes) == 2
-    assert [str(op.name) for op in x3.input_nodes] == ['x2', 'bias2']
+    assert len(x3.input_nodes) == len(set([op.name for op in x3.input_nodes]))
+    assert all([str(op.name) in ['x2', 'bias2'] for op in x3.input_nodes])
+    assert x3.output_nodes == []
+
+    x2 = ugraph.ops_info['x2']
+    assert [str(op.name) for op in x2.output_nodes] == ['x3']

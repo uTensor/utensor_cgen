@@ -4,12 +4,13 @@ r"""Namescope Transformer
 Transformers that get rid of namescope/nodes which are not needed 
 for inference
 """
+import re
 from collections import defaultdict
 from copy import deepcopy
-import re
 
-from utensor_cgen.ir import uTensorGraph, OperationInfo
+from utensor_cgen.ir import OperationInfo, uTensorGraph
 from utensor_cgen.utils import parse_tensor_name
+
 from .base import Transformer
 
 __all__ = ["DropoutTransformer", "BatchNormTransformer", "InlineTransformer"]
@@ -71,6 +72,7 @@ class DropoutTransformer(Transformer):
       new_topo_order.append(node_name)
     new_graph.ops_info = new_ops_info
     new_graph.topo_order = new_topo_order
+    new_graph.setup_in_out_nodes()
     new_graph.output_nodes = deepcopy(ugraph.output_nodes)
     new_graph._backend = ugraph._backend
     return new_graph
