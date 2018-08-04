@@ -2,6 +2,31 @@ import tensorflow as tf
 from utensor_cgen.ir import uTensorGraph, OperationInfo
 from copy import deepcopy
 
+def get_ops_io_info(op_type):
+#please refer to OperatorFactory() in operators.py
+  ops_io_table = dict()
+  ops_io_table["Add"] =                 [[0, 0], [0]]
+  ops_io_table["ArgMax"] =              [[0, 1], [0]]
+  ops_io_table["Dequantize"] =          [[0, 1, 2], [0]]
+  ops_io_table["Max"] =                 [[0, 1], [0]]
+  ops_io_table["QuantizedMaxPool"] =    [[0, 1, 2], [0, 1, 2]]
+  ops_io_table["Min"] =                 [[0, 1], [0]]
+  ops_io_table["QuantizeV2"] =          [[0, 1, 2], [0, 1, 2]]
+  ops_io_table["QuantizedMatMul"] =     [[0, 1, 2, 3, 4, 5], [0, 1, 2]]
+  ops_io_table["QuantizedRelu"] =       [[0, 1, 2], [0, 1, 2]]
+  ops_io_table["QuantizedAdd"] =        [[0, 0, 1, 2, 4, 5], [0, 1, 2]]
+  ops_io_table["RequantizationRange"] = [[0, 1, 2], [0, 1]]
+  ops_io_table["Requantize"] =          [[0, 1, 2, 3, 4], [0, 1, 2]]
+  ops_io_table["Reshape"] =             [[0, 1], [0]]
+  ops_io_table["QuantizedReshape"] =    [[0, 1, 2, 3], [0, 1, 2]]
+  ops_io_table["QuantizedConv2D"] =     [[0, 1, 2, 3, 4, 5], [0, 1, 2]]
+  ops_io_table["Const"] =               [None, [0]]
+  ops_io_table["Placeholder"] =         [None, [0]]
+  ops_io_table["Inline"] =              [None, [0]]
+
+  return ops_io_table[op_type]
+
+
 def print_topo_order(graph):
   for it_node in graph.topo_order:
     #print(it_node)
@@ -63,7 +88,7 @@ def get_input_tensors(graph, node_name):
 def get_output_tensors(graph, node_name):
   return [t.name for t in graph.ops_info[node_name].output_tensors]
 
-def subgraph_trace_exposed_edges(graph, start_index = 0, end_index=-2):
+def subgraph_trace_exposed_edges(graph, start_index=0, end_index=-2):
   sub_topo = graph.topo_order[start_index:(end_index+1)]
   subgraph_tensors_in = set()
   subgraph_tensors_out = set()
@@ -116,25 +141,47 @@ def subgraph_replace(graph, matcher_subgraph, dropin_subgraph):
   for node in graph.topo_order[start_index:(end_index+1)]:
     remove_node(graph, node)
 
-  #graph.topo_order[start_index:start_index] = dropin_subgraph.topo_order
-  graph.topo_order[start_index:start_index] = [dropin_subgraph.topo_order[0]] #single node support
+  graph.topo_order[start_index:start_index] = dropin_subgraph.topo_order
+  #graph.topo_order[start_index:start_index] = [dropin_subgraph.topo_order[0]] #single node support
   #support fusing into a single node for now
   #TODO:
   #optimization pass: generate input/output attribute for each op
   #optimization pass: implement topological signature
   #ugraph class: holds metadata: applied passes, states
   #pass manager/config
-  assert (len(dropin_subgraph.topo_order) != 1), "only fusing to 1 node is implemented"
-  dropin_node_name = dropin_subgraph.topo_order[0]
+
   input_tensor_infos = [tensorInfo_from_name(graph_backup, t_name) for t_name in input_tensors]
   output_tensor_infos = [tensorInfo_from_name(graph_backup, t_name) for t_name in output_tensors]
-  new_op_info = OperationInfo(name=dropin_subgraph.ops_info[dropin_node_name].name,
-                            input_tensors=input_tensor_infos,
-                            output_tensors=output_tensor_infos,
+  
+  for dropin_node_name in dropin_subgraph.topo_order:
+    new_op_type = dropin_subgraph.ops_info[dropin_node_name].op_type
+    ops_io_info = get_ops_io_info(new_op_type)
+    new_input_tensor_infos = list()
+    new_output_tensor_infos = list()
+
+    if ops_io_info[0] != None:
+      assert len(input_tensor_infos) >= len(ops_io_info[0]), "subject graph has fewer input edges than the drop-in graph"
+      new_input_tensor_infos = input_tensor_infos[0:len(ops_io_info[0])]
+      input_tensor_infos = input_tensor_infos[len(ops_io_info[0]):-1]
+
+    if ops_io_info[1] != None:
+      assert len(output_tensor_infos) >= len(ops_io_info[1]), "subject graph has fewer output edges than the drop-in graph"
+      new_output_tensor_infos = output_tensor_infos[0:len(ops_io_info[1])]
+      output_tensor_infos = output_tensor_infos[len(ops_io_info[1]):-1]
+
+    new_op_info = OperationInfo(name=dropin_subgraph.ops_info[dropin_node_name].name,
+                            input_tensors=new_input_tensor_infos,
+                            output_tensors=new_output_tensor_infos,
                             op_type=dropin_subgraph.ops_info[dropin_node_name].op_type,
                             backend=dropin_subgraph.ops_info[dropin_node_name].backend,
                             op_attr=deepcopy(dropin_subgraph.ops_info[dropin_node_name].op_attr))
-  graph.ops_info[new_op_info.name] = new_op_info
+    graph.ops_info[new_op_info.name] = new_op_info
+
+    assert len(input_tensor_infos) == 0, "not all input edges are connected"
+    assert len(output_tensor_infos) == 0, "not all output edges are connected"
+
+    ##TODO: trigger topo rebuild here
+
   return True
 
 
