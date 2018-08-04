@@ -53,7 +53,8 @@ def fusion_graph_tuple():
     expected_input1 = tf.placeholder(dtype=tf.float32,
                                    name='expected_input1')
     expected_node_add0 = tf.add(expected_input0, expected_input1, name="expected_node_add0")
-  uexpected = uTensorGraph(expected_graph.as_graph_def(), [expected_node_add0.name])
+    expected_node_add1 = tf.add(expected_node_add0, expected_input1, name="expected_node_add1")
+  uexpected = uTensorGraph(expected_graph.as_graph_def(), [expected_node_add1.name])
   #expected_tuple = (expected_graph, (expected_input0, expected_input1), (expected_node_add0))
 
   return (ugraph, usubgraph, ureplacement, uexpected)
