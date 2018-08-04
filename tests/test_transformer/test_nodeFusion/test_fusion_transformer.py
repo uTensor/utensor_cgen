@@ -30,7 +30,10 @@ def get_ops_io_info(op_type):
 def print_topo_order(graph):
   for it_node in graph.topo_order:
     #print(it_node)
-    print(it_node, " : ", graph.ops_info[it_node].op_type)
+    print(it_node, " : ", graph.ops_info[it_node].op_type, "| ", [t.name for t in graph.ops_info[it_node].input_tensors], ":", [t.name for t in graph.ops_info[it_node].output_tensors])
+  [exp_inputs, exp_outputs] = subgraph_trace_exposed_edges(graph)
+  print("exposed inputs", exp_inputs)
+  print("exposed outputs", exp_outputs)
 
 def compare_topological_orders(graph0, graph1):
   if(len(graph0.topo_order) != len(graph1.topo_order)):
@@ -88,8 +91,12 @@ def get_input_tensors(graph, node_name):
 def get_output_tensors(graph, node_name):
   return [t.name for t in graph.ops_info[node_name].output_tensors]
 
-def subgraph_trace_exposed_edges(graph, start_index=0, end_index=-2):
-  sub_topo = graph.topo_order[start_index:(end_index+1)]
+def subgraph_trace_exposed_edges(graph, start_index=0, end_index=None):
+  if end_index == None:
+    end_index = len(graph.topo_order)
+
+  sub_topo = graph.topo_order[start_index:end_index]
+
   subgraph_tensors_in = set()
   subgraph_tensors_out = set()
 
@@ -97,10 +104,28 @@ def subgraph_trace_exposed_edges(graph, start_index=0, end_index=-2):
     subgraph_tensors_in.update(get_input_tensors(graph, node))
     subgraph_tensors_out.update(get_output_tensors(graph, node))
 
+  # print("subgraph_trace_exposed_edges: ", start_index, ", ", end_index)
+  # print("original topo: ", graph.topo_order)
+  # print("sub_topo: ", sub_topo)
+  # print("subgraph_tensors_in: ", subgraph_tensors_in)
+  # print("subgraph_tensors_out: ", subgraph_tensors_out)
+
   input_edges = subgraph_tensors_in.difference(subgraph_tensors_out)
   output_edges = subgraph_tensors_out.difference(subgraph_tensors_in)
 
-  return [input_edges, output_edges]
+  input_edges_list = list()
+  output_edges_list = list()
+
+  #ensure this follows topological order
+  for node in sub_topo:
+    for t_name in get_input_tensors(graph, node):
+      if t_name in input_edges:
+        input_edges_list.append(t_name)
+    for t_name in get_output_tensors(graph, node):
+      if t_name in output_edges:
+        output_edges_list.append(t_name)
+
+  return [input_edges_list, output_edges_list]
 
 # def edge_cleanup(graph, edge_name):
 #   for node in graph.topo_order:
@@ -133,9 +158,10 @@ def subgraph_replace(graph, matcher_subgraph, dropin_subgraph):
   if(matched == None):
     return False
   [start_index, end_index] = matched
-  [input_tensors, output_tensors] = subgraph_trace_exposed_edges(graph, start_index, end_index)
+  print("matched indexi: ", start_index, ", ", end_index)
+  [input_tensors, output_tensors] = subgraph_trace_exposed_edges(graph, start_index, end_index+1)
   [dropin_input_tensors, dropin_output_tensors] = subgraph_trace_exposed_edges(dropin_subgraph)
-  assert (len(input_tensors) != len(dropin_input_tensors) or len(output_tensors) != len(dropin_output_tensors))
+  assert (len(input_tensors) == len(dropin_input_tensors) and len(output_tensors) == len(dropin_output_tensors))
   #TODO:
   graph_backup = deepcopy(graph)
   for node in graph.topo_order[start_index:(end_index+1)]:
@@ -150,8 +176,8 @@ def subgraph_replace(graph, matcher_subgraph, dropin_subgraph):
   #ugraph class: holds metadata: applied passes, states
   #pass manager/config
 
-  input_tensor_infos = [tensorInfo_from_name(graph_backup, t_name) for t_name in input_tensors]
-  output_tensor_infos = [tensorInfo_from_name(graph_backup, t_name) for t_name in output_tensors]
+  # input_tensor_infos = [tensorInfo_from_name(graph_backup, t_name) for t_name in input_tensors]
+  # output_tensor_infos = [tensorInfo_from_name(graph_backup, t_name) for t_name in output_tensors]
   
   for dropin_node_name in dropin_subgraph.topo_order:
     new_op_type = dropin_subgraph.ops_info[dropin_node_name].op_type
@@ -160,14 +186,21 @@ def subgraph_replace(graph, matcher_subgraph, dropin_subgraph):
     new_output_tensor_infos = list()
 
     if ops_io_info[0] != None:
-      assert len(input_tensor_infos) >= len(ops_io_info[0]), "subject graph has fewer input edges than the drop-in graph"
-      new_input_tensor_infos = input_tensor_infos[0:len(ops_io_info[0])]
-      input_tensor_infos = input_tensor_infos[len(ops_io_info[0]):-1]
+      new_input_tensor_infos = dropin_subgraph.ops_info[dropin_node_name].input_tensors #direct copy from the drop-in graph
+      for i, tensor_info in enumerate(new_input_tensor_infos):
+        if tensor_info.name in dropin_input_tensors: #contains an exposed edge
+          drop_in_tensor_index = dropin_input_tensors.index(tensor_info.name) #exposed edge index matching with the subject graph
+          cooresponding_subject_graph_tensor_name = input_tensors[drop_in_tensor_index]
+          new_input_tensor_infos[i] = tensorInfo_from_name(graph_backup, cooresponding_subject_graph_tensor_name)
+
 
     if ops_io_info[1] != None:
-      assert len(output_tensor_infos) >= len(ops_io_info[1]), "subject graph has fewer output edges than the drop-in graph"
-      new_output_tensor_infos = output_tensor_infos[0:len(ops_io_info[1])]
-      output_tensor_infos = output_tensor_infos[len(ops_io_info[1]):-1]
+      new_output_tensor_infos = dropin_subgraph.ops_info[dropin_node_name].output_tensors
+      for i, tensor_info in enumerate(new_output_tensor_infos):
+        if tensor_info.name in dropin_output_tensors:
+          drop_in_tensor_index = dropin_output_tensors.index(tensor_info.name)
+          cooresponding_subject_graph_tensor_name = output_tensors[drop_in_tensor_index]
+          new_output_tensor_infos[i] = tensorInfo_from_name(graph_backup, cooresponding_subject_graph_tensor_name)
 
     new_op_info = OperationInfo(name=dropin_subgraph.ops_info[dropin_node_name].name,
                             input_tensors=new_input_tensor_infos,
@@ -176,9 +209,6 @@ def subgraph_replace(graph, matcher_subgraph, dropin_subgraph):
                             backend=dropin_subgraph.ops_info[dropin_node_name].backend,
                             op_attr=deepcopy(dropin_subgraph.ops_info[dropin_node_name].op_attr))
     graph.ops_info[new_op_info.name] = new_op_info
-
-    assert len(input_tensor_infos) == 0, "not all input edges are connected"
-    assert len(output_tensor_infos) == 0, "not all output edges are connected"
 
     ##TODO: trigger topo rebuild here
 
@@ -195,10 +225,10 @@ def subgraph_latch(graph, matcher_subgraph, dropin_subgraph):
     matcher_node = match_topo[matcher_index]
     #TODO: need to implement a connectivity test
     if(graph.ops_info[node].op_type == matcher_subgraph.ops_info[matcher_node].op_type):
-      matcher_index += 1
-      if(matcher_index >= matcher_seq_len):
+      if(matcher_index >= matcher_seq_len - 1):
         #matched
         return [start_index, i] #start index, end index
+      matcher_index += 1
     else:
       matcher_index = 0
       start_index = i
@@ -215,9 +245,18 @@ def test_fusion_transformer(fusion_graph_tuple):
   (ugraph, usubgraph, ureplacement, uexpected) = fusion_graph_tuple
   print("======ugraph content")
   print_topo_order(ugraph)
-  assert subgraph_replace(ugraph, usubgraph, ureplacement), "pattern not found"
   print("======usubgraph content")
   print_topo_order(usubgraph)
   print("======ureplacement content")
   print_topo_order(ureplacement)
+  print("==================")
+  print("==================")
+  assert subgraph_replace(ugraph, usubgraph, ureplacement), "pattern not found"
   assert compare_topological_orders(ugraph, uexpected), "ugraph does not equal to uexpected"
+  print("==================")
+  print("==================")
+  print("======result content")
+  print_topo_order(ugraph)
+  print("======uexpected content")
+  print_topo_order(uexpected)
+  assert False
