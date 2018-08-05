@@ -5,13 +5,8 @@ import os
 import pkg_resources
 
 import click
-from click.types import FuncParamType
+from .utils import NArgsParam
 
-
-def _nargs(sep=','):
-  def parser(argstr):
-    return argstr.split(sep)
-  return parser
 
 def _get_pb_model_name(path):
   return os.path.basename(os.path.splitext(path)[0])
@@ -45,12 +40,12 @@ def cli():
               help="Add debug comments in the output source file",
               show_default=True)
 @click.option("--output-nodes",
-              type=FuncParamType(_nargs()),
+              type=NArgsParam(),
               metavar="NODE_NAME,NODE_NAME,...",
               required=True,
               help="list of output nodes")
 @click.option("-O", "--transform-methods", 
-              type=FuncParamType(_nargs()),
+              type=NArgsParam(),
               default='dropout,quantize,refcnt,inline',
               help='optimization methods',
               metavar='METHOD,METHOD,...',

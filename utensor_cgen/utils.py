@@ -3,6 +3,7 @@ import os
 import re
 from copy import deepcopy
 
+from click.types import ParamType
 import numpy as np
 import idx2numpy as idx2np
 import tensorflow as tf
@@ -151,3 +152,23 @@ class NamescopedKWArgsParser:
       return self._private_kwargs[argname]
     except KeyError:
       return self._shared_kwargs[argname]
+
+class NArgsParam(ParamType):
+
+  def __init__(self, sep=','):
+    self._sep = sep
+
+  def convert(self, value, param, ctx):
+    value = str(value)
+    args = value.split(self._sep)
+    aug_args = [arg for arg in args if arg[0] in ['+', '-']]
+    if aug_args:
+      final_args = param.default.split(self._sep)
+      for arg in aug_args:
+        if arg[0] == '+':
+          final_args.append(arg[1:])
+        elif arg[0] == '-' and arg[1:] in final_args:
+          final_args.remove(arg[1:])
+    else:
+      final_args = args
+    return final_args
