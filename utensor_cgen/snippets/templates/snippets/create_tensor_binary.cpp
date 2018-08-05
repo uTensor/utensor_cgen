@@ -3,12 +3,12 @@ S_TENSOR {{sptr_name}};
 {% endif %}
 {    
     {%if ref_count%}
-    ctx.add(new {{tensor_type}}<{{dtype}}>({% if tensor_shape %}{{tensor_shape}}{%endif%}, {{inline_name}}), 
-    "{{tensor_name}}", 
-    {{ref_count}});
+    ctx.add(new {{tensor_type}}<{{dtype}}>({{tensor_shape}}, {{inline_name}}), 
+            "{{tensor_name}}", 
+            {{ref_count}});
     {% else %}
-    ctx.add(new {{tensor_type}}<{{dtype}}>({% if tensor_shape %}{{tensor_shape}}{%endif%}, {{inline_name}}), 
-    "{{tensor_name}}");
+    ctx.add(new {{tensor_type}}<{{dtype}}>({{tensor_shape}}, {{inline_name}}), 
+            "{{tensor_name}}");
     {%endif%}
     {% if create_sptr %}
     {{sptr_name}} = ctx.get("{{tensor_name}}");
