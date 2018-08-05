@@ -28,6 +28,7 @@ class Transformer(object):
     @wraps(ori_transform)
     def transform(ugraph):
       new_ugraph = ori_transform(ugraph)
+      new_ugraph.setup_in_out_nodes()
       if self.prune_graph:
         return self._prune_graph(new_ugraph)
       return new_ugraph

@@ -1,22 +1,23 @@
 # -*- coding: utf8 -*-
 import re
+from collections import defaultdict
 from copy import deepcopy
-
-import six
 
 import attr
 import numpy as np
+import six
 import tensorflow as tf
 from attr.validators import instance_of
 from tensorflow.contrib.util import make_ndarray
 from tensorflow.core.framework.attr_value_pb2 import AttrValue as _AttrValue
-from tensorflow.core.framework.attr_value_pb2 import (
-    NameAttrList as _NameAttrList)
+from tensorflow.core.framework.attr_value_pb2 import \
+    NameAttrList as _NameAttrList
 from tensorflow.core.framework.tensor_pb2 import TensorProto as _TensorProto
-from tensorflow.core.framework.tensor_shape_pb2 import (
-    TensorShapeProto as _TensorShapeProto)
+from tensorflow.core.framework.tensor_shape_pb2 import \
+    TensorShapeProto as _TensorShapeProto
 from tensorflow.core.framework.types_pb2 import DataType as _DataType
 from tensorflow.tools.graph_transforms import TransformGraph
+
 from utensor_cgen.utils import parse_tensor_name
 
 from .converter import AttrValueConverter, ConverterFactory
@@ -45,6 +46,7 @@ class TensorInfo(IRBase, _NoShallowCopyMixin):
   shape : list
   """
   name = attr.ib(validator=instance_of(six.text_type))
+  op_name = attr.ib(validator=instance_of(six.text_type))
   dtype = attr.ib(validator=instance_of(np.dtype))
   shape = attr.ib(validator=instance_of((list, type(None))))
   @shape.validator
@@ -56,6 +58,7 @@ class TensorInfo(IRBase, _NoShallowCopyMixin):
 
   def __deepcopy__(self, memo):
     return TensorInfo(name=self.name,
+                      op_name=self.op_name,
                       dtype=self.dtype,
                       shape=deepcopy(self.shape, memo))
 
@@ -66,6 +69,8 @@ class OperationInfo(IRBase, _NoShallowCopyMixin):
   name : str
   input_tensors : List[TensorInfo]
   output_tensors : List[TensorInfo]
+  input_nodes : Set[OperationInfo]
+  output_nodes : Set[OperationInfo]
   op_type : str
   backend : str {"tensorflow", 'pytorch'(future work)}
   op_attr : dict
@@ -100,6 +105,10 @@ class OperationInfo(IRBase, _NoShallowCopyMixin):
       raise ValueError('Unsupported backend: {}'.format(value))
 
   op_attr = attr.ib(factory=dict, converter=dict)
+  
+  ugraph = attr.ib(default=None, init=False)
+  input_nodes = attr.ib(factory=list, init=False)
+  output_nodes = attr.ib(factory=list, init=False)
 
   def __attrs_post_init__(self):
     skip_pattern = re.compile(r'_[^_]*')
@@ -114,12 +123,16 @@ class OperationInfo(IRBase, _NoShallowCopyMixin):
       self.op_attr = op_attr
   
   def __deepcopy__(self, memo):
-    return OperationInfo(name=self.name,
-                         input_tensors=deepcopy(self.input_tensors, memo),
-                         output_tensors=deepcopy(self.output_tensors, memo),
-                         op_type=self.op_type,
-                         backend=self.backend,
-                         op_attr=deepcopy(self.op_attr, memo))
+    op_info = OperationInfo(name=self.name,
+                            input_tensors=deepcopy(self.input_tensors, memo),
+                            output_tensors=deepcopy(self.output_tensors, memo),
+                            op_type=self.op_type,
+                            backend=self.backend,
+                            op_attr=deepcopy(self.op_attr, memo))
+    op_info.ugraph = self.ugraph
+    op_info.input_nodes = [node for node in self.input_nodes]
+    op_info.output_nodes = [node for node in self.output_nodes]
+    return op_info
 
 
 class uTensorGraph(IRBase, _NoShallowCopyMixin):
@@ -210,17 +223,17 @@ class uTensorGraph(IRBase, _NoShallowCopyMixin):
       visit(node_name)
     return ops_torder
 
+  # tensorflow
   @staticmethod
-  def _parse_tf_tshape(t_shape):
+  def _tf_parse_tshape(t_shape):
     try:
       shape = t_shape.as_list()
     except ValueError:
       shape = None
     return shape
 
-  # tensorflow
   def _init_from_graph_def(self, graph_def, output_nodes):
-    """Tensorflow
+    """Initailize graph with Tensorflow GraphDef
     """
     if not self._tf_is_freeze_graph(graph_def):
       raise ValueError('Given graph_def is not freezed')
@@ -238,12 +251,14 @@ class uTensorGraph(IRBase, _NoShallowCopyMixin):
     for node in graph_def.node:
       op = graph.get_operation_by_name(node.name)
       in_tensors = [TensorInfo(name=tensor.name,
+                               op_name=tensor.op.name,
                                dtype=np.dtype(tensor.dtype.as_numpy_dtype),
-                               shape=self._parse_tf_tshape(tensor.shape))
+                               shape=self._tf_parse_tshape(tensor.shape))
                     for tensor in op.inputs]
       out_tensors = [TensorInfo(name=tensor.name,
+                                op_name=op.name,
                                 dtype=np.dtype(tensor.dtype.as_numpy_dtype),
-                                shape=self._parse_tf_tshape(tensor.shape))
+                                shape=self._tf_parse_tshape(tensor.shape))
                      for tensor in op.outputs]
       op_type = node.op
       op_attr = node.attr
@@ -254,12 +269,26 @@ class uTensorGraph(IRBase, _NoShallowCopyMixin):
                               backend='tensorflow',
                               op_attr=op_attr)
       op_info.op_attr['tensorflow__device'] = node.device
+      op_info.ugraph = self
       self.ops_info[node.name] = op_info
       self.topo_order.append(node.name)
+    self.setup_in_out_nodes()
   
   def _tf_is_freeze_graph(self, graph_def):
     is_frozen = all(node.op not in ['VariableV2'] for node in graph_def.node)
     return is_frozen
+
+  def setup_in_out_nodes(self):
+    records = defaultdict(lambda: {'in_ops': set([]), 'out_ops': set([])})
+    for op_info in self.ops_info.values():
+      for tensor in op_info.input_tensors:
+        in_op = self.ops_info[tensor.op_name]
+        records[op_info.name]['in_ops'].add(in_op.name)
+        records[in_op.name]['out_ops'].add(op_info.name)
+    for op_name, record in records.items():
+      op_info = self.ops_info[op_name]
+      op_info.input_nodes = [self.ops_info[name] for name in record['in_ops']]
+      op_info.output_nodes = [self.ops_info[name] for name in record['out_ops']]
 
   def __deepcopy__(self, memo):
     new_graph = uTensorGraph()

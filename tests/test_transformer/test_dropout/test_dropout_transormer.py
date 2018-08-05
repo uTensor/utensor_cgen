@@ -10,6 +10,10 @@ def test_dropout_trans(droput_graph_tuple):
     ugraph = uTensorGraph(graph_def, output_nodes=output_nodes)
     transformer = DropoutTransformer()
     new_ugraph = transformer.transform(ugraph)
+    for op in new_ugraph.ops_info.values():
+        assert op.ugraph
+    out_op = new_ugraph.ops_info[output_nodes[0]]
+    assert set([str(op.name) for op in out_op.input_nodes]) == set(['x', 'bias'])
     # all dropout nodes should be gone
     graph_1 = tf.Graph()
     graph_2 = tf.Graph()
