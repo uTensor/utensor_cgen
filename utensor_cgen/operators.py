@@ -259,7 +259,9 @@ class _InlineOperator(_Operator):
     out_tname, out_dtype, tensor_shape = (out_tensor_info.name,
                             out_tensor_info.dtype,
                             out_tensor_info.shape)
-    ref_count = 0 #ref_counts[0]
+    parser = NamescopedKWArgsParser(RefCntOptimizer.KWARGS_NAMESCOPE,
+                                    op_info.op_attr)
+    ref_count = parser.get('ref_counts', [0])[0]
     pre_tname = self._prepare_tensor_name(out_tname)
     inline_tname = self._prepare_inline_array_name(out_tname)
     value = op_info.op_attr['value'].value.np_array.flatten()
