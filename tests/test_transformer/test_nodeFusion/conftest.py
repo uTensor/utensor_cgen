@@ -17,9 +17,11 @@ def fusion_graph_tuple():
                                    name='input0')
     input1 = tf.placeholder(dtype=tf.float32,
                                    name='input1')
+    input2 = tf.placeholder(dtype=tf.float32,
+                                   name='input2')
     node_add0 = tf.add(input0, input1, name="node_add0")
     node_add1 = tf.add(node_add0, input1, name="node_add1")
-    node_add2 = tf.add(node_add1, input1, name="node_add2")
+    node_add2 = tf.add(node_add1, input2, name="node_add2")
 
   ugraph = uTensorGraph(graph.as_graph_def(), [node_add2.name])
   #graph_tuple = (graph, (input0, input1), (node_add2))
@@ -52,8 +54,10 @@ def fusion_graph_tuple():
                                    name='expected_input0')
     expected_input1 = tf.placeholder(dtype=tf.float32,
                                    name='expected_input1')
+    expected_input2 = tf.placeholder(dtype=tf.float32,
+                                   name='expected_input2')
     expected_node_add0 = tf.add(expected_input0, expected_input1, name="expected_node_add0")
-    expected_node_add1 = tf.add(expected_node_add0, expected_input1, name="expected_node_add1")
+    expected_node_add1 = tf.add(expected_node_add0, expected_input2, name="expected_node_add1")
   uexpected = uTensorGraph(expected_graph.as_graph_def(), [expected_node_add1.name])
   #expected_tuple = (expected_graph, (expected_input0, expected_input1), (expected_node_add0))
 
