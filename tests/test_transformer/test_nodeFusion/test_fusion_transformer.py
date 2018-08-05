@@ -127,6 +127,34 @@ def subgraph_trace_exposed_edges(graph, start_index=0, end_index=None):
 
   return [input_edges_list, output_edges_list]
 
+def subgraph_trace_internal_edges(graph, start_index=0, end_index=None):
+  if end_index == None:
+    end_index = len(graph.topo_order)
+
+  sub_topo = graph.topo_order[start_index:end_index]
+
+  subgraph_tensors_in = set()
+  subgraph_tensors_out = set()
+
+  for node in sub_topo:
+    subgraph_tensors_in.update(get_input_tensors(graph, node))
+    subgraph_tensors_out.update(get_output_tensors(graph, node))
+    
+  internal_edges = subgraph_tensors_in.intersection(subgraph_tensors_out)
+
+  internal_edges_list = list()
+
+  #ensure this follows topological order
+  for node in sub_topo:
+    for t_name in get_input_tensors(graph, node):
+      if t_name in internal_edges and not t_name in internal_edges_list:
+        internal_edges_list.append(t_name)
+    for t_name in get_output_tensors(graph, node):
+      if t_name in internal_edges and not t_name in internal_edges_list:
+        internal_edges_list.append(t_name)
+
+  return internal_edges_list
+
 # def edge_cleanup(graph, edge_name):
 #   for node in graph.topo_order:
 #     tensors_in = get_input_tensors(graph, node)
@@ -153,8 +181,23 @@ def tensorInfo_from_name(graph, edge_name):
 
   return None
 
+def get_tensor_nodes(graph, t_name):
+  start_nodes = list()
+  end_nodes = list()
+
+  for it_node in graph.topo_order:
+    for t in graph.ops_info[it_node].input_tensors:
+      if t.name == t_name:
+        end_nodes.append(it_node)
+    for t in graph.ops_info[it_node].output_tensors:
+      if t.name == t_name:
+        start_nodes.append(it_node)
+
+  return [start_nodes, end_nodes]
+
+
 def subgraph_replace(graph, matcher_subgraph, dropin_subgraph):
-  matched = subgraph_latch(graph, matcher_subgraph, dropin_subgraph)
+  matched = subgraph_latch(graph, matcher_subgraph)
   if(matched == None):
     return False
   [start_index, end_index] = matched
@@ -162,6 +205,20 @@ def subgraph_replace(graph, matcher_subgraph, dropin_subgraph):
   [input_tensors, output_tensors] = subgraph_trace_exposed_edges(graph, start_index, end_index+1)
   [dropin_input_tensors, dropin_output_tensors] = subgraph_trace_exposed_edges(dropin_subgraph)
   assert (len(input_tensors) == len(dropin_input_tensors) and len(output_tensors) == len(dropin_output_tensors))
+
+  #check if internal edges are referenced externally
+  internal_edges = set(subgraph_trace_internal_edges(graph, start_index, end_index+1))
+  # print("index range: ", start_index, " ", end_index)
+  # print("internal edges", internal_edges)
+  for i, node in enumerate(graph.topo_order):
+    edge_list = get_input_tensors(graph, node)
+    edge_list += get_output_tensors(graph, node)
+    common_edge = set(edge_list).intersection(internal_edges)
+    if(len(common_edge) > 0 and not (i >= start_index and i <= end_index)):
+      assert False, "dangling edge detected %r" % common_edge
+    # [start_node, end_node] = get_tensor_nodes(graph, internal_edge)
+    # edge_nodes = start_node + end_node
+
   #TODO:
   graph_backup = deepcopy(graph)
   for node in graph.topo_order[start_index:(end_index+1)]:
@@ -215,23 +272,20 @@ def subgraph_replace(graph, matcher_subgraph, dropin_subgraph):
   return True
 
 
-def subgraph_latch(graph, matcher_subgraph, dropin_subgraph):
+def subgraph_latch(graph, matcher_subgraph):
   topo = graph.topo_order
   match_topo = matcher_subgraph.topo_order
-  matcher_index = 0
   matcher_seq_len = len(match_topo)
-  start_index = 0 #keep a record of where the match starts
-  for i, node in enumerate(topo):
-    matcher_node = match_topo[matcher_index]
-    #TODO: need to implement a connectivity test
-    if(graph.ops_info[node].op_type == matcher_subgraph.ops_info[matcher_node].op_type):
-      if(matcher_index >= matcher_seq_len - 1):
-        #matched
-        return [start_index, i] #start index, end index
-      matcher_index += 1
-    else:
-      matcher_index = 0
-      start_index = i
+
+  for i in range(0,len(topo) - matcher_seq_len):
+    search_topo = topo[i:(i+matcher_seq_len)]
+    for j, test_node in enumerate(search_topo):
+      matcher_node = match_topo[j]
+      if(graph.ops_info[test_node].op_type != matcher_subgraph.ops_info[matcher_node].op_type):
+        break
+      if(j >= matcher_seq_len-1): #matched
+        return [i, i + j]
+
   return None
 
 def test_fusion_support_functions(fusion_graph_tuple):
@@ -240,6 +294,7 @@ def test_fusion_support_functions(fusion_graph_tuple):
   assert not compare_topological_orders(ugraph, usubgraph), "ugraph and ugraph_tuple are not equal"
   assert is_connected(ugraph, "node_add0", "node_add1"), "node_add0 and node_add1 in ugraph should be connected"
   assert not is_connected(ugraph, "node_add0", "node_add2"), "node_add0 and node_add2 in ugraph shouldn't be connected"
+  assert subgraph_latch(ugraph, usubgraph), "subgraph_latch failed"
 
 def test_fusion_transformer(fusion_graph_tuple):
   (ugraph, usubgraph, ureplacement, uexpected) = fusion_graph_tuple
@@ -247,16 +302,16 @@ def test_fusion_transformer(fusion_graph_tuple):
   print_topo_order(ugraph)
   print("======usubgraph content")
   print_topo_order(usubgraph)
-  print("======ureplacement content")
-  print_topo_order(ureplacement)
-  print("==================")
-  print("==================")
+  # print("======ureplacement content")
+  # print_topo_order(ureplacement)
+  # print("==================")
+  # print("==================")
   assert subgraph_replace(ugraph, usubgraph, ureplacement), "pattern not found"
   assert compare_topological_orders(ugraph, uexpected), "ugraph does not equal to uexpected"
   print("==================")
   print("==================")
   print("======result content")
   print_topo_order(ugraph)
-  print("======uexpected content")
-  print_topo_order(uexpected)
-  assert False
+  # print("======uexpected content")
+  # print_topo_order(uexpected)
+  # assert False
