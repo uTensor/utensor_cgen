@@ -21,7 +21,7 @@ def cli():
   pass
   
 
-@cli.command(name='convert')
+@cli.command(name='convert', help='convert graph to cpp/hpp files')
 @click.help_option('-h', '--help')
 @click.argument('pb_file', required=True, metavar='MODEL.pb')
 @click.option('-o', '--output',
@@ -79,7 +79,7 @@ def convet_graph(pb_file, output, data_dir, embed_data_dir,
   generator.generate(model_path)
 
 
-@cli.command(name='show')
+@cli.command(name='show', help='show node names in the pb file')
 @click.help_option('-h', '--help')
 @click.argument('pb_file', required=True, metavar='MODEL.pb')
 def show_pb_file(pb_file):
