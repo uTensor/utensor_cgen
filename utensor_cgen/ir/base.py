@@ -28,7 +28,7 @@ __all__ = ['TensorInfo', 'OperationInfo', 'uTensorGraph']
 class _NoShallowCopyMixin(object):
 
   def __copy__(self):
-    raise NotImplementedError('shallow copy is not allowed for type %s' % type(self))
+    raise RuntimeError('shallow copy is not allowed for type %s' % type(self))
 
 
 class IRBase(object):
