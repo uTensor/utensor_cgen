@@ -181,7 +181,7 @@ def tensorInfo_from_name(graph, edge_name):
 
   return None
 
-def get_tensor_nodes(graph, t_name):
+def get_tensor_node_names(graph, t_name):
   start_nodes = list()
   end_nodes = list()
 
@@ -194,82 +194,6 @@ def get_tensor_nodes(graph, t_name):
         start_nodes.append(it_node)
 
   return [start_nodes, end_nodes]
-
-
-def subgraph_isomorph(graph, matcher_subgraph):
-  matched = subgraph_latch(graph, matcher_subgraph)
-  if(matched == None):
-    return False
-  [start_index, end_index] = matched
-  print("matched indexi: ", start_index, ", ", end_index)
-  [input_tensors, output_tensors] = subgraph_trace_exposed_edges(graph, start_index, end_index+1)
-  [dropin_input_tensors, dropin_output_tensors] = subgraph_trace_exposed_edges(dropin_subgraph)
-  assert (len(input_tensors) == len(dropin_input_tensors) and len(output_tensors) == len(dropin_output_tensors))
-
-  #check if internal edges are referenced externally
-  internal_edges = set(subgraph_trace_internal_edges(graph, start_index, end_index+1))
-  # print("index range: ", start_index, " ", end_index)
-  # print("internal edges", internal_edges)
-  for i, node in enumerate(graph.topo_order):
-    edge_list = get_input_tensors(graph, node)
-    edge_list += get_output_tensors(graph, node)
-    common_edge = set(edge_list).intersection(internal_edges)
-    if(len(common_edge) > 0 and not (i >= start_index and i <= end_index)):
-      assert False, "dangling edge detected %r" % common_edge
-    # [start_node, end_node] = get_tensor_nodes(graph, internal_edge)
-    # edge_nodes = start_node + end_node
-
-  #TODO:
-  graph_backup = deepcopy(graph)
-  for node in graph.topo_order[start_index:(end_index+1)]:
-    remove_node(graph, node)
-
-  graph.topo_order[start_index:start_index] = dropin_subgraph.topo_order
-  #graph.topo_order[start_index:start_index] = [dropin_subgraph.topo_order[0]] #single node support
-  #support fusing into a single node for now
-  #TODO:
-  #optimization pass: generate input/output attribute for each op
-  #optimization pass: implement topological signature
-  #ugraph class: holds metadata: applied passes, states
-  #pass manager/config
-
-  # input_tensor_infos = [tensorInfo_from_name(graph_backup, t_name) for t_name in input_tensors]
-  # output_tensor_infos = [tensorInfo_from_name(graph_backup, t_name) for t_name in output_tensors]
-  
-  for dropin_node_name in dropin_subgraph.topo_order:
-    new_op_type = dropin_subgraph.ops_info[dropin_node_name].op_type
-    ops_io_info = get_ops_io_info(new_op_type)
-    new_input_tensor_infos = list()
-    new_output_tensor_infos = list()
-
-    if ops_io_info[0] != None:
-      new_input_tensor_infos = dropin_subgraph.ops_info[dropin_node_name].input_tensors #direct copy from the drop-in graph
-      for i, tensor_info in enumerate(new_input_tensor_infos):
-        if tensor_info.name in dropin_input_tensors: #contains an exposed edge
-          drop_in_tensor_index = dropin_input_tensors.index(tensor_info.name) #exposed edge index matching with the subject graph
-          cooresponding_subject_graph_tensor_name = input_tensors[drop_in_tensor_index]
-          new_input_tensor_infos[i] = tensorInfo_from_name(graph_backup, cooresponding_subject_graph_tensor_name)
-
-
-    if ops_io_info[1] != None:
-      new_output_tensor_infos = dropin_subgraph.ops_info[dropin_node_name].output_tensors
-      for i, tensor_info in enumerate(new_output_tensor_infos):
-        if tensor_info.name in dropin_output_tensors:
-          drop_in_tensor_index = dropin_output_tensors.index(tensor_info.name)
-          cooresponding_subject_graph_tensor_name = output_tensors[drop_in_tensor_index]
-          new_output_tensor_infos[i] = tensorInfo_from_name(graph_backup, cooresponding_subject_graph_tensor_name)
-
-    new_op_info = OperationInfo(name=dropin_subgraph.ops_info[dropin_node_name].name,
-                            input_tensors=new_input_tensor_infos,
-                            output_tensors=new_output_tensor_infos,
-                            op_type=dropin_subgraph.ops_info[dropin_node_name].op_type,
-                            backend=dropin_subgraph.ops_info[dropin_node_name].backend,
-                            op_attr=deepcopy(dropin_subgraph.ops_info[dropin_node_name].op_attr))
-    graph.ops_info[new_op_info.name] = new_op_info
-
-    ##TODO: trigger topo rebuild here
-
-  return True
 
 #depth = 1 only checks the current node
 def node_forward_isomorph(subject_node_name, matcher_node_name, subject_graph, matcher_graph, depth=None):
@@ -286,7 +210,9 @@ def node_forward_isomorph(subject_node_name, matcher_node_name, subject_graph, m
     return False
 
   #check next level
+  ## the case when there's no next level or when depth is reached
   if len(get_output_nodes(matcher_graph, matcher_node_name)) <= 0 or depth <= 0:
+    #translate and return the nodes and edges
     matcher_node_output_tensors = get_output_tensors(matcher_graph, matcher_node_name)
     subject_node_output_tensors = get_output_tensors(subject_graph, subject_node_name)
     for i, matcher_node_output_tensor in enumerate(matcher_node_output_tensors):
@@ -296,20 +222,13 @@ def node_forward_isomorph(subject_node_name, matcher_node_name, subject_graph, m
 
   [_, output_groups] = get_ops_io_info(matcher_node.op_type)
 
-  matcher_output_nodes = set()
-  subject_output_nodes = set()
-  used_outputs = set()
+  matcher_output_node_names = set()
+  subject_output_node_names = set()
 
-#FIXME: TODO:
-#iterate with group numbers
-#matches must equal to number of group members
-
-#TODO: get how many groups there are
-# iterate through each group
-# max(list(range(1,3)))
+  #through the number of groups
   for group in list(range(0,max(output_groups)+1)):
-    num_tensor_in_group = output_groups.count(group)
 
+    #for the same group
     for output_index, group_id in enumerate(output_groups):
       if group_id != group:
         continue
@@ -317,30 +236,30 @@ def node_forward_isomorph(subject_node_name, matcher_node_name, subject_graph, m
       for output_inner_index, group_inner_id in enumerate(output_groups):
         if group_inner_id != group:
           continue
-        if not output_inner_index in used_outputs:
+        
+        matcher_tensor_name = matcher_node.output_tensors[output_inner_index].name
+        subject_tensor_name = subject_node.output_tensors[output_inner_index].name
+        
+        if not matcher_tensor_name in matcher_to_subject_edges:
           #adding all connected node of the same group to a set
-          matcher_tensor_name = matcher_node.output_tensors[output_inner_index].name
-          subject_tensor_name = subject_node.output_tensors[output_inner_index].name
+          [_, tmp] = get_tensor_node_names(matcher_graph, matcher_tensor_name) 
+          matcher_output_node_names.update(tmp)
 
-          [_, tmp] = get_tensor_nodes(matcher_graph, matcher_tensor_name) 
-          matcher_output_nodes.update(tmp)
-
-          [_, tmp] = get_tensor_nodes(subject_graph, subject_tensor_name) 
-          subject_output_nodes.update(tmp)
+          [_, tmp] = get_tensor_node_names(subject_graph, subject_tensor_name) 
+          subject_output_node_names.update(tmp)
       #all unevaluated outputs are added to the lists at the point
 
 
       #matching a output group
       result = False
-      for matcher_output_node in matcher_output_nodes:
-        for subject_output_node in subject_output_nodes:
-          result = node_forward_isomorph(subject_output_node.name, matcher_output_node.name, subject_graph, matcher_graph, depth-1)
+      for matcher_output_node in matcher_output_node_names:
+        for subject_output_node in subject_output_node_names:
+          result = node_forward_isomorph(subject_output_node, matcher_output_node, subject_graph, matcher_graph, depth-1)
           #early termination
           if result != False:
             #combining the lists
-            matcher_to_subject_nodes.update(result[0])
+            matcher_to_subject_nodes.update(result[0]) #updating a dicitionary
             matcher_to_subject_edges.update(result[1])
-            used_outputs.add(output_index)
             break
         if result != False:
           break
@@ -350,29 +269,26 @@ def node_forward_isomorph(subject_node_name, matcher_node_name, subject_graph, m
   #all group outputs matched
   return [matcher_to_subject_nodes, matcher_to_subject_edges]
 
+#   return [matcher_to_subject_nodes, matcher_to_subject_edges]
 
-    
-      
-
-def subgraph_isomorph(graph, matcher_subgraph):
+def isomorphic_match(subject_graph, matcher_graph):
   matcher_to_subject_nodes = dict()
   matcher_to_subject_edges = dict()
-
-  #pick a random node form the matcher graph
-  for matcher_node_name in matcher_subgraph.topo_order:
-    matcher_node = matcher_subgraph.ops_info[matcher_node_name]
-    #type matches with every node in graph
-    for subject_node_name in graph.topo_order:
-      subject_node = graph.ops_info[subject_node_name]
-      #skip if type mismatches
-      if subject_node.op_type != matcher_node.op_type:
-        continue
-
-
-
+  for matcher_node_name in matcher_graph.topo_order:
+    if not matcher_node_name in matcher_to_subject_nodes:
+      for subject_node_name in subject_graph.topo_order:
+        subject_node = subject_graph.ops_info[subject_node_name]
+        matcher_node = matcher_graph.ops_info[matcher_node_name]
+        if subject_node.op_type == matcher_node.op_type:
+          result = node_forward_isomorph(subject_node_name, matcher_node_name, subject_graph, matcher_graph)
+          if result != False:
+            matcher_to_subject_nodes.update(result[0]) #updating a dicitionary
+            matcher_to_subject_edges.update(result[1])
+  for matcher_node_name in matcher_graph.topo_order:
+    if not matcher_node_name in matcher_to_subject_nodes:
+      return False
+  
   return [matcher_to_subject_nodes, matcher_to_subject_edges]
-
-#def bfs_from_node(graph, node_name, depth=0):
 
 
 def subgraph_latch(graph, matcher_subgraph):
@@ -393,6 +309,7 @@ def subgraph_latch(graph, matcher_subgraph):
 
 def test_fusion_support_functions(fusion_graph_tuple):
   (ugraph, usubgraph, ureplacement, uexpected) = fusion_graph_tuple
+  assert True, "assert True"
   assert compare_topological_orders(ugraph, ugraph), "ugraph and ugraph should be equal"
   assert not compare_topological_orders(ugraph, usubgraph), "ugraph and ugraph_tuple are not equal"
   assert is_connected(ugraph, "node_add0", "node_add1"), "node_add0 and node_add1 in ugraph should be connected"
@@ -405,16 +322,6 @@ def test_fusion_transformer(fusion_graph_tuple):
   print_topo_order(ugraph)
   print("======usubgraph content")
   print_topo_order(usubgraph)
-  # print("======ureplacement content")
-  # print_topo_order(ureplacement)
-  # print("==================")
-  # print("==================")
-  assert subgraph_replace(ugraph, usubgraph, ureplacement), "pattern not found"
-  assert compare_topological_orders(ugraph, uexpected), "ugraph does not equal to uexpected"
-  print("==================")
-  print("==================")
-  print("======result content")
-  print_topo_order(ugraph)
-  # print("======uexpected content")
-  # print_topo_order(uexpected)
-  # assert False
+  import pdb; pdb.set_trace()
+  assert isomorphic_match(ugraph, usubgraph), "pattern not found"
+  #assert compare_topological_orders(ugraph, uexpected), "ugraph does not equal to uexpected"
