@@ -26,26 +26,26 @@ def fusion_graph_tuple():
   ugraph = uTensorGraph(graph.as_graph_def(), [node_add2.name])
   #graph_tuple = (graph, (input0, input1), (node_add2))
 #######
-  subgraph = tf.Graph()
-  with subgraph.as_default():
-    subgraph_input0 = tf.placeholder(dtype=tf.float32,
-                                   name='subgraph_input0')
-    subgraph_input1 = tf.placeholder(dtype=tf.float32,
-                                   name='subgraph_input1')
-    subgraph_node_add0 = tf.add(subgraph_input0, subgraph_input1, name="subgraph_node_add0")
-    subgraph_node_add1 = tf.add(subgraph_node_add0, subgraph_input1, name="subgraph_node_add1")
+  matcher_graph = tf.Graph()
+  with matcher_graph.as_default():
+    matcher_input0 = tf.placeholder(dtype=tf.float32,
+                                   name='matcher_input0')
+    matcher_input1 = tf.placeholder(dtype=tf.float32,
+                                   name='matcher_input1')
+    matcher_node_add0 = tf.add(matcher_input0, matcher_input1, name="matcher_node_add0")
+    matcher_node_add1 = tf.add(matcher_node_add0, matcher_input1, name="matcher_node_add1")
   
-  usubgraph = uTensorGraph(subgraph.as_graph_def(), [subgraph_node_add1.name])
+  umatchergraph = uTensorGraph(matcher_graph.as_graph_def(), [matcher_node_add1.name])
   #subgraph_tuple = (subgraph, (subgraph_input0, subgraph_input1), (subgraph_node_add1))
 #######
-  replacement_graph = tf.Graph()
-  with replacement_graph.as_default():
-    replacement_input0 = tf.placeholder(dtype=tf.float32,
-                                   name='replacement_input0')
-    replacement_input1 = tf.placeholder(dtype=tf.float32,
-                                   name='replacement_input1')
-    replacement_node_add0 = tf.add(replacement_input0, replacement_input1, name="replacement_node_add0")
-  ureplacement = uTensorGraph(replacement_graph.as_graph_def(), [replacement_node_add0.name])
+  dropin_graph = tf.Graph()
+  with dropin_graph.as_default():
+    dropin_input0 = tf.placeholder(dtype=tf.float32,
+                                   name='dropin_input0')
+    dropin_input1 = tf.placeholder(dtype=tf.float32,
+                                   name='dropin_input1')
+    dropin_node_add0 = tf.add(dropin_input0, dropin_input1, name="dropin_node_add0")
+  udropin = uTensorGraph(dropin_graph.as_graph_def(), [dropin_node_add0.name])
   #replacement_tuple = (replacement_graph, (replacement_input0, replacement_input1), (replacement_node_add0))
 #######
   expected_graph = tf.Graph()
@@ -61,4 +61,4 @@ def fusion_graph_tuple():
   uexpected = uTensorGraph(expected_graph.as_graph_def(), [expected_node_add1.name])
   #expected_tuple = (expected_graph, (expected_input0, expected_input1), (expected_node_add0))
 
-  return (ugraph, usubgraph, ureplacement, uexpected)
+  return (ugraph, umatchergraph, udropin, uexpected)
