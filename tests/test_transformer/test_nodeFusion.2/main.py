@@ -248,117 +248,58 @@ def get_tensor_node_names(graph, t_name):
 
   return [start_nodes, end_nodes]
 
-#depth = 1 only checks the current node
-def node_forward_isomorph(subject_node_name, matcher_node_name, subject_graph, matcher_graph, depth=None):
-  matcher_to_subject_nodes = dict()
-  matcher_to_subject_edges = dict()
-
-  if depth == None:
-    depth = len(matcher_graph.ops_info)-1
-
-  subject_node = subject_graph.ops_info[subject_node_name]
-  matcher_node = matcher_graph.ops_info[matcher_node_name]
-
-  if subject_node.op_type != matcher_node.op_type:
-    return False
-
-  #check next level
-  ## the case when there's no next level or when depth is reached
-  if len(get_output_nodes(matcher_graph, matcher_node_name)) <= 0 or depth <= 0:
-    #translate and return the nodes and edges
-    matcher_node_output_tensors = get_output_tensors(matcher_graph, matcher_node_name)
-    subject_node_output_tensors = get_output_tensors(subject_graph, subject_node_name)
-    for i, matcher_node_output_tensor in enumerate(matcher_node_output_tensors):
-      matcher_to_subject_edges[matcher_node_output_tensor] = subject_node_output_tensors[i]
-    matcher_to_subject_nodes[matcher_node_name] = subject_node_name
-    return [matcher_to_subject_nodes, matcher_to_subject_edges]
-
-  [_, output_groups] = get_ops_io_info(matcher_node.op_type)
-
-  matcher_output_node_names = set()
-  subject_output_node_names = set()
-
-  #through the number of groups
-  for group in list(range(0,max(output_groups)+1)):
-
-    #for the same group
-    for output_index, group_id in enumerate(output_groups):
-      if group_id != group:
-        continue
-      
-      for output_inner_index, group_inner_id in enumerate(output_groups):
-        if group_inner_id != group:
-          continue
-        
-        matcher_tensor_name = matcher_node.output_tensors[output_inner_index].name
-        subject_tensor_name = subject_node.output_tensors[output_inner_index].name
-        
-        if not matcher_tensor_name in matcher_to_subject_edges:
-          #adding all connected node of the same group to a set
-          [_, tmp] = get_tensor_node_names(matcher_graph, matcher_tensor_name) 
-          matcher_output_node_names.update(tmp)
-
-          [_, tmp] = get_tensor_node_names(subject_graph, subject_tensor_name) 
-          subject_output_node_names.update(tmp)
-      #all unevaluated outputs are added to the lists at the point
-
-
-      #matching a output group
-      result = False
-      for matcher_output_node in matcher_output_node_names:
-        for subject_output_node in subject_output_node_names:
-          result = node_forward_isomorph(subject_output_node, matcher_output_node, subject_graph, matcher_graph, depth-1)
-          #early termination
-          if result != False:
-            #combining the lists
-            matcher_to_subject_nodes.update(result[0]) #updating a dicitionary
-            matcher_to_subject_edges.update(result[1])
-            break
-        if result != False:
-          break
-      #if no viable combo is found
-      if result == False:
-        return False
-  #all group outputs matched
-  return [matcher_to_subject_nodes, matcher_to_subject_edges]
-
-#   return [matcher_to_subject_nodes, matcher_to_subject_edges]
 
 def isomorphic_match(subject_graph, matcher_graph):
   matcher_to_subject_nodes = dict()
   matcher_to_subject_edges = dict()
+  node_candidates = dict()
+
+  #type selection
   for matcher_node_name in matcher_graph.topo_order:
-    if not matcher_node_name in matcher_to_subject_nodes:
-      for subject_node_name in subject_graph.topo_order:
-        subject_node = subject_graph.ops_info[subject_node_name]
-        matcher_node = matcher_graph.ops_info[matcher_node_name]
-        if subject_node.op_type == matcher_node.op_type:
-          result = node_forward_isomorph(subject_node_name, matcher_node_name, subject_graph, matcher_graph)
-          if result != False:
-            matcher_to_subject_nodes.update(result[0]) #updating a dicitionary
-            matcher_to_subject_edges.update(result[1])
-  for matcher_node_name in matcher_graph.topo_order:
-    if not matcher_node_name in matcher_to_subject_nodes:
-      return False
+    node_candidates[matcher_node_name] = set()
+    matcher_node = matcher_graph.ops_info[matcher_node_name]
+    for subject_node_name in subject_graph.topo_order:
+      subject_node = subject_graph.ops_info[subject_node_name]
+      if subject_node.op_type == matcher_node.op_type:
+        node_candidates[matcher_node_name].add(subject_node.name)
+  
+  #level-1 back trace
+  for matcher_node_name, candidate_nodes in node_candidates:
+    input_node_names = get_input_nodes(matcher_graph, matcher_node_name)
+    input_node_type_list = [matcher_graph.ops_info[input_node_name].op_type for input_node_name in input_node_names]
+    matcher_node = matcher_graph.ops_info[matcher_node_name]
+    [input_groups, _] = get_ops_io_info(matcher_node.op_type)
+    for candidate_node in candidate_nodes:
+      candidate_input_node_names = get_input_nodes(subject_graph, candidate_node)
+      candidate_input_node_type_list = [subject_graph.ops_info[input_node_name].op_type for input_node_name in candidate_input_node_names]
+      for group in list(range(0,max(input_groups)+1)):
+        for input_id, group_id in enumerate(input_groups):
+          if group_id != group:
+            continue
+          for inner_input_id, inner_group_id in enumerate(input_groups):
+            if inner_group_id != group:
+              continue
+            if candidate_input_node_type_list[inner_input_id] == input_node_type_list[input_id]:
+              candidate_input_node_type_list[inner_input_id] = 0
+      for type_node in candidate_input_node_type_list:
+        if type_node != 0:
+          node_candidates[matcher_node_name].remove(candidate_nodes)
+
+  # for matcher_node_name in matcher_graph.topo_order:
+  #   if not matcher_node_name in matcher_to_subject_nodes:
+  #     for subject_node_name in subject_graph.topo_order:
+  #       subject_node = subject_graph.ops_info[subject_node_name]
+  #       matcher_node = matcher_graph.ops_info[matcher_node_name]
+  #       if subject_node.op_type == matcher_node.op_type:
+  #         result = node_forward_isomorph(subject_node_name, matcher_node_name, subject_graph, matcher_graph)
+  #         if result != False:
+  #           matcher_to_subject_nodes.update(result[0]) #updating a dicitionary
+  #           matcher_to_subject_edges.update(result[1])
+  # for matcher_node_name in matcher_graph.topo_order:
+  #   if not matcher_node_name in matcher_to_subject_nodes:
+  #     return False
   
   return [matcher_to_subject_nodes, matcher_to_subject_edges]
-
-
-def subgraph_latch(graph, matcher_subgraph):
-  topo = graph.topo_order
-  match_topo = matcher_subgraph.topo_order
-  matcher_seq_len = len(match_topo)
-
-  for i in range(0,len(topo) - matcher_seq_len):
-    search_topo = topo[i:(i+matcher_seq_len)]
-    for j, test_node in enumerate(search_topo):
-      matcher_node = match_topo[j]
-      if(graph.ops_info[test_node].op_type != matcher_subgraph.ops_info[matcher_node].op_type):
-        break
-      if(j >= matcher_seq_len-1): #matched
-        return [i, i + j]
-
-  return None
 
 def test_fusion_support_functions(fusion_graph_tuple):
   (ugraph, usubgraph, ureplacement, uexpected) = fusion_graph_tuple
@@ -367,7 +308,7 @@ def test_fusion_support_functions(fusion_graph_tuple):
   assert not compare_topological_orders(ugraph, usubgraph), "ugraph and ugraph_tuple are not equal"
   assert is_connected(ugraph, "node_add0", "node_add1"), "node_add0 and node_add1 in ugraph should be connected"
   assert not is_connected(ugraph, "node_add0", "node_add2"), "node_add0 and node_add2 in ugraph shouldn't be connected"
-  assert subgraph_latch(ugraph, usubgraph), "subgraph_latch failed"
+  # assert subgraph_latch(ugraph, usubgraph), "subgraph_latch failed"
 
 def test_fusion_transformer(fusion_graph_tuple):
   (ugraph, usubgraph, ureplacement, uexpected) = fusion_graph_tuple
