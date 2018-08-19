@@ -111,7 +111,7 @@ class OperationInfo(IRBase, _NoShallowCopyMixin):
   output_nodes = attr.ib(factory=list, init=False)
 
   def __attrs_post_init__(self):
-    skip_pattern = re.compile(r'_[^_]*')
+    skip_pattern = re.compile(r'_utensor_[^_]*')
     if self.op_attr:
       op_attr = {}
       for k, v in self.op_attr.items():

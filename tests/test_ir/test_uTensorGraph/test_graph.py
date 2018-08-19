@@ -36,12 +36,12 @@ def test_op_info():
                             op_type='no_op',
                             backend='tensorflow',
                             op_attr={
-                                '_to_skip': [1, 2, 3],
-                                '_skip_this_too': None,
+                                '_utensor_to_skip': [1, 2, 3],
+                                '_utensor_skip_this_too': None,
                                 'tensor_no_skip': t_proto
                             })
-    assert op_info.op_attr.get('_to_skip', None) == [1, 2, 3]
-    assert op_info.op_attr.get('_skip_this_too') is None
+    assert op_info.op_attr.get('_utensor_to_skip', None) == [1, 2, 3]
+    assert op_info.op_attr.get('_utensor_skip_this_too') is None
     generic_tensor = op_info.op_attr.get('tensor_no_skip')
     assert isinstance(generic_tensor,
                       TensorProtoConverter.__utensor_generic_type__)

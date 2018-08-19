@@ -17,7 +17,7 @@ __all__ = ["DropoutTransformer", "BatchNormTransformer", "InlineTransformer"]
 
 class InlineTransformer(Transformer):
   METHOD_NAME = 'inline'
-  KWARGS_NAMESCOPE = '_inline'
+  KWARGS_NAMESCOPE = '_utensor_inline'
   TARGET_NODENAME_PATTERN = re.compile(r'(const[_\w\d]*)/.*')
 
 
@@ -34,7 +34,7 @@ class DropoutTransformer(Transformer):
   """Remove Dropout Op
   """
   METHOD_NAME = 'dropout'
-  KWARGS_NAMESCOPE = '_dropout'
+  KWARGS_NAMESCOPE = '_utensor_dropout'
   TARGET_NODENAME_PATTERN = re.compile(r'(dropout[_\w\d]*)/.*')
 
   def transform(self, ugraph):
