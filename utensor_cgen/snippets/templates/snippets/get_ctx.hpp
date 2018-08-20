@@ -6,4 +6,4 @@ void get_{{graph_name}}_ctx(Context& ctx, {%for ph in placeholders%}Tensor* inpu
 {% else %}
 void get_{{graph_name}}_ctx(Context& ctx);
 {% endif %}
-#endif // _{_header_guard}}
+#endif // _{{header_guard}}
