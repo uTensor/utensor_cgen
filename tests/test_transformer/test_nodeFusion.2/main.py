@@ -234,6 +234,7 @@ def tensorInfo_from_name(graph, edge_name):
 
   return None
 
+#find the origin and destinations of a tensor
 def get_tensor_node_names(graph, t_name):
   start_nodes = list()
   end_nodes = list()
@@ -248,42 +249,136 @@ def get_tensor_node_names(graph, t_name):
 
   return [start_nodes, end_nodes]
 
+#recursive helper
+#returns False when mismatch
+#returns node-name-relation if a match exist
+def isomorphic_associativity_helper(subject_node_name, matcher_node_name, subject_graph, matcher_graph, depth=0):
+  #compare the current nodes
+  subject_node = subject_graph.ops_info[subject_node_name]
+  matcher_node = matcher_graph.ops_info[matcher_node_name]
+  
+  if subject_node.op_type != matcher_node.op_type:
+    return False
+
+  #create and concate the named-relations
+  matcher_to_subject_nodes = dict()
+  matcher_to_subject_edges = dict()
+  matcher_to_subject_nodes[matcher_node_name] = subject_node_name
+
+  matcher_node = matcher_graph.ops_info[matcher_node_name]
+  [input_groups, _] = get_ops_io_info(matcher_node.op_type)
+  #dealing with end of terminations
+  if depth <= 0 or len(matcher_node.output_tensors) == 0 or input_groups == None:
+    return [matcher_to_subject_nodes, matcher_to_subject_edges]
+
+  used_input_id = set()
+
+  for group in list(range(0,max(input_groups)+1)):
+    #this loop refer to the matcher
+    for input_id, group_id in enumerate(input_groups):
+      if group_id != group:
+        continue
+      #currently iterating over the same group
+
+      #sweeping all inputs with the current group_id
+      #mark used when successful
+      for sweeping_input_id, sweeping_group_id in enumerate(input_groups):
+        if sweeping_group_id != group_id or sweeping_input_id in used_input_id:
+          continue
+        #sweep the subject input nodes
+        sweeping_subject_input_tensor_names = get_input_tensors(subject_graph, subject_node_name)
+        sweeping_subject_input_tensor_name = sweeping_subject_input_tensor_names[sweeping_input_id]
+        [sweeping_subject_input_node_name, _] = get_tensor_node_names(subject_graph, sweeping_subject_input_tensor_name)
+
+        matcher_input_tensor_names = get_input_tensors(matcher_graph, matcher_node_name)
+        matcher_input_tensor_name = matcher_input_tensor_names[input_id]
+        [matcher_input_node_name, _] = get_tensor_node_names(matcher_graph, matcher_input_tensor_name)
+
+        # if subject_node.name == "node_add0" and matcher_node.name == "subgraph_node_add0":
+        #   import pdb; pdb.set_trace()
+        #   print("===================")
+
+        probe = isomorphic_associativity_helper(sweeping_subject_input_node_name[0], matcher_input_node_name[0], subject_graph, matcher_graph, depth-1)
+        if probe == False:
+          continue
+        #a match is found here:
+        used_input_id.add(sweeping_input_id)
+        matcher_to_subject_nodes.update(probe[0])
+        matcher_to_subject_edges[matcher_input_tensor_name] = sweeping_subject_input_tensor_name
+        matcher_to_subject_edges.update(probe[1])
+  print("subject node: ", subject_node.name)
+  print("matcher node: ", matcher_node.name)
+  print("used_input_id vs input group: ", used_input_id, input_groups)
+  # import pdb; pdb.set_trace()
+
+  if len(used_input_id) == len(input_groups):
+    return [matcher_to_subject_nodes, matcher_to_subject_edges]
+  
+  return False
 
 def isomorphic_match(subject_graph, matcher_graph):
   matcher_to_subject_nodes = dict()
   matcher_to_subject_edges = dict()
-  node_candidates = dict()
+  matcher_output_node_names = set()
 
-  #type selection
-  for matcher_node_name in matcher_graph.topo_order:
-    node_candidates[matcher_node_name] = set()
-    matcher_node = matcher_graph.ops_info[matcher_node_name]
-    for subject_node_name in subject_graph.topo_order:
-      subject_node = subject_graph.ops_info[subject_node_name]
-      if subject_node.op_type == matcher_node.op_type:
-        node_candidates[matcher_node_name].add(subject_node.name)
+  #identify matcher output nodes
+  [_, matcher_output_edges] = subgraph_trace_exposed_edges(matcher_graph)
   
-  #level-1 back trace
-  for matcher_node_name, candidate_nodes in node_candidates:
-    input_node_names = get_input_nodes(matcher_graph, matcher_node_name)
-    input_node_type_list = [matcher_graph.ops_info[input_node_name].op_type for input_node_name in input_node_names]
-    matcher_node = matcher_graph.ops_info[matcher_node_name]
-    [input_groups, _] = get_ops_io_info(matcher_node.op_type)
-    for candidate_node in candidate_nodes:
-      candidate_input_node_names = get_input_nodes(subject_graph, candidate_node)
-      candidate_input_node_type_list = [subject_graph.ops_info[input_node_name].op_type for input_node_name in candidate_input_node_names]
-      for group in list(range(0,max(input_groups)+1)):
-        for input_id, group_id in enumerate(input_groups):
-          if group_id != group:
-            continue
-          for inner_input_id, inner_group_id in enumerate(input_groups):
-            if inner_group_id != group:
-              continue
-            if candidate_input_node_type_list[inner_input_id] == input_node_type_list[input_id]:
-              candidate_input_node_type_list[inner_input_id] = 0
-      for type_node in candidate_input_node_type_list:
-        if type_node != 0:
-          node_candidates[matcher_node_name].remove(candidate_nodes)
+  for matcher_output_edge in matcher_output_edges: 
+    [tensor_origin, _] = get_tensor_node_names(matcher_graph, matcher_output_edge)
+    matcher_output_node_names.add(tensor_origin[0])
+  max_search_depth = len(matcher_graph.topo_order)
+  partial_matcher_to_subject_nodes = None
+  partial_matcher_to_subject_edges = None
+  #support only signle matcher output node for now
+  for subject_node_name in subject_graph.topo_order:
+    probe = isomorphic_associativity_helper(subject_node_name, next(iter(matcher_output_node_names)), subject_graph, matcher_graph, max_search_depth)
+    if probe == False:
+      continue
+    [partial_matcher_to_subject_nodes, partial_matcher_to_subject_edges] = probe
+
+  if partial_matcher_to_subject_nodes == None and partial_matcher_to_subject_edges == None:
+    return False
+
+  matcher_to_subject_nodes.update(partial_matcher_to_subject_nodes)
+  matcher_to_subject_edges.update(partial_matcher_to_subject_edges)
+
+  return [matcher_to_subject_nodes, matcher_to_subject_edges]
+
+  # #TODO:
+  # #implement a recursive graph traversal matcher function here
+  # #backward searcher
+  # #trash the below
+
+  # for matcher_node_name in matcher_graph.topo_order:
+  #   node_candidates[matcher_node_name] = set()
+  #   matcher_node = matcher_graph.ops_info[matcher_node_name]
+  #   for subject_node_name in subject_graph.topo_order:
+  #     subject_node = subject_graph.ops_info[subject_node_name]
+  #     if subject_node.op_type == matcher_node.op_type:
+  #       node_candidates[matcher_node_name].add(subject_node.name)
+  
+  # #level-1 back trace
+  # for matcher_node_name, candidate_nodes in node_candidates:
+  #   input_node_names = get_input_nodes(matcher_graph, matcher_node_name)
+  #   input_node_type_list = [matcher_graph.ops_info[input_node_name].op_type for input_node_name in input_node_names]
+  #   matcher_node = matcher_graph.ops_info[matcher_node_name]
+  #   [input_groups, _] = get_ops_io_info(matcher_node.op_type)
+  #   for candidate_node in candidate_nodes:
+  #     candidate_input_node_names = get_input_nodes(subject_graph, candidate_node)
+  #     candidate_input_node_type_list = [subject_graph.ops_info[input_node_name].op_type for input_node_name in candidate_input_node_names]
+  #     for group in list(range(0,max(input_groups)+1)):
+  #       for input_id, group_id in enumerate(input_groups):
+  #         if group_id != group:
+  #           continue
+  #         for inner_input_id, inner_group_id in enumerate(input_groups):
+  #           if inner_group_id != group:
+  #             continue
+  #           if candidate_input_node_type_list[inner_input_id] == input_node_type_list[input_id]:
+  #             candidate_input_node_type_list[inner_input_id] = 0
+  #     for type_node in candidate_input_node_type_list:
+  #       if type_node != 0:
+  #         node_candidates[matcher_node_name].remove(candidate_nodes)
 
   # for matcher_node_name in matcher_graph.topo_order:
   #   if not matcher_node_name in matcher_to_subject_nodes:
@@ -298,8 +393,6 @@ def isomorphic_match(subject_graph, matcher_graph):
   # for matcher_node_name in matcher_graph.topo_order:
   #   if not matcher_node_name in matcher_to_subject_nodes:
   #     return False
-  
-  return [matcher_to_subject_nodes, matcher_to_subject_edges]
 
 def test_fusion_support_functions(fusion_graph_tuple):
   (ugraph, usubgraph, ureplacement, uexpected) = fusion_graph_tuple
@@ -316,8 +409,10 @@ def test_fusion_transformer(fusion_graph_tuple):
   print_topo_order(ugraph)
   print("======usubgraph content")
   print_topo_order(usubgraph)
-  import pdb; pdb.set_trace()
-  assert isomorphic_match(ugraph, usubgraph), "pattern not found"
+  result = isomorphic_match(ugraph, usubgraph)
+  assert result, "pattern not found"
+  print("=====================")
+  print(result)
   #assert compare_topological_orders(ugraph, uexpected), "ugraph does not equal to uexpected"
 
 def main():
