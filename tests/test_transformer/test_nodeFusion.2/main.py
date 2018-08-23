@@ -107,11 +107,11 @@ def compare_topological_orders(graph0, graph1):
       return False
   return True
 
-def get_input_nodes(graph, node):
-  tensors_in = set([t.name for t in graph.ops_info[node].input_tensors])
+def get_input_nodes(graph, node_name):
+  tensors_in = set([t.name for t in graph.ops_info[node_name].input_tensors])
   node_list = set()
   for it_node in graph.topo_order:
-    if(it_node == node):
+    if(it_node == node_name):
       continue
     it_tensors_out = [t.name for t in graph.ops_info[it_node].output_tensors]
     if not tensors_in.isdisjoint(it_tensors_out):
@@ -119,11 +119,11 @@ def get_input_nodes(graph, node):
 
   return node_list
 
-def get_output_nodes(graph, node):
-  tensors_out = set([t.name for t in graph.ops_info[node].output_tensors])
+def get_output_nodes(graph, node_name):
+  tensors_out = set([t.name for t in graph.ops_info[node_name].output_tensors])
   node_list = set()
   for it_node in graph.topo_order:
-    if(it_node == node):
+    if(it_node == node_name):
       continue
     it_tensors_in = [t.name for t in graph.ops_info[it_node].input_tensors]
     if not tensors_out.isdisjoint(it_tensors_in):
@@ -249,6 +249,39 @@ def get_tensor_node_names(graph, t_name):
 
   return [start_nodes, end_nodes]
 
+#named sequence
+def forward_path_tracer(graph, start_node_name, end_node_name, depth=-1):
+  # start_node = graph.ops_info[start_node_name]
+  # end_node = graph.ops_info[end_node_name]
+  output_node_names = set()
+  path_list = list()
+
+  if start_node_name == end_node_name:
+    tmp = list()
+    tmp.append(start_node_name)
+    path_list.append(tmp)
+    return path_list
+  
+  if depth == -1:
+    depth = len(graph.topo_order) - 1
+
+  output_node_names = get_output_nodes(graph, start_node_name)
+  if len(output_node_names) == 0 or depth <= 0:
+    return None
+  
+  for output_node_name in output_node_names:
+    forward_path_list = forward_path_tracer(graph, output_node_name, end_node_name, depth-1)
+    if forward_path_list == None:
+      continue
+    for forward_path in forward_path_list:
+      forward_path.insert(0, start_node_name) #list
+      path_list.append(forward_path) #list of list
+
+  if len(path_list) == 0:
+    return None
+
+  return path_list
+
 #recursive helper
 #returns False when mismatch
 #returns node-name-relation if a match exist
@@ -345,55 +378,6 @@ def isomorphic_match(subject_graph, matcher_graph):
 
   return [matcher_to_subject_nodes, matcher_to_subject_edges]
 
-  # #TODO:
-  # #implement a recursive graph traversal matcher function here
-  # #backward searcher
-  # #trash the below
-
-  # for matcher_node_name in matcher_graph.topo_order:
-  #   node_candidates[matcher_node_name] = set()
-  #   matcher_node = matcher_graph.ops_info[matcher_node_name]
-  #   for subject_node_name in subject_graph.topo_order:
-  #     subject_node = subject_graph.ops_info[subject_node_name]
-  #     if subject_node.op_type == matcher_node.op_type:
-  #       node_candidates[matcher_node_name].add(subject_node.name)
-  
-  # #level-1 back trace
-  # for matcher_node_name, candidate_nodes in node_candidates:
-  #   input_node_names = get_input_nodes(matcher_graph, matcher_node_name)
-  #   input_node_type_list = [matcher_graph.ops_info[input_node_name].op_type for input_node_name in input_node_names]
-  #   matcher_node = matcher_graph.ops_info[matcher_node_name]
-  #   [input_groups, _] = get_ops_io_info(matcher_node.op_type)
-  #   for candidate_node in candidate_nodes:
-  #     candidate_input_node_names = get_input_nodes(subject_graph, candidate_node)
-  #     candidate_input_node_type_list = [subject_graph.ops_info[input_node_name].op_type for input_node_name in candidate_input_node_names]
-  #     for group in list(range(0,max(input_groups)+1)):
-  #       for input_id, group_id in enumerate(input_groups):
-  #         if group_id != group:
-  #           continue
-  #         for inner_input_id, inner_group_id in enumerate(input_groups):
-  #           if inner_group_id != group:
-  #             continue
-  #           if candidate_input_node_type_list[inner_input_id] == input_node_type_list[input_id]:
-  #             candidate_input_node_type_list[inner_input_id] = 0
-  #     for type_node in candidate_input_node_type_list:
-  #       if type_node != 0:
-  #         node_candidates[matcher_node_name].remove(candidate_nodes)
-
-  # for matcher_node_name in matcher_graph.topo_order:
-  #   if not matcher_node_name in matcher_to_subject_nodes:
-  #     for subject_node_name in subject_graph.topo_order:
-  #       subject_node = subject_graph.ops_info[subject_node_name]
-  #       matcher_node = matcher_graph.ops_info[matcher_node_name]
-  #       if subject_node.op_type == matcher_node.op_type:
-  #         result = node_forward_isomorph(subject_node_name, matcher_node_name, subject_graph, matcher_graph)
-  #         if result != False:
-  #           matcher_to_subject_nodes.update(result[0]) #updating a dicitionary
-  #           matcher_to_subject_edges.update(result[1])
-  # for matcher_node_name in matcher_graph.topo_order:
-  #   if not matcher_node_name in matcher_to_subject_nodes:
-  #     return False
-
 def test_fusion_support_functions(fusion_graph_tuple):
   (ugraph, usubgraph, ureplacement, uexpected) = fusion_graph_tuple
   assert True, "assert True"
@@ -414,6 +398,7 @@ def test_fusion_transformer(fusion_graph_tuple):
   print("=====================")
   print(result)
   #assert compare_topological_orders(ugraph, uexpected), "ugraph does not equal to uexpected"
+  import pdb; pdb.set_trace()
 
 def main():
   test_param = fusion_graph_tuple()
