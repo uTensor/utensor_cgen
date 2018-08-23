@@ -282,10 +282,47 @@ def forward_path_tracer(graph, start_node_name, end_node_name, depth=-1):
 
   return path_list
 
+#TODO: FIXME:
+#this function only has heurstic comparator
+def compare_paths(path_group0, path_group1, graph0, graph1):
+  path_potential_matches = dict() #path0 to path1
+  #pass alternator
+  if len(path_group0) != len(path_group1):
+    return False
+
+  for i0, path0 in enumerate(path_group0):
+    for i1, path1 in enumerate(path_group1):
+      #length comparison
+      if len(path0) != len(path1):
+        continue
+
+      type_compare_success = True
+      #type comparison
+      for node0_name, node1_name in zip(path0, path1):
+        node0 = graph0.ops_info[node0_name]
+        node1 = graph1.ops_info[node1_name]
+
+        if node0.op_type != node1.op_type:
+          type_compare_success = False
+          break
+      if type_compare_success:
+        if not i0 in path_potential_matches:
+          path_potential_matches[i0] = list()
+        path_potential_matches[i0].append(i1)
+
+  #TODO: add more checks here
+  if len(path_potential_matches) != len(path_group0):
+    return False
+
+  for i in path_potential_matches:
+    if len(path_potential_matches[i]) < 1:
+      return False
+  return True
+
 #recursive helper
 #returns False when mismatch
 #returns node-name-relation if a match exist
-def isomorphic_associativity_helper(subject_node_name, matcher_node_name, subject_graph, matcher_graph, depth=0):
+def isomorphic_associativity_helper(subject_node_name, matcher_node_name, subject_graph, matcher_graph, depth=0, subject_trace=None, matcher_trace=None):
   #compare the current nodes
   subject_node = subject_graph.ops_info[subject_node_name]
   matcher_node = matcher_graph.ops_info[matcher_node_name]
@@ -302,6 +339,18 @@ def isomorphic_associativity_helper(subject_node_name, matcher_node_name, subjec
   [input_groups, _] = get_ops_io_info(matcher_node.op_type)
   #dealing with end of terminations
   if depth <= 0 or len(matcher_node.output_tensors) == 0 or input_groups == None:
+    if subject_trace != None and matcher_trace != None:
+      subject_start_node_name = subject_trace[0]
+      subject_path_group = forward_path_tracer(subject_graph, subject_node_name, subject_start_node_name, len(matcher_graph.topo_order)-1)
+
+      matcher_start_node_name = matcher_trace[0]
+      matcher_path_group = forward_path_tracer(matcher_graph, matcher_node_name, matcher_start_node_name, len(matcher_graph.topo_order)-1)
+
+      #import pdb; pdb.set_trace()
+
+      if not compare_paths(subject_path_group, matcher_path_group, subject_graph, matcher_graph):
+        return False
+
     return [matcher_to_subject_nodes, matcher_to_subject_edges]
 
   used_input_id = set()
@@ -331,7 +380,15 @@ def isomorphic_associativity_helper(subject_node_name, matcher_node_name, subjec
         #   import pdb; pdb.set_trace()
         #   print("===================")
 
-        probe = isomorphic_associativity_helper(sweeping_subject_input_node_name[0], matcher_input_node_name[0], subject_graph, matcher_graph, depth-1)
+        if subject_trace == None:
+          subject_trace = list()
+        if matcher_trace == None:
+          matcher_trace = list()
+
+        subject_trace.append(subject_node_name)
+        matcher_trace.append(matcher_node_name)
+
+        probe = isomorphic_associativity_helper(sweeping_subject_input_node_name[0], matcher_input_node_name[0], subject_graph, matcher_graph, depth-1, subject_trace, matcher_trace)
         if probe == False:
           continue
         #a match is found here:
@@ -398,7 +455,6 @@ def test_fusion_transformer(fusion_graph_tuple):
   print("=====================")
   print(result)
   #assert compare_topological_orders(ugraph, uexpected), "ugraph does not equal to uexpected"
-  import pdb; pdb.set_trace()
 
 def main():
   test_param = fusion_graph_tuple()
