@@ -415,6 +415,19 @@ class QuantizedReshapeOpSnippet(Snippet):
     self.template_vars["outputs"] = outputs
     self.template_vars["to_eval"] = to_eval
 
+class CMSISNNFCOpSnippet(Snippet):
+  __template_name__ = "snippets/cmsis_nn_fc_op.cpp"
+  __headers__ = set(['"uTensor/ops/cmsis_ops/FullyConnectedOps.hpp"'])
+
+  def __init__(self, inputs, output,
+               ref_counts=None,
+               to_eval=False):
+    Snippet.__init__(self)
+    if ref_counts:
+      self.template_vars["ref_counts"] = ref_counts
+    self.template_vars["inputs"] = inputs
+    self.template_vars["output"] = output
+    self.template_vars["to_eval"] = to_eval
 
 class Conv2DOpSnippent(Snippet):
   __template_name__ = "snippets/conv2d_op.cpp"
