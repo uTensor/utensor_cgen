@@ -233,6 +233,19 @@ class _QuantizedReshapeOperator(_Operator):
                                               ref_counts=ref_counts,
                                               to_eval=to_eval)
 
+class _CMSIS_NN_FCOperator(_Operator):
+  def __init__(self, op_info, **kwargs):
+    _Operator.__init__(self)
+    inputs = [tensor_info.name for tensor_info in op_info.input_tensors]
+    output = op_info.output_tensors[0].name
+    parser = NamescopedKWArgsParser(RefCntOptimizer.KWARGS_NAMESCOPE,
+                                    op_info.op_attr)
+    ref_counts = parser.get('ref_counts', [])
+    to_eval = parser.get('to_eval', False)
+    self._snippet = CMSISNNFCOpSnippet(inputs=inputs,
+                                              output=output,
+                                              ref_counts=ref_counts,
+                                              to_eval=to_eval)
 
 class _Conv2DOperator(_Operator):
   def __init__(self, op_info, **kwargs):
@@ -341,7 +354,8 @@ class OperatorFactory():
                 "QuantizedReshape": _QuantizedReshapeOperator,
                 "QuantizedConv2D": _Conv2DOperator,
                 "Const": _ConstOperator,
-                "Inline": _InlineOperator}
+                "Inline": _InlineOperator,
+                "CMSIS_NN_FC": _CMSIS_NN_FCOperator}
 
   def createOperatorSnippet(self, op_info, **kwargs):
     op_type = op_info.op_type
