@@ -18,6 +18,29 @@ from .base import Transformer
 
 __all__ = ["CMSIS_NN_Transformer"]
 
+class uTensorNodeMeta(object):
+  input_str = None
+  node_name = None
+  node_type = None
+  node_attrib = None
+
+  def __init__(self, str):
+    tfNameMatcher = re.match( r'(.*)__uTensor__(.*[0-9]*)', str)
+    self.node_attrib = None
+    self.input_str = str
+
+    if tfNameMatcher == None:
+      cmd = "None"
+      self.node_name = str
+      return
+
+    self.node_name = tfNameMatcher.group(1)
+
+    if tfNameMatcher.group(2) == "End":
+      cmd = "End"
+    elif tfNameMatcher.group(2) == "Any":
+      cmd = "Any"
+
 def get_ops_io_info(op_type):
 #please refer to OperatorFactory() in operators.py
   ops_io_table = dict()
@@ -243,7 +266,11 @@ def isomorphic_associativity_helper(subject_node_name, matcher_node_name, subjec
   subject_node = subject_graph.ops_info[subject_node_name]
   matcher_node = matcher_graph.ops_info[matcher_node_name]
   
-  if subject_node.op_type != matcher_node.op_type:
+  node_meta_data = uTensorNodeMeta(matcher_node_name)
+  #print(matcher_node_name)
+  #import pdb; pdb.set_trace()
+  
+  if subject_node.op_type != matcher_node.op_type and node_meta_data.node_type != "Any":
     return False
 
   #create and concate the named-relations
@@ -254,7 +281,8 @@ def isomorphic_associativity_helper(subject_node_name, matcher_node_name, subjec
   matcher_node = matcher_graph.ops_info[matcher_node_name]
   [input_groups, _] = get_ops_io_info(matcher_node.op_type)
   #dealing with end of terminations
-  if depth <= 0 or len(matcher_node.output_tensors) == 0 or input_groups == None:
+
+  if depth <= 0 or len(matcher_node.output_tensors) == 0 or input_groups == None or node_meta_data.node_type == "End":
     if subject_trace != None and matcher_trace != None:
       subject_start_node_name = subject_trace[0]
       subject_path_group = forward_path_tracer(subject_graph, subject_node_name, subject_start_node_name, len(matcher_graph.topo_order)-1)
@@ -334,6 +362,8 @@ def isomorphic_match(subject_graph, matcher_graph):
   partial_matcher_to_subject_edges = None
   #support only signle matcher output node for now
   for subject_node_name in subject_graph.topo_order:
+    if subject_node_name == "zscore":
+      import pdb; pdb.set_trace()
     probe = isomorphic_associativity_helper(subject_node_name, next(iter(matcher_output_node_names)), subject_graph, matcher_graph, max_search_depth)
     if probe == False:
       continue
@@ -355,7 +385,8 @@ class CMSIS_NN_Transformer(Transformer):
     graph = tf.Graph()
     with graph.as_default():
     
-      x = tf.placeholder(dtype=tf.float32, name='input')
+      x = tf.placeholder(dtype=tf.float32, name='input__uTensor__Any')
+      #FIXME: type error, placeholder -> const
       W_fc1 = tf.placeholder(dtype=tf.float32, name='weight')
       b_fc1 = tf.placeholder(dtype=tf.float32, name='bias')
       a_fc1 = tf.add(tf.matmul(x, W_fc1), b_fc1, name="zscore")
