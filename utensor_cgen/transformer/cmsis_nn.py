@@ -18,6 +18,29 @@ from .base import Transformer
 
 __all__ = ["CMSIS_NN_Transformer"]
 
+class uTensorNodeMeta(object):
+  input_str = None
+  node_name = None
+  node_type = None
+  node_attrib = None
+
+  def __init__(self, str):
+    tfNameMatcher = re.match( r'(.*)__uTensor__(.*[0-9]*)', str)
+    self.node_attrib = None
+    self.input_str = str
+
+    if tfNameMatcher == None:
+      cmd = "None"
+      self.node_name = str
+      return
+
+    self.node_name = tfNameMatcher.group(1)
+
+    if tfNameMatcher.group(2) == "End":
+      cmd = "End"
+    elif tfNameMatcher.group(2) == "Any":
+      cmd = "Any"
+
 def get_ops_io_info(op_type):
 #please refer to OperatorFactory() in operators.py
   ops_io_table = dict()
