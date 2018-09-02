@@ -18,29 +18,6 @@ from .base import Transformer
 
 __all__ = ["CMSIS_NN_Transformer"]
 
-class uTensorNodeMeta(object):
-  input_str = None
-  node_name = None
-  node_type = None
-  node_attrib = None
-
-  def __init__(self, str):
-    tfNameMatcher = re.match( r'(.*)__uTensor__(.*[0-9]*)', str)
-    self.node_attrib = None
-    self.input_str = str
-
-    if tfNameMatcher == None:
-      cmd = "None"
-      self.node_name = str
-      return
-
-    self.node_name = tfNameMatcher.group(1)
-
-    if tfNameMatcher.group(2) == "End":
-      cmd = "End"
-    elif tfNameMatcher.group(2) == "Any":
-      cmd = "Any"
-
 def get_ops_io_info(op_type):
 #please refer to OperatorFactory() in operators.py
   ops_io_table = dict()
@@ -52,6 +29,7 @@ def get_ops_io_info(op_type):
   ops_io_table["Min"] =                 [[0, 1], [0]]
   ops_io_table["QuantizeV2"] =          [[0, 1, 2], [0, 1, 2]]
   ops_io_table["QuantizedMatMul"] =     [[0, 1, 2, 3, 4, 5], [0, 1, 2]]
+  ops_io_table["MatMul"] =              [[0, 1], [0]]
   ops_io_table["QuantizedRelu"] =       [[0, 1, 2], [0, 1, 2]]
   ops_io_table["QuantizedAdd"] =        [[0, 0, 1, 2, 4, 5], [0, 1, 2]]
   ops_io_table["RequantizationRange"] = [[0, 1, 2], [0, 1]]
@@ -221,9 +199,17 @@ def forward_path_tracer(graph, start_node_name, end_node_name, depth=-1):
 
   return path_list
 
+
+def get_node_meta(node_name, meta):
+  if meta == None:
+    return "None"
+  if not node_name in meta:
+    return "None"
+  return meta[node_name]
+
 #TODO: FIXME:
 #this function only has heurstic comparator
-def compare_paths(path_group0, path_group1, graph0, graph1):
+def compare_paths(path_group0, path_group1, graph0, graph1, meta0=None, meta1=None):
   path_potential_matches = dict() #path0 to path1
   #pass alternator
   if len(path_group0) != len(path_group1):
@@ -241,7 +227,7 @@ def compare_paths(path_group0, path_group1, graph0, graph1):
         node0 = graph0.ops_info[node0_name]
         node1 = graph1.ops_info[node1_name]
 
-        if node0.op_type != node1.op_type:
+        if node0.op_type != node1.op_type and (get_node_meta(node0_name, meta0) != "Any" and get_node_meta(node1_name, meta1) != "Any"):
           type_compare_success = False
           break
       if type_compare_success:
@@ -261,16 +247,15 @@ def compare_paths(path_group0, path_group1, graph0, graph1):
 #recursive helper
 #returns False when mismatch
 #returns node-name-relation if a match exist
-def isomorphic_associativity_helper(subject_node_name, matcher_node_name, subject_graph, matcher_graph, depth=0, subject_trace=None, matcher_trace=None):
+def isomorphic_associativity_helper(subject_node_name, matcher_node_name, subject_graph, matcher_graph, matcher_meta=None, depth=0, subject_trace=None, matcher_trace=None):
   #compare the current nodes
   subject_node = subject_graph.ops_info[subject_node_name]
   matcher_node = matcher_graph.ops_info[matcher_node_name]
   
-  node_meta_data = uTensorNodeMeta(matcher_node_name)
   #print(matcher_node_name)
   #import pdb; pdb.set_trace()
   
-  if subject_node.op_type != matcher_node.op_type and node_meta_data.node_type != "Any":
+  if subject_node.op_type != matcher_node.op_type and get_node_meta(matcher_node_name, matcher_meta) != "Any":
     return False
 
   #create and concate the named-relations
@@ -282,7 +267,7 @@ def isomorphic_associativity_helper(subject_node_name, matcher_node_name, subjec
   [input_groups, _] = get_ops_io_info(matcher_node.op_type)
   #dealing with end of terminations
 
-  if depth <= 0 or len(matcher_node.output_tensors) == 0 or input_groups == None or node_meta_data.node_type == "End":
+  if depth <= 0 or len(matcher_node.output_tensors) == 0 or input_groups == None or get_node_meta(matcher_node_name, matcher_meta) == "End":
     if subject_trace != None and matcher_trace != None:
       subject_start_node_name = subject_trace[0]
       subject_path_group = forward_path_tracer(subject_graph, subject_node_name, subject_start_node_name, len(matcher_graph.topo_order)-1)
@@ -290,9 +275,7 @@ def isomorphic_associativity_helper(subject_node_name, matcher_node_name, subjec
       matcher_start_node_name = matcher_trace[0]
       matcher_path_group = forward_path_tracer(matcher_graph, matcher_node_name, matcher_start_node_name, len(matcher_graph.topo_order)-1)
 
-      #import pdb; pdb.set_trace()
-
-      if not compare_paths(subject_path_group, matcher_path_group, subject_graph, matcher_graph):
+      if not compare_paths(subject_path_group, matcher_path_group, subject_graph, matcher_graph, None, matcher_meta):
         return False
 
     return [matcher_to_subject_nodes, matcher_to_subject_edges]
@@ -328,7 +311,7 @@ def isomorphic_associativity_helper(subject_node_name, matcher_node_name, subjec
         subject_trace.append(subject_node_name)
         matcher_trace.append(matcher_node_name)
 
-        probe = isomorphic_associativity_helper(sweeping_subject_input_node_name[0], matcher_input_node_name[0], subject_graph, matcher_graph, depth-1, subject_trace, matcher_trace)
+        probe = isomorphic_associativity_helper(sweeping_subject_input_node_name[0], matcher_input_node_name[0], subject_graph, matcher_graph, matcher_meta, depth-1, subject_trace, matcher_trace)
         if probe == False:
           continue
         #a match is found here:
@@ -346,7 +329,7 @@ def isomorphic_associativity_helper(subject_node_name, matcher_node_name, subjec
   
   return False
 
-def isomorphic_match(subject_graph, matcher_graph):
+def isomorphic_match(subject_graph, matcher_graph, meta):
   matcher_to_subject_nodes = dict()
   matcher_to_subject_edges = dict()
   matcher_output_node_names = set()
@@ -362,9 +345,9 @@ def isomorphic_match(subject_graph, matcher_graph):
   partial_matcher_to_subject_edges = None
   #support only signle matcher output node for now
   for subject_node_name in subject_graph.topo_order:
-    if subject_node_name == "zscore":
-      import pdb; pdb.set_trace()
-    probe = isomorphic_associativity_helper(subject_node_name, next(iter(matcher_output_node_names)), subject_graph, matcher_graph, max_search_depth)
+    #if subject_node_name == "zscore":
+      #import pdb; pdb.set_trace()
+    probe = isomorphic_associativity_helper(subject_node_name, next(iter(matcher_output_node_names)), subject_graph, matcher_graph, meta, max_search_depth)
     if probe == False:
       continue
     [partial_matcher_to_subject_nodes, partial_matcher_to_subject_edges] = probe
@@ -381,21 +364,27 @@ class CMSIS_NN_Transformer(Transformer):
   METHOD_NAME = 'cmsisnn'
   KWARGS_NAMESCOPE = '_utensor_cmsisnn'
 
+  def make_rand_const(self, shape, name):
+    val = np.random.random(shape)
+    return tf.convert_to_tensor(val, name=name, dtype=tf.float32)
+
   def get_matcher_graph(self):
     graph = tf.Graph()
     with graph.as_default():
     
-      x = tf.placeholder(dtype=tf.float32, name='input__uTensor__Any')
-      #FIXME: type error, placeholder -> const
-      W_fc1 = tf.placeholder(dtype=tf.float32, name='weight')
-      b_fc1 = tf.placeholder(dtype=tf.float32, name='bias')
+      x = tf.placeholder(dtype=tf.float32, name='input')
+      W_fc1 = self.make_rand_const([784, 128], name='weight')
+      b_fc1 = self.make_rand_const([128], name='bias')
       a_fc1 = tf.add(tf.matmul(x, W_fc1), b_fc1, name="zscore")
 
-    return uTensorGraph(graph.as_graph_def(), [a_fc1.name])
+      meta = dict()
+      meta["input"] = "Any"
+
+    return (uTensorGraph(graph.as_graph_def(), [a_fc1.name]), meta)
 
   def transform(self, ugraph):
-    matcher_ugraph = self.get_matcher_graph()
-    result = isomorphic_match(ugraph, matcher_ugraph)
+    [matcher_ugraph, metaData] = self.get_matcher_graph()
+    result = isomorphic_match(ugraph, matcher_ugraph, metaData)
     #import pdb; pdb.set_trace()
     print(result)
     assert result != False
