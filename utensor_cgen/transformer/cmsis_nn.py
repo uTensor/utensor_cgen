@@ -252,9 +252,6 @@ def isomorphic_associativity_helper(subject_node_name, matcher_node_name, subjec
   subject_node = subject_graph.ops_info[subject_node_name]
   matcher_node = matcher_graph.ops_info[matcher_node_name]
   
-  #print(matcher_node_name)
-  #import pdb; pdb.set_trace()
-  
   if subject_node.op_type != matcher_node.op_type and get_node_meta(matcher_node_name, matcher_meta) != "Any":
     return False
 
@@ -345,8 +342,6 @@ def isomorphic_match(subject_graph, matcher_graph, meta):
   partial_matcher_to_subject_edges = None
   #support only signle matcher output node for now
   for subject_node_name in subject_graph.topo_order:
-    #if subject_node_name == "zscore":
-      #import pdb; pdb.set_trace()
     probe = isomorphic_associativity_helper(subject_node_name, next(iter(matcher_output_node_names)), subject_graph, matcher_graph, meta, max_search_depth)
     if probe == False:
       continue
@@ -385,7 +380,26 @@ class CMSIS_NN_Transformer(Transformer):
   def transform(self, ugraph):
     [matcher_ugraph, metaData] = self.get_matcher_graph()
     result = isomorphic_match(ugraph, matcher_ugraph, metaData)
-    #import pdb; pdb.set_trace()
     print(result)
     assert result != False
+    import pdb; pdb.set_trace()
+    in_tensors = list()
+    in_tensors.append(tensorInfo_from_name(ugraph, result[1]['MatMul:0']))
+    in_tensors.append(tensorInfo_from_name(ugraph, result[1]['input:0']))
+    in_tensors.append(tensorInfo_from_name(ugraph, result[1]['bias:0']))
+
+    out_tensors = ugraph.ops_info[result[0]["zscore"]].output_tensors
+
+  #FIXME: shoudln't be Tensorflow backend
+    fused_op_info = OperationInfo(name="cmsis_fc_" + result[0]["zscore"],
+                            input_tensors=in_tensors,
+                            output_tensors=out_tensors,
+                            op_type="CMSIS_NN_FC",
+                            backend="tensorflow"
+                            )
+
+    del ugraph.ops_info[result[0]['MatMul']]
+    #FIXME: find result[0]['MatMul'] in ugraph.topo_order
+    ugraph.ops_info[result[0]['zscore']] = fused_op_info
+
     return ugraph
