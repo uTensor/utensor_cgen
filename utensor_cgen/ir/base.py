@@ -63,7 +63,6 @@ class TensorInfo(IRBase, _NoShallowCopyMixin):
                       shape=deepcopy(self.shape, memo))
 
 
-# @attr.s
 class OperationInfo(IRBase, _NoShallowCopyMixin):
   """
   name : str
@@ -106,7 +105,6 @@ class OperationInfo(IRBase, _NoShallowCopyMixin):
 
   op_attr = attr.ib(factory=dict, converter=dict)
   
-  # ugraph = attr.ib(default=None, init=False)
   @property
   def input_nodes(self):
     in_ops = []
