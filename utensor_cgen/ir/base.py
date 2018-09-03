@@ -63,7 +63,7 @@ class TensorInfo(IRBase, _NoShallowCopyMixin):
                       shape=deepcopy(self.shape, memo))
 
 
-@attr.s
+# @attr.s
 class OperationInfo(IRBase, _NoShallowCopyMixin):
   """
   name : str
@@ -106,9 +106,24 @@ class OperationInfo(IRBase, _NoShallowCopyMixin):
 
   op_attr = attr.ib(factory=dict, converter=dict)
   
-  ugraph = attr.ib(default=None, init=False)
-  input_nodes = attr.ib(factory=list, init=False)
-  output_nodes = attr.ib(factory=list, init=False)
+  # ugraph = attr.ib(default=None, init=False)
+  @property
+  def input_nodes(self):
+    in_ops = []
+    for tensor in self.input_tensors:
+      if tensor.op_name not in in_ops:
+        in_ops.append(tensor.op_name)
+    return [self.ugraph.ops_info[name] for name in in_ops]
+  
+  @property
+  def output_nodes(self):
+    out_ops = []
+    for op in self.ugraph.ops:
+      for in_tensor in op.input_tensors:
+        if in_tensor.op_name == self.name and op.name not in out_ops:
+          out_ops.append(op.name)
+          break
+    return [self.ugraph.ops_info[name] for name in out_ops]
 
   def __attrs_post_init__(self):
     skip_pattern = re.compile(r'_utensor_[^_]*')
@@ -121,6 +136,8 @@ class OperationInfo(IRBase, _NoShallowCopyMixin):
         else:
           op_attr[k] = ConverterFactory.get_generic_value(v)
       self.op_attr = op_attr
+      if self.ugraph is None:
+        raise ValueError('ugraph is not set properly')
   
   def __deepcopy__(self, memo):
     op_info = OperationInfo(name=self.name,
@@ -128,10 +145,8 @@ class OperationInfo(IRBase, _NoShallowCopyMixin):
                             output_tensors=deepcopy(self.output_tensors, memo),
                             op_type=self.op_type,
                             backend=self.backend,
-                            op_attr=deepcopy(self.op_attr, memo))
-    op_info.ugraph = self.ugraph
-    op_info.input_nodes = [node for node in self.input_nodes]
-    op_info.output_nodes = [node for node in self.output_nodes]
+                            op_attr=deepcopy(self.op_attr, memo),
+                            ugraph=self.ugraph)
     return op_info
 
 
@@ -267,28 +282,15 @@ class uTensorGraph(IRBase, _NoShallowCopyMixin):
                               output_tensors=out_tensors,
                               op_type=op_type,
                               backend='tensorflow',
-                              op_attr=op_attr)
+                              op_attr=op_attr,
+                              ugraph=self)
       op_info.op_attr['tensorflow__device'] = node.device
-      op_info.ugraph = self
       self.ops_info[node.name] = op_info
       self.topo_order.append(node.name)
-    self.setup_in_out_nodes()
   
   def _tf_is_freeze_graph(self, graph_def):
     is_frozen = all(node.op not in ['VariableV2'] for node in graph_def.node)
     return is_frozen
-
-  def setup_in_out_nodes(self):
-    records = defaultdict(lambda: {'in_ops': set([]), 'out_ops': set([])})
-    for op_info in self.ops_info.values():
-      for tensor in op_info.input_tensors:
-        in_op = self.ops_info[tensor.op_name]
-        records[op_info.name]['in_ops'].add(in_op.name)
-        records[in_op.name]['out_ops'].add(op_info.name)
-    for op_name, record in records.items():
-      op_info = self.ops_info[op_name]
-      op_info.input_nodes = [self.ops_info[name] for name in record['in_ops']]
-      op_info.output_nodes = [self.ops_info[name] for name in record['out_ops']]
 
   def __deepcopy__(self, memo):
     new_graph = uTensorGraph()
@@ -300,3 +302,7 @@ class uTensorGraph(IRBase, _NoShallowCopyMixin):
     new_graph.output_nodes = self.output_nodes
     new_graph._backend = self._backend
     return new_graph
+
+OperationInfo.ugraph = attr.ib(default=None,
+                               validator=instance_of((uTensorGraph, type(None))))
+OperationInfo = attr.s(OperationInfo)
