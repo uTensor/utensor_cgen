@@ -316,11 +316,7 @@ def isomorphic_associativity_helper(subject_node_name, matcher_node_name, subjec
         matcher_to_subject_nodes.update(probe[0])
         matcher_to_subject_edges[matcher_input_tensor_name] = sweeping_subject_input_tensor_name
         matcher_to_subject_edges.update(probe[1])
-  print("subject node: ", subject_node.name)
-  print("matcher node: ", matcher_node.name)
-  print("used_input_id vs input group: ", used_input_id, input_groups)
-  # import pdb; pdb.set_trace()
-
+        
   if len(used_input_id) == len(input_groups):
     return [matcher_to_subject_nodes, matcher_to_subject_edges]
   
@@ -355,6 +351,10 @@ def isomorphic_match(subject_graph, matcher_graph, meta):
 
   return [matcher_to_subject_nodes, matcher_to_subject_edges]
 
+def remove_node(node_name, graph):
+  del graph.ops_info[node_name]
+  graph.topo_order.remove(node_name)
+
 class CMSIS_NN_Transformer(Transformer):
   METHOD_NAME = 'cmsisnn'
   KWARGS_NAMESCOPE = '_utensor_cmsisnn'
@@ -382,24 +382,30 @@ class CMSIS_NN_Transformer(Transformer):
     result = isomorphic_match(ugraph, matcher_ugraph, metaData)
     print(result)
     assert result != False
-    import pdb; pdb.set_trace()
+    new_op_name = "cmsis_fc_" + result[0]["zscore"]
     in_tensors = list()
-    in_tensors.append(tensorInfo_from_name(ugraph, result[1]['MatMul:0']))
+    in_tensors.append(tensorInfo_from_name(ugraph, result[1]['weight:0']))
     in_tensors.append(tensorInfo_from_name(ugraph, result[1]['input:0']))
     in_tensors.append(tensorInfo_from_name(ugraph, result[1]['bias:0']))
 
     out_tensors = ugraph.ops_info[result[0]["zscore"]].output_tensors
 
+    #TODO: need a way to update all the tensor op references
+
+    # for i, tensor in enumerate(out_tensors):
+    #   tensor.op_name = new_op_name
+    #   out_tensors[i] = tensor
+
   #FIXME: shoudln't be Tensorflow backend
-    fused_op_info = OperationInfo(name="cmsis_fc_" + result[0]["zscore"],
+    fused_op_info = OperationInfo(name=new_op_name,
                             input_tensors=in_tensors,
                             output_tensors=out_tensors,
                             op_type="CMSIS_NN_FC",
                             backend="tensorflow"
                             )
 
-    del ugraph.ops_info[result[0]['MatMul']]
-    #FIXME: find result[0]['MatMul'] in ugraph.topo_order
-    ugraph.ops_info[result[0]['zscore']] = fused_op_info
+    remove_node(result[0]['MatMul'], ugraph)
+    remove_node(result[0]['zscore'], ugraph)
+    ugraph.ops_info[fused_op_info.name] = fused_op_info
 
     return ugraph
