@@ -66,8 +66,8 @@ class DropoutTransformer(Transformer):
                                   output_tensors=out_t_infos,
                                   op_type=op_info.op_type,
                                   backend=op_info.backend,
-                                  op_attr=op_attr)
-      new_op_info.ugraph = new_graph
+                                  op_attr=op_attr,
+                                  ugraph=new_graph)
       new_ops_info[node_name] = new_op_info
       new_topo_order.append(node_name)
     new_graph.ops_info = new_ops_info
