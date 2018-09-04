@@ -45,6 +45,7 @@ class TensorInfo(IRBase, _NoShallowCopyMixin):
   dtype : numpy.dtype
   shape : list
   """
+  # TODO: add op attribute (binding to a OperationInfo)
   name = attr.ib(validator=instance_of(six.text_type))
   op_name = attr.ib(validator=instance_of(six.text_type))
   dtype = attr.ib(validator=instance_of(np.dtype))
@@ -63,6 +64,10 @@ class TensorInfo(IRBase, _NoShallowCopyMixin):
                       shape=deepcopy(self.shape, memo))
 
 
+<<<<<<< HEAD
+=======
+@attr.s
+>>>>>>> 100eede... ugraph enhancement / update tests
 class OperationInfo(IRBase, _NoShallowCopyMixin):
   """
   name : str
@@ -82,6 +87,12 @@ class OperationInfo(IRBase, _NoShallowCopyMixin):
     values of such keys will be saved as-is without any type conversion.
   """
   name = attr.ib(type=str)
+  ugraph = attr.ib()
+  @ugraph.validator
+  def check(self, attrib, value):
+    if not isinstance(value, uTensorGraph):
+      raise ValueError(('Expecting a uTensorGraph, '
+                        'get {}'.format(type(value))))
 
   input_tensors = attr.ib(validator=instance_of(list))
   @input_tensors.validator
@@ -104,7 +115,7 @@ class OperationInfo(IRBase, _NoShallowCopyMixin):
       raise ValueError('Unsupported backend: {}'.format(value))
 
   op_attr = attr.ib(factory=dict, converter=dict)
-  
+
   @property
   def input_nodes(self):
     in_ops = []
@@ -134,9 +145,8 @@ class OperationInfo(IRBase, _NoShallowCopyMixin):
         else:
           op_attr[k] = ConverterFactory.get_generic_value(v)
       self.op_attr = op_attr
-      if self.ugraph is None:
-        raise ValueError('ugraph is not set properly')
-  
+    self.ugraph.add_op(self)
+
   def __deepcopy__(self, memo):
     op_info = OperationInfo(name=self.name,
                             input_tensors=deepcopy(self.input_tensors, memo),
@@ -144,9 +154,11 @@ class OperationInfo(IRBase, _NoShallowCopyMixin):
                             op_type=self.op_type,
                             backend=self.backend,
                             op_attr=deepcopy(self.op_attr, memo),
-                            ugraph=self.ugraph)
+                            ugraph=memo['ugraph'])
     return op_info
 
+  def copy_into_graph(self, ugraph):
+    return deepcopy(self, {'ugraph': ugraph})
 
 class uTensorGraph(IRBase, _NoShallowCopyMixin):
   """
@@ -206,7 +218,19 @@ class uTensorGraph(IRBase, _NoShallowCopyMixin):
   @property
   def ops(self):
     return [self.ops_info[name] for name in self.topo_order]
-  
+
+  def add_op(self, op):
+    if not isinstance(op, OperationInfo):
+      raise ValueError('expecting OperationInfo, get {}'.format(type(op)))
+    if op.name in self.ops_info:
+      raise ValueError('duplicate op detected, {}'.format(op.name))
+    self.ops_info[op.name] = op
+
+  def drop_op(self, op_name):
+    if op_name not in self.ops_info:
+      raise ValueError('op not found in the graph: {}'.format(op_name))
+    del self.ops_info[op_name]
+
   @staticmethod
   def _topologic_order_graph(ugraph):
     # https://en.wikipedia.org/wiki/Topological_sorting
@@ -292,6 +316,7 @@ class uTensorGraph(IRBase, _NoShallowCopyMixin):
 
   def __deepcopy__(self, memo):
     new_graph = uTensorGraph()
+    memo['ugraph'] = new_graph
     new_ops_info = dict((k, deepcopy(v, memo)) for k, v in self.ops_info.items())
     new_topo_order = [name for name in self.topo_order]
 
@@ -300,7 +325,3 @@ class uTensorGraph(IRBase, _NoShallowCopyMixin):
     new_graph.output_nodes = self.output_nodes
     new_graph._backend = self._backend
     return new_graph
-
-OperationInfo.ugraph = attr.ib(default=None,
-                               validator=instance_of((uTensorGraph, type(None))))
-OperationInfo = attr.s(OperationInfo)
