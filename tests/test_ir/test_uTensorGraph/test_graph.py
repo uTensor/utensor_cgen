@@ -30,6 +30,7 @@ def test_ugraph_copy(graph_tuple):
 def test_op_info():
     np_array = np.array([1, 2, 3], dtype=np.float32)
     t_proto = tf.make_tensor_proto(np_array, dtype=np.float32)
+    ugraph = uTensorGraph()
     op_info = OperationInfo(name='testing_op',
                             input_tensors=[],
                             output_tensors=[],
@@ -39,13 +40,15 @@ def test_op_info():
                                 '_utensor_to_skip': [1, 2, 3],
                                 '_utensor_skip_this_too': None,
                                 'tensor_no_skip': t_proto
-                            })
+                            },
+                            ugraph=ugraph)
     assert op_info.op_attr.get('_utensor_to_skip', None) == [1, 2, 3]
     assert op_info.op_attr.get('_utensor_skip_this_too') is None
     generic_tensor = op_info.op_attr.get('tensor_no_skip')
     assert isinstance(generic_tensor,
                       TensorProtoConverter.__utensor_generic_type__)
     assert (generic_tensor.np_array == np_array).all()
+    assert op_info.name in ugraph.ops_info
 
 def test_in_out_nodes(graph_tuple):
     ugraph = uTensorGraph(*graph_tuple)    
