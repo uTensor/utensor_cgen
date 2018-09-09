@@ -55,8 +55,12 @@ def cli():
               default="models",
               help="ouptut directory for tensor data idx files",
               show_default=True)
+@click.option("--save-graph",
+              is_flag=True,
+              help="save transformed graph")
 def convet_graph(pb_file, output, data_dir, embed_data_dir,
-                 debug_comment, output_nodes, transform_methods, model_dir):
+                 debug_comment, output_nodes, transform_methods, 
+                 save_graph, model_dir):
   from utensor_cgen.code_generator import CodeGenerator
 
   if pb_file is None:
@@ -69,13 +73,15 @@ def convet_graph(pb_file, output, data_dir, embed_data_dir,
     data_dir = os.path.join("constants", _get_pb_model_name(pb_file))
 
   if output is None:
-    output = _get_pb_model_name(pb_file) + ".cpp"
+    output =  "{}.cpp".format(_get_pb_model_name(pb_file))
   model_path = os.path.join(model_dir, output)
 
   if embed_data_dir is None:
     embed_data_dir = os.path.join("/fs", data_dir)
   # TODO: pass transformation kwargs to codegenerator (better argument parser)
-  generator = CodeGenerator(pb_file, data_dir, embed_data_dir, transform_methods, output_nodes, debug_comment)
+  generator = CodeGenerator(pb_file, data_dir, embed_data_dir,
+                            transform_methods, output_nodes,
+                            save_graph, debug_comment)
   generator.generate(model_path)
 
 
