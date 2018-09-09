@@ -63,10 +63,14 @@ class TensorInfo(IRBase, _NoShallowCopyMixin):
   
   @property
   def op(self):
-    """
-    If return None, this tensor is a dangling tensor
-    """
     return self.ugraph.ops_info.get(self.op_name, None)
+
+  @property
+  def is_dangling(self):
+    op = self.op
+    if not op:
+      return True
+    return op.is_dangling
 
   def __deepcopy__(self, memo):
     new_tensor = TensorInfo(name=self.name,
@@ -135,7 +139,7 @@ class OperationInfo(IRBase, _NoShallowCopyMixin):
     for tensor in self.input_tensors:
       if tensor.op_name not in in_ops:
         in_ops.append(tensor.op_name)
-    return [self.ugraph.ops_info[name] for name in in_ops]
+    return [self.ugraph.ops_info.get(name, None) for name in in_ops]
   
   @property
   def output_nodes(self):
@@ -146,6 +150,14 @@ class OperationInfo(IRBase, _NoShallowCopyMixin):
           out_ops.append(op.name)
           break
     return [self.ugraph.ops_info[name] for name in out_ops]
+  
+  @property
+  def is_dangling(self):
+    """
+    True: the op is dangling in the graph
+    False: otherwise
+    """
+    return None in self.input_nodes
 
   @property
   def n_inputs(self):
