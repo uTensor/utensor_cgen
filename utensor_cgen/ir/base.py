@@ -81,10 +81,7 @@ class TensorInfo(IRBase, _NoShallowCopyMixin):
     return new_tensor
 
 
-<<<<<<< HEAD
-=======
 @attr.s
->>>>>>> 100eede... ugraph enhancement / update tests
 class OperationInfo(IRBase, _NoShallowCopyMixin):
   """
   name : str
