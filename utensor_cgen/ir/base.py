@@ -255,11 +255,19 @@ class uTensorGraph(IRBase, _NoShallowCopyMixin):
     if op.name in self.ops_info:
       raise ValueError('duplicate op detected, {}'.format(op.name))
     self.ops_info[op.name] = op
+    max_idx = 0
+    for tensor in op.input_tensors:
+      op_name = tensor.op.name
+      op_idx = self.topo_order.find(op_name)
+      if op_idx >= max_idx:
+        max_idx = op_idx
+    self.topo_order.insert(max_idx+1, op.name)
 
   def drop_op(self, op_name):
     if op_name not in self.ops_info:
       raise ValueError('op not found in the graph: {}'.format(op_name))
     del self.ops_info[op_name]
+    self.topo_order.remove(op_name)
 
   @staticmethod
   def _topologic_order_graph(ugraph):
