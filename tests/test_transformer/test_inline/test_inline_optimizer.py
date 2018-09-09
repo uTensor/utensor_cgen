@@ -6,6 +6,8 @@ def test_inline_optimizer(inlinegraph_tuple):
     ugraph = uTensorGraph(graph_def, output_nodes)
     transformer = InlineTransformer()
     ugraph = transformer.transform(ugraph)
+    for op in ugraph.ops_info.values():
+        assert not op.is_dangling
     for node_name in ugraph.topo_order:
         if node_name in inline_ans:
             op_type = ugraph.ops_info[node_name].op_type
