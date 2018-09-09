@@ -45,7 +45,6 @@ class TensorInfo(IRBase, _NoShallowCopyMixin):
   dtype : numpy.dtype
   shape : list
   """
-  # TODO: add op attribute (binding to a OperationInfo)
   name = attr.ib(validator=instance_of(six.text_type))
   op_name = attr.ib(validator=instance_of(six.text_type))
   dtype = attr.ib(validator=instance_of(np.dtype))
@@ -56,12 +55,26 @@ class TensorInfo(IRBase, _NoShallowCopyMixin):
       for v in shape_values:
         assert isinstance(v, (int, type(None))), \
           "shape should be a list of integers"
+  ugraph = attr.ib()
+  @ugraph.validator
+  def check(self, attrib, value):
+    if not isinstance(value, uTensorGraph):
+      raise ValueError('Expecting a uTensorGraph, get {}'.format(type(value)))
+  
+  @property
+  def op(self):
+    """
+    If return None, this tensor is a dangling tensor
+    """
+    return self.ugraph.ops_info.get(self.op_name, None)
 
   def __deepcopy__(self, memo):
-    return TensorInfo(name=self.name,
-                      op_name=self.op_name,
-                      dtype=self.dtype,
-                      shape=deepcopy(self.shape, memo))
+    new_tensor = TensorInfo(name=self.name,
+                            ugraph=memo['ugraph'],
+                            op_name=self.op_name,
+                            dtype=self.dtype,
+                            shape=deepcopy(self.shape, memo))
+    return new_tensor
 
 
 <<<<<<< HEAD
@@ -133,6 +146,14 @@ class OperationInfo(IRBase, _NoShallowCopyMixin):
           out_ops.append(op.name)
           break
     return [self.ugraph.ops_info[name] for name in out_ops]
+
+  @property
+  def n_inputs(self):
+    return len(self.input_tensors)
+  
+  @property
+  def n_outputs(self):
+    return len(self.output_tensors)
 
   def __attrs_post_init__(self):
     skip_pattern = re.compile(r'_utensor_[^_]*')
@@ -288,11 +309,13 @@ class uTensorGraph(IRBase, _NoShallowCopyMixin):
     for node in graph_def.node:
       op = graph.get_operation_by_name(node.name)
       in_tensors = [TensorInfo(name=tensor.name,
+                               ugraph=self,
                                op_name=tensor.op.name,
                                dtype=np.dtype(tensor.dtype.as_numpy_dtype),
                                shape=self._tf_parse_tshape(tensor.shape))
                     for tensor in op.inputs]
       out_tensors = [TensorInfo(name=tensor.name,
+                                ugraph=self,
                                 op_name=op.name,
                                 dtype=np.dtype(tensor.dtype.as_numpy_dtype),
                                 shape=self._tf_parse_tshape(tensor.shape))

@@ -60,3 +60,9 @@ def test_in_out_nodes(graph_tuple):
 
     x2 = ugraph.ops_info['x2']
     assert [str(op.name) for op in x2.output_nodes] == ['x3']
+
+def test_tensor_ops(graph_tuple):
+    ugraph = uTensorGraph(*graph_tuple)
+    for op in ugraph.ops_info.values():
+        for tensor in op.output_tensors:
+            assert tensor.op is op

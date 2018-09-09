@@ -49,8 +49,10 @@ class DropoutTransformer(Transformer):
         continue
       # replace inputs with dropout inputs
       op_info = ugraph.ops_info[node_name]
-      in_t_infos = [deepcopy(t_info) for t_info in op_info.input_tensors]
-      out_t_infos = [deepcopy(t_info) for t_info in op_info.output_tensors]
+      in_t_infos = [deepcopy(t_info, {'ugraph': new_graph}) 
+                    for t_info in op_info.input_tensors]
+      out_t_infos = [deepcopy(t_info, {'ugraph': new_graph}) 
+                    for t_info in op_info.output_tensors]
       op_attr = deepcopy(op_info.op_attr)
       for i, t_info in enumerate(in_t_infos):
         op_name = parse_tensor_name(t_info.name)[0]
@@ -72,7 +74,7 @@ class DropoutTransformer(Transformer):
       new_topo_order.append(node_name)
     new_graph.ops_info = new_ops_info
     new_graph.topo_order = new_topo_order
-    new_graph.output_nodes = deepcopy(ugraph.output_nodes)
+    new_graph.output_nodes = ugraph.output_nodes
     new_graph._backend = ugraph._backend
     return new_graph
 
