@@ -258,7 +258,7 @@ class uTensorGraph(IRBase, _NoShallowCopyMixin):
     max_idx = 0
     for tensor in op.input_tensors:
       op_name = tensor.op.name
-      op_idx = self.topo_order.find(op_name)
+      op_idx = self.topo_order.index(op_name)
       if op_idx >= max_idx:
         max_idx = op_idx
     self.topo_order.insert(max_idx+1, op.name)
