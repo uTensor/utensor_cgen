@@ -312,10 +312,7 @@ class uTensorGraph(IRBase, _NoShallowCopyMixin):
     graph = tf.Graph()
     with graph.as_default():
       tf.import_graph_def(graph_def, name='')
-    # graph_def = TransformGraph(graph_def,
-    #                            [],
-    #                            output_nodes,
-    #                            ['sort_by_execution_order'])
+
     for node in graph_def.node:
       op = graph.get_operation_by_name(node.name)
       in_tensors = [TensorInfo(name=tensor.name,
@@ -341,7 +338,6 @@ class uTensorGraph(IRBase, _NoShallowCopyMixin):
                               ugraph=self)
       op_info.op_attr['tensorflow__device'] = node.device
       self.ops_info[node.name] = op_info
-      # self.topo_order.append(node.name)
     self._topologic_order_graph()
   
   def _tf_is_freeze_graph(self, graph_def):
