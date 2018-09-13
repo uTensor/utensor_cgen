@@ -28,6 +28,7 @@ class Transformer(object):
     @wraps(ori_transform)
     def transform(ugraph):
       new_ugraph = ori_transform(ugraph)
+      new_ugraph._topologic_order_graph()
       if self.prune_graph:
         return self._prune_graph(new_ugraph)
       return new_ugraph

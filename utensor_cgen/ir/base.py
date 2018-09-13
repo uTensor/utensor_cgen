@@ -175,7 +175,7 @@ class OperationInfo(IRBase, _NoShallowCopyMixin):
         else:
           op_attr[k] = ConverterFactory.get_generic_value(v)
       self.op_attr = op_attr
-    self.ugraph.add_op(self)
+    self.ugraph.ops_info[self.name] = self
 
   def __deepcopy__(self, memo):
     op_info = OperationInfo(name=self.name,
@@ -255,13 +255,7 @@ class uTensorGraph(IRBase, _NoShallowCopyMixin):
     if op.name in self.ops_info:
       raise ValueError('duplicate op detected, {}'.format(op.name))
     self.ops_info[op.name] = op
-    max_idx = 0
-    for tensor in op.input_tensors:
-      op_name = tensor.op.name
-      op_idx = self.topo_order.index(op_name)
-      if op_idx >= max_idx:
-        max_idx = op_idx
-    self.topo_order.insert(max_idx+1, op.name)
+    self._topologic_order_graph()
 
   def drop_op(self, op_name):
     if op_name not in self.ops_info:
@@ -269,10 +263,9 @@ class uTensorGraph(IRBase, _NoShallowCopyMixin):
     del self.ops_info[op_name]
     self.topo_order.remove(op_name)
 
-  @staticmethod
-  def _topologic_order_graph(ugraph):
+  def _topologic_order_graph(self):
     # https://en.wikipedia.org/wiki/Topological_sorting
-    queue = deepcopy(ugraph.output_nodes)
+    queue = deepcopy(self.output_nodes)
     visited = set()    # temporary mark
     perm_visit = set()  # Permanent mark
     ops_torder = []  # L
@@ -284,7 +277,7 @@ class uTensorGraph(IRBase, _NoShallowCopyMixin):
         raise ValueError("Input graph is not a DAG")
 
       visited.add(node_name)
-      op_info = ugraph.ops_info[node_name]
+      op_info = self.ops_info[node_name]
 
       for t_info in op_info.input_tensors:
         op_name = parse_tensor_name(t_info.name)[0]
@@ -296,7 +289,7 @@ class uTensorGraph(IRBase, _NoShallowCopyMixin):
     while queue:
       node_name = queue.pop(0)
       visit(node_name)
-    return ops_torder
+    self.topo_order = ops_torder[::-1]
 
   # tensorflow
   @staticmethod
@@ -319,10 +312,10 @@ class uTensorGraph(IRBase, _NoShallowCopyMixin):
     graph = tf.Graph()
     with graph.as_default():
       tf.import_graph_def(graph_def, name='')
-    graph_def = TransformGraph(graph_def,
-                               [],
-                               output_nodes,
-                               ['sort_by_execution_order'])
+    # graph_def = TransformGraph(graph_def,
+    #                            [],
+    #                            output_nodes,
+    #                            ['sort_by_execution_order'])
     for node in graph_def.node:
       op = graph.get_operation_by_name(node.name)
       in_tensors = [TensorInfo(name=tensor.name,
@@ -348,7 +341,8 @@ class uTensorGraph(IRBase, _NoShallowCopyMixin):
                               ugraph=self)
       op_info.op_attr['tensorflow__device'] = node.device
       self.ops_info[node.name] = op_info
-      self.topo_order.append(node.name)
+      # self.topo_order.append(node.name)
+    self._topologic_order_graph()
   
   def _tf_is_freeze_graph(self, graph_def):
     is_frozen = all(node.op not in ['VariableV2'] for node in graph_def.node)
