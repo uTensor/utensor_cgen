@@ -41,7 +41,6 @@ class DropoutTransformer(Transformer):
     new_graph = uTensorGraph()
     dropout_input_map = self._find_input(ugraph)
     new_ops_info = {}
-    new_topo_order = []
     for node_name in ugraph.topo_order:
       match = self.TARGET_NODENAME_PATTERN.match(node_name)
       if match:
