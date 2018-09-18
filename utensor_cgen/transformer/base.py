@@ -62,7 +62,10 @@ class Transformer(object):
       #           for t_info in op_info.input_tensors]
 
       #TODO: move the code below to a standalone function. Consider using a more extensive data structure:
+<<<<<<< HEAD
       #      Or, use this: in_ops = [node.name for node in ugraph.ops_info[op_name].input_nodes]
+=======
+>>>>>>> cmsis_nn test runs without runtime error, results yet to be checked
       tensors_in = set([t.name for t in ugraph.ops_info[op_name].input_tensors])
       in_ops = set()
       for it_node in ugraph.topo_order:

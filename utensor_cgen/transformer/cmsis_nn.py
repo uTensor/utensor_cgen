@@ -352,6 +352,12 @@ def isomorphic_match(subject_graph, matcher_graph, meta):
   return [matcher_to_subject_nodes, matcher_to_subject_edges]
 
 def remove_node(node_name, graph):
+  #check for dangling referece before proceeding
+  #only input check is needed
+  # for op_info in graph.ops_info:
+  #   for input_tensor_info in op_info.input_tensors:
+  #     input_tensor_info = 
+
   del graph.ops_info[node_name]
   graph.topo_order.remove(node_name)
 
