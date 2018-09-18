@@ -352,6 +352,12 @@ def isomorphic_match(subject_graph, matcher_graph, meta):
   return [matcher_to_subject_nodes, matcher_to_subject_edges]
 
 def remove_node(node_name, graph):
+  #check for dangling referece before proceeding
+  #only input check is needed
+  # for op_info in graph.ops_info:
+  #   for input_tensor_info in op_info.input_tensors:
+  #     input_tensor_info = 
+
   del graph.ops_info[node_name]
   graph.topo_order.remove(node_name)
 
@@ -382,12 +388,17 @@ class CMSIS_NN_Transformer(Transformer):
     result = isomorphic_match(ugraph, matcher_ugraph, metaData)
     print(result)
     assert result != False
+
+    #generate new op name
     new_op_name = "cmsis_fc_" + result[0]["zscore"]
+
+    #compile new op's the input list
     in_tensors = list()
     in_tensors.append(tensorInfo_from_name(ugraph, result[1]['weight:0']))
     in_tensors.append(tensorInfo_from_name(ugraph, result[1]['input:0']))
     in_tensors.append(tensorInfo_from_name(ugraph, result[1]['bias:0']))
 
+    #compile new op's output list
     out_tensors = ugraph.ops_info[result[0]["zscore"]].output_tensors
 
     #TODO: need a way to update all the tensor op references
@@ -396,7 +407,7 @@ class CMSIS_NN_Transformer(Transformer):
     #   tensor.op_name = new_op_name
     #   out_tensors[i] = tensor
 
-  #FIXME: shoudln't be Tensorflow backend
+  #FIXME: shouldn't be Tensorflow backend
     fused_op_info = OperationInfo(name=new_op_name,
                             input_tensors=in_tensors,
                             output_tensors=out_tensors,
@@ -408,4 +419,5 @@ class CMSIS_NN_Transformer(Transformer):
     remove_node(result[0]['zscore'], ugraph)
     ugraph.ops_info[fused_op_info.name] = fused_op_info
 
+    # import pdb; pdb.set_trace()
     return ugraph

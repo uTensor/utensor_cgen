@@ -55,12 +55,26 @@ class Transformer(object):
     visited = set([])
     while queue:
       op_name = queue.pop(0)
-      op_info = new_ugraph.ops_info[op_name]
-      in_ops = [parse_tensor_name(t_info.name)[0] 
-                for t_info in op_info.input_tensors]
+      #FIXME: names are framework and graph dependent
+      #       temporary fix is included aftert the commented code
+      #op_info = new_ugraph.ops_info[op_name]
+      # in_ops = [parse_tensor_name(t_info.name)[0] 
+      #           for t_info in op_info.input_tensors]
+
+      #TODO: move the code below to a standalone function. Consider using a more extensive data structure:
+      tensors_in = set([t.name for t in ugraph.ops_info[op_name].input_tensors])
+      in_ops = set()
+      for it_node in ugraph.topo_order:
+        if(it_node == op_name):
+          continue
+        it_tensors_out = [t.name for t in ugraph.ops_info[it_node].output_tensors]
+        if not tensors_in.isdisjoint(it_tensors_out):
+          in_ops.add(it_node)
+
       queue.extend([name for name in in_ops if name not in visited])
       visited.update(in_ops)
       ops_in_need.update(in_ops)
+      #END
 
     ops_to_remove = set([])
     for op_name in new_ugraph.ops_info.keys():
