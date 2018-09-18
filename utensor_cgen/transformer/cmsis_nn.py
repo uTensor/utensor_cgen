@@ -351,13 +351,15 @@ def isomorphic_match(subject_graph, matcher_graph, meta):
 
   return [matcher_to_subject_nodes, matcher_to_subject_edges]
 
-def remove_node(node_name, graph):
-  #check for dangling referece before proceeding
-  #only input check is needed
-  # for op_info in graph.ops_info:
-  #   for input_tensor_info in op_info.input_tensors:
-  #     input_tensor_info = 
+def graph_check(graph):
+  for op_name, op_info in graph.ops_info.items():
+    for input_tensor_info in op_info.input_tensors:
+      assert input_tensor_info.op_name in graph.ops_info, "In %r: input tensor %r points to non-existing op %r" % (op_name, input_tensor_info.name, input_tensor_info.op_name)
+      assert input_tensor_info.op_name in graph.topo_order
 
+  assert len(graph.ops_info) == len(graph.topo_order)
+
+def remove_node(node_name, graph):
   del graph.ops_info[node_name]
   graph.topo_order.remove(node_name)
 
@@ -415,6 +417,7 @@ class CMSIS_NN_Transformer(Transformer):
     in_tensors.append(tensorInfo_from_name(ugraph, result[1]['input:0']))
     in_tensors.append(tensorInfo_from_name(ugraph, result[1]['bias:0']))
 
+    ##
     #compile new op's output list
     out_tensors = ugraph.ops_info[result[0]["zscore"]].output_tensors
     #update updating all relevant tensors to point to the new op
