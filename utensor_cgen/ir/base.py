@@ -227,8 +227,7 @@ class uTensorGraph(IRBase, _NoShallowCopyMixin):
       op_info = ugraph.ops_info[node_name]
 
       for t_info in op_info.input_tensors:
-        op_name = parse_tensor_name(t_info.name)[0]
-        visit(op_name)
+        visit(t_info.op_name)
 
       perm_visit.add(node_name)
       ops_torder.insert(0, node_name)
