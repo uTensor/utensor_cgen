@@ -386,7 +386,8 @@ class CMSIS_NN_Transformer(Transformer):
       x = tf.placeholder(dtype=tf.float32, name='input')
       W_fc1 = self.make_rand_const([784, 128], name='weight')
       b_fc1 = self.make_rand_const([128], name='bias')
-      a_fc1 = tf.add(tf.matmul(x, W_fc1), b_fc1, name="zscore")
+      matmal = tf.matmul(x, W_fc1, name='matmal')
+      a_fc1 = tf.add(matmal, b_fc1, name="zscore")
 
       meta = dict()
       meta["input"] = "Any"
@@ -421,7 +422,7 @@ class CMSIS_NN_Transformer(Transformer):
                             backend="tensorflow"
                             )
 
-    remove_node(result[0]['MatMul'], ugraph)
+    remove_node(result[0]['matmal'], ugraph)
     remove_node(result[0]['zscore'], ugraph)
     ugraph.ops_info[fused_op_info.name] = fused_op_info
 
