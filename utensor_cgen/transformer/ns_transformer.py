@@ -4,19 +4,20 @@ r"""Namescope Transformer
 Transformers that get rid of namescope/nodes which are not needed 
 for inference
 """
+import re
 from collections import defaultdict
 from copy import deepcopy
-import re
 
-from utensor_cgen.ir import uTensorGraph, OperationInfo
+from utensor_cgen.ir import OperationInfo, uTensorGraph
 from utensor_cgen.utils import parse_tensor_name
+
 from .base import Transformer
 
 __all__ = ["DropoutTransformer", "BatchNormTransformer", "InlineTransformer"]
 
 class InlineTransformer(Transformer):
   METHOD_NAME = 'inline'
-  KWARGS_NAMESCOPE = '_inline'
+  KWARGS_NAMESCOPE = '_utensor_inline'
   TARGET_NODENAME_PATTERN = re.compile(r'(const[_\w\d]*)/.*')
 
 
@@ -33,11 +34,11 @@ class DropoutTransformer(Transformer):
   """Remove Dropout Op
   """
   METHOD_NAME = 'dropout'
-  KWARGS_NAMESCOPE = '_dropout'
+  KWARGS_NAMESCOPE = '_utensor_dropout'
   TARGET_NODENAME_PATTERN = re.compile(r'(dropout[_\w\d]*)/.*')
 
   def transform(self, ugraph):
-
+    new_graph = uTensorGraph()
     dropout_input_map = self._find_input(ugraph)
     new_ops_info = {}
     new_topo_order = []
@@ -65,10 +66,10 @@ class DropoutTransformer(Transformer):
                                   output_tensors=out_t_infos,
                                   op_type=op_info.op_type,
                                   backend=op_info.backend,
-                                  op_attr=op_attr)
+                                  op_attr=op_attr,
+                                  ugraph=new_graph)
       new_ops_info[node_name] = new_op_info
       new_topo_order.append(node_name)
-    new_graph = uTensorGraph()
     new_graph.ops_info = new_ops_info
     new_graph.topo_order = new_topo_order
     new_graph.output_nodes = deepcopy(ugraph.output_nodes)

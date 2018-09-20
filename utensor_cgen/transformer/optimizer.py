@@ -11,7 +11,7 @@ __all__ = ['RefCntOptimizer']
 class RefCntOptimizer(Transformer):
   
   METHOD_NAME = 'refcnt'
-  KWARGS_NAMESCOPE = '_refcnt'
+  KWARGS_NAMESCOPE = '_utensor_refcnt'
 
   def __init__(self, **kwargs):
     self.prune_graph = False

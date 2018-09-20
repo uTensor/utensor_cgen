@@ -25,14 +25,14 @@ setup(
     package_data={"utensor_cgen": ["templates/*"]},
     entry_points={
         "console_scripts": [
-            "utensor-cli=utensor_cgen.__main__:cli"
+            "utensor-cli=utensor_cgen.cli:cli"
         ]},
     install_requires=[
         'Jinja2',
         'tensorflow',
-        'numpy',
         'idx2numpy',
-        'attrs'
+        'attrs',
+        'click'
     ],
     extras_require={
         'dev': ['pytest']
