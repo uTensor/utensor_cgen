@@ -14,7 +14,9 @@ __all__ = ["Snippet", "SnippetContainerBase",
            "Conv2DOpSnippent",
            "RequantizationRangeOpSnippet", "RequantizeOpSnippet",
            "CommentSnippet", "ContextHeaderSnippet",
-           "ContextSnippetsContainer", "QuantizedAddOpSnippet"]
+           "ContextSnippetsContainer", "QuantizedAddOpSnippet",
+           "CreateTensorBinarySnippet", "WeightSnippet",
+           "ContextGlobalArrayContainer"]
 
 # TODO: Better abstraction, i.e a better backend for code generation
 class CreateTensorIdxSnippet(Snippet):
@@ -46,6 +48,39 @@ class CreateTensorIdxSnippet(Snippet):
     self.template_vars["tensor_name"] = tensor_name
     self.template_vars["importer_dtype"] = NP_TYPES_MAP[np_dtype].importer_type_str
     self.template_vars["to_eval"] = to_eval
+
+class CreateTensorBinarySnippet(Snippet):
+  __template_name__ = "snippets/create_tensor_binary.cpp"
+  __headers__ = set(['"uTensor/core/context.hpp"',
+                     '"uTensor/core/tensor.hpp"'])
+
+  def __init__(self, tensor_name, tf_dtype, tensor_shape=None,
+               ref_count=0,
+               sptr_name=None,
+               inline_name=None,
+               create_sptr=False,
+               to_eval=False):
+    if create_sptr and sptr_name is None:
+      raise ValueError("sptr_name can't be None if create_sptr is True")
+    if tf_dtype not in NP_TYPES_MAP:
+      raise ValueError("unsupport data type in uTensor: {}".format(tf_dtype))
+    Snippet.__init__(self)
+    if ref_count:
+      self.template_vars["ref_count"] = ref_count
+    if create_sptr:
+      self.template_vars["create_sptr"] = create_sptr
+      self.template_vars["sptr_name"] = sptr_name
+    self.template_vars["tensor_type"] = "BinaryTensor"
+    self.template_vars["tensor_name"] = tensor_name
+    self.template_vars["tensor_shape"] = self._to_shape_str(tensor_shape)
+    self.template_vars["tensor_length"] = np.prod(tensor_shape)
+    self.template_vars["dtype"] = NP_TYPES_MAP[tf_dtype].tensor_type_str
+    self.template_vars["to_eval"] = to_eval
+    self.template_vars["inline_name"] = inline_name
+
+  def _to_shape_str(self, shape):
+    shape_str = ",".join([str(dim) for dim in shape])
+    return "{" + shape_str + "}"
 
 
 class CreateTensorNewSnippet(Snippet):
@@ -428,13 +463,33 @@ class ContextHeaderSnippet(Snippet):
     self.template_vars["graph_name"] = graph_name
     self.template_vars["placeholders"] = placeholders
 
+class WeightSnippet(Snippet):
+  __template_name__ = "snippets/weight_snippet.hpp"
+  __headers__ = set([])
+
+  def __init__(self, inline_name, type, shape, value):
+      Snippet.__init__(self)
+      length = np.prod(shape)
+      self.template_vars['type'] =  NP_TYPES_MAP[type].tensor_type_str 
+      self.template_vars['value'] = value
+      self.template_vars['length'] = int(length) 
+      self.template_vars['inline_name'] = inline_name 
+
+
+class ContextGlobalArrayContainer(SnippetContainerBase):
+  __template_name__ = "containers/weight_header.hpp"
+  __headers__ = set([])
+
+  def __init__(self, snippets=None):
+    SnippetContainerBase.__init__(self, snippets)
+
 
 class ContextSnippetsContainer(SnippetContainerBase):
   __template_name__ = "containers/get_ctx.cpp"
   __headers__ = set([])
 
   def __init__(self,
-               graph_name, ctx_header_name, 
+               graph_name, ctx_header_name, ctx_weightheader_name,
                snippets=None, placeholders=None, ref_counts=None):
     SnippetContainerBase.__init__(self, snippets)
     if placeholders is None:
@@ -449,3 +504,4 @@ class ContextSnippetsContainer(SnippetContainerBase):
     self.template_vars["placeholders"] = placeholders
     self.template_vars["ref_counts"] = ref_counts
     self.add_header('"{}"'.format(ctx_header_name))
+    self.add_header('"{}"'.format(ctx_weightheader_name))
