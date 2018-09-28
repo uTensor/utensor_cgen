@@ -19,7 +19,7 @@ def _get_pb_model_name(path):
                        '-V', '--version')
 def cli():
   pass
-  
+
 
 @cli.command(name='convert', help='convert graph to cpp/hpp files')
 @click.help_option('-h', '--help')
@@ -44,7 +44,7 @@ def cli():
               metavar="NODE_NAME,NODE_NAME,...",
               required=True,
               help="list of output nodes")
-@click.option("--transform-methods", 
+@click.option("--transform-methods",
               type=NArgsParam(),
               default='dropout,quantize,refcnt,inline',
               help='optimization methods',
@@ -88,7 +88,6 @@ def show_pb_file(pb_file):
   with open(pb_file, 'rb') as fid:
     graph_def.ParseFromString(fid.read())
   for node in graph_def.node:
-    print(node.name)
-
+    print('name:', node.name, 'op:', node.op, 'input:', node.input)
 if __name__ == '__main__':
   cli()
