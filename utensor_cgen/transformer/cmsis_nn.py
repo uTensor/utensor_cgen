@@ -44,41 +44,29 @@ def get_ops_io_info(op_type):
   return ops_io_table[op_type]
 
 
-def get_input_nodes(graph, node_name):
-  tensors_in = set([t.name for t in graph.ops_info[node_name].input_tensors])
-  node_list = set()
-  for it_node in graph.topo_order:
-    if(it_node == node_name):
-      continue
-    it_tensors_out = [t.name for t in graph.ops_info[it_node].output_tensors]
-    if not tensors_in.isdisjoint(it_tensors_out):
-      node_list.add(it_node)
+def get_input_node_names(graph, node_name):
+  input_op_infos = graph.ops_info[node_name].input_nodes
+  input_op_names = [op.name for op in input_op_infos]
 
-  return node_list
+  return input_op_names
 
-def get_output_nodes(graph, node_name):
-  tensors_out = set([t.name for t in graph.ops_info[node_name].output_tensors])
-  node_list = set()
-  for it_node in graph.topo_order:
-    if(it_node == node_name):
-      continue
-    it_tensors_in = [t.name for t in graph.ops_info[it_node].input_tensors]
-    if not tensors_out.isdisjoint(it_tensors_in):
-      node_list.add(it_node)
+def get_output_node_names(graph, node_name):
+  output_op_infos = graph.ops_info[node_name].output_nodes
+  output_op_names = [op.name for op in output_op_infos]
 
-  return node_list
+  return output_op_names
 
 def is_connected(graph, node0, node1):
-  input_nodes = get_input_nodes(graph, node0)
-  output_nodes = get_output_nodes(graph, node0)
+  input_nodes = get_input_node_names(graph, node0)
+  output_nodes = get_output_node_names(graph, node0)
   node_list = input_nodes.union(output_nodes)
 
   return node1 in node_list
 
-def get_input_tensors(graph, node_name):
+def get_input_tensor_names(graph, node_name):
   return [t.name for t in graph.ops_info[node_name].input_tensors]
 
-def get_output_tensors(graph, node_name):
+def get_output_tensor_names(graph, node_name):
   return [t.name for t in graph.ops_info[node_name].output_tensors]
 
 def subgraph_trace_exposed_edges(graph, start_index=0, end_index=None):
@@ -91,8 +79,8 @@ def subgraph_trace_exposed_edges(graph, start_index=0, end_index=None):
   subgraph_tensors_out = set()
 
   for node in sub_topo:
-    subgraph_tensors_in.update(get_input_tensors(graph, node))
-    subgraph_tensors_out.update(get_output_tensors(graph, node))
+    subgraph_tensors_in.update(get_input_tensor_names(graph, node))
+    subgraph_tensors_out.update(get_output_tensor_names(graph, node))
 
   input_edges = subgraph_tensors_in.difference(subgraph_tensors_out)
   output_edges = subgraph_tensors_out.difference(subgraph_tensors_in)
@@ -102,10 +90,10 @@ def subgraph_trace_exposed_edges(graph, start_index=0, end_index=None):
 
   #ensure this follows topological order
   for node in sub_topo:
-    for t_name in get_input_tensors(graph, node):
+    for t_name in get_input_tensor_names(graph, node):
       if t_name in input_edges:
         input_edges_list.append(t_name)
-    for t_name in get_output_tensors(graph, node):
+    for t_name in get_output_tensor_names(graph, node):
       if t_name in output_edges:
         output_edges_list.append(t_name)
 
@@ -121,8 +109,8 @@ def subgraph_trace_internal_edges(graph, start_index=0, end_index=None):
   subgraph_tensors_out = set()
 
   for node in sub_topo:
-    subgraph_tensors_in.update(get_input_tensors(graph, node))
-    subgraph_tensors_out.update(get_output_tensors(graph, node))
+    subgraph_tensors_in.update(get_input_tensor_names(graph, node))
+    subgraph_tensors_out.update(get_output_tensor_names(graph, node))
     
   internal_edges = subgraph_tensors_in.intersection(subgraph_tensors_out)
 
@@ -130,10 +118,10 @@ def subgraph_trace_internal_edges(graph, start_index=0, end_index=None):
 
   #ensure this follows topological order
   for node in sub_topo:
-    for t_name in get_input_tensors(graph, node):
+    for t_name in get_input_tensor_names(graph, node):
       if t_name in internal_edges and not t_name in internal_edges_list:
         internal_edges_list.append(t_name)
-    for t_name in get_output_tensors(graph, node):
+    for t_name in get_output_tensor_names(graph, node):
       if t_name in internal_edges and not t_name in internal_edges_list:
         internal_edges_list.append(t_name)
 
@@ -182,7 +170,7 @@ def forward_path_tracer(graph, start_node_name, end_node_name, depth=-1):
   if depth == -1:
     depth = len(graph.topo_order) - 1
 
-  output_node_names = get_output_nodes(graph, start_node_name)
+  output_node_names = get_output_node_names(graph, start_node_name)
   if len(output_node_names) == 0 or depth <= 0:
     return None
   
@@ -292,11 +280,11 @@ def isomorphic_associativity_helper(subject_node_name, matcher_node_name, subjec
         if sweeping_group_id != group_id or sweeping_input_id in used_input_id:
           continue
         #sweep the subject input nodes
-        sweeping_subject_input_tensor_names = get_input_tensors(subject_graph, subject_node_name)
+        sweeping_subject_input_tensor_names = get_input_tensor_names(subject_graph, subject_node_name)
         sweeping_subject_input_tensor_name = sweeping_subject_input_tensor_names[sweeping_input_id]
         [sweeping_subject_input_node_name, _] = get_tensor_node_names(subject_graph, sweeping_subject_input_tensor_name)
 
-        matcher_input_tensor_names = get_input_tensors(matcher_graph, matcher_node_name)
+        matcher_input_tensor_names = get_input_tensor_names(matcher_graph, matcher_node_name)
         matcher_input_tensor_name = matcher_input_tensor_names[input_id]
         [matcher_input_node_name, _] = get_tensor_node_names(matcher_graph, matcher_input_tensor_name)
 
@@ -350,10 +338,6 @@ def isomorphic_match(subject_graph, matcher_graph, meta):
   matcher_to_subject_edges.update(partial_matcher_to_subject_edges)
 
   return [matcher_to_subject_nodes, matcher_to_subject_edges]
-
-def remove_node(node_name, graph):
-  del graph.ops_info[node_name]
-  graph.topo_order.remove(node_name)
 
 def replace_tensors_op(node_name, new_node_name, graph):
   for op_name, op_info in graph.ops_info.items():
