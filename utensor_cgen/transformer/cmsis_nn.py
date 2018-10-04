@@ -424,18 +424,17 @@ class CMSIS_NN_Transformer(Transformer):
     ugraph = replace_tensors_op(result[0]["zscore"], new_op_name, ugraph)
 
   #FIXME: shouldn't be Tensorflow backend
+    tmp_ugraph = uTensorGraph()
     fused_op_info = OperationInfo(name=new_op_name,
                             input_tensors=in_tensors,
                             output_tensors=out_tensors,
                             op_type="CMSIS_NN_FC",
                             backend="tensorflow",
-                            ugraph=ugraph
+                            ugraph=tmp_ugraph
                             )
 
-    remove_node(result[0]['matmal'], ugraph)
-    remove_node(result[0]['zscore'], ugraph)
-    ugraph.ops_info[fused_op_info.name] = fused_op_info
-
-    ugraph.topo_order = uTensorGraph._topologic_order_graph(ugraph)
+    ugraph.drop_op(result[0]['matmal'])
+    ugraph.drop_op(result[0]['zscore'])
+    ugraph.add_op(fused_op_info)
 
     return ugraph
