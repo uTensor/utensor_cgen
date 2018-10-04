@@ -391,8 +391,8 @@ class CMSIS_NN_Transformer(Transformer):
 
       meta = dict()
       meta["input"] = "Any"
-
-    return (uTensorGraph(graph.as_graph_def(), [a_fc1.name]), meta)
+    #import pdb; pdb.set_trace()
+    return (uTensorGraph(graph.as_graph_def(), ['zscore']), meta)
 
   def transform(self, ugraph):
     [matcher_ugraph, metaData] = self.get_matcher_graph()
@@ -419,7 +419,8 @@ class CMSIS_NN_Transformer(Transformer):
                             input_tensors=in_tensors,
                             output_tensors=out_tensors,
                             op_type="CMSIS_NN_FC",
-                            backend="tensorflow"
+                            backend="tensorflow",
+                            ugraph=ugraph
                             )
 
     remove_node(result[0]['matmal'], ugraph)
