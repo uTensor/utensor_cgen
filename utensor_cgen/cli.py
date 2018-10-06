@@ -54,7 +54,10 @@ def cli():
               default="models",
               help="ouptut directory for tensor data idx files",
               show_default=True)
-def convert_graph(pb_file, output, data_dir, embed_data_dir,
+@click.option("--save-graph",
+              is_flag=True,
+              help="save transformed graph")
+def convert_graph(pb_file, output, data_dir, embed_data_dir, save_graph,
                   debug_comment, output_nodes, transform_methods, model_dir):
   from utensor_cgen.code_generator import CodeGenerator
 
