@@ -101,7 +101,7 @@ class OperationInfo(IRBase, _NoShallowCopyMixin):
     values of such keys will be saved as-is without any type conversion.
   """
   name = attr.ib(type=str)
-  ugraph = attr.ib()
+  ugraph = attr.ib(repr=False)
   @ugraph.validator
   def check(self, attrib, value):
     if not isinstance(value, uTensorGraph):
