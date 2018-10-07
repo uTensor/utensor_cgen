@@ -70,6 +70,7 @@ class CodeGenerator(object):
     self._expect_non_quantized(graph_def)
     ugraph = uTensorGraph(graph_def, self.output_nodes)
     _logger.info("Transforming graph: %s", self.model_file)
+    _logger.info("Transform pipeline: %s", ' -> '.join(self.trans_methods))
     quant_ugraph = self._transform_graph(ugraph,
                                          self.trans_methods,
                                          self.trans_kwargs)
