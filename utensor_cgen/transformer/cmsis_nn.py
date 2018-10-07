@@ -380,36 +380,38 @@ class CMSIS_NN_Transformer(Transformer):
 
   def transform(self, ugraph):
     [matcher_ugraph, metaData] = self.get_matcher_graph()
-    result = isomorphic_match(ugraph, matcher_ugraph, metaData)
-    print(result)
-    assert result != False
 
-    #generate new op name
-    new_op_name = "cmsis_fc_" + result[0]["zscore"]
+    while True:
+      result = isomorphic_match(ugraph, matcher_ugraph, metaData)
+      if result == False:
+        break
+      
+      #generate new op name
+      new_op_name = "cmsis_fc_" + result[0]["zscore"]
 
-    #compile new op's the input list
-    in_tensors = list()
-    in_tensors.append(tensorInfo_from_name(ugraph, result[1]['weight:0']))
-    in_tensors.append(tensorInfo_from_name(ugraph, result[1]['input:0']))
-    in_tensors.append(tensorInfo_from_name(ugraph, result[1]['bias:0']))
+      #compile new op's the input list
+      in_tensors = list()
+      in_tensors.append(tensorInfo_from_name(ugraph, result[1]['weight:0']))
+      in_tensors.append(tensorInfo_from_name(ugraph, result[1]['input:0']))
+      in_tensors.append(tensorInfo_from_name(ugraph, result[1]['bias:0']))
 
-    #compile new op's output list
-    out_tensors = ugraph.ops_info[result[0]["zscore"]].output_tensors
-    #update updating all relevant tensors to point to the new op
-    ugraph = replace_tensors_op(result[0]["zscore"], new_op_name, ugraph)
+      #compile new op's output list
+      out_tensors = ugraph.ops_info[result[0]["zscore"]].output_tensors
+      #update updating all relevant tensors to point to the new op
+      ugraph = replace_tensors_op(result[0]["zscore"], new_op_name, ugraph)
 
-  #FIXME: shouldn't be Tensorflow backend
-    tmp_ugraph = uTensorGraph()
-    fused_op_info = OperationInfo(name=new_op_name,
-                            input_tensors=in_tensors,
-                            output_tensors=out_tensors,
-                            op_type="CMSIS_NN_FC",
-                            backend="tensorflow",
-                            ugraph=tmp_ugraph
-                            )
+      #FIXME: shouldn't be Tensorflow backend
+      tmp_ugraph = uTensorGraph()
+      fused_op_info = OperationInfo(name=new_op_name,
+                              input_tensors=in_tensors,
+                              output_tensors=out_tensors,
+                              op_type="CMSIS_NN_FC",
+                              backend="tensorflow",
+                              ugraph=tmp_ugraph
+                              )
 
-    ugraph.drop_op(result[0]['matmal'])
-    ugraph.drop_op(result[0]['zscore'])
-    ugraph.add_op(fused_op_info)
+      ugraph.drop_op(result[0]['matmal'])
+      ugraph.drop_op(result[0]['zscore'])
+      ugraph.add_op(fused_op_info)
 
     return ugraph
