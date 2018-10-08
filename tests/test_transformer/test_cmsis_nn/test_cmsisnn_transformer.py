@@ -1,7 +1,6 @@
 from utensor_cgen.transformer import CMSIS_NN_Transformer
 from utensor_cgen.ir import uTensorGraph
 
-<<<<<<< HEAD
 def graph_check(graph):
   for op_name, op_info in graph.ops_info.items():
     for input_tensor_info in op_info.input_tensors:
@@ -15,9 +14,4 @@ def test_cmsisnn_trnasformer(fusion_graph_tuple):
     transformer = CMSIS_NN_Transformer()
     test_graph = transformer.transform(ugraph1)
     graph_check(test_graph)
-=======
-def test_cmsisnn_trnasformer(fusion_graph_tuple):
-    (ugraph, ugraph1) = fusion_graph_tuple
-    transformer = CMSIS_NN_Transformer()
-    test_graph = transformer.transform(ugraph1)
->>>>>>> cmsis_nn test runs without runtime error, results yet to be checked
+    print(test_graph.topo_order)

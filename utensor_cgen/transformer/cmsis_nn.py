@@ -339,18 +339,6 @@ def isomorphic_match(subject_graph, matcher_graph, meta):
 
   return [matcher_to_subject_nodes, matcher_to_subject_edges]
 
-def graph_check(graph):
-  for op_name, op_info in graph.ops_info.items():
-    for input_tensor_info in op_info.input_tensors:
-      assert input_tensor_info.op_name in graph.ops_info, "In %r: input tensor %r points to non-existing op %r" % (op_name, input_tensor_info.name, input_tensor_info.op_name)
-      assert input_tensor_info.op_name in graph.topo_order
-
-  assert len(graph.ops_info) == len(graph.topo_order)
-
-def remove_node(node_name, graph):
-  del graph.ops_info[node_name]
-  graph.topo_order.remove(node_name)
-
 def replace_tensors_op(node_name, new_node_name, graph):
   for op_name, op_info in graph.ops_info.items():
     for i, output_tensor_info in enumerate(op_info.output_tensors):
