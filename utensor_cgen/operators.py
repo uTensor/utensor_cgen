@@ -238,7 +238,7 @@ class _CMSIS_NN_FCOperator(_Operator):
     _Operator.__init__(self)
     inputs = [tensor_info.name for tensor_info in op_info.input_tensors]
     output = op_info.output_tensors[0].name
-    dtypes = [tensor_info.dtype for tensor_info in op_info.input_tensors].append(op_info.output_tensors[0].dtype
+    dtypes = [tensor_info.dtype for tensor_info in op_info.input_tensors].append(op_info.output_tensors[0].dtype)
     parser = NamescopedKWArgsParser(RefCntOptimizer.KWARGS_NAMESCOPE,
                                     op_info.op_attr)
     ref_counts = parser.get('ref_counts', [])
