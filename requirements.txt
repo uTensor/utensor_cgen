@@ -12,6 +12,7 @@ flake8==3.5.0
 funcsigs==1.0.2
 futures==3.2.0
 gast==0.2.0
+graphviz==0.9
 grpcio==1.13.0
 idx2numpy==1.2.2
 isort==4.3.4
