@@ -249,7 +249,7 @@ class uTensorGraph(IRBase, _NoShallowCopyMixin):
   def ops(self):
     return [self.ops_info[name] for name in self.topo_order]
 
-  def viz_graph(self):
+  def viz_graph(self, fname="graph.gv"):
     from graphviz import Digraph
     dot = Digraph()
     nodes = {}
@@ -270,7 +270,7 @@ class uTensorGraph(IRBase, _NoShallowCopyMixin):
             dot.edge(nodes[n.name], nodes[node.name])
         for n in node.output_tensors:
             dot.edge(nodes[node.name], nodes[n.name])
-    dot.render('graphs/graph.gv', view=True)
+    dot.render(fname, view=True)
 
 
   def add_op(self, op):
