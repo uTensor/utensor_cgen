@@ -2,6 +2,7 @@
 import os
 from tempfile import NamedTemporaryFile
 import logging
+import pickle
 
 import numpy as np
 import tensorflow as tf
@@ -27,6 +28,7 @@ class CodeGenerator(object):
                embed_data_dir,
                trans_methods,
                output_nodes,
+               save_graph=False,
                debug_cmt=False,
                **trans_kwargs):
     self.model_file = model_file
@@ -36,6 +38,7 @@ class CodeGenerator(object):
     self.embed_data_dir = embed_data_dir.rstrip("/")
     self.trans_methods = trans_methods
     self.output_nodes = output_nodes
+    self.save_graph = save_graph
     self.debug_cmt = debug_cmt
     self.trans_kwargs = trans_kwargs
 
@@ -67,10 +70,18 @@ class CodeGenerator(object):
     self._expect_non_quantized(graph_def)
     ugraph = uTensorGraph(graph_def, self.output_nodes)
     _logger.info("Transforming graph: %s", self.model_file)
+    _logger.info("Transform pipeline: %s", ' -> '.join(self.trans_methods))
     quant_ugraph = self._transform_graph(ugraph,
                                          self.trans_methods,
                                          self.trans_kwargs)
     _logger.info('Graph transormation done')
+
+    if self.save_graph:
+      _logger.info('Saving transformed graph')
+      pkl_fname = "quant_{}.pkl".format(graph_name)
+      with open(pkl_fname, 'wb') as fid:
+        pickle.dump(quant_ugraph, fid)
+      _logger.info('{} saved'.format(pkl_fname))
 
     for op_id, op_name in enumerate(quant_ugraph.topo_order):
       op_info = quant_ugraph.ops_info[op_name]

@@ -27,20 +27,14 @@ pip instal -e .[dev]
 
 You can go to this [repo](https://github.com/pypa/pipenv) for detail information about `pipenv`.
 
-**Note**: If you have trouble with installation using `pipenv`, try `PIPENV_VENV_IN_PROJECT=1 pipenv install -d --skip-lock`
+### Troubleshooting with `pipenv`
 
-### If All Fails...
-
-1. You can use `docker`
-    - run `docker pull dboyliao/utensor-cli` for a pre-build docker image
-    - or run `docker build -t <user_name>/utensor-cli .` to build the docker image
-      by yourself, where `<user_name>` can be any user name you want.
-2. Run the docker image
-    - `docker run -it dboyliao/utensor-cli`
-    - or `docker run -it <user_name>/utensor-cli` if you want to use the image you just
-      build.
-
-Please refer to `docker` [documentation](https://docs.docker.com/get-started/) for detail.
+- If you have trouble with installation using `pipenv`, try `PIPENV_VENV_IN_PROJECT=1 pipenv install -d --skip-lock`
+- there is known issue of `pip` and `pipenv`, plz refer to this [issue](https://github.com/pypa/pipenv/issues/2924) for detail
+    - short answer: downgrade to `pip==18.0` may help :)
+- Tensorflow requires `setuptools<=39.1.0` (the latest is `40.4.3` by the time this README is writen)
+    - plz downgrade to `setuptools==39.1.0`
+    - my recommendation is to use `virtualenv`
 
 # Example
 

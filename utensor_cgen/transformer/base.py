@@ -28,6 +28,7 @@ class Transformer(object):
     @wraps(ori_transform)
     def transform(ugraph):
       new_ugraph = ori_transform(ugraph)
+      new_ugraph._topologic_order_graph()
       if self.prune_graph:
         return self._prune_graph(new_ugraph)
       return new_ugraph
@@ -61,10 +62,11 @@ class Transformer(object):
       visited.update(in_ops)
       ops_in_need.update(in_ops)
 
-    for op_name in new_ugraph.topo_order:
+    ops_to_remove = set([])
+    for op_name in new_ugraph.ops_info.keys():
       if op_name not in ops_in_need:
         # remove ops not needed from ops_info
-        new_ugraph.ops_info.pop(op_name)
-    new_ugraph.topo_order = [op_name for op_name in new_ugraph.topo_order
-                             if op_name in new_ugraph.ops_info]
+        ops_to_remove.add(op_name)
+    for op_name in ops_to_remove:
+      new_ugraph.ops_info.pop(op_name)
     return new_ugraph

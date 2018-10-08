@@ -1,6 +1,5 @@
 #-*- coding:utf8 -*-
-import argparse
-import os
+import os, sys
 
 import pkg_resources
 
@@ -55,8 +54,11 @@ def cli():
               default="models",
               help="ouptut directory for tensor data idx files",
               show_default=True)
-def convet_graph(pb_file, output, data_dir, embed_data_dir,
-                 debug_comment, output_nodes, transform_methods, model_dir):
+@click.option("--save-graph",
+              is_flag=True,
+              help="save transformed graph")
+def convert_graph(pb_file, output, data_dir, embed_data_dir, save_graph,
+                  debug_comment, output_nodes, transform_methods, model_dir):
   from utensor_cgen.code_generator import CodeGenerator
 
   if pb_file is None:
@@ -69,25 +71,68 @@ def convet_graph(pb_file, output, data_dir, embed_data_dir,
     data_dir = os.path.join("constants", _get_pb_model_name(pb_file))
 
   if output is None:
-    output = _get_pb_model_name(pb_file) + ".cpp"
+    output =  "{}.cpp".format(_get_pb_model_name(pb_file))
   model_path = os.path.join(model_dir, output)
 
   if embed_data_dir is None:
     embed_data_dir = os.path.join("/fs", data_dir)
   # TODO: pass transformation kwargs to codegenerator (better argument parser)
-  generator = CodeGenerator(pb_file, data_dir, embed_data_dir, transform_methods, output_nodes, debug_comment)
+  generator = CodeGenerator(pb_file, data_dir, embed_data_dir,
+                            transform_methods, output_nodes,
+                            save_graph, debug_comment)
   generator.generate(model_path)
 
 
 @cli.command(name='show', help='show node names in the pb file')
 @click.help_option('-h', '--help')
+@click.option('--oneline', is_flag=True,
+              help='show in oneline format (no detail information)')
 @click.argument('pb_file', required=True, metavar='MODEL.pb')
-def show_pb_file(pb_file):
+def show_pb_file(pb_file, oneline=False):
   import tensorflow as tf
-  graph_def = tf.GraphDef()
-  with open(pb_file, 'rb') as fid:
-    graph_def.ParseFromString(fid.read())
-  for node in graph_def.node:
-    print('name:', node.name, 'op:', node.op, 'input:', node.input)
+  from utensor_cgen.ir import uTensorGraph
+  import textwrap
+
+  _, ext = os.path.splitext(pb_file)
+  if ext == '.pb':
+    graph_def = tf.GraphDef()
+    with open(pb_file, 'rb') as fid:
+      graph_def.ParseFromString(fid.read())
+      ugraph = uTensorGraph(graph=graph_def,
+                            output_nodes=[node.name for node in graph_def.node])
+  else:
+    msg = click.style('unknown file extension: {}'.format(ext), fg='red', bold=True)
+    click.echo(msg, file=sys.stderr)
+  if oneline:
+    tmpl = click.style("{op_name} ", fg='yellow', bold=True) + \
+      "op_type: {op_type}, inputs: {inputs}, outputs: {outputs}"
+    for op_name in ugraph.topo_order:
+      op_info = ugraph.ops_info[op_name]
+      msg = tmpl.format(op_name=op_name, op_type=op_info.op_type,
+                        inputs=[tensor.name for tensor in op_info.input_tensors],
+                        outputs=[tensor.name for tensor in op_info.output_tensors])
+      click.echo(msg)
+  else:
+    tmpl = click.style('op_name: {op_name}\n', fg='yellow', bold=True) + \
+    '''\
+      op_type: {op_type}
+      input(s):
+        {inputs}
+      ouptut(s):
+        {outputs}
+    '''
+    tmpl = textwrap.dedent(tmpl)
+    paragraphs = []
+    for op_name in ugraph.topo_order:
+      op_info = ugraph.ops_info[op_name]
+      op_str = tmpl.format(
+        op_name=op_name,
+        op_type=op_info.op_type,
+        inputs=op_info.input_tensors,
+        outputs=op_info.output_tensors)
+      paragraphs.append(op_str)
+    click.echo('\n'.join(paragraphs))
+  return 0
+
 if __name__ == '__main__':
   cli()

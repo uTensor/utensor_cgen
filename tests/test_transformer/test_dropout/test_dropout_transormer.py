@@ -12,6 +12,7 @@ def test_dropout_trans(droput_graph_tuple):
     new_ugraph = transformer.transform(ugraph)
     for op in new_ugraph.ops_info.values():
         assert op.ugraph
+        assert not op.is_dangling
     out_op = new_ugraph.ops_info[output_nodes[0]]
     assert set([str(op.name) for op in out_op.input_nodes]) == set(['x', 'bias'])
     # all dropout nodes should be gone
