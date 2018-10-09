@@ -13,6 +13,7 @@ import numpy as np
 
 from utensor_cgen.ir import OperationInfo, uTensorGraph
 from utensor_cgen.utils import parse_tensor_name
+from tensorflow.tools.graph_transforms import TransformGraph
 
 from .base import Transformer
 
@@ -365,6 +366,7 @@ class CMSIS_NN_Transformer(Transformer):
 
   def get_matcher_graph(self):
     graph = tf.Graph()
+    tf.reset_default_graph()
     with graph.as_default():
     
       x = tf.placeholder(dtype=tf.float32, name='input')
@@ -375,30 +377,42 @@ class CMSIS_NN_Transformer(Transformer):
 
       meta = dict()
       meta["input"] = "Any"
-    #import pdb; pdb.set_trace()
-    return (uTensorGraph(graph.as_graph_def(), ['zscore']), meta)
+      #import pdb; pdb.set_trace()
+    #return (uTensorGraph(graph.as_graph_def(), ['zscore']), meta)
+    #ugraph = uTensorGraph(graph.as_graph_def(), ['zscore'])
+    #graph_def = ugraph.graph_def
+      quant_graph_def = TransformGraph(input_graph_def=graph.as_graph_def(),
+                                     inputs=['input'],
+                                     outputs=['zscore'],
+                                     transforms=["quantize_weights", "quantize_nodes"])
+    return (uTensorGraph(graph=quant_graph_def, output_nodes=['zscore/eightbit/requantize']), meta)
 
   def transform(self, ugraph):
     [matcher_ugraph, metaData] = self.get_matcher_graph()
 
     while True:
+      #import pdb; pdb.set_trace()
       result = isomorphic_match(ugraph, matcher_ugraph, metaData)
       if result == False:
         break
       
       #generate new op name
-      new_op_name = "cmsis_fc_" + result[0]["zscore"]
+      new_op_name = result[0]["zscore/eightbit/requantize"]
+      ##new_op_name = "cmsis_fc_" + result[0]["zscore"]
 
       #compile new op's the input list
       in_tensors = list()
-      in_tensors.append(tensorInfo_from_name(ugraph, result[1]['weight:0']))
+      #in_tensors.append(tensorInfo_from_name(ugraph, result[1]['weight:0']))
+      in_tensors.append(tensorInfo_from_name(ugraph, result[1]['weight_quantized_const:0']))
       in_tensors.append(tensorInfo_from_name(ugraph, result[1]['input:0']))
       in_tensors.append(tensorInfo_from_name(ugraph, result[1]['bias:0']))
 
+      # NOTE: Up to here should be correct
       #compile new op's output list
-      out_tensors = ugraph.ops_info[result[0]["zscore"]].output_tensors
+      out_tensors = ugraph.ops_info[result[0]["zscore/eightbit/requantize"]].output_tensors
+      #import pdb; pdb.set_trace()
       #update updating all relevant tensors to point to the new op
-      ugraph = replace_tensors_op(result[0]["zscore"], new_op_name, ugraph)
+      ugraph = replace_tensors_op(result[0]["zscore/eightbit/requantize"], new_op_name, ugraph)
 
       #FIXME: shouldn't be Tensorflow backend
       tmp_ugraph = uTensorGraph()
@@ -410,8 +424,12 @@ class CMSIS_NN_Transformer(Transformer):
                               ugraph=tmp_ugraph
                               )
 
-      ugraph.drop_op(result[0]['matmal'])
-      ugraph.drop_op(result[0]['zscore'])
+      ugraph.drop_op(result[0]['matmal/eightbit'])
+      ugraph.drop_op(result[0]['matmal/eightbit/requant_range'])
+      ugraph.drop_op(result[0]['matmal/eightbit/requantize'])
+      ugraph.drop_op(result[0]['zscore/eightbit'])
+      ugraph.drop_op(result[0]['zscore/eightbit/requant_range'])
+      ugraph.drop_op(result[0]['zscore/eightbit/requantize'])
       ugraph.add_op(fused_op_info)
 
     return ugraph
