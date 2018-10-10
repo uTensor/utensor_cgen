@@ -394,6 +394,7 @@ class CMSIS_NN_Transformer(Transformer):
       meta["zscore_eightbit/Variable_1__port__0/quantize"] = "End"
       meta["MatMul_eightbit/x__port__0/quantize"] = "End"
       meta["matmal_eightbit/input/quantize"] = "End"
+      meta["zscore_eightbit/bias/quantize"] = "End"
 
       #import pdb; pdb.set_trace()
     #return (uTensorGraph(graph.as_graph_def(), ['zscore']), meta)
@@ -422,7 +423,7 @@ class CMSIS_NN_Transformer(Transformer):
     [matcher_ugraph, metaData] = self.get_matcher_graph()
 
     while True:
-#      import pdb; pdb.set_trace()
+      #import pdb; pdb.set_trace()
       result = isomorphic_match(ugraph, matcher_ugraph, metaData)
       if result == False:
         break
