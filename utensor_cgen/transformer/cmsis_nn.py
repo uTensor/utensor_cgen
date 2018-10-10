@@ -357,6 +357,18 @@ def replace_tensors_op(node_name, new_node_name, graph):
 
   return graph
 
+def graph_validate(graph):
+  conflicts = []  
+  for op_name, op_info in graph.ops_info.items():
+    for input_tensor_info in op_info.input_tensors:
+      if input_tensor_info.op_name not in graph.ops_info:
+        print("In %r: input tensor %r points to non-existing op %r" % (op_name, input_tensor_info.name, input_tensor_info.op_name))
+        conflicts.append((input_tensor_info.name, input_tensor_info.op_name))
+      if input_tensor_info.op_name not in graph.topo_order:
+        print("In %r: input tensor %r points to an op (%r) that does not exist in graph.topo_order" % (op_name, input_tensor_info.name, input_tensor_info.op_name))
+        conflicts.append((input_tensor_info.name, input_tensor_info.op_name))
+
+
 class CMSIS_NN_Transformer(Transformer):
   METHOD_NAME = 'cmsisnn'
   KWARGS_NAMESCOPE = '_utensor_cmsisnn'
@@ -371,6 +383,7 @@ class CMSIS_NN_Transformer(Transformer):
     with graph.as_default():
     
       x = tf.placeholder(dtype=tf.float32, name='input')
+      #x = self.make_rand_const([1,784], name='input')
       W_fc1 = self.make_rand_const([784, 128], name='weight')
       b_fc1 = self.make_rand_const([128], name='bias')
       matmal = tf.matmul(x, W_fc1, name='matmal')
@@ -380,41 +393,66 @@ class CMSIS_NN_Transformer(Transformer):
       #meta["input"] = "Any"
       meta["zscore_eightbit/Variable_1__port__0/quantize"] = "End"
       meta["MatMul_eightbit/x__port__0/quantize"] = "End"
+      meta["matmal_eightbit/input/quantize"] = "End"
 
       #import pdb; pdb.set_trace()
     #return (uTensorGraph(graph.as_graph_def(), ['zscore']), meta)
     #ugraph = uTensorGraph(graph.as_graph_def(), ['zscore'])
     #graph_def = ugraph.graph_def
       quant_graph_def = TransformGraph(input_graph_def=graph.as_graph_def(),
-                                     inputs=['input'],
+                                     inputs=['input`'],
                                      outputs=['zscore'],
                                      transforms=["quantize_weights", "quantize_nodes"])
-    return (uTensorGraph(graph=quant_graph_def, output_nodes=['zscore/eightbit/requantize']), meta)
+      mgraph = uTensorGraph(graph=quant_graph_def, output_nodes=['zscore/eightbit/requantize'])
+#      import pdb; pdb.set_trace()
+#      mgraph = replace_tensors_op("input", new_op_name, ugraph)
+#      mgraph.drop_op("input")
+#      mgraph.drop_op("matmal_eightbit/input/reshape_dims")
+#      mgraph.drop_op("matmal_eightbit/input/reshape")
+#      mgraph.drop_op("matmal_eightbit/input/reduction_dims")
+#      mgraph.drop_op("matmal_eightbit/input/min")
+#      mgraph.drop_op("matmal_eightbit/input/max")
+#      #mgraph.drop_op("matmal_eightbit/input/quantize")
+#      mgraph.drop_op("weight_quantized_const")
+#      mgraph.drop_op("weight_quantized_min")
+#      mgraph.drop_op("weight_quantized_max")
+    return (mgraph, meta)
 
   def transform(self, ugraph):
     [matcher_ugraph, metaData] = self.get_matcher_graph()
 
     while True:
-      #import pdb; pdb.set_trace()
+#      import pdb; pdb.set_trace()
       result = isomorphic_match(ugraph, matcher_ugraph, metaData)
       if result == False:
         break
       
       #generate new op name
-      new_op_name = result[0]["zscore/eightbit/requantize"]
-      ##new_op_name = "cmsis_fc_" + result[0]["zscore"]
+      #new_op_name = result[0]["zscore/eightbit/requantize"]
+      new_op_name = "cmsis_fc_" + result[0]["zscore/eightbit/requantize"]
+      #new_op_name = "cmsis_fc_" + result[0]["zscore"]
 
       #compile new op's the input list
       in_tensors = list()
       #in_tensors.append(tensorInfo_from_name(ugraph, result[1]['weight:0']))
+#      import pdb; pdb.set_trace()
+      #in_tensors.append(tensorInfo_from_name(ugraph, result[1]['weight_quantized_const:0']))
+      #in_tensors.append(tensorInfo_from_name(ugraph, result[1]['input:0']))
+      #in_tensors.append(tensorInfo_from_name(ugraph, result[1]['bias:0']))
+      in_tensors.append(tensorInfo_from_name(ugraph, result[1]['matmal_eightbit/input/quantize:0']))
+      in_tensors.append(tensorInfo_from_name(ugraph, result[1]['matmal_eightbit/input/quantize:1']))
+      in_tensors.append(tensorInfo_from_name(ugraph, result[1]['matmal_eightbit/input/quantize:2']))
       in_tensors.append(tensorInfo_from_name(ugraph, result[1]['weight_quantized_const:0']))
-      in_tensors.append(tensorInfo_from_name(ugraph, result[1]['input:0']))
-      in_tensors.append(tensorInfo_from_name(ugraph, result[1]['bias:0']))
+      in_tensors.append(tensorInfo_from_name(ugraph, result[1]['weight_quantized_min:0']))
+      in_tensors.append(tensorInfo_from_name(ugraph, result[1]['weight_quantized_max:0']))
+      in_tensors.append(tensorInfo_from_name(ugraph, result[1]['zscore_eightbit/bias/quantize:0']))
+      in_tensors.append(tensorInfo_from_name(ugraph, result[1]['zscore_eightbit/bias/quantize:1']))
+      in_tensors.append(tensorInfo_from_name(ugraph, result[1]['zscore_eightbit/bias/quantize:2']))
+
 
       # NOTE: Up to here should be correct
       #compile new op's output list
       out_tensors = ugraph.ops_info[result[0]["zscore/eightbit/requantize"]].output_tensors
-      #mport pdb; pdb.set_trace()
       #update updating all relevant tensors to point to the new op
       ugraph = replace_tensors_op(result[0]["zscore/eightbit/requantize"], new_op_name, ugraph)
 
@@ -435,6 +473,8 @@ class CMSIS_NN_Transformer(Transformer):
       ugraph.drop_op(result[0]['zscore/eightbit/requant_range'])
       ugraph.drop_op(result[0]['zscore/eightbit/requantize'])
       ugraph.add_op(fused_op_info)
+      graph_validate(ugraph)
 
     graph_check(ugraph)
+    import pdb; pdb.set_trace()
     return ugraph
