@@ -377,6 +377,9 @@ class CMSIS_NN_Transformer(Transformer):
 
       meta = dict()
       meta["input"] = "Any"
+      meta["zscore_eightbit/Variable_1__port__0/quantize"] = "End"
+      meta["MatMul_eightbit/x__port__0/quantize"] = "End"
+
       #import pdb; pdb.set_trace()
     #return (uTensorGraph(graph.as_graph_def(), ['zscore']), meta)
     #ugraph = uTensorGraph(graph.as_graph_def(), ['zscore'])
@@ -410,7 +413,7 @@ class CMSIS_NN_Transformer(Transformer):
       # NOTE: Up to here should be correct
       #compile new op's output list
       out_tensors = ugraph.ops_info[result[0]["zscore/eightbit/requantize"]].output_tensors
-      #import pdb; pdb.set_trace()
+      import pdb; pdb.set_trace()
       #update updating all relevant tensors to point to the new op
       ugraph = replace_tensors_op(result[0]["zscore/eightbit/requantize"], new_op_name, ugraph)
 
