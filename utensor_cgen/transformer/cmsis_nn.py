@@ -14,6 +14,7 @@ import numpy as np
 from utensor_cgen.ir import OperationInfo, uTensorGraph
 from utensor_cgen.utils import parse_tensor_name
 from tensorflow.tools.graph_transforms import TransformGraph
+from utensor_cgen.ir.utils import graph_check
 
 from .base import Transformer
 
@@ -435,4 +436,5 @@ class CMSIS_NN_Transformer(Transformer):
       ugraph.drop_op(result[0]['zscore/eightbit/requantize'])
       ugraph.add_op(fused_op_info)
 
+    graph_check(ugraph)
     return ugraph
