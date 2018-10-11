@@ -236,17 +236,24 @@ class _QuantizedReshapeOperator(_Operator):
 class _CMSIS_NN_FCOperator(_Operator):
   def __init__(self, op_info, **kwargs):
     _Operator.__init__(self)
+    #import pdb; pdb.set_trace()
     inputs = [tensor_info.name for tensor_info in op_info.input_tensors]
-    output = op_info.output_tensors[0].name
-    dtypes = [tensor_info.dtype for tensor_info in op_info.input_tensors].append(op_info.output_tensors[0].dtype)
+    outputs = [tensor_info.name for tensor_info in op_info.output_tensors]
+    out_dtypes = [tensor_info.name for tensor_info in op_info.output_tensors]
+    in_dtypes = list()
+    in_dtypes.append(op_info.input_tensors[0].dtype)
+    in_dtypes.append(op_info.input_tensors[3].dtype)
+    in_dtypes.append(op_info.input_tensors[6].dtype)
+    assert (op_info.input_tensors[0].shape[0] == None or op_info.input_tensors[0].shape[0] == 1)
     parser = NamescopedKWArgsParser(RefCntOptimizer.KWARGS_NAMESCOPE,
                                     op_info.op_attr)
     ref_counts = parser.get('ref_counts', [])
     to_eval = parser.get('to_eval', False)
     self._snippet = CMSISNNFCOpSnippet(inputs=inputs,
-                                              output=output,
+                                              outputs=outputs,
                                               ref_counts=ref_counts,
-                                              dtypes=dtypes,
+                                              in_dtypes=in_dtypes,
+                                              out_dtypes=out_dtypes,
                                               to_eval=to_eval)
 
 class _Conv2DOperator(_Operator):

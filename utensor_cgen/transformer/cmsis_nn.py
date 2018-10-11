@@ -425,7 +425,6 @@ class CMSIS_NN_Transformer(Transformer):
     ugraph.viz_graph(fname="subject.gv")
 
     while True:
-      #import pdb; pdb.set_trace()
       result = isomorphic_match(ugraph, matcher_ugraph, metaData)
       if result == False:
         break
