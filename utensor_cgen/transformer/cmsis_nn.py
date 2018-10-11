@@ -192,9 +192,9 @@ def forward_path_tracer(graph, start_node_name, end_node_name, depth=-1):
 
 def get_node_meta(node_name, meta):
   if meta == None:
-    return "None"
+    return ["None"]
   if not node_name in meta:
-    return "None"
+    return ["None"]
   return meta[node_name]
 
 #TODO: FIXME:
@@ -217,7 +217,7 @@ def compare_paths(path_group0, path_group1, graph0, graph1, meta0=None, meta1=No
         node0 = graph0.ops_info[node0_name]
         node1 = graph1.ops_info[node1_name]
 
-        if node0.op_type != node1.op_type and (get_node_meta(node0_name, meta0) != "Any" and get_node_meta(node1_name, meta1) != "Any"):
+        if node0.op_type != node1.op_type and (not "Any" in get_node_meta(node0_name, meta0) and not "Any" in get_node_meta(node1_name, meta1)):
           type_compare_success = False
           break
       if type_compare_success:
@@ -242,7 +242,7 @@ def isomorphic_associativity_helper(subject_node_name, matcher_node_name, subjec
   subject_node = subject_graph.ops_info[subject_node_name]
   matcher_node = matcher_graph.ops_info[matcher_node_name]
   
-  if subject_node.op_type != matcher_node.op_type and get_node_meta(matcher_node_name, matcher_meta) != "Any":
+  if subject_node.op_type != matcher_node.op_type and not "Any" in get_node_meta(matcher_node_name, matcher_meta) :
     return False
 
   #create and concate the named-relations
@@ -254,7 +254,7 @@ def isomorphic_associativity_helper(subject_node_name, matcher_node_name, subjec
   [input_groups, _] = get_ops_io_info(matcher_node.op_type)
   #dealing with end of terminations
 
-  if depth <= 0 or len(matcher_node.output_tensors) == 0 or input_groups == None or get_node_meta(matcher_node_name, matcher_meta) == "End":
+  if depth <= 0 or len(matcher_node.output_tensors) == 0 or input_groups == None or "End" in get_node_meta(matcher_node_name, matcher_meta):
     if subject_trace != None and matcher_trace != None:
       subject_start_node_name = subject_trace[0]
       subject_path_group = forward_path_tracer(subject_graph, subject_node_name, subject_start_node_name, len(matcher_graph.topo_order)-1)
@@ -391,10 +391,10 @@ class CMSIS_NN_Transformer(Transformer):
 
       meta = dict()
       #meta["input"] = "Any"
-      meta["zscore_eightbit/Variable_1__port__0/quantize"] = "End"
-      meta["MatMul_eightbit/x__port__0/quantize"] = "End"
-      meta["matmal_eightbit/input/quantize"] = "End"
-      meta["zscore_eightbit/bias/quantize"] = "End"
+      meta["zscore_eightbit/Variable_1__port__0/quantize"] = ["End", "Any"]
+      meta["MatMul_eightbit/x__port__0/quantize"] = ["End", "Any"]
+      meta["matmal_eightbit/input/quantize"] = ["End", "Any"]
+      meta["zscore_eightbit/bias/quantize"] = ["End", "Any"]
 
       #import pdb; pdb.set_trace()
     #return (uTensorGraph(graph.as_graph_def(), ['zscore']), meta)
@@ -417,10 +417,12 @@ class CMSIS_NN_Transformer(Transformer):
 #      mgraph.drop_op("weight_quantized_const")
 #      mgraph.drop_op("weight_quantized_min")
 #      mgraph.drop_op("weight_quantized_max")
+    mgraph.viz_graph(fname="matcher.gv")
     return (mgraph, meta)
 
   def transform(self, ugraph):
     [matcher_ugraph, metaData] = self.get_matcher_graph()
+    ugraph.viz_graph(fname="subject.gv")
 
     while True:
       #import pdb; pdb.set_trace()
@@ -477,5 +479,6 @@ class CMSIS_NN_Transformer(Transformer):
       graph_validate(ugraph)
 
     graph_check(ugraph)
-    import pdb; pdb.set_trace()
+    #import pdb; pdb.set_trace()
+    ugraph.viz_graph(fname="cmsis_nn.gv")
     return ugraph
