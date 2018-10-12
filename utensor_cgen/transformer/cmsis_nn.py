@@ -11,7 +11,8 @@ from copy import deepcopy
 import tensorflow as tf
 import numpy as np
 
-from utensor_cgen.ir import OperationInfo, uTensorGraph
+from utensor_cgen.ir import OperationInfo, uTensorGraph, TensorInfo
+from utensor_cgen.ir.converter import AttrValueConverter, GenericTensorConverterMixin # hue hue hue hue hue
 from utensor_cgen.utils import parse_tensor_name
 from tensorflow.tools.graph_transforms import TransformGraph
 from utensor_cgen.ir.utils import graph_check
@@ -368,6 +369,31 @@ def graph_validate(graph):
         print("In %r: input tensor %r points to an op (%r) that does not exist in graph.topo_order" % (op_name, input_tensor_info.name, input_tensor_info.op_name))
         conflicts.append((input_tensor_info.name, input_tensor_info.op_name))
 
+# Let us get unique names for custom injected nodes
+def static_vars(**kwargs):
+  def decorate(func):
+    for k in kwargs:
+      setattr(func, k, kwargs[k])
+    return func
+  return decorate
+
+@static_vars(counters=defaultdict(int))
+def get_unique_number(target):
+  get_unique_number.counters[target] += 1
+  return get_unique_number.counters[target]
+
+def bs_ops_attr(np_array):
+  """ Simplify creating the op_attr bullshit boilerplate from an numpy array """
+  op_attr = {}
+  op_attr["tensorflow_device"] = ''
+  op_attr["dtype"] = AttrValueConverter.GenericType(value_name='type', value=3) # The hell are these values?
+  op_attr["value"] = AttrValueConverter.GenericType(value_name='tensor', 
+                                          value=GenericTensorConverterMixin.GenericType(np_array=np_array, 
+                                                                                        dtype=np_array.dtype
+                                                                                        )
+                                         )
+  return op_attr
+
 
 class CMSIS_NN_Transformer(Transformer):
   METHOD_NAME = 'cmsisnn'
@@ -412,20 +438,78 @@ class CMSIS_NN_Transformer(Transformer):
       if result == False:
         break
       
+      tmp_ugraph = uTensorGraph()
+      
       #generate new op name
       new_op_name = "cmsis_fc_" + result[0]["zscore/eightbit/requantize"]
 
+      #import pdb; pdb.set_trace()
+      bShift = "cmsis_bShift_"
+      bShiftIter = get_unique_number(bShift)
+      bShift += "%d" % bShiftIter
+      bShift_tensor = TensorInfo(name=bShift + ":0",
+                              op_name=bShift,
+                              dtype=np.dtype('uint16'),
+                              shape=[1],
+                              ugraph=tmp_ugraph
+                              )
+      bShift_op_info = OperationInfo(name=bShift,
+                              input_tensors=list(),
+                              output_tensors=[bShift_tensor],
+                              op_type="Const",
+                              backend="tensorflow",
+                              ugraph=tmp_ugraph,
+                              op_attr=bs_ops_attr(np.array([0], dtype=np.uint16))
+                              )
+      ugraph.add_op(bShift_op_info)
+
+      oShift = "cmsis_oShift_"
+      oShiftIter = get_unique_number(oShift)
+      oShift += "%d" % oShiftIter
+      oShift_tensor = TensorInfo(name=oShift + ":0",
+                              op_name=oShift,
+                              dtype=np.dtype('uint16'),
+                              shape=[1],
+                              ugraph=tmp_ugraph
+                              )
+      oShift_op_info = OperationInfo(name=oShift,
+                              input_tensors=list(),
+                              output_tensors=[oShift_tensor],
+                              op_type="Const",
+                              backend="tensorflow",
+                              ugraph=tmp_ugraph,
+                              op_attr=bs_ops_attr(np.array([0], dtype=np.uint16))
+                              )
+      ugraph.add_op(oShift_op_info)
+
+      scratch_space = "cmsis_scratch_"
+      scratchIter = get_unique_number(scratch_space)
+      scratch_space += "%d" % scratchIter
+      scratch_shape = list(map(lambda x: x if x else 1, tensorInfo_from_name(ugraph, result[1]['matmal_eightbit/input/quantize:0']).shape))
+      scratch_tensor = TensorInfo(name=scratch_space + ":0",
+                              op_name=scratch_space,
+                              dtype=np.dtype('uint16'),
+                              shape=scratch_shape,
+                              ugraph=tmp_ugraph
+                              )
+      scratch_op_info = OperationInfo(name=scratch_space,
+                              input_tensors=list(),
+                              output_tensors=[scratch_tensor],
+                              op_type="Const",
+                              backend="tensorflow",
+                              ugraph=tmp_ugraph,
+                              op_attr=bs_ops_attr(np.zeros(tuple(scratch_shape), dtype=np.uint16))
+                              )
+      ugraph.add_op(scratch_op_info)
+      #import pdb; pdb.set_trace()
       #compile new op's the input list
       in_tensors = list()
-      in_tensors.append(tensorInfo_from_name(ugraph, result[1]['matmal_eightbit/input/quantize:0']))
-      # in_tensors.append(tensorInfo_from_name(ugraph, result[1]['matmal_eightbit/input/quantize:1']))
-      # in_tensors.append(tensorInfo_from_name(ugraph, result[1]['matmal_eightbit/input/quantize:2']))
-      in_tensors.append(tensorInfo_from_name(ugraph, result[1]['weight_quantized_const:0']))
-      # in_tensors.append(tensorInfo_from_name(ugraph, result[1]['weight_quantized_min:0']))
-      # in_tensors.append(tensorInfo_from_name(ugraph, result[1]['weight_quantized_max:0']))
-      in_tensors.append(tensorInfo_from_name(ugraph, result[1]['zscore_eightbit/bias/quantize:0']))
-      # in_tensors.append(tensorInfo_from_name(ugraph, result[1]['zscore_eightbit/bias/quantize:1']))
-      # in_tensors.append(tensorInfo_from_name(ugraph, result[1]['zscore_eightbit/bias/quantize:2']))
+      in_tensors.append(tensorInfo_from_name(ugraph, result[1]['matmal_eightbit/input/quantize:0'])) #pV
+      in_tensors.append(tensorInfo_from_name(ugraph, result[1]['weight_quantized_const:0'])) # Weights pM
+      in_tensors.append(tensorInfo_from_name(ugraph, result[1]['zscore_eightbit/bias/quantize:0'])) # Bias
+      in_tensors.append(bShift_tensor)
+      in_tensors.append(oShift_tensor)
+      in_tensors.append(scratch_tensor)
 
       #TODO:
       # make sure weight and bias are in the format
@@ -441,7 +525,6 @@ class CMSIS_NN_Transformer(Transformer):
       ugraph = replace_tensors_op(result[0]["zscore/eightbit/requantize"], new_op_name, ugraph)
 
       #FIXME: shouldn't be Tensorflow backend
-      tmp_ugraph = uTensorGraph()
       fused_op_info = OperationInfo(name=new_op_name,
                               input_tensors=in_tensors,
                               output_tensors=out_tensors,

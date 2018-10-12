@@ -9,7 +9,7 @@
     ctx.add(new RamTensor<{{out_dtypes[0]}}>({1}), "{{outputs[2]}}");
     {%endif%}
     
-    ctx.push(new FullyConnectedLayerCmsisOp<{%for dtype in in_dtypes[:-1]%}{{dtype[-1]}}, {%endfor%}{{in_dtypes[-1][-1]}}>(),
+    ctx.push(new FullyConnectedLayerCmsisOp<{{in_dtypes[0]}},{{in_dtypes[1]}},{{out_dtypes[0]}}>(),
               { {%for tname in inputs[:-1] %}"{{tname}}", {%endfor%}"{{inputs[-1]}}" },
               { {%for tname in outputs[:-1] %}"{{tname}}", {%endfor%}"{{outputs[-1]}}" });
     {%if to_eval%}

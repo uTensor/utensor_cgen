@@ -237,15 +237,11 @@ class _CMSIS_NN_FCOperator(_Operator):
   def __init__(self, op_info, **kwargs):
     _Operator.__init__(self)
     #import pdb; pdb.set_trace()
+    # Note order of inputs/outputs is preserved
     inputs = [tensor_info.name for tensor_info in op_info.input_tensors]
     outputs = [tensor_info.name for tensor_info in op_info.output_tensors]
-    out_dtypes = [tensor_info.name for tensor_info in op_info.output_tensors]
-    in_dtypes = list()
-    in_dtypes.append(op_info.input_tensors[0].dtype)
-    in_dtypes.append(op_info.input_tensors[1].dtype)
-    in_dtypes.append(op_info.input_tensors[2].dtype)
-    #in_dtypes.append(op_info.input_tensors[3].dtype) # bShift
-    #in_dtypes.append(op_info.input_tensors[4].dtype)  # oShift
+    out_dtypes = [tensor_info.dtype for tensor_info in op_info.output_tensors]
+    in_dtypes = [tensor_info.dtype for tensor_info in op_info.input_tensors]
     assert (op_info.input_tensors[0].shape[0] == None or op_info.input_tensors[0].shape[0] == 1)
     parser = NamescopedKWArgsParser(RefCntOptimizer.KWARGS_NAMESCOPE,
                                     op_info.op_attr)
