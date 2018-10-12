@@ -242,8 +242,10 @@ class _CMSIS_NN_FCOperator(_Operator):
     out_dtypes = [tensor_info.name for tensor_info in op_info.output_tensors]
     in_dtypes = list()
     in_dtypes.append(op_info.input_tensors[0].dtype)
-    in_dtypes.append(op_info.input_tensors[3].dtype)
-    in_dtypes.append(op_info.input_tensors[6].dtype)
+    in_dtypes.append(op_info.input_tensors[1].dtype)
+    in_dtypes.append(op_info.input_tensors[2].dtype)
+    #in_dtypes.append(op_info.input_tensors[3].dtype) # bShift
+    #in_dtypes.append(op_info.input_tensors[4].dtype)  # oShift
     assert (op_info.input_tensors[0].shape[0] == None or op_info.input_tensors[0].shape[0] == 1)
     parser = NamescopedKWArgsParser(RefCntOptimizer.KWARGS_NAMESCOPE,
                                     op_info.op_attr)
