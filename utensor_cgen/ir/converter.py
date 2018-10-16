@@ -132,7 +132,14 @@ class ConverterFactory(object):
   def register(cls, converter_cls):
     if not issubclass(converter_cls, GenericConverter) or \
       not issubclass(converter_cls, TFConverterMixin):
-      raise ValueError('converter has to be subclass of GenericConverter and TFConverterMixin')
+      raise ValueError(
+        ('converter has to be subclass of both GenericConverter and TFConverterMixin'
+         ': %s' % converter_cls)
+      )
+    if converter_cls.__utensor_generic_type__ is None:
+      raise ValueError('__utensor_generic_type__ cannot be None: %s' % converter_cls)
+    if converter_cls.__tfproto_type__ is None:
+      raise ValueError('__tfproto_type__ cannot be None: %s' % converter_cls)
     cls._TF2GENERIC_MAP[converter_cls.__tfproto_type__] = converter_cls
     cls._GENERIC2TF_MAP[converter_cls.__utensor_generic_type__] = converter_cls
     return converter_cls
