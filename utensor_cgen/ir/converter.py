@@ -12,7 +12,7 @@ import numpy as np
 from attr import validators
 from tensorflow import DType as _DType
 from tensorflow import as_dtype as _tf_as_dtype
-from tensorflow.contrib.util import make_ndarray, make_tensor_proto
+from tensorflow import make_ndarray, make_tensor_proto
 from tensorflow.core.framework.attr_value_pb2 import AttrValue as _AttrValue
 from tensorflow.core.framework.attr_value_pb2 import (
     NameAttrList as _NameAttrList)
@@ -30,7 +30,7 @@ if sys.version_info.major > 2:
   long = int
   unicode = str
 
-class Converter(object):
+class GenericConverter(object):
   """Convert value to utensor generic type
   """
   __metaclass__ = ABCMeta
@@ -40,7 +40,6 @@ class Converter(object):
   @abstractmethod
   def get_generic_value(cls, value):
       raise NotImplementedError('')
-
 
 class TFConverterMixin(object):
   """Convert value to tf protobuf types
@@ -52,6 +51,41 @@ class TFConverterMixin(object):
   def get_tf_value(cls, value):
     raise NotImplementedError('')
 
+class GenericTensorConverterMixin(GenericConverter):
+  @attr.s
+  class GenericType(object):
+    np_array = attr.ib(validator=validators.instance_of(np.ndarray))
+    dtype = attr.ib(default=None)
+    
+    def __attrs_post_init__(self):
+      if self.dtype is None:
+        self.dtype = self.np_array.dtype
+  __utensor_generic_type__ = GenericType
+
+class GenericDataTypeConverterMixin(GenericConverter):
+  __utensor_generic_type__ = np.dtype
+
+class GenericTensorShapeMixin(GenericConverter):
+  @attr.s
+  class GenericType(object):
+    list_view = attr.ib()
+    
+    @list_view.validator
+    def check(self, attrib, a_list):
+      if a_list is None:
+        # unknown shape
+        return
+      if not isinstance(a_list, list):
+        raise ValueError('list_view should be a list')
+      # check the values in the list
+      is_valid = True
+      for v in a_list:
+        if isinstance(v, (int, type(None))):
+          continue
+        is_valid = False
+      if not is_valid:
+        raise ValueError("Invalid value type for %s" % a_list)
+  __utensor_generic_type__ = GenericType
 
 # helpers
 def _check_tf_type(conv_func):
@@ -70,20 +104,85 @@ def _check_generic_type(conv_func):
     return conv_func(cls, value)
   return wrap
 
+class BuiltinConverter(GenericConverter, TFConverterMixin):
+  """Identity converter for buildin types
+  """
+  __tfproto_type__ = (bytes, int, long, bool, float, str, unicode)
+  __utensor_generic_type__ = __tfproto_type__
+
+  @classmethod
+  @_check_tf_type
+  def get_generic_value(cls, value):
+    return value
+
+  @classmethod
+  @_check_generic_type
+  def get_tf_value(cls, value):
+    return value
+
+class ConverterFactory(object):
+  _BUILTIN_MAP = dict((t, BuiltinConverter) for t in BuiltinConverter.__tfproto_type__)
+  _TF2GENERIC_MAP = {}
+  _TF2GENERIC_MAP.update(_BUILTIN_MAP)
+
+  _GENERIC2TF_MAP = {}
+  _GENERIC2TF_MAP.update(_BUILTIN_MAP)
+
+  @classmethod
+  def register(cls, converter_cls):
+    if not issubclass(converter_cls, GenericConverter) or \
+      not issubclass(converter_cls, TFConverterMixin):
+      raise ValueError(
+        ('converter has to be subclass of both GenericConverter and TFConverterMixin'
+         ': %s' % converter_cls)
+      )
+    if converter_cls.__utensor_generic_type__ is None:
+      raise ValueError('__utensor_generic_type__ cannot be None: %s' % converter_cls)
+    if converter_cls.__tfproto_type__ is None:
+      raise ValueError('__tfproto_type__ cannot be None: %s' % converter_cls)
+    cls._TF2GENERIC_MAP[converter_cls.__tfproto_type__] = converter_cls
+    cls._GENERIC2TF_MAP[converter_cls.__utensor_generic_type__] = converter_cls
+    return converter_cls
+
+  @classmethod
+  def get_generic_value(cls, tf_value):
+    value_type = type(tf_value)
+    if value_type in cls._GENERIC2TF_MAP:
+      # already generic type
+      return tf_value
+    cvt = cls._TF2GENERIC_MAP.get(value_type, None)
+    if not cvt:
+      raise ValueError('Unknown tf value type: %s' % value_type)
+    return cvt.get_generic_value(tf_value)
+  
+  @classmethod
+  def get_tf_value(cls, generic):
+    value_type = type(generic)
+    if value_type in cls._TF2GENERIC_MAP:
+      # already tf type
+      return generic
+    cvt = cls._GENERIC2TF_MAP.get(value_type, None)
+    if not cvt:
+      raise ValueError('Unknown generic type: %s' % value_type)
+    return cvt.get_tf_value(generic)
+  
+  @classmethod
+  def all_supported_tf_types(cls):
+    return cls._TF2GENERIC_MAP.keys()
+  
+  @classmethod
+  def all_generic_types(cls):
+    return cls._GENERIC2TF_MAP.keys()
+
+  @classmethod
+  def TF2GENERIC_MAP(cls):
+    type_map = {}
+    for converter in cls._TF2GENERIC_MAP.values():
+      type_map[converter.__tfproto_type__] = converter.__utensor_generic_type__
+    return type_map
 
 # converters
-class GenericTensorConverterMixin(Converter):
-  @attr.s
-  class GenericType(object):
-    np_array = attr.ib(validator=validators.instance_of(np.ndarray))
-    dtype = attr.ib(default=None)
-    
-    def __attrs_post_init__(self):
-      if self.dtype is None:
-        self.dtype = self.np_array.dtype
-  __utensor_generic_type__ = GenericType
-
-
+@ConverterFactory.register
 class TensorProtoConverter(GenericTensorConverterMixin, TFConverterMixin):
   __tfproto_type__ = _TensorProto
 
@@ -110,11 +209,7 @@ class TensorProtoConverter(GenericTensorConverterMixin, TFConverterMixin):
     return cls.__utensor_generic_type__(np_array=np_array,
                                         dtype=dtype)
 
-
-class GenericDataTypeConverterMixin(Converter):
-  __utensor_generic_type__ = np.dtype
-
-
+@ConverterFactory.register
 class DataTypeConverter(GenericDataTypeConverterMixin, TFConverterMixin):
   __tfproto_type__ = int # _DataType is an enum type
   
@@ -145,30 +240,7 @@ class DataTypeConverter(GenericDataTypeConverterMixin, TFConverterMixin):
     else:
       raise TypeError('Unsupport numpy dtype: %s' % dtype)
 
-
-class GenericTensorShapeMixin(Converter):
-  @attr.s
-  class GenericType(object):
-    list_view = attr.ib()
-    
-    @list_view.validator
-    def check(self, attrib, a_list):
-      if a_list is None:
-        # unknown shape
-        return
-      if not isinstance(a_list, list):
-        raise ValueError('list_view should be a list')
-      # check the values in the list
-      is_valid = True
-      for v in a_list:
-        if isinstance(v, (int, type(None))):
-          continue
-        is_valid = False
-      if not is_valid:
-        raise ValueError("Invalid value type for %s" % a_list)
-  __utensor_generic_type__ = GenericType
-
-
+@ConverterFactory.register
 class TensorShapeConverter(GenericTensorShapeMixin, TFConverterMixin):
   __tfproto_type__ = _TensorShapeProto
 
@@ -187,7 +259,8 @@ class TensorShapeConverter(GenericTensorShapeMixin, TFConverterMixin):
       list_view = None
     return cls.GenericType(list_view=list_view)
 
-class AttrValueConverter(Converter, TFConverterMixin):
+@ConverterFactory.register
+class AttrValueConverter(GenericConverter, TFConverterMixin):
   __tfproto_type__ = _AttrValue
 
   @attr.s
@@ -223,7 +296,8 @@ class AttrValueConverter(Converter, TFConverterMixin):
     return cls.__utensor_generic_type__(value_name=value_name,
                                         value=ConverterFactory.get_generic_value(value))
 
-class NameAttrListConverter(Converter, TFConverterMixin):
+@ConverterFactory.register
+class NameAttrListConverter(GenericConverter, TFConverterMixin):
   __tfproto_type__ = _NameAttrList
 
   @attr.s
@@ -264,24 +338,8 @@ class NameAttrListConverter(Converter, TFConverterMixin):
       attr_map[name] = AttrValueConverter.get_generic_value(attr)
     return cls.__utensor_generic_type__(name=name, attr_map=attr_map)
 
-class BuiltinConverter(Converter, TFConverterMixin):
-  """Identity converter for buildin types
-  """
-  __tfproto_type__ = (bytes, int, long, bool, float, str, unicode)
-  __utensor_generic_type__ = __tfproto_type__
-
-  @classmethod
-  @_check_tf_type
-  def get_generic_value(cls, value):
-    return value
-
-  @classmethod
-  @_check_generic_type
-  def get_tf_value(cls, value):
-    return value
-
-
-class AttrListValueConverter(Converter, TFConverterMixin):
+@ConverterFactory.register
+class AttrListValueConverter(GenericConverter, TFConverterMixin):
   __tfproto_type__ = _AttrValue.ListValue
 
   @attr.s
@@ -328,56 +386,3 @@ class AttrListValueConverter(Converter, TFConverterMixin):
       'name_attrs_value': [ConverterFactory.get_generic_value(v) for v in tf_value.func]
     }
     return cls.__utensor_generic_type__(**kwargs)
-
-
-class ConverterFactory(object):
-  _BUILTIN_MAP = dict((t, BuiltinConverter) for t in BuiltinConverter.__tfproto_type__)
-  _TF2GENERIC_MAP = {
-    TensorProtoConverter.__tfproto_type__: TensorProtoConverter,
-    TensorShapeConverter.__tfproto_type__: TensorShapeConverter,
-    DataTypeConverter.__tfproto_type__: DataTypeConverter,
-    AttrValueConverter.__tfproto_type__: AttrValueConverter,
-    AttrListValueConverter.__tfproto_type__: AttrListValueConverter,
-    NameAttrListConverter.__tfproto_type__: NameAttrListConverter
-  }
-  _TF2GENERIC_MAP.update(_BUILTIN_MAP)
-
-  _GENERIC2TF_MAP = dict((c.__utensor_generic_type__, c) for c in _TF2GENERIC_MAP.values())
-  _GENERIC2TF_MAP.update(_BUILTIN_MAP)
-
-  @classmethod
-  def get_generic_value(cls, tf_value):
-    value_type = type(tf_value)
-    if value_type in cls._GENERIC2TF_MAP:
-      # already generic type
-      return tf_value
-    cvt = cls._TF2GENERIC_MAP.get(value_type, None)
-    if not cvt:
-      raise ValueError('Unknown tf value type: %s' % value_type)
-    return cvt.get_generic_value(tf_value)
-  
-  @classmethod
-  def get_tf_value(cls, generic):
-    value_type = type(generic)
-    if value_type in cls._TF2GENERIC_MAP:
-      # already tf type
-      return generic
-    cvt = cls._GENERIC2TF_MAP.get(value_type, None)
-    if not cvt:
-      raise ValueError('Unknown generic type: %s' % value_type)
-    return cvt.get_tf_value(generic)
-  
-  @classmethod
-  def all_supported_tf_types(cls):
-    return cls._TF2GENERIC_MAP.keys()
-  
-  @classmethod
-  def all_generic_types(cls):
-    return cls._GENERIC2TF_MAP.keys()
-
-  @classmethod
-  def TF2GENERIC_MAP(cls):
-    type_map = {}
-    for converter in cls._TF2GENERIC_MAP.values():
-      type_map[converter.__tfproto_type__] = converter.__utensor_generic_type__
-    return type_map

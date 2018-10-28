@@ -63,6 +63,10 @@ Following steps are a general guild for user how to porting a `TensorFlow` proto
     - You can still use any input tensor with name starts with "keep_prob" as long as it's not the output tensor of a placeholder node.
     - You can't wrap `dropout` in any `namescope` 
 
+# Philosophy
+
+- [12 Factor CLI App](https://medium.com/@jdxcode/12-factor-cli-apps-dd3c227a0e46?fbclid=IwAR1Gfq0D7oh3b-mXaIMV3RwYu39TAPrPXfz5sBKC4Rz1t-cckvC8WjBVl_w)
+
 # TODOs
 1. (done?) core code generator implementation
     - We need some refactoring, PRs are welcomed!

@@ -8,7 +8,7 @@ import numpy as np
 import six
 import tensorflow as tf
 from attr.validators import instance_of
-from tensorflow.contrib.util import make_ndarray
+from tensorflow import make_ndarray
 from tensorflow.core.framework.attr_value_pb2 import AttrValue as _AttrValue
 from tensorflow.core.framework.attr_value_pb2 import \
     NameAttrList as _NameAttrList
