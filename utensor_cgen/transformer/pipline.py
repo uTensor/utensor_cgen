@@ -1,9 +1,11 @@
-from .optimizer import RefCntOptimizer
-from .ns_transformer import DropoutTransformer, BatchNormTransformer
-from .ns_transformer import InlineTransformer
-from .quantize import QuantizeTransformer
-from .base import Transformer
 from utensor_cgen.utils import NamescopedKWArgsParser
+
+from .base import Transformer
+from .ns_transformer import (BatchNormTransformer, DropoutTransformer,
+                             InlineTransformer)
+from .optimizer import RefCntOptimizer
+from .quantize import QuantizeTransformer
+
 
 class TransformerPipeline(object):
 

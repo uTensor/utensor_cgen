@@ -1,5 +1,7 @@
-from utensor_cgen.ir.converter import TensorProtoConverter
 import numpy as np
+
+from utensor_cgen.ir.converter import TensorProtoConverter
+
 
 def test_generic_array(generic_array):
     tf_value = TensorProtoConverter.get_tf_value(generic_array)

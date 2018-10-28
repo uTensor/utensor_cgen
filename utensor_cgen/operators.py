@@ -4,10 +4,12 @@ import os
 import idx2numpy as idx2np
 import numpy as np
 
-from .snippets import *  # pylint: disable=W0401,W0614
-from utensor_cgen.utils import NamescopedKWArgsParser
-from utensor_cgen.transformer.optimizer import RefCntOptimizer
 from utensor_cgen.logger import logger
+from utensor_cgen.transformer.optimizer import RefCntOptimizer
+from utensor_cgen.utils import NamescopedKWArgsParser
+
+from .snippets import *  # pylint: disable=W0401,W0614
+
 
 class _Operator(object):
   def __init__(self):

@@ -1,5 +1,6 @@
-import tensorflow as tf
 import pytest
+import tensorflow as tf
+
 
 @pytest.fixture(scope='session', name='refgraph_tuple')
 def refgraph():

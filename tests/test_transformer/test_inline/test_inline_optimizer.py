@@ -1,5 +1,6 @@
-from utensor_cgen.transformer import InlineTransformer
 from utensor_cgen.ir import uTensorGraph
+from utensor_cgen.transformer import InlineTransformer
+
 
 def test_inline_optimizer(inlinegraph_tuple):
     (graph_def, inline_ans, output_nodes)=  inlinegraph_tuple

@@ -1,6 +1,7 @@
 import pytest
 from tensorflow import AttrValue, NameAttrList
 
+
 @pytest.fixture(scope='session')
 def int_attr_value():
     return AttrValue(i=3333)

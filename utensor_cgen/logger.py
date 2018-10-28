@@ -1,6 +1,6 @@
 #-*- coding: utf8 -*-
-import sys
 import logging
+import sys
 
 __all__ = ['logger']
 

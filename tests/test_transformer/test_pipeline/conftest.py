@@ -1,7 +1,10 @@
-import pytest
 from random import shuffle
-from utensor_cgen.transformer import (RefCntOptimizer, DropoutTransformer,
-                                      BatchNormTransformer, QuantizeTransformer)
+
+import pytest
+
+from utensor_cgen.transformer import (BatchNormTransformer, DropoutTransformer,
+                                      QuantizeTransformer, RefCntOptimizer)
+
 
 @pytest.fixture(scope='function', name='methods')
 def pipeline_methods():

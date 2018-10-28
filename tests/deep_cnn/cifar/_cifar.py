@@ -1,15 +1,16 @@
 # -*- coding: utf8 -*-
-from __future__ import print_function
-from __future__ import absolute_import
+from __future__ import absolute_import, print_function
+
 import os
 import tarfile
 
 import numpy as np
-from tensorflow.python.platform import gfile
-from tensorflow.python.framework import dtypes
 from tensorflow.contrib.learn.python.learn.datasets import base
-from .dataset import DataSet, dense_to_one_hot
+from tensorflow.python.framework import dtypes
+from tensorflow.python.platform import gfile
+
 from .cs231n.data_utils import load_CIFAR10
+from .dataset import DataSet, dense_to_one_hot
 
 __all__ = ["read_data_sets", "get_class_names", "onehot_to_names"]
 

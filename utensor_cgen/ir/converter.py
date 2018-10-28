@@ -14,11 +14,11 @@ from tensorflow import DType as _DType
 from tensorflow import as_dtype as _tf_as_dtype
 from tensorflow import make_ndarray, make_tensor_proto
 from tensorflow.core.framework.attr_value_pb2 import AttrValue as _AttrValue
-from tensorflow.core.framework.attr_value_pb2 import (
-    NameAttrList as _NameAttrList)
+from tensorflow.core.framework.attr_value_pb2 import \
+    NameAttrList as _NameAttrList
 from tensorflow.core.framework.tensor_pb2 import TensorProto as _TensorProto
-from tensorflow.core.framework.tensor_shape_pb2 import (
-    TensorShapeProto as _TensorShapeProto)
+from tensorflow.core.framework.tensor_shape_pb2 import \
+    TensorShapeProto as _TensorShapeProto
 from tensorflow.core.framework.types_pb2 import DataType as _DataType
 from tensorflow.python.framework import tensor_shape
 

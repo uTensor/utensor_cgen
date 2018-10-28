@@ -1,7 +1,8 @@
-import pytest
 import numpy as np
-from tensorflow.core.framework import types_pb2
+import pytest
 from tensorflow import make_tensor_proto
+from tensorflow.core.framework import types_pb2
+
 from utensor_cgen.ir.converter import TensorProtoConverter
 
 

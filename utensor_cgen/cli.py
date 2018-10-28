@@ -1,9 +1,10 @@
 #-*- coding:utf8 -*-
-import os, sys
-
-import pkg_resources
+import os
+import sys
 
 import click
+import pkg_resources
+
 from .utils import NArgsParam
 
 

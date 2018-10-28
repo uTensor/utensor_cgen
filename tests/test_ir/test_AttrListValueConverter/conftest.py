@@ -1,5 +1,5 @@
-from tensorflow.core.framework.attr_value_pb2 import AttrValue
 import pytest
+from tensorflow.core.framework.attr_value_pb2 import AttrValue
 
 
 @pytest.fixture(scope='session')

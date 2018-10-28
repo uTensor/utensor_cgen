@@ -3,6 +3,7 @@ import tensorflow as tf
 from utensor_cgen.ir import uTensorGraph
 from utensor_cgen.transformer.ns_transformer import DropoutTransformer
 
+
 def test_dropout_trans(droput_graph_tuple):
     (graph_def,
      (keep_prob_name, dropout_output_name),
@@ -35,4 +36,3 @@ def test_dropout_trans(droput_graph_tuple):
         output_2 = output.eval()
     # expecting the same outputs with keep_prob == 1.0
     assert (output_1 == output_2).all()
-
