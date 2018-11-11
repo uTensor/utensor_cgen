@@ -60,7 +60,7 @@ def cli():
               help="save transformed graph")
 def convert_graph(pb_file, output, data_dir, embed_data_dir, save_graph,
                   debug_comment, output_nodes, transform_methods, model_dir):
-  from utensor_cgen.code_generator import CodeGenerator
+  from utensor_cgen.backend import CodeGenerator
 
   if pb_file is None:
     raise ValueError("No pb file given")
@@ -104,13 +104,9 @@ def show_graph(model_file, **kwargs):
 
 def _show_pb_file(pb_file, **kwargs):
   import tensorflow as tf
-  from utensor_cgen.ir import uTensorGraph
+  from utensor_cgen.frontend.tensorflow import GraphDefParser
 
-  graph_def = tf.GraphDef()
-  with open(pb_file, 'rb') as fid:
-    graph_def.ParseFromString(fid.read())
-    ugraph = uTensorGraph(graph=graph_def,
-                          output_nodes=[node.name for node in graph_def.node])
+  ugraph = GraphDefParser.parse(pb_file)
   _show_ugraph(ugraph, **kwargs)
 
 def _show_ugraph(ugraph, oneline=False):

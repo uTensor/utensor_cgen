@@ -2,7 +2,7 @@ from abc import ABCMeta, abstractmethod
 from copy import deepcopy
 from functools import wraps
 
-from utensor_cgen.utils import parse_tensor_name
+from utensor_cgen.utils import parse_tensor_name, topologic_order_graph
 
 
 class Transformer(object):
@@ -28,7 +28,7 @@ class Transformer(object):
     @wraps(ori_transform)
     def transform(ugraph):
       new_ugraph = ori_transform(ugraph)
-      new_ugraph._topologic_order_graph()
+      topologic_order_graph(new_ugraph)
       if self.prune_graph:
         return self._prune_graph(new_ugraph)
       return new_ugraph
