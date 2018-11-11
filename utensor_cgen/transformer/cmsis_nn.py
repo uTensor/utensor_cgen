@@ -438,14 +438,53 @@ class CMSIS_NN_Transformer(Transformer):
       
       tmp_ugraph = uTensorGraph()
 
-      ##TODO: convert the inputs Uint8Q7OriginOp
-      input0_q7_tensor = TensorInfo(name=result[0]["matmal_eightbit/input/quantize"] + "_q7",
-                        op_name=result[0]["matmal_eightbit/input/quantize"],  #ownership
+      ## convert the inputs Uint8Q7OriginOp
+      new_input0_op_name = "convert_uint8_q7_" + result[0]["matmal_eightbit/input/quantize"]
+      new_input1_op_name = "convert_uint8_q7_" + result[0]["weight_quantized_const"]
+
+      input0_shape = tensorInfo_from_name(ugraph, result[1]["matmal_eightbit/input/quantize:0"]).shape
+      input0_q7_out = TensorInfo(name=result[0]["matmal_eightbit/input/quantize"] + "_q7:0",
+                        op_name=new_input0_op_name,  #ownership
                         dtype=np.dtype('int8'),
-                        shape=[1],
+                        shape=input0_shape,
                         ugraph=tmp_ugraph
                         )
-      
+      input0_q7_inputs = list()
+      input0_q7_inputs.append(tensorInfo_from_name(ugraph, result[1]["matmal_eightbit/input/quantize:0"]))
+      input0_q7_inputs.append(tensorInfo_from_name(ugraph, result[1]["matmal_eightbit/input/quantize:1"]))
+      input0_q7_inputs.append(tensorInfo_from_name(ugraph, result[1]["matmal_eightbit/input/quantize:2"]))
+      input0_q7_op_info = OperationInfo(name=new_input0_op_name,
+                                input_tensors=input0_q7_inputs,
+                                output_tensors=input0_q7_out,
+                                op_type="Uint8Q7OriginOp",
+                                backend="tensorflow",
+                                ugraph=tmp_ugraph,
+                                op_attr=bs_ops_attr(np.array([0], dtype=np.uint16))
+                                )
+      ugraph.add_op(input0_q7_op_info)
+
+      input1_shape = tensorInfo_from_name(ugraph, result[1]["weight_quantized_const:0"]).shape
+      input1_q7_out = TensorInfo(name=result[0]["weight_quantized_const"] + "_q7:0",
+                        op_name=new_input1_op_name,  #ownership
+                        dtype=np.dtype('int8'),
+                        shape=input1_shape,
+                        ugraph=tmp_ugraph
+                        )
+      input1_q7_inputs = list()
+      input1_q7_inputs.append(tensorInfo_from_name(ugraph, result[1]["weight_quantized_const:0"]))
+      input1_q7_inputs.append(tensorInfo_from_name(ugraph, result[1]["weight_quantized_min:0"]))
+      input1_q7_inputs.append(tensorInfo_from_name(ugraph, result[1]["weight_quantized_max:0"]))
+      input1_q7_op_info = OperationInfo(name=new_input1_op_name,
+                                input_tensors=input1_q7_inputs,
+                                output_tensors=input1_q7_out,
+                                op_type="Uint8Q7OriginOp",
+                                backend="tensorflow",
+                                ugraph=tmp_ugraph,
+                                op_attr=bs_ops_attr(np.array([0], dtype=np.uint16))
+                                )
+      ugraph.add_op(input1_q7_op_info)
+
+      #using CMSIS-NN FC as MatMul only, for now
       #generate new op name
       new_op_name = "cmsis_fc_" + result[0]["zscore/eightbit/requantize"]
 
@@ -510,9 +549,10 @@ class CMSIS_NN_Transformer(Transformer):
       #import pdb; pdb.set_trace()
       #compile new op's the input list
       in_tensors = list()
-      in_tensors.append(tensorInfo_from_name(ugraph, result[1]['matmal_eightbit/input/quantize:0'])) #pV
-      in_tensors.append(tensorInfo_from_name(ugraph, result[1]['weight_quantized_const:0'])) # Weights pM
-      in_tensors.append(tensorInfo_from_name(ugraph, result[1]['zscore_eightbit/bias/quantize:0'])) # Bias
+      in_tensors.append(input0_q7_out) #pV
+      in_tensors.append(input1_q7_out) # Weights pM
+      ##Bias is temporary disabled in CMSIS_NN_FC, so give it anything for now
+      in_tensors.append(input0_q7_out) # Bias
       in_tensors.append(bShift_tensor)
       in_tensors.append(oShift_tensor)
       in_tensors.append(scratch_tensor)
@@ -526,26 +566,61 @@ class CMSIS_NN_Transformer(Transformer):
       # update _CMSIS_NN_FCOperator in operator.py
 
       #compile new op's output list
-      out_tensors = ugraph.ops_info[result[0]["zscore/eightbit/requantize"]].output_tensors
+      out_tensor = [tensorInfo_from_name(ugraph, "matmal/eightbit:0")]
       #update updating all relevant tensors to point to the new op
       ugraph = replace_tensors_op(result[0]["zscore/eightbit/requantize"], new_op_name, ugraph)
 
       #FIXME: shouldn't be Tensorflow backend
       fused_op_info = OperationInfo(name=new_op_name,
                               input_tensors=in_tensors,
-                              output_tensors=out_tensors,
+                              output_tensors=out_tensor,
                               op_type="CMSIS_NN_FC",
                               backend="tensorflow",
                               ugraph=tmp_ugraph
                               )
 
       ugraph.drop_op(result[0]['matmal/eightbit'])
-      ugraph.drop_op(result[0]['matmal/eightbit/requant_range'])
-      ugraph.drop_op(result[0]['matmal/eightbit/requantize'])
-      ugraph.drop_op(result[0]['zscore/eightbit'])
-      ugraph.drop_op(result[0]['zscore/eightbit/requant_range'])
-      ugraph.drop_op(result[0]['zscore/eightbit/requantize'])
+      # ugraph.drop_op(result[0]['matmal/eightbit/requant_range'])
+      # ugraph.drop_op(result[0]['matmal/eightbit/requantize'])
+      # ugraph.drop_op(result[0]['zscore/eightbit'])
+      # ugraph.drop_op(result[0]['zscore/eightbit/requant_range'])
+      # ugraph.drop_op(result[0]['zscore/eightbit/requantize'])
       ugraph.add_op(fused_op_info)
+
+      new_range_op_name = new_op_name + "_range"
+      # matmul_min_tensor = TensorInfo(name=new_op_name + ":1",
+      #                         op_name=new_range_op_name,
+      #                         dtype=np.dtype('float'),
+      #                         shape=[1],
+      #                         ugraph=tmp_ugraph
+      #                         )
+      # matmul_max_tensor = TensorInfo(name=new_op_name + ":2",
+      #                         op_name=new_range_op_name,
+      #                         dtype=np.dtype('float'),
+      #                         shape=[1],
+      #                         ugraph=tmp_ugraph
+      #                         )
+      new_range_op_inputs = list()
+      new_range_op_inputs.append(tensorInfo_from_name(ugraph, "matmal_eightbit/input/quantize:1"))
+      new_range_op_inputs.append(tensorInfo_from_name(ugraph, "matmal_eightbit/input/quantize:2"))
+      new_range_op_inputs.append(tensorInfo_from_name(ugraph, "weight_quantized_min:0:"))
+      new_range_op_inputs.append(tensorInfo_from_name(ugraph, "weight_quantized_max:0"))
+
+      new_range_op_outputs = list()
+      new_range_op_outputs.append(tensorInfo_from_name(ugraph, "matmal/eightbit:1"))
+      new_range_op_outputs.append(tensorInfo_from_name(ugraph, "matmal/eightbit:2"))
+      new_range_op_outputs[0].op_name = new_range_op_name
+      new_range_op_outputs[1].op_name = new_range_op_name
+
+      new_range_op_info = OperationInfo(name=new_range_op_name,
+                        input_tensors=new_range_op_inputs,
+                        output_tensors=new_range_op_outputs,
+                        op_type="QuantRangeForMultiplicationu8u8int32Op",
+                        backend="tensorflow",
+                        ugraph=tmp_ugraph
+                        )
+      ugraph.add_op(new_range_op_info)
+
       graph_validate(ugraph)
 
     graph_check(ugraph)
