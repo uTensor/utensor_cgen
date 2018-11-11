@@ -2,10 +2,13 @@
 import re
 from collections import defaultdict
 from copy import deepcopy
+import six
 
 import attr
 import numpy as np
-import six
+import onnx
+from onnx.onnx_pb import ModelProto
+from onnx_tf.backend import prepare
 import tensorflow as tf
 from attr.validators import instance_of
 from tensorflow import make_ndarray
@@ -190,6 +193,7 @@ class OperationInfo(IRBase, _NoShallowCopyMixin):
   def copy_into_graph(self, ugraph):
     return deepcopy(self, {'ugraph': ugraph})
 
+
 class uTensorGraph(IRBase, _NoShallowCopyMixin):
   """
   Attributes
@@ -212,10 +216,12 @@ class uTensorGraph(IRBase, _NoShallowCopyMixin):
       return
     assert isinstance(output_nodes, list), \
         "output_nodes should be of type %s, get %s" % (list, type(output_nodes))
-    if isinstance(graph, tf.GraphDef):
-      if not output_nodes:
+    if not output_nodes:
         raise ValueError('No output_nodes given')
+    if isinstance(graph, tf.GraphDef):
       self._init_from_graph_def(graph, output_nodes)
+    elif isinstance(graph, ModelProto):
+      self._init_from_onnx(graph, output_nodes)
     else:
       raise ValueError('Only support tensorflow now')
   
@@ -339,6 +345,11 @@ class uTensorGraph(IRBase, _NoShallowCopyMixin):
       op_info.op_attr['tensorflow__device'] = node.device
       self.ops_info[node.name] = op_info
     self._topologic_order_graph()
+  
+  def _init_from_onnx(self, onnx_model, output_nodes):
+    tf_rep = prepare(onnx_model)
+    graph_def = tf_rep.graph.as_graph_def()
+    self._init_from_graph_def(graph_def, output_nodes)
   
   def _tf_is_freeze_graph(self, graph_def):
     is_frozen = all(node.op not in ['VariableV2'] for node in graph_def.node)
