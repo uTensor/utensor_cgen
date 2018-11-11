@@ -394,7 +394,7 @@ def bs_ops_attr(np_array):
                                          )
   return op_attr
 
-
+## MatMul Only
 class CMSIS_NN_Transformer(Transformer):
   METHOD_NAME = 'cmsisnn'
   KWARGS_NAMESCOPE = '_utensor_cmsisnn'
@@ -416,15 +416,13 @@ class CMSIS_NN_Transformer(Transformer):
       a_fc1 = tf.add(matmal, b_fc1, name="zscore")
 
       meta = dict()
-      #meta["input"] = "Any"
-      meta["matmal_eightbit/input/quantize"] = ["End", "Any"]
       meta["zscore_eightbit/bias/quantize"] = ["End", "Any"]
 
       quant_graph_def = TransformGraph(input_graph_def=graph.as_graph_def(),
                                      inputs=['input`'],
                                      outputs=['zscore'],
                                      transforms=["quantize_weights", "quantize_nodes"])
-      mgraph = uTensorGraph(graph=quant_graph_def, output_nodes=['zscore/eightbit/requantize'])
+      mgraph = uTensorGraph(graph=quant_graph_def, output_nodes=['matmal/eightbit'])
 
     #mgraph.viz_graph(fname="matcher.gv")
     return (mgraph, meta)
@@ -439,6 +437,14 @@ class CMSIS_NN_Transformer(Transformer):
         break
       
       tmp_ugraph = uTensorGraph()
+
+      ##TODO: convert the inputs Uint8Q7OriginOp
+      input0_q7_tensor = TensorInfo(name=result[0]["matmal_eightbit/input/quantize"] + "_q7",
+                        op_name=result[0]["matmal_eightbit/input/quantize"],  #ownership
+                        dtype=np.dtype('int8'),
+                        shape=[1],
+                        ugraph=tmp_ugraph
+                        )
       
       #generate new op name
       new_op_name = "cmsis_fc_" + result[0]["zscore/eightbit/requantize"]
@@ -545,3 +551,156 @@ class CMSIS_NN_Transformer(Transformer):
     graph_check(ugraph)
     #ugraph.viz_graph(fname="cmsis_nn.gv")
     return ugraph
+
+
+## MatMul + Add
+# class CMSIS_NN_Transformer(Transformer):
+#   METHOD_NAME = 'cmsisnn'
+#   KWARGS_NAMESCOPE = '_utensor_cmsisnn'
+
+#   def make_rand_const(self, shape, name):
+#     val = np.random.random(shape)
+#     return tf.convert_to_tensor(val, name=name, dtype=tf.float32)
+
+#   def get_matcher_graph(self):
+#     graph = tf.Graph()
+#     tf.reset_default_graph()
+#     with graph.as_default():
+    
+#       x = tf.placeholder(dtype=tf.float32, name='input')
+#       #x = self.make_rand_const([1,784], name='input')
+#       W_fc1 = self.make_rand_const([784, 128], name='weight')
+#       b_fc1 = self.make_rand_const([128], name='bias')
+#       matmal = tf.matmul(x, W_fc1, name='matmal')
+#       a_fc1 = tf.add(matmal, b_fc1, name="zscore")
+
+#       meta = dict()
+#       #meta["input"] = "Any"
+#       meta["matmal_eightbit/input/quantize"] = ["End", "Any"]
+#       meta["zscore_eightbit/bias/quantize"] = ["End", "Any"]
+
+#       quant_graph_def = TransformGraph(input_graph_def=graph.as_graph_def(),
+#                                      inputs=['input`'],
+#                                      outputs=['zscore'],
+#                                      transforms=["quantize_weights", "quantize_nodes"])
+#       mgraph = uTensorGraph(graph=quant_graph_def, output_nodes=['zscore/eightbit/requantize'])
+
+#     #mgraph.viz_graph(fname="matcher.gv")
+#     return (mgraph, meta)
+
+#   def transform(self, ugraph):
+#     [matcher_ugraph, metaData] = self.get_matcher_graph()
+#     #ugraph.viz_graph(fname="subject.gv")
+
+#     while True:
+#       result = isomorphic_match(ugraph, matcher_ugraph, metaData)
+#       if result == False:
+#         break
+      
+#       tmp_ugraph = uTensorGraph()
+      
+#       #generate new op name
+#       new_op_name = "cmsis_fc_" + result[0]["zscore/eightbit/requantize"]
+
+#       #import pdb; pdb.set_trace()
+#       bShift = "cmsis_bShift_"
+#       bShiftIter = get_unique_number(bShift)
+#       bShift += "%d" % bShiftIter
+#       bShift_tensor = TensorInfo(name=bShift + ":0",
+#                               op_name=bShift,
+#                               dtype=np.dtype('uint16'),
+#                               shape=[1],
+#                               ugraph=tmp_ugraph
+#                               )
+#       bShift_op_info = OperationInfo(name=bShift,
+#                               input_tensors=list(),
+#                               output_tensors=[bShift_tensor],
+#                               op_type="Const",
+#                               backend="tensorflow",
+#                               ugraph=tmp_ugraph,
+#                               op_attr=bs_ops_attr(np.array([0], dtype=np.uint16))
+#                               )
+#       ugraph.add_op(bShift_op_info)
+
+#       oShift = "cmsis_oShift_"
+#       oShiftIter = get_unique_number(oShift)
+#       oShift += "%d" % oShiftIter
+#       oShift_tensor = TensorInfo(name=oShift + ":0",
+#                               op_name=oShift,
+#                               dtype=np.dtype('uint16'),
+#                               shape=[1],
+#                               ugraph=tmp_ugraph
+#                               )
+#       oShift_op_info = OperationInfo(name=oShift,
+#                               input_tensors=list(),
+#                               output_tensors=[oShift_tensor],
+#                               op_type="Const",
+#                               backend="tensorflow",
+#                               ugraph=tmp_ugraph,
+#                               op_attr=bs_ops_attr(np.array([0], dtype=np.uint16))
+#                               )
+#       ugraph.add_op(oShift_op_info)
+
+#       scratch_space = "cmsis_scratch_"
+#       scratchIter = get_unique_number(scratch_space)
+#       scratch_space += "%d" % scratchIter
+#       scratch_shape = list(map(lambda x: x if x else 1, tensorInfo_from_name(ugraph, result[1]['matmal_eightbit/input/quantize:0']).shape))
+#       scratch_tensor = TensorInfo(name=scratch_space + ":0",
+#                               op_name=scratch_space,
+#                               dtype=np.dtype('uint16'),
+#                               shape=scratch_shape,
+#                               ugraph=tmp_ugraph
+#                               )
+#       scratch_op_info = OperationInfo(name=scratch_space,
+#                               input_tensors=list(),
+#                               output_tensors=[scratch_tensor],
+#                               op_type="Const",
+#                               backend="tensorflow",
+#                               ugraph=tmp_ugraph,
+#                               op_attr=bs_ops_attr(np.zeros(tuple(scratch_shape), dtype=np.uint16))
+#                               )
+#       ugraph.add_op(scratch_op_info)
+#       #import pdb; pdb.set_trace()
+#       #compile new op's the input list
+#       in_tensors = list()
+#       in_tensors.append(tensorInfo_from_name(ugraph, result[1]['matmal_eightbit/input/quantize:0'])) #pV
+#       in_tensors.append(tensorInfo_from_name(ugraph, result[1]['weight_quantized_const:0'])) # Weights pM
+#       in_tensors.append(tensorInfo_from_name(ugraph, result[1]['zscore_eightbit/bias/quantize:0'])) # Bias
+#       in_tensors.append(bShift_tensor)
+#       in_tensors.append(oShift_tensor)
+#       in_tensors.append(scratch_tensor)
+
+#       #TODO:
+#       # make sure weight and bias are in the format
+#       # supply S_TENSOR bShift and S_TENSOR oShift here
+#       # This can be found by either offline quantization profiling
+#       # Or, by taking statistic of the weight matrix
+#       # In uTensor runtime CMSIS Op, convert the number format back to the linear quantized format
+#       # update _CMSIS_NN_FCOperator in operator.py
+
+#       #compile new op's output list
+#       out_tensors = ugraph.ops_info[result[0]["zscore/eightbit/requantize"]].output_tensors
+#       #update updating all relevant tensors to point to the new op
+#       ugraph = replace_tensors_op(result[0]["zscore/eightbit/requantize"], new_op_name, ugraph)
+
+#       #FIXME: shouldn't be Tensorflow backend
+#       fused_op_info = OperationInfo(name=new_op_name,
+#                               input_tensors=in_tensors,
+#                               output_tensors=out_tensors,
+#                               op_type="CMSIS_NN_FC",
+#                               backend="tensorflow",
+#                               ugraph=tmp_ugraph
+#                               )
+
+#       ugraph.drop_op(result[0]['matmal/eightbit'])
+#       ugraph.drop_op(result[0]['matmal/eightbit/requant_range'])
+#       ugraph.drop_op(result[0]['matmal/eightbit/requantize'])
+#       ugraph.drop_op(result[0]['zscore/eightbit'])
+#       ugraph.drop_op(result[0]['zscore/eightbit/requant_range'])
+#       ugraph.drop_op(result[0]['zscore/eightbit/requantize'])
+#       ugraph.add_op(fused_op_info)
+#       graph_validate(ugraph)
+
+#     graph_check(ugraph)
+#     #ugraph.viz_graph(fname="cmsis_nn.gv")
+#     return ugraph
