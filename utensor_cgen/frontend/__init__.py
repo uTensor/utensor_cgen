@@ -1,5 +1,3 @@
-from utensor_cgen.utils import MUST_OVERWRITEN
-
 class FrontendSelector(object):
   _parser_map = {}
 
@@ -9,7 +7,7 @@ class FrontendSelector(object):
       for ext in target_exts:
         if ext in cls._parser_map:
           raise ValueError("duplicate file ext detected: %s" % ext)
-      cls._parser_map[ext] = parser_cls
+        cls._parser_map[ext] = parser_cls
       return parser_cls
 
     return _register
