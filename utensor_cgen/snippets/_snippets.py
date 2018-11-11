@@ -456,6 +456,33 @@ class Conv2DOpSnippent(Snippet):
     self.template_vars["ref_counts"] = ref_counts
     self.template_vars["to_eval"] = to_eval
 
+class Uint8Q7OriginSnippet(Snippet):
+  __template_name__ = "snippets/cmsis_uint8q7origin_op.cpp"
+  __headers__ = set(['"uTensor/ops/cmsis_ops/Uint8Q7OriginOps.hpp"'])
+
+  def __init__(self, inputs, output,
+               ref_count=0,
+               to_eval=False):
+    Snippet.__init__(self)
+    if ref_count:
+      self.template_vars["ref_count"] = ref_count
+    self.template_vars["inputs"] = inputs
+    self.template_vars["output"] = output
+    self.template_vars["to_eval"] = to_eval
+
+class QuantRangeForMultiplicationSnippet(Snippet):
+  __template_name__ = "snippets/quant_range_for_multiplication_op.cpp"
+  __headers__ = set(['"uTensor/ops/cmsis_ops/Uint8Q7OriginOps.hpp"'])
+
+  def __init__(self, inputs, outputs,
+               ref_count=0,
+               to_eval=False):
+    Snippet.__init__(self)
+    if ref_count:
+      self.template_vars["ref_count"] = ref_count
+    self.template_vars["inputs"] = inputs
+    self.template_vars["outputs"] = outputs
+    self.template_vars["to_eval"] = to_eval
 
 class CommentSnippet(Snippet):
   __template_name__ = "snippets/comments.cpp"

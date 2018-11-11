@@ -272,6 +272,29 @@ class _Conv2DOperator(_Operator):
                                      in_dtype=in_dtype, filter_dtype=filter_dtype, out_dtypes=out_dtypes,
                                      ref_counts=ref_counts, to_eval=to_eval)
 
+class _Uint8Q7OriginOperator(_Operator):
+  def __init__(self, op_info, **kwargs):
+    _Operator.__init__(self)
+    inputs = [tensor_info.name for tensor_info in op_info.input_tensors]
+    output = op_info.output_tensors[0].name
+    parser = NamescopedKWArgsParser(RefCntOptimizer.KWARGS_NAMESCOPE, 
+                                    op_info.op_attr)
+    ref_count = parser.get('ref_counts', [0])[0]
+    to_eval = parser.get('to_eval', False)
+    self._snippet = Uint8Q7OriginSnippet(inputs, output, ref_count, to_eval)
+
+#hard coding to uint8_t uint8_t int32_t for now
+class _QuantRangeForMultiplication_u8_u8_int32_Operator(_Operator):
+  def __init__(self, op_info, **kwargs):
+   _Operator.__init__(self)
+   inputs = [tensor_info.name for tensor_info in op_info.input_tensors]
+   outputs = [tensor_info.name for tensor_info in op_info.output_tensors]
+   parser = NamescopedKWArgsParser(RefCntOptimizer.KWARGS_NAMESCOPE, 
+                                   op_info.op_attr)
+   ref_count = parser.get('ref_counts', [0])[0]
+   to_eval = parser.get('to_eval', False)
+   self._snippet = QuantRangeForMultiplicationSnippet(inputs, outputs, ref_count, to_eval)
+
 class _InlineOperator(_Operator):
   
   def __init__(self, op_info, **kwargs):
@@ -362,7 +385,10 @@ class OperatorFactory():
                 "QuantizedConv2D": _Conv2DOperator,
                 "Const": _ConstOperator,
                 "Inline": _InlineOperator,
-                "CMSIS_NN_FC": _CMSIS_NN_FCOperator}
+                "CMSIS_NN_FC": _CMSIS_NN_FCOperator,
+                "Uint8Q7OriginOp", : _Uint8Q7OriginOperator,
+                "QuantRangeForMultiplicationu8u8int32Op", : _QuantRangeForMultiplication_u8_u8_int32_Operator
+                }
 
   def createOperatorSnippet(self, op_info, **kwargs):
     op_type = op_info.op_type
