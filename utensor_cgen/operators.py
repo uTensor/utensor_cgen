@@ -386,8 +386,8 @@ class OperatorFactory():
                 "Const": _ConstOperator,
                 "Inline": _InlineOperator,
                 "CMSIS_NN_FC": _CMSIS_NN_FCOperator,
-                "Uint8Q7OriginOp", : _Uint8Q7OriginOperator,
-                "QuantRangeForMultiplicationu8u8int32Op", : _QuantRangeForMultiplication_u8_u8_int32_Operator
+                "Uint8Q7OriginOp" : _Uint8Q7OriginOperator,
+                "QuantRangeForMultiplicationu8u8int32Op" : _QuantRangeForMultiplication_u8_u8_int32_Operator
                 }
 
   def createOperatorSnippet(self, op_info, **kwargs):

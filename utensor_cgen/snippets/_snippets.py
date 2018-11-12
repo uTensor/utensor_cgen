@@ -16,7 +16,7 @@ __all__ = ["Snippet", "SnippetContainerBase",
            "CommentSnippet", "ContextHeaderSnippet",
            "ContextSnippetsContainer", "QuantizedAddOpSnippet",
            "CreateTensorBinarySnippet", "WeightSnippet",
-           "ContextGlobalArrayContainer"]
+           "ContextGlobalArrayContainer", "QuantRangeForMultiplicationSnippet", "Uint8Q7OriginSnippet"]
 
 # TODO: Better abstraction, i.e a better backend for code generation
 class CreateTensorIdxSnippet(Snippet):
