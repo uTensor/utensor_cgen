@@ -7,7 +7,7 @@ from utensor_cgen.ir.base import TensorInfo, OperationInfo, uTensorGraph
 from utensor_cgen.utils import topologic_order_graph
 
 
-@FrontendSelector.register(target_exts=['.pb'])
+@FrontendSelector.register(target_exts=['.pb', '.pbtxt'])
 class GraphDefParser(Parser):
 
   @classmethod

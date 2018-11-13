@@ -1,8 +1,4 @@
 from abc import ABCMeta, abstractmethod
-from copy import deepcopy
-
-from utensor_cgen.utils import parse_tensor_name
-
 
 class Parser(object):
   __metaclass__ = ABCMeta

@@ -1,4 +1,3 @@
-from onnx.onnx_pb import ModelProto
 from onnx import load as _load
 from onnx_tf.backend import prepare
 
