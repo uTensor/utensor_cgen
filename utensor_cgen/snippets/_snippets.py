@@ -419,16 +419,16 @@ class CMSISNNFCOpSnippet(Snippet):
   __template_name__ = "snippets/cmsis_nn_fc_op.cpp"
   __headers__ = set(['"uTensor/ops/cmsis_ops/FullyConnectedOps.hpp"'])
 
-  def __init__(self, inputs, outputs, in_dtypes, out_dtypes,
+  def __init__(self, inputs, output, in_dtypes, out_dtype,
                ref_counts=None,
                to_eval=False):
     Snippet.__init__(self)
     if ref_counts:
       self.template_vars["ref_counts"] = ref_counts
     self.template_vars["inputs"] = inputs
-    self.template_vars["outputs"] = outputs
+    self.template_vars["output"] = output
     self.template_vars["in_dtypes"] = in_dtypes
-    self.template_vars["out_dtypes"] = out_dtypes
+    self.template_vars["out_dtype"] = NP_TYPES_MAP[out_dtype].tensor_type_str
     self.template_vars["to_eval"] = to_eval
 
 class Conv2DOpSnippent(Snippet):
@@ -474,7 +474,7 @@ class QuantRangeForMultiplicationSnippet(Snippet):
   __template_name__ = "snippets/quant_range_for_multiplication_op.cpp"
   __headers__ = set(['"uTensor/ops/cmsis_ops/Uint8Q7OriginOps.hpp"'])
 
-  def __init__(self, inputs, outputs,
+  def __init__(self, inputs, outputs, out_dtype,
                ref_count=0,
                to_eval=False):
     Snippet.__init__(self)
@@ -482,6 +482,7 @@ class QuantRangeForMultiplicationSnippet(Snippet):
       self.template_vars["ref_count"] = ref_count
     self.template_vars["inputs"] = inputs
     self.template_vars["outputs"] = outputs
+    self.template_vars["out_dtype"] = NP_TYPES_MAP[out_dtype].tensor_type_str
     self.template_vars["to_eval"] = to_eval
 
 class CommentSnippet(Snippet):

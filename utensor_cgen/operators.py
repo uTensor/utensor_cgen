@@ -239,8 +239,8 @@ class _CMSIS_NN_FCOperator(_Operator):
     #import pdb; pdb.set_trace()
     # Note order of inputs/outputs is preserved
     inputs = [tensor_info.name for tensor_info in op_info.input_tensors]
-    outputs = [tensor_info.name for tensor_info in op_info.output_tensors]
-    out_dtypes = [tensor_info.dtype for tensor_info in op_info.output_tensors]
+    output = op_info.output_tensors[0].name
+    out_dtype = op_info.output_tensors[0].dtype
     in_dtypes = [tensor_info.dtype for tensor_info in op_info.input_tensors]
     assert (op_info.input_tensors[0].shape[0] == None or op_info.input_tensors[0].shape[0] == 1)
     parser = NamescopedKWArgsParser(RefCntOptimizer.KWARGS_NAMESCOPE,
@@ -248,10 +248,10 @@ class _CMSIS_NN_FCOperator(_Operator):
     ref_counts = parser.get('ref_counts', [])
     to_eval = parser.get('to_eval', False)
     self._snippet = CMSISNNFCOpSnippet(inputs=inputs,
-                                              outputs=outputs,
+                                              output=output,
                                               ref_counts=ref_counts,
                                               in_dtypes=in_dtypes,
-                                              out_dtypes=out_dtypes,
+                                              out_dtype=out_dtype,
                                               to_eval=to_eval)
 
 class _Conv2DOperator(_Operator):
@@ -286,14 +286,17 @@ class _Uint8Q7OriginOperator(_Operator):
 #hard coding to uint8_t uint8_t int32_t for now
 class _QuantRangeForMultiplication_u8_u8_int32_Operator(_Operator):
   def __init__(self, op_info, **kwargs):
-   _Operator.__init__(self)
-   inputs = [tensor_info.name for tensor_info in op_info.input_tensors]
-   outputs = [tensor_info.name for tensor_info in op_info.output_tensors]
-   parser = NamescopedKWArgsParser(RefCntOptimizer.KWARGS_NAMESCOPE, 
-                                   op_info.op_attr)
-   ref_count = parser.get('ref_counts', [0])[0]
-   to_eval = parser.get('to_eval', False)
-   self._snippet = QuantRangeForMultiplicationSnippet(inputs, outputs, ref_count, to_eval)
+    _Operator.__init__(self)
+    inputs = [tensor_info.name for tensor_info in op_info.input_tensors]
+    outputs = [tensor_info.name for tensor_info in op_info.output_tensors]
+    if op_info.output_tensors[0].dtype != op_info.output_tensors[1].dtype:
+      assert "output tensors must have the same data type"
+    output_type = op_info.output_tensors[0].dtype
+    parser = NamescopedKWArgsParser(RefCntOptimizer.KWARGS_NAMESCOPE, 
+                                    op_info.op_attr)
+    ref_count = parser.get('ref_counts', [0])[0]
+    to_eval = parser.get('to_eval', False)
+    self._snippet = QuantRangeForMultiplicationSnippet(inputs, outputs, output_type, ref_count, to_eval)
 
 class _InlineOperator(_Operator):
   
