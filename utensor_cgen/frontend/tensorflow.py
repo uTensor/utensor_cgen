@@ -1,5 +1,8 @@
+import os
+
 import tensorflow as tf
 import numpy as np
+from google.protobuf import text_format
 
 from utensor_cgen.frontend.base import Parser
 from utensor_cgen.frontend import FrontendSelector
@@ -12,12 +15,7 @@ class GraphDefParser(Parser):
 
   @classmethod
   def parse(cls, pb_file, output_nodes=None):
-    if isinstance(pb_file, str):
-      graph_def = tf.GraphDef()
-      with open(pb_file, 'rb') as fid:
-        graph_def.ParseFromString(fid.read())
-    else:
-      graph_def = pb_file
+    graph_def = cls._load_graph_def(pb_file)
     if not cls._tf_is_freeze_graph(graph_def):
       raise ValueError('Given graph_def is not freezed')
     if output_nodes is None:
@@ -56,6 +54,23 @@ class GraphDefParser(Parser):
       ugraph.ops_info[node.name] = op_info
     topologic_order_graph(ugraph)
     return ugraph
+
+  @staticmethod
+  def _load_graph_def(pb_file):
+    if isinstance(pb_file, tf.GraphDef):
+      return pb_file
+    assert isinstance(pb_file, str)
+    graph_def = tf.GraphDef()
+    if pb_file[-3:] == ".pb":
+      with open(pb_file, 'rb') as fid:
+        graph_def.ParseFromString(fid.read())
+    elif pb_file[-3:] == ".pbtxt":
+      with open(pb_file, 'r') as fid:
+        text_format.Parse(fid.read(), graph_def)
+    else:
+      raise ValueError('unknown file format: %s' % pb_file)
+    return graph_def
+
 
   @staticmethod
   def _tf_parse_tshape(t_shape):
