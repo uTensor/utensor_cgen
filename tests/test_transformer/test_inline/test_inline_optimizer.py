@@ -1,10 +1,10 @@
-from utensor_cgen.ir import uTensorGraph
+from utensor_cgen.frontend.tensorflow import GraphDefParser
 from utensor_cgen.transformer import InlineTransformer
 
 
 def test_inline_optimizer(inlinegraph_tuple):
     (graph_def, inline_ans, output_nodes)=  inlinegraph_tuple
-    ugraph = uTensorGraph(graph_def, output_nodes)
+    ugraph = GraphDefParser.parse(graph_def, output_nodes)
     transformer = InlineTransformer()
     ugraph = transformer.transform(ugraph)
     for op in ugraph.ops_info.values():
