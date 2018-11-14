@@ -458,7 +458,7 @@ class Conv2DOpSnippent(Snippet):
 
 class Uint8Q7OriginSnippet(Snippet):
   __template_name__ = "snippets/cmsis_uint8q7origin_op.cpp"
-  __headers__ = set(['"uTensor/ops/cmsis_ops/Uint8Q7OriginOps.hpp"'])
+  __headers__ = set(['"uTensor/ops/cmsis_ops/supportOps.hpp"'])
 
   def __init__(self, inputs, output,
                ref_count=0,
@@ -472,7 +472,7 @@ class Uint8Q7OriginSnippet(Snippet):
 
 class QuantRangeForMultiplicationSnippet(Snippet):
   __template_name__ = "snippets/quant_range_for_multiplication_op.cpp"
-  __headers__ = set(['"uTensor/ops/cmsis_ops/Uint8Q7OriginOps.hpp"'])
+  __headers__ = set(['"uTensor/ops/cmsis_ops/supportOps.hpp"'])
 
   def __init__(self, inputs, outputs, out_dtype,
                ref_count=0,

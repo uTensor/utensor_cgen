@@ -555,7 +555,7 @@ class CMSIS_NN_Transformer(Transformer):
       scratch_op_info = OperationInfo(name=scratch_space,
                               input_tensors=list(),
                               output_tensors=[scratch_tensor],
-                              op_type="Const",
+                              op_type="Const",  #fixme
                               backend="tensorflow",
                               ugraph=tmp_ugraph,
                               op_attr=bs_ops_attr(np.zeros(tuple(scratch_shape), dtype=np.uint16))
