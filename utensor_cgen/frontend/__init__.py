@@ -38,10 +38,10 @@ class FrontendSelector(object):
     if cls._setuped:
       return
     root_dir = os.path.dirname(__file__)
-    for _, _, files in os.walk(root_dir):
-      for file in files:
-        fname, ext = os.path.splitext(file)
-        if fname not in ['__init__', 'base'] and ext == ".py":
-          mod_name = 'utensor_cgen.frontend.%s' % fname
-          importlib.import_module(mod_name)
+    _, _, files = next(os.walk(root_dir))
+    for file in files:
+      fname, ext = os.path.splitext(file)
+      if fname not in ['__init__', 'base'] and ext == ".py":
+        mod_name = 'utensor_cgen.frontend.%s' % fname
+        importlib.import_module(mod_name)
     cls._setuped = True
