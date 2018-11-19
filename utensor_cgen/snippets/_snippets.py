@@ -72,6 +72,8 @@ class CreateTensorBinarySnippet(Snippet):
       self.template_vars["sptr_name"] = sptr_name
     self.template_vars["tensor_type"] = "BinaryTensor"
     self.template_vars["tensor_name"] = tensor_name
+    if tensor_shape == []:
+      tensor_shape = [1]
     self.template_vars["tensor_shape"] = self._to_shape_str(tensor_shape)
     self.template_vars["tensor_length"] = np.prod(tensor_shape)
     self.template_vars["dtype"] = NP_TYPES_MAP[tf_dtype].tensor_type_str
