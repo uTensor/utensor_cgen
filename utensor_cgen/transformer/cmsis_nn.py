@@ -629,7 +629,6 @@ class CMSIS_NN_Transformer(Transformer):
       ugraph = replace_tensor_op_by_name(matmal_output_tensors[2].name, new_range_op_name, ugraph)
       new_range_op_outputs[0].op_name = new_range_op_name
       new_range_op_outputs[1].op_name = new_range_op_name
-
       new_range_op_info = OperationInfo(name=new_range_op_name,
                         input_tensors=new_range_op_inputs,
                         output_tensors=new_range_op_outputs,
@@ -638,7 +637,6 @@ class CMSIS_NN_Transformer(Transformer):
                         ugraph=tmp_ugraph
                         )
       ugraph.add_op(new_range_op_info)
-      #       #import pdb; pdb.set_trace()
       graph_validate(ugraph)
 
     graph_check(ugraph)

@@ -72,6 +72,7 @@ class CreateTensorBinarySnippet(Snippet):
       self.template_vars["sptr_name"] = sptr_name
     self.template_vars["tensor_type"] = "BinaryTensor"
     self.template_vars["tensor_name"] = tensor_name
+    #FIXME: a patch to make scalar RomTensor compilable: [] vs [1]
     if tensor_shape == []:
       tensor_shape = [1]
     self.template_vars["tensor_shape"] = self._to_shape_str(tensor_shape)
@@ -477,11 +478,16 @@ class QuantRangeForMultiplicationSnippet(Snippet):
   __headers__ = set(['"uTensor/ops/cmsis_ops/supportOps.hpp"'])
 
   def __init__(self, inputs, outputs, out_dtype,
-               ref_count=0,
+               ref_counts=None,
                to_eval=False):
     Snippet.__init__(self)
-    if ref_count:
-      self.template_vars["ref_count"] = ref_count
+    if ref_counts is None:
+      ref_counts = []
+    if ref_counts:
+      err_msg = ("incorrect number of ref_counts and outputs: {}, {}"
+                 .format(ref_counts, outputs))
+      assert len(ref_counts) == len(outputs), err_msg
+      self.template_vars['ref_counts'] = ref_counts
     self.template_vars["inputs"] = inputs
     self.template_vars["outputs"] = outputs
     self.template_vars["out_dtype"] = NP_TYPES_MAP[out_dtype].tensor_type_str

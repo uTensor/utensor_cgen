@@ -279,7 +279,7 @@ class _Uint8Q7OriginOperator(_Operator):
     output = op_info.output_tensors[0].name
     parser = NamescopedKWArgsParser(RefCntOptimizer.KWARGS_NAMESCOPE, 
                                     op_info.op_attr)
-    ref_count = parser.get('ref_counts', [0])[0]
+    ref_count = parser.get('ref_counts', [])
     to_eval = parser.get('to_eval', False)
     self._snippet = Uint8Q7OriginSnippet(inputs, output, ref_count, to_eval)
 
@@ -294,9 +294,9 @@ class _QuantRangeForMultiplication_u8_u8_int32_Operator(_Operator):
     output_type = op_info.output_tensors[0].dtype
     parser = NamescopedKWArgsParser(RefCntOptimizer.KWARGS_NAMESCOPE, 
                                     op_info.op_attr)
-    ref_count = parser.get('ref_counts', [0])[0]
+    ref_counts = parser.get('ref_counts', [])
     to_eval = parser.get('to_eval', False)
-    self._snippet = QuantRangeForMultiplicationSnippet(inputs, outputs, output_type, ref_count, to_eval)
+    self._snippet = QuantRangeForMultiplicationSnippet(inputs, outputs, output_type, ref_counts, to_eval)
 
 class _InlineOperator(_Operator):
   
