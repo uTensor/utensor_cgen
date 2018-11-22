@@ -5,7 +5,6 @@ name = "pypi"
 
 [packages]
 "e1839a8" = {path = ".", editable = true}
-setuptools = "==39.1.0"
 
 [dev-packages]
 pylint = "*"

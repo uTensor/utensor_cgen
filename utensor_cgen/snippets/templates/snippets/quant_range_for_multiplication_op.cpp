@@ -1,9 +1,9 @@
 {
     {%if ref_counts%}
-    ctx.add(new RamTensor<{{out_dtype}}>({0}), "{{outputs[0]}}", {{ref_counts[0]}});
+    ctx.add(new RamTensor<{{out_dtype}}>({1}), "{{outputs[0]}}", {{ref_counts[0]}});
     ctx.add(new RamTensor<{{out_dtype}}>({1}), "{{outputs[1]}}", {{ref_counts[1]}});
     {%else%}
-    ctx.add(new RamTensor<{{out_dtype}}>({0}), "{{outputs[0]}}");
+    ctx.add(new RamTensor<{{out_dtype}}>({1}), "{{outputs[0]}}");
     ctx.add(new RamTensor<{{out_dtype}}>({1}), "{{outputs[1]}}");
     {%endif%}
     

@@ -393,12 +393,13 @@ class ReshapeOpSnippet(Snippet):
   __template_name__ = "snippets/reshape_op.cpp"
   __headers__ = set(['"uTensor/ops/ArrayOps.hpp"'])
 
-  def __init__(self, inputs, output,
+  def __init__(self, inputs, output, dtype,
                ref_count=0,
                to_eval=False):
     Snippet.__init__(self)
     if ref_count:
       self.template_vars["ref_count"] = ref_count
+    self.template_vars["dtype"] = NP_TYPES_MAP[dtype].tensor_type_str
     self.template_vars["inputs"] = inputs
     self.template_vars["output"] = output
     self.template_vars["to_eval"] = to_eval
