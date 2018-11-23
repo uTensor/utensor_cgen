@@ -469,6 +469,9 @@ class CMSIS_NN_Transformer(Transformer):
       #turn matmal_eightbit/input/quantize:0 from [1 n] to [n 1]
       pV = ugraph.ops_info[result[0]["matmal_eightbit/input/quantize"]]
       act_reshape_shape = pV.output_tensors[0].shape[::-1]
+      for i, v in enumerate(act_reshape_shape):
+        if v == None:
+          act_reshape_shape[i] = 1
 ### reshape shape const
       act_reshape_op_name = pV.name + "_newshape"
       act_reshape_const_tensor = TensorInfo(name=act_reshape_op_name + ":0",
@@ -631,21 +634,28 @@ class CMSIS_NN_Transformer(Transformer):
       # update _CMSIS_NN_FCOperator in operator.py
 
       #compile new op's output list
+      subject_matmul_tensors = ugraph.ops_info[result[0]["matmal/eightbit"]].output_tensors
       new_op_name = "cmsis_fc_" + result[0]["matmal/eightbit"]
-      matmal_output_tensors = ugraph.ops_info[result[0]["matmal/eightbit"]].output_tensors
+
+      matcher_matmul_tensor = TensorInfo(name=new_op_name + ":0",
+                        op_name=new_op_name,
+                        dtype=subject_matmul_tensors[0].dtype,
+                        shape=subject_matmul_tensors[0].shape,
+                        ugraph=tmp_ugraph
+                        )
+
       #import pdb; pdb.set_trace()
-      #update updating all relevant tensors to point to the new op
-      ugraph = replace_tensors_op(result[0]["matmal/eightbit"], new_op_name, ugraph)
 
       #FIXME: shouldn't be Tensorflow backend
       fused_op_info = OperationInfo(name=new_op_name,
                               input_tensors=in_tensors,
-                              output_tensors=[matmal_output_tensors[0]],
+                              output_tensors=[matcher_matmul_tensor],
                               op_type="CMSIS_NN_FC",
                               backend="tensorflow",
                               ugraph=tmp_ugraph
                               )
 
+      ugraph = replace_tensors_op(result[0]['matmal/eightbit'], new_op_name, ugraph)
       ugraph.drop_op(result[0]['matmal/eightbit'])
       # ugraph.drop_op(result[0]['matmal/eightbit/requant_range'])
       # ugraph.drop_op(result[0]['matmal/eightbit/requantize'])
@@ -653,6 +663,43 @@ class CMSIS_NN_Transformer(Transformer):
       # ugraph.drop_op(result[0]['zscore/eightbit/requant_range'])
       # ugraph.drop_op(result[0]['zscore/eightbit/requantize'])
       ugraph.add_op(fused_op_info)
+
+      #output reshape
+
+### reshape shape const
+      matmul_output_shape = subject_matmul_tensors[0].shape
+      for i, v in enumerate(matmul_output_shape):
+        if v == None:
+          matmul_output_shape[i] = 1
+### reshape shape const
+      act_reshape_op_name = fused_op_info.name + "_newshape"
+      act_reshape_const_tensor = TensorInfo(name=act_reshape_op_name + ":0",
+                                  op_name=act_reshape_op_name,
+                                  dtype=np.dtype('int'),
+                                  shape=[len(matmul_output_shape)], #vector
+                                  ugraph=tmp_ugraph
+                                  )
+      act_reshape_const_opInfo = OperationInfo(name=act_reshape_op_name,
+                              input_tensors=list(),
+                              output_tensors=[act_reshape_const_tensor],
+                              op_type="Const",
+                              backend="tensorflow",
+                              ugraph=tmp_ugraph,
+                              op_attr=bs_ops_attr(np.array(matmul_output_shape)))
+      ugraph.add_op(act_reshape_const_opInfo)
+
+### reshape
+      act_transpose_op_name = fused_op_info.name + "_transpose"
+
+      ugraph = replace_tensor_op_by_name(subject_matmul_tensors[0].name, act_transpose_op_name, ugraph)
+      act_transpose_opInfo = OperationInfo(name=act_transpose_op_name,
+                              input_tensors=[fused_op_info.output_tensors[0], act_reshape_const_tensor],
+                              output_tensors=[tensorInfo_from_name(ugraph, subject_matmul_tensors[0].name)],
+                              op_type="Reshape",
+                              backend="tensorflow",
+                              ugraph=tmp_ugraph
+                              )
+      ugraph.add_op(act_transpose_opInfo)
 
 
       #range op
@@ -676,10 +723,10 @@ class CMSIS_NN_Transformer(Transformer):
       new_range_op_inputs.append(tensorInfo_from_name(ugraph, result[1]["weight_quantized_max:0"]))
 
       new_range_op_outputs = list()
-      new_range_op_outputs.append(matmal_output_tensors[1])
-      new_range_op_outputs.append(matmal_output_tensors[2])
-      ugraph = replace_tensor_op_by_name(matmal_output_tensors[1].name, new_range_op_name, ugraph)
-      ugraph = replace_tensor_op_by_name(matmal_output_tensors[2].name, new_range_op_name, ugraph)
+      new_range_op_outputs.append(subject_matmul_tensors[1])
+      new_range_op_outputs.append(subject_matmul_tensors[2])
+      ugraph = replace_tensor_op_by_name(subject_matmul_tensors[1].name, new_range_op_name, ugraph)
+      ugraph = replace_tensor_op_by_name(subject_matmul_tensors[2].name, new_range_op_name, ugraph)
       new_range_op_outputs[0].op_name = new_range_op_name
       new_range_op_outputs[1].op_name = new_range_op_name
       new_range_op_info = OperationInfo(name=new_range_op_name,
