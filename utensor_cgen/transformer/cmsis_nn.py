@@ -418,6 +418,28 @@ def transpose_offline(op_info):
 
   return op_info
 
+
+def create_const_op(name, np_array):
+  tmp_ugraph = uTensorGraph()
+  const_tensor = TensorInfo(name=name + ":0",
+                          op_name=name,
+                          dtype=np_array.dtype,
+                          shape=list(np_array.shape),
+                          ugraph=tmp_ugraph
+                          )
+  const_op_info = OperationInfo(name=name,
+                          input_tensors=list(),
+                          output_tensors=[const_tensor],
+                          op_type="Const",
+                          backend="tensorflow",
+                          ugraph=tmp_ugraph,
+                          op_attr=bs_ops_attr(np_array)
+                          )
+  output = list()
+  output.append(const_tensor)
+
+  return (const_op_info, output)
+
 ## MatMul Only
 class CMSIS_NN_Transformer(Transformer):
   METHOD_NAME = 'cmsisnn'
@@ -558,6 +580,20 @@ class CMSIS_NN_Transformer(Transformer):
       #generate new op name
       new_op_name = "cmsis_fc_" + result[0]["matmal/eightbit"]
 
+      #bias
+      bias_name = new_op_name + "_bias"
+      weight_transposed = pM.op_attr['value'].value.np_array
+      bias_values = np.matmul(weight_transposed, np.full(act_reshape_shape, 64))
+      max_bias = np.max(np.abs(bias_values))
+      bias_shift_value = np.log2(max_bias)
+      bias_shift_value = np.ceil(bias_shift_value).astype(int) - 8
+      bias_values = np.right_shift(bias_values, bias_shift_value).astype(np.int8)
+      (bias_op_info, bias_out_tensors) = create_const_op(bias_name + "_bias", bias_values)
+      bias_out_tensor_info = bias_out_tensors[0]
+      ugraph.add_op(bias_op_info)
+
+      #bias shift
+      
       bShift = "cmsis_bShift_"
       bShiftIter = get_unique_number(bShift)
       bShift += "%d" % bShiftIter
@@ -573,7 +609,7 @@ class CMSIS_NN_Transformer(Transformer):
                               op_type="Const",
                               backend="tensorflow",
                               ugraph=tmp_ugraph,
-                              op_attr=bs_ops_attr(np.array([0], dtype=np.uint16))
+                              op_attr=bs_ops_attr(np.array([bias_shift_value], dtype=np.uint16))
                               )
       ugraph.add_op(bShift_op_info)
 
@@ -620,7 +656,7 @@ class CMSIS_NN_Transformer(Transformer):
       in_tensors.append(input0_q7_out) #pV
       in_tensors.append(input1_q7_out) # Weights pM
       ##Bias is temporary disabled in CMSIS_NN_FC, so give it anything for now
-      in_tensors.append(input0_q7_out) # Bias #FIXME: needs to be the right dimension
+      in_tensors.append(bias_out_tensor_info) # Bias #FIXME: needs to be the right dimension
       in_tensors.append(bShift_tensor)
       in_tensors.append(oShift_tensor)
       in_tensors.append(scratch_tensor)
