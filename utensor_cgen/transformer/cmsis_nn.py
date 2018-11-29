@@ -581,13 +581,17 @@ class CMSIS_NN_Transformer(Transformer):
       new_op_name = "cmsis_fc_" + result[0]["matmal/eightbit"]
 
       #bias
+      #import pdb; pdb.set_trace()
       bias_name = new_op_name + "_bias"
       weight_transposed = pM.op_attr['value'].value.np_array
-      bias_values = np.matmul(weight_transposed, np.full(act_reshape_shape, 64))
+      bias_values = np.matmul(weight_transposed, np.full(act_reshape_shape, 128))
       max_bias = np.max(np.abs(bias_values))
-      bias_shift_value = np.log2(max_bias)
-      bias_shift_value = np.ceil(bias_shift_value).astype(int) - 8
-      bias_values = np.right_shift(bias_values, bias_shift_value).astype(np.int8)
+      bias_shift_value = np.log2(max_bias + 1)
+      bias_shift_value = np.ceil(bias_shift_value).astype(int) - (8 - 1)
+
+      bias_values = np.right_shift(bias_values, bias_shift_value)
+      bias_values = np.minimum(bias_values, 127).astype(np.int8)
+
       (bias_op_info, bias_out_tensors) = create_const_op(bias_name + "_bias", bias_values)
       bias_out_tensor_info = bias_out_tensors[0]
       ugraph.add_op(bias_op_info)
@@ -648,6 +652,7 @@ class CMSIS_NN_Transformer(Transformer):
                               op_type="Const",  #fixme
                               backend="tensorflow",
                               ugraph=tmp_ugraph,
+                              #op_attr=op_info.op_attr["strides"].value.ints_value
                               op_attr=bs_ops_attr(np.zeros(tuple(scratch_shape), dtype=np.uint16))
                               )
       ugraph.add_op(scratch_op_info)
