@@ -451,7 +451,7 @@ class CMSIS_NN_Transformer(Transformer):
 
   def get_matcher_graph(self):
     graph = tf.Graph()
-    tf.reset_default_graph()
+    tf.reset_default_graph() #remove me
     with graph.as_default():
     
       x = tf.placeholder(dtype=tf.float32, name='input')
@@ -591,6 +591,9 @@ class CMSIS_NN_Transformer(Transformer):
 
       bias_values = np.right_shift(bias_values, bias_shift_value)
       bias_values = np.minimum(bias_values, 127).astype(np.int8)
+
+      #FIXME: for debugging purpose, temporarily fixing the bias values to 0
+      bias_values = np.full(act_reshape_shape, 0)
 
       (bias_op_info, bias_out_tensors) = create_const_op(bias_name + "_bias", bias_values)
       bias_out_tensor_info = bias_out_tensors[0]
