@@ -1,10 +1,12 @@
 # -*- coding: utf8 -*-
 # this file is (mostly) adapt from Tensorflow source code
 from __future__ import print_function
+
 from functools import reduce
+
 import numpy
-from tensorflow.python.framework import dtypes
-from tensorflow.python.framework import random_seed
+from tensorflow.python.framework import dtypes, random_seed
+
 
 def dense_to_one_hot(labels_dense, num_classes):
   """Convert class labels from scalars to one-hot vectors."""

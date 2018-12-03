@@ -4,7 +4,6 @@ from copy import deepcopy
 
 from .base import Transformer
 
-
 __all__ = ['RefCntOptimizer']
 
 

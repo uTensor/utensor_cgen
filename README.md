@@ -36,6 +36,24 @@ You can go to this [repo](https://github.com/pypa/pipenv) for detail information
     - plz downgrade to `setuptools==39.1.0`
     - my recommendation is to use `virtualenv`
 
+# Basic Usage
+
+## `utensor-cli show <model.pb>`
+
+Show all nodes and detailed information of given pb file.
+
+Run `utensor-cli show --help` for detailed information.
+
+## `utensor-cli convert --output-nodes=<node_name>[,<node_name>,...] <model.pb>`
+
+Convert given pb file into cpp/hpp files.
+
+Note that `--output-nodes` is required options. It's the names of nodes you want to output, seperated by comma if there are many.
+
+In graph theory terminology, they are `leaf` nodes of your graph.
+
+Run `utensor-cli convert --help` for detailed information.
+
 # Example
 
 Please refer to [tests/deep_mlp](https://github.com/uTensor/utensor_cgen/tree/develop/tests/deep_mlp) for detailed example
@@ -62,6 +80,10 @@ Following steps are a general guild for user how to porting a `TensorFlow` proto
 - If you want to use dropout with placeholders for the `keep_prob`, you have to name the `keep_prob` placeholder by any name that starts with "keep_prob".
     - You can still use any input tensor with name starts with "keep_prob" as long as it's not the output tensor of a placeholder node.
     - You can't wrap `dropout` in any `namescope` 
+
+# Philosophy
+
+- [12 Factor CLI App](https://medium.com/@jdxcode/12-factor-cli-apps-dd3c227a0e46?fbclid=IwAR1Gfq0D7oh3b-mXaIMV3RwYu39TAPrPXfz5sBKC4Rz1t-cckvC8WjBVl_w)
 
 # TODOs
 1. (done?) core code generator implementation

@@ -1,6 +1,7 @@
-import tensorflow as tf
 import numpy as np
 import pytest
+import tensorflow as tf
+
 
 @pytest.fixture(scope='session', name='droput_graph_tuple')
 def dropout_graph_tuple():

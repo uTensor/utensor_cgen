@@ -1,6 +1,9 @@
+from utensor_cgen.utils import NamescopedKWArgsParser
+
+from .base import Transformer
+from .ns_transformer import (BatchNormTransformer, DropoutTransformer,
+                             InlineTransformer)
 from .optimizer import RefCntOptimizer
-from .ns_transformer import DropoutTransformer, BatchNormTransformer
-from .ns_transformer import InlineTransformer
 from .quantize import QuantizeTransformer
 from .cmsis_nn import CMSIS_NN_Transformer
 from .base import Transformer

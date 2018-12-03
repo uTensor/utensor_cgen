@@ -4,10 +4,36 @@ import os
 import idx2numpy as idx2np
 import numpy as np
 
-from .snippets import *  # pylint: disable=W0401,W0614
-from utensor_cgen.utils import NamescopedKWArgsParser
-from utensor_cgen.transformer.optimizer import RefCntOptimizer
 from utensor_cgen.logger import logger
+from utensor_cgen.transformer.optimizer import RefCntOptimizer
+from utensor_cgen.utils import NamescopedKWArgsParser
+
+from .snippets import *  # pylint: disable=W0401,W0614
+
+
+class OperatorFactory():
+  # Can easily do something smarter
+  _operators = {}
+
+  def createOperatorSnippet(self, op_info, **kwargs):
+    op_type = op_info.op_type
+    if op_type not in self._operators:
+      err_msg = "unsupported op type in uTensor: {}".format(op_type)
+      raise ValueError(err_msg)
+
+    op = self._operators[op_type](op_info, **kwargs)  # Create desired object
+    return op.snippet  # Ops know how to create their snippets
+
+  @classmethod
+  def register(cls, op_cls):
+    cls._operators[op_cls.op_type] = op_cls
+
+  @classmethod
+  def support_op_types(cls):
+    """Return the list of all supported ops
+    """
+    return list(cls._operators.keys())
+
 
 class _Operator(object):
   def __init__(self):
@@ -19,7 +45,11 @@ class _Operator(object):
     return self._snippet
 
 
+@OperatorFactory.register
 class _AddOperator(_Operator):
+
+  op_type = "Add" # tf op type
+
   def __init__(self, op_info, **kwargs):
     _Operator.__init__(self)
     inputs = [tensor_info.name for tensor_info in op_info.input_tensors]
@@ -32,7 +62,11 @@ class _AddOperator(_Operator):
     self._snippet = AddOpSnippet(inputs, output, tf_dtype, ref_count, to_eval)
 
 
+@OperatorFactory.register
 class _ArgMaxOperator(_Operator):
+
+  op_type = "ArgMax"
+
   def __init__(self, op_info, **kwargs):
     _Operator.__init__(self)
     inputs = [tensor_info.name for tensor_info in op_info.input_tensors]
@@ -46,7 +80,11 @@ class _ArgMaxOperator(_Operator):
     self._snippet = ArgMaxOpSnippet(inputs, output, in_dtype, out_dtype, ref_count, to_eval)
 
 
+@OperatorFactory.register
 class _DequantizeOperator(_Operator):
+
+  op_type = "Dequantize"
+
   def __init__(self, op_info, **kwargs):
     _Operator.__init__(self)
     inputs = [tensor_info.name for tensor_info in op_info.input_tensors]
@@ -59,7 +97,11 @@ class _DequantizeOperator(_Operator):
     self._snippet = DequantizeOpSnippet(inputs, output, out_dtype, ref_count, to_eval)
 
 
+@OperatorFactory.register
 class _MaxOperator(_Operator):
+
+  op_type = "Max"
+
   def __init__(self, op_info, **kwargs):
     _Operator.__init__(self)
     inputs = [tensor_info.name for tensor_info in op_info.input_tensors]
@@ -77,7 +119,11 @@ class _MaxOperator(_Operator):
     self._snippet = MaxOpSnippet(inputs, output, out_dtype, out_shape, ref_count, to_eval)
 
 
+@OperatorFactory.register
 class _QuantizedMaxPool(_Operator):
+
+  op_type = "QuantizedMaxPool"
+
   def __init__(self, op_info, **kwargs):
     _Operator.__init__(self)
     inputs = [tensor_info.name for tensor_info in op_info.input_tensors]
@@ -95,7 +141,11 @@ class _QuantizedMaxPool(_Operator):
                                             ref_counts, to_eval)
 
 
+@OperatorFactory.register
 class _MinOperator(_Operator):
+
+  op_type = "Min"
+
   def __init__(self, op_info, **kwargs):
     _Operator.__init__(self)
     inputs = [tensor_info.name for tensor_info in op_info.input_tensors]
@@ -113,7 +163,11 @@ class _MinOperator(_Operator):
     self._snippet = MinOpSnippet(inputs, output, out_dtype, out_shape, ref_count, to_eval)
 
 
+@OperatorFactory.register
 class _QuantizeV2Operator(_Operator):
+
+  op_type = "QuantizeV2"
+
   def __init__(self, op_info, **kwargs):
     _Operator.__init__(self)
     inputs = [tensor_info.name for tensor_info in op_info.input_tensors]
@@ -126,7 +180,11 @@ class _QuantizeV2Operator(_Operator):
     self._snippet = QuantizeV2OpSnippet(inputs, outputs, out_dtype, ref_counts, to_eval)
 
 
+@OperatorFactory.register
 class _QuantizedMatMulOperator(_Operator):
+
+  op_type = "QuantizedMatMul"
+
   def __init__(self, op_info, **kwargs):
     _Operator.__init__(self)
     inputs = [tensor_info.name for tensor_info in op_info.input_tensors]
@@ -143,23 +201,12 @@ class _QuantizedMatMulOperator(_Operator):
                                              x_dtype, w_dtype, out_dtype, 
                                              ref_counts, to_eval)
 
-class _QuantizedAddOperator(_Operator):
-  def __init__(self, op_info, **kwargs):
-    _Operator.__init__(self)
-    inputs = [tensor_info.name for tensor_info in op_info.input_tensors]
-    outputs = [tensor_info.name for tensor_info in op_info.output_tensors]
-    x_dtype, w_dtype, out_dtype = (op_info.input_tensors[0].dtype,
-                                   op_info.input_tensors[1].dtype,
-                                   op_info.output_tensors[0].dtype)
-    parser = NamescopedKWArgsParser(RefCntOptimizer.KWARGS_NAMESCOPE,
-                                    op_info.op_attr)
-    ref_counts = parser.get('ref_counts', [])
-    to_eval = parser.get('to_eval', False)
-    self._snippet = QuantizedAddOpSnippet(inputs, outputs, 
-                                          x_dtype, w_dtype, out_dtype, 
-                                          ref_counts, to_eval)
 
+@OperatorFactory.register
 class _QuantizedReluOperator(_Operator):
+
+  op_type = "QuantizedRelu"
+
   def __init__(self, op_info, **kwargs):
     _Operator.__init__(self)
     inputs = [tensor_info.name for tensor_info in op_info.input_tensors]
@@ -177,7 +224,32 @@ class _QuantizedReluOperator(_Operator):
                                            ref_counts, to_eval)
 
 
+@OperatorFactory.register
+class _QuantizedAddOperator(_Operator):
+
+  op_type = "QuantizedAdd"
+
+  def __init__(self, op_info, **kwargs):
+    _Operator.__init__(self)
+    inputs = [tensor_info.name for tensor_info in op_info.input_tensors]
+    outputs = [tensor_info.name for tensor_info in op_info.output_tensors]
+    x_dtype, w_dtype, out_dtype = (op_info.input_tensors[0].dtype,
+                                   op_info.input_tensors[1].dtype,
+                                   op_info.output_tensors[0].dtype)
+    parser = NamescopedKWArgsParser(RefCntOptimizer.KWARGS_NAMESCOPE,
+                                    op_info.op_attr)
+    ref_counts = parser.get('ref_counts', [])
+    to_eval = parser.get('to_eval', False)
+    self._snippet = QuantizedAddOpSnippet(inputs, outputs, 
+                                          x_dtype, w_dtype, out_dtype, 
+                                          ref_counts, to_eval)
+
+
+@OperatorFactory.register
 class _RequantizationRangeOperator(_Operator):
+
+  op_type = "RequantizationRange"
+
   def __init__(self, op_info, **kwargs):
     _Operator.__init__(self)
     inputs = [tensor_info.name for tensor_info in op_info.input_tensors]
@@ -191,7 +263,10 @@ class _RequantizationRangeOperator(_Operator):
                                                  ref_counts, to_eval)
 
 
+@OperatorFactory.register
 class _RequantizeOperator(_Operator):
+
+  op_type = "Requantize"
   def __init__(self, op_info, **kwargs):
     _Operator.__init__(self)
     inputs = [tensor_info.name for tensor_info in op_info.input_tensors]
@@ -207,7 +282,11 @@ class _RequantizeOperator(_Operator):
                                         ref_counts, to_eval)
 
 
+@OperatorFactory.register
 class _ReshapeOperator(_Operator):
+
+  op_type = "Reshape"
+
   def __init__(self, op_info, **kwargs):
     _Operator.__init__(self)
     inputs = [tensor_info.name for tensor_info in op_info.input_tensors]
@@ -220,7 +299,11 @@ class _ReshapeOperator(_Operator):
     self._snippet = ReshapeOpSnippet(inputs, output, dtype, ref_count, to_eval)
 
 
+@OperatorFactory.register
 class _QuantizedReshapeOperator(_Operator):
+
+  op_type = "QuantizedReshape"
+
   def __init__(self, op_info, **kwargs):
     _Operator.__init__(self)
     inputs = [tensor_info.name for tensor_info in op_info.input_tensors]
@@ -234,7 +317,11 @@ class _QuantizedReshapeOperator(_Operator):
                                               ref_counts=ref_counts,
                                               to_eval=to_eval)
 
+@OperatorFactory.register
 class _CMSIS_NN_FCOperator(_Operator):
+
+  op_type="CMSIS_NN_FC"
+  
   def __init__(self, op_info, **kwargs):
     _Operator.__init__(self)
     #import pdb; pdb.set_trace()
@@ -255,7 +342,11 @@ class _CMSIS_NN_FCOperator(_Operator):
                                               out_dtype=out_dtype,
                                               to_eval=to_eval)
 
+@OperatorFactory.register
 class _Conv2DOperator(_Operator):
+
+  op_type = "QuantizedConv2D"
+
   def __init__(self, op_info, **kwargs):
     _Operator.__init__(self)
     inputs = [tensor_info.name for tensor_info in op_info.input_tensors]
@@ -272,8 +363,11 @@ class _Conv2DOperator(_Operator):
     self._snippet = Conv2DOpSnippent(inputs, outputs, strides, padding,
                                      in_dtype=in_dtype, filter_dtype=filter_dtype, out_dtypes=out_dtypes,
                                      ref_counts=ref_counts, to_eval=to_eval)
-
+@OperatorFactory.register
 class _Uint8Q7OriginOperator(_Operator):
+
+  op_type = "Uint8Q7OriginOp"
+  
   def __init__(self, op_info, **kwargs):
     _Operator.__init__(self)
     inputs = [tensor_info.name for tensor_info in op_info.input_tensors]
@@ -285,7 +379,11 @@ class _Uint8Q7OriginOperator(_Operator):
     self._snippet = Uint8Q7OriginSnippet(inputs, output, ref_count, to_eval)
 
 #hard coding to uint8_t uint8_t int32_t for now
+@OperatorFactory.register
 class _QuantRangeForMultiplication_u8_u8_int32_Operator(_Operator):
+
+  op_type = "QuantRangeForMultiplicationu8u8int32Op"
+
   def __init__(self, op_info, **kwargs):
     _Operator.__init__(self)
     inputs = [tensor_info.name for tensor_info in op_info.input_tensors]
@@ -301,7 +399,10 @@ class _QuantRangeForMultiplication_u8_u8_int32_Operator(_Operator):
     to_eval = parser.get('to_eval', False)
     self._snippet = QuantRangeForMultiplicationSnippet(inputs, outputs, output_type, ref_counts, to_eval)
 
+@OperatorFactory.register
 class _InlineOperator(_Operator):
+
+  op_type="Inline"
   
   def __init__(self, op_info, **kwargs):
     out_tensor_info = op_info.output_tensors[0]
@@ -336,7 +437,10 @@ class _InlineOperator(_Operator):
     preapred = "inline_{}".format(inline)
     return preapred
 
+@OperatorFactory.register
 class _ConstOperator(_Operator):
+
+  op_type = "Const"
 
   def __init__(self, op_info, **kwargs):
     out_tensor_info = op_info.output_tensors[0]
@@ -372,35 +476,12 @@ class _ConstOperator(_Operator):
       idx2np.convert_to_file(fid, np_array)
     logger.info("saving %s", path)
 
-class OperatorFactory():
-  # Can easily do something smarter
-  _operators = {"Add": _AddOperator,
-                "ArgMax": _ArgMaxOperator,
-                "Dequantize": _DequantizeOperator,
-                "Max": _MaxOperator,
-                "QuantizedMaxPool": _QuantizedMaxPool,
-                "Min": _MinOperator,
-                "QuantizeV2": _QuantizeV2Operator,
-                "QuantizedMatMul": _QuantizedMatMulOperator,
-                "QuantizedRelu": _QuantizedReluOperator,
-                "QuantizedAdd": _QuantizedAddOperator,
-                "RequantizationRange": _RequantizationRangeOperator,
-                "Requantize": _RequantizeOperator,
-                "Reshape": _ReshapeOperator,
-                "QuantizedReshape": _QuantizedReshapeOperator,
-                "QuantizedConv2D": _Conv2DOperator,
-                "Const": _ConstOperator,
-                "Inline": _InlineOperator,
-                "CMSIS_NN_FC": _CMSIS_NN_FCOperator,
-                "Uint8Q7OriginOp" : _Uint8Q7OriginOperator,
-                "QuantRangeForMultiplicationu8u8int32Op" : _QuantRangeForMultiplication_u8_u8_int32_Operator
-                }
 
-  def createOperatorSnippet(self, op_info, **kwargs):
-    op_type = op_info.op_type
-    if op_type not in self._operators:
-      err_msg = "unsupported op type in uTensor: {}".format(op_type)
-      raise ValueError(err_msg)
+  def _prepare_tensor_name(self, tensor_name):
+    prepared = tensor_name.replace(":", "_").replace("/", "_")
+    return prepared
 
-    op = self._operators[op_type](op_info, **kwargs)  # Create desired object
-    return op.snippet  # Ops know how to create their snippets
+  def _prepare_inline_array_name(self, tensor_name):
+    inline = tensor_name.replace(":", "_").replace("/", "_")
+    preapred = "inline_{}".format(inline)
+    return preapred

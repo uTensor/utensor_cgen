@@ -1,6 +1,7 @@
 from tensorflow.tools.graph_transforms import TransformGraph
 
 from utensor_cgen.ir.base import uTensorGraph
+
 from .base import Transformer
 
 __all__ = ['QuantizeTransformer']

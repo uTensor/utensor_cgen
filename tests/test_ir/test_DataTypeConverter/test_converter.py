@@ -1,7 +1,9 @@
-from utensor_cgen.ir.converter import DataTypeConverter
-from tensorflow import as_dtype
 import numpy as np
 import tensorflow as tf
+from tensorflow import as_dtype
+
+from utensor_cgen.ir.converter import DataTypeConverter
+
 
 def test_float32():
     tf_float = as_dtype(np.float32).as_datatype_enum

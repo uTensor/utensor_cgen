@@ -1,5 +1,6 @@
 from utensor_cgen.utils import NamescopedKWArgsParser
 
+
 def test_kwarg_parser():
     op_attr = {
         'global': 10,

@@ -1,6 +1,6 @@
 from abc import ABCMeta, abstractmethod
-from functools import wraps
 from copy import deepcopy
+from functools import wraps
 
 from utensor_cgen.utils import parse_tensor_name
 

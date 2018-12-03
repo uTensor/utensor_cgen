@@ -1,9 +1,10 @@
 #-*- coding:utf8 -*-
-import os, sys
-
-import pkg_resources
+import os
+import sys
 
 import click
+import pkg_resources
+
 from .utils import NArgsParam
 
 
@@ -87,22 +88,33 @@ def convert_graph(pb_file, output, data_dir, embed_data_dir, save_graph,
 @click.help_option('-h', '--help')
 @click.option('--oneline', is_flag=True,
               help='show in oneline format (no detail information)')
-@click.argument('pb_file', required=True, metavar='MODEL.pb')
-def show_pb_file(pb_file, oneline=False):
-  import tensorflow as tf
-  from utensor_cgen.ir import uTensorGraph
-  import textwrap
-
-  _, ext = os.path.splitext(pb_file)
+@click.argument('model_file', required=True, metavar='MODEL.{pb,pkl}')
+def show_graph(model_file, **kwargs):
+  _, ext = os.path.splitext(model_file)
   if ext == '.pb':
-    graph_def = tf.GraphDef()
-    with open(pb_file, 'rb') as fid:
-      graph_def.ParseFromString(fid.read())
-      ugraph = uTensorGraph(graph=graph_def,
-                            output_nodes=[node.name for node in graph_def.node])
+    _show_pb_file(model_file, **kwargs)
+  elif ext == '.pkl':
+    import pickle
+    with open(model_file, 'rb') as fid:
+      ugraph = pickle.load(fid)
+    _show_ugraph(ugraph, **kwargs)
   else:
     msg = click.style('unknown file extension: {}'.format(ext), fg='red', bold=True)
     click.echo(msg, file=sys.stderr)
+
+def _show_pb_file(pb_file, **kwargs):
+  import tensorflow as tf
+  from utensor_cgen.ir import uTensorGraph
+
+  graph_def = tf.GraphDef()
+  with open(pb_file, 'rb') as fid:
+    graph_def.ParseFromString(fid.read())
+    ugraph = uTensorGraph(graph=graph_def,
+                          output_nodes=[node.name for node in graph_def.node])
+  _show_ugraph(ugraph, **kwargs)
+
+def _show_ugraph(ugraph, oneline=False):
+  import textwrap
   if oneline:
     tmpl = click.style("{op_name} ", fg='yellow', bold=True) + \
       "op_type: {op_type}, inputs: {inputs}, outputs: {outputs}"

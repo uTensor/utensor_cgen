@@ -3,10 +3,10 @@ import os
 import re
 from copy import deepcopy
 
-from click.types import ParamType
-import numpy as np
 import idx2numpy as idx2np
+import numpy as np
 import tensorflow as tf
+from click.types import ParamType
 from tensorflow.python.framework import graph_util
 from tensorflow.tools.graph_transforms import TransformGraph
 

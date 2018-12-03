@@ -1,22 +1,22 @@
 # -*- coding:utf8 -*-
-import os
-from tempfile import NamedTemporaryFile
 import logging
+import os
 import pickle
+from tempfile import NamedTemporaryFile
 
 import numpy as np
 import tensorflow as tf
 from tensorflow.core.framework.graph_pb2 import GraphDef
 from tensorflow.tools.graph_transforms import TransformGraph
 
-from .operators import OperatorFactory
-from .transformer.pipline import TransformerPipeline
-from .transformer.optimizer import RefCntOptimizer
 from .ir import uTensorGraph
-from .snippets import (CommentSnippet, ContextHeaderSnippet,
-                       ContextSnippetsContainer, CreateTensorIdxSnippet,
-                      CreateTensorBinarySnippet, ContextGlobalArrayContainer)
+from .operators import OperatorFactory
+from .snippets import (CommentSnippet, ContextGlobalArrayContainer,
+                       ContextHeaderSnippet, ContextSnippetsContainer,
+                       CreateTensorBinarySnippet, CreateTensorIdxSnippet)
 from .snippets.composer import Composer
+from .transformer.optimizer import RefCntOptimizer
+from .transformer.pipline import TransformerPipeline
 from .utils import NamescopedKWArgsParser
 
 __all__ = ["CodeGenerator"]

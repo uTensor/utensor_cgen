@@ -1,10 +1,12 @@
 from __future__ import print_function
 
-from six.moves import cPickle as pickle
-import numpy as np
 import os
-from scipy.misc import imread
 import platform
+
+import numpy as np
+from scipy.misc import imread
+from six.moves import cPickle as pickle
+
 
 def load_pickle(f):
     version = platform.python_version_tuple()

@@ -1,6 +1,6 @@
+import numpy as np
 import pytest
 import tensorflow as tf
-import numpy as np
 
 
 @pytest.fixture(scope='session', name='graph_tuple')

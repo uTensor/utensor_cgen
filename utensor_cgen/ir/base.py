@@ -8,7 +8,7 @@ import numpy as np
 import six
 import tensorflow as tf
 from attr.validators import instance_of
-from tensorflow.contrib.util import make_ndarray
+from tensorflow import make_ndarray
 from tensorflow.core.framework.attr_value_pb2 import AttrValue as _AttrValue
 from tensorflow.core.framework.attr_value_pb2 import \
     NameAttrList as _NameAttrList
@@ -112,13 +112,13 @@ class OperationInfo(IRBase, _NoShallowCopyMixin):
   @input_tensors.validator
   def check(self, attribute, value):
     if not all([isinstance(v, TensorInfo) for v in value]):
-      raise ValueError('Expecting a list of TensorInfo for input_tensor')
+      raise ValueError('Expecting a list of TensorInfo for input_tensors')
 
   output_tensors = attr.ib(validator=instance_of(list))
   @output_tensors.validator
   def check(self, attribute, value):
     if not all([isinstance(v, TensorInfo) for v in value]):
-      raise ValueError('Expecting a list of TensorInfo for output_tensor')
+      raise ValueError('Expecting a list of TensorInfo for output_tensors')
 
   op_type = attr.ib(type=str)
 
