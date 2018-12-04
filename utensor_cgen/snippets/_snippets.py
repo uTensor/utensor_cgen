@@ -16,7 +16,8 @@ __all__ = ["Snippet", "SnippetContainerBase",
            "CommentSnippet", "ContextHeaderSnippet",
            "ContextSnippetsContainer", "QuantizedAddOpSnippet",
            "CreateTensorBinarySnippet", "WeightSnippet",
-           "ContextGlobalArrayContainer", "QuantRangeForMultiplicationSnippet", "Uint8Q7OriginSnippet"]
+           "ContextGlobalArrayContainer", "QuantRangeForMultiplicationSnippet",
+           "CreateTensorRamSnippet", "Uint8Q7OriginSnippet"]
 
 # TODO: Better abstraction, i.e a better backend for code generation
 class CreateTensorIdxSnippet(Snippet):
@@ -48,6 +49,37 @@ class CreateTensorIdxSnippet(Snippet):
     self.template_vars["tensor_name"] = tensor_name
     self.template_vars["importer_dtype"] = NP_TYPES_MAP[np_dtype].importer_type_str
     self.template_vars["to_eval"] = to_eval
+
+class CreateTensorRamSnippet(Snippet):
+  __template_name__ = "snippets/create_tensor_new.cpp"
+  __headers__ = set(['"uTensor/core/context.hpp"',
+                     '"uTensor/core/tensor.hpp"'])
+
+  def __init__(self, tensor_name, tf_dtype, tensor_shape=None,
+               ref_count=0,
+               sptr_name=None,
+               create_sptr=False,
+               to_eval=False):
+    if create_sptr and sptr_name is None:
+      raise ValueError("sptr_name can't be None if create_sptr is True")
+    if tf_dtype not in NP_TYPES_MAP:
+      raise ValueError("unsupport data type in uTensor: {}".format(tf_dtype))
+    Snippet.__init__(self)
+    if ref_count:
+      self.template_vars["ref_count"] = ref_count
+    if create_sptr:
+      self.template_vars["create_sptr"] = create_sptr
+      self.template_vars["sptr_name"] = sptr_name
+    self.template_vars["tensor_type"] = "RamTensor"
+    self.template_vars["tensor_name"] = tensor_name
+    self.template_vars["tensor_shape"] = self._to_shape_str(tensor_shape)
+    self.template_vars["dtype"] = NP_TYPES_MAP[tf_dtype].tensor_type_str
+    self.template_vars["to_eval"] = to_eval
+
+  def _to_shape_str(self, shape):
+    shape_str = ",".join([str(dim) for dim in shape])
+    return "{" + shape_str + "}"
+
 
 class CreateTensorBinarySnippet(Snippet):
   __template_name__ = "snippets/create_tensor_binary.cpp"

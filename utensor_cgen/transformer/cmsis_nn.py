@@ -652,7 +652,7 @@ class CMSIS_NN_Transformer(Transformer):
       scratch_op_info = OperationInfo(name=scratch_space,
                               input_tensors=list(),
                               output_tensors=[scratch_tensor],
-                              op_type="Const",  #fixme
+                              op_type="Ram",  #fixme
                               backend="tensorflow",
                               ugraph=tmp_ugraph,
                               #op_attr=op_info.op_attr["strides"].value.ints_value
