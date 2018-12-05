@@ -283,6 +283,7 @@ class uTensorGraph(IRBase, _NoShallowCopyMixin):
       raise ValueError('expecting OperationInfo, get {}'.format(type(op)))
     if op.name in self.ops_info:
       raise ValueError('duplicate op detected, {}'.format(op.name))
+    op.ugraph = self
     self.ops_info[op.name] = op
     self._topologic_order_graph()
 

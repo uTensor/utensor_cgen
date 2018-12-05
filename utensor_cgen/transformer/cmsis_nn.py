@@ -419,26 +419,56 @@ def transpose_offline(op_info):
   return op_info
 
 
-def create_const_op(name, np_array):
-  tmp_ugraph = uTensorGraph()
+def create_const_op(name, np_array, ugraph=None):
+  if ugraph == None:
+    ugraph = uTensorGraph()
   const_tensor = TensorInfo(name=name + ":0",
                           op_name=name,
                           dtype=np_array.dtype,
                           shape=list(np_array.shape),
-                          ugraph=tmp_ugraph
+                          ugraph=ugraph
                           )
   const_op_info = OperationInfo(name=name,
                           input_tensors=list(),
                           output_tensors=[const_tensor],
                           op_type="Const",
                           backend="tensorflow",
-                          ugraph=tmp_ugraph,
+                          ugraph=ugraph,
                           op_attr=bs_ops_attr(np_array)
                           )
   output = list()
   output.append(const_tensor)
 
   return (const_op_info, output)
+
+def create_reshape_op(name, inputs, ugraph):
+  #FIXME: ValueError: duplicate op detected
+  #if ugraph == None:
+  tmp_ugraph = uTensorGraph()
+
+  shape_const_op = ugraph.ops_info[inputs[1].op_name]
+
+  reshape_out_tensor = TensorInfo(name=name + ":0",
+                            op_name=name,
+                            dtype=inputs[0].dtype,
+                            shape=shape_const_op.op_attr['value'].value.np_array.tolist(),
+                            ugraph=tmp_ugraph
+                            )
+
+  reshape_opInfo = OperationInfo(name=name,
+                          input_tensors=inputs,
+                          output_tensors=[reshape_out_tensor],
+                          op_type="Reshape",
+                          backend="tensorflow",
+                          ugraph=tmp_ugraph
+                          )
+  return (reshape_opInfo, [reshape_out_tensor])
+
+def create_const_reshape(name, inputs, shape, ugraph):
+  const_name = name + "_const"
+  (reshape_const_opInfo, reshape_const_tensors) = create_const_op(const_name, np.array(shape))
+  ugraph.add_op(reshape_const_opInfo)
+  return create_reshape_op(name, [inputs[0], reshape_const_tensors[0]], ugraph)
 
 ## MatMul Only
 class CMSIS_NN_Transformer(Transformer):
@@ -495,46 +525,35 @@ class CMSIS_NN_Transformer(Transformer):
         if v == None:
           act_reshape_shape[i] = 1
 ### reshape shape const
-      act_reshape_op_name = pV.name + "_newshape"
-      act_reshape_const_tensor = TensorInfo(name=act_reshape_op_name + ":0",
-                                  op_name=act_reshape_op_name,
-                                  dtype=np.dtype('int'),
-                                  shape=[len(act_reshape_shape)], #vector
-                                  ugraph=tmp_ugraph
-                                  )
-      act_reshape_const_opInfo = OperationInfo(name=act_reshape_op_name,
-                              input_tensors=list(),
-                              output_tensors=[act_reshape_const_tensor],
-                              op_type="Const",
-                              backend="tensorflow",
-                              ugraph=tmp_ugraph,
-                              op_attr=bs_ops_attr(np.array(act_reshape_shape)))
-      #import pdb; pdb.set_trace()
-      ugraph.add_op(act_reshape_const_opInfo)
+      #ct_reshape_op_name = pV.name + "_newshape"
+      #(act_reshape_const_opInfo, act_reshape_const_tensors) = create_const_op(act_reshape_op_name, np.array(act_reshape_shape))
+      #ugraph.add_op(act_reshape_const_opInfo)
 
 ### reshape
       act_transpose_op_name = pV.name + "_transpose"
-      act_transposed_tensor = TensorInfo(name=pV.output_tensors[0].name + "_transpose",
-                                op_name=act_transpose_op_name,  #ownership
-                                dtype=pV.output_tensors[0].dtype,
-                                shape=act_reshape_shape,
-                                ugraph=tmp_ugraph
-                                )
+      #(act_transpose_opInfo, act_transposed_tensors) = create_reshape_op(act_transpose_op_name, [pV.output_tensors[0], act_reshape_const_tensors[0]], ugraph)
+      # act_transposed_tensor = TensorInfo(name=pV.output_tensors[0].name + "_transpose",
+      #                           op_name=act_transpose_op_name,  #ownership
+      #                           dtype=pV.output_tensors[0].dtype,
+      #                           shape=act_reshape_shape,
+      #                           ugraph=tmp_ugraph
+      #                           )
 
-      act_transpose_opInfo = OperationInfo(name=act_transpose_op_name,
-                              input_tensors=[pV.output_tensors[0], act_reshape_const_tensor],
-                              output_tensors=[act_transposed_tensor],
-                              op_type="Reshape",
-                              backend="tensorflow",
-                              ugraph=tmp_ugraph
-                              )
+      # act_transpose_opInfo = OperationInfo(name=act_transpose_op_name,
+      #                         input_tensors=[pV.output_tensors[0], act_reshape_const_tensors[0]],
+      #                         output_tensors=[act_transposed_tensor],
+      #                         op_type="Reshape",
+      #                         backend="tensorflow",
+      #                         ugraph=tmp_ugraph
+      #                         )
+      (act_transpose_opInfo, act_transposed_tensors) = create_const_reshape(act_transpose_op_name, [pV.output_tensors[0]], act_reshape_shape, ugraph)
       ugraph.add_op(act_transpose_opInfo)
       #import pdb; pdb.set_trace()
 
 
 
       ## convert the inputs Uint8Q7OriginOp
-      new_input0_op_name = "convert_uint8_q7_" + act_transposed_tensor.name  #pV
+      new_input0_op_name = "convert_uint8_q7_" + act_transposed_tensors[0].name  #pV
       new_input1_op_name = "convert_uint8_q7_" + result[0]["weight_quantized_const"]  #pM
 
       input0_q7_out = TensorInfo(name=result[0]["matmal_eightbit/input/quantize"] + "_q7:0",
@@ -544,7 +563,7 @@ class CMSIS_NN_Transformer(Transformer):
                         ugraph=tmp_ugraph
                         )
       input0_q7_inputs = list()
-      input0_q7_inputs.append(tensorInfo_from_name(ugraph, act_transposed_tensor.name))
+      input0_q7_inputs.append(tensorInfo_from_name(ugraph, act_transposed_tensors[0].name))
       input0_q7_inputs.append(tensorInfo_from_name(ugraph, result[1]["matmal_eightbit/input/quantize:1"]))
       input0_q7_inputs.append(tensorInfo_from_name(ugraph, result[1]["matmal_eightbit/input/quantize:2"]))
       input0_q7_op_info = OperationInfo(name=new_input0_op_name,
@@ -604,39 +623,13 @@ class CMSIS_NN_Transformer(Transformer):
       bShift = "cmsis_bShift_"
       bShiftIter = get_unique_number(bShift)
       bShift += "%d" % bShiftIter
-      bShift_tensor = TensorInfo(name=bShift + ":0",
-                              op_name=bShift,
-                              dtype=np.dtype('uint16'),
-                              shape=[1],
-                              ugraph=tmp_ugraph
-                              )
-      bShift_op_info = OperationInfo(name=bShift,
-                              input_tensors=list(),
-                              output_tensors=[bShift_tensor],
-                              op_type="Const",
-                              backend="tensorflow",
-                              ugraph=tmp_ugraph,
-                              op_attr=bs_ops_attr(np.array([bias_shift_value], dtype=np.uint16))
-                              )
+      (bShift_op_info, bShift_tensors) = create_const_op(bShift, np.array([bias_shift_value], dtype=np.uint16))
       ugraph.add_op(bShift_op_info)
 
       oShift = "cmsis_oShift_"
       oShiftIter = get_unique_number(oShift)
       oShift += "%d" % oShiftIter
-      oShift_tensor = TensorInfo(name=oShift + ":0",
-                              op_name=oShift,
-                              dtype=np.dtype('uint16'),
-                              shape=[1],
-                              ugraph=tmp_ugraph
-                              )
-      oShift_op_info = OperationInfo(name=oShift,
-                              input_tensors=list(),
-                              output_tensors=[oShift_tensor],
-                              op_type="Const",
-                              backend="tensorflow",
-                              ugraph=tmp_ugraph,
-                              op_attr=bs_ops_attr(np.array([0], dtype=np.uint16))
-                              )
+      (oShift_op_info, oShift_tensors) = create_const_op(oShift, np.array([0], dtype=np.uint16))
       ugraph.add_op(oShift_op_info)
 
       scratch_space = "cmsis_scratch_"
@@ -665,8 +658,8 @@ class CMSIS_NN_Transformer(Transformer):
       in_tensors.append(input1_q7_out) # Weights pM
       ##Bias is temporary disabled in CMSIS_NN_FC, so give it anything for now
       in_tensors.append(bias_out_tensor_info) # Bias #FIXME: needs to be the right dimension
-      in_tensors.append(bShift_tensor)
-      in_tensors.append(oShift_tensor)
+      in_tensors.append(bShift_tensors[0])
+      in_tensors.append(oShift_tensors[0])
       in_tensors.append(scratch_tensor)
 
       #TODO:
@@ -717,19 +710,7 @@ class CMSIS_NN_Transformer(Transformer):
           matmul_output_shape[i] = 1
 ### reshape shape const
       act_reshape_op_name = fused_op_info.name + "_newshape"
-      act_reshape_const_tensor = TensorInfo(name=act_reshape_op_name + ":0",
-                                  op_name=act_reshape_op_name,
-                                  dtype=np.dtype('int'),
-                                  shape=[len(matmul_output_shape)], #vector
-                                  ugraph=tmp_ugraph
-                                  )
-      act_reshape_const_opInfo = OperationInfo(name=act_reshape_op_name,
-                              input_tensors=list(),
-                              output_tensors=[act_reshape_const_tensor],
-                              op_type="Const",
-                              backend="tensorflow",
-                              ugraph=tmp_ugraph,
-                              op_attr=bs_ops_attr(np.array(matmul_output_shape)))
+      (act_reshape_const_opInfo, act_reshape_const_tensors) = create_const_op(act_reshape_op_name, np.array(matmul_output_shape))
       ugraph.add_op(act_reshape_const_opInfo)
 
 ### reshape
@@ -737,7 +718,7 @@ class CMSIS_NN_Transformer(Transformer):
 
       ugraph = replace_tensor_op_by_name(subject_matmul_tensors[0].name, act_transpose_op_name, ugraph)
       act_transpose_opInfo = OperationInfo(name=act_transpose_op_name,
-                              input_tensors=[fused_op_info.output_tensors[0], act_reshape_const_tensor],
+                              input_tensors=[fused_op_info.output_tensors[0], act_reshape_const_tensors[0]],
                               output_tensors=[tensorInfo_from_name(ugraph, subject_matmul_tensors[0].name)],
                               op_type="Reshape",
                               backend="tensorflow",
@@ -786,156 +767,3 @@ class CMSIS_NN_Transformer(Transformer):
     graph_check(ugraph)
     ugraph.viz_graph(fname="cmsis_nn.gv")
     return ugraph
-
-
-## MatMul + Add
-# class CMSIS_NN_Transformer(Transformer):
-#   METHOD_NAME = 'cmsisnn'
-#   KWARGS_NAMESCOPE = '_utensor_cmsisnn'
-
-#   def make_rand_const(self, shape, name):
-#     val = np.random.random(shape)
-#     return tf.convert_to_tensor(val, name=name, dtype=tf.float32)
-
-#   def get_matcher_graph(self):
-#     graph = tf.Graph()
-#     tf.reset_default_graph()
-#     with graph.as_default():
-    
-#       x = tf.placeholder(dtype=tf.float32, name='input')
-#       #x = self.make_rand_const([1,784], name='input')
-#       W_fc1 = self.make_rand_const([784, 128], name='weight')
-#       b_fc1 = self.make_rand_const([128], name='bias')
-#       matmal = tf.matmul(x, W_fc1, name='matmal')
-#       a_fc1 = tf.add(matmal, b_fc1, name="zscore")
-
-#       meta = dict()
-#       #meta["input"] = "Any"
-#       meta["matmal_eightbit/input/quantize"] = ["End", "Any"]
-#       meta["zscore_eightbit/bias/quantize"] = ["End", "Any"]
-
-#       quant_graph_def = TransformGraph(input_graph_def=graph.as_graph_def(),
-#                                      inputs=['input`'],
-#                                      outputs=['zscore'],
-#                                      transforms=["quantize_weights", "quantize_nodes"])
-#       mgraph = uTensorGraph(graph=quant_graph_def, output_nodes=['zscore/eightbit/requantize'])
-
-#     #mgraph.viz_graph(fname="matcher.gv")
-#     return (mgraph, meta)
-
-#   def transform(self, ugraph):
-#     [matcher_ugraph, metaData] = self.get_matcher_graph()
-#     #ugraph.viz_graph(fname="subject.gv")
-
-#     while True:
-#       result = isomorphic_match(ugraph, matcher_ugraph, metaData)
-#       if result == False:
-#         break
-      
-#       tmp_ugraph = uTensorGraph()
-      
-#       #generate new op name
-#       new_op_name = "cmsis_fc_" + result[0]["zscore/eightbit/requantize"]
-
-#       #import pdb; pdb.set_trace()
-#       bShift = "cmsis_bShift_"
-#       bShiftIter = get_unique_number(bShift)
-#       bShift += "%d" % bShiftIter
-#       bShift_tensor = TensorInfo(name=bShift + ":0",
-#                               op_name=bShift,
-#                               dtype=np.dtype('uint16'),
-#                               shape=[1],
-#                               ugraph=tmp_ugraph
-#                               )
-#       bShift_op_info = OperationInfo(name=bShift,
-#                               input_tensors=list(),
-#                               output_tensors=[bShift_tensor],
-#                               op_type="Const",
-#                               backend="tensorflow",
-#                               ugraph=tmp_ugraph,
-#                               op_attr=bs_ops_attr(np.array([0], dtype=np.uint16))
-#                               )
-#       ugraph.add_op(bShift_op_info)
-
-#       oShift = "cmsis_oShift_"
-#       oShiftIter = get_unique_number(oShift)
-#       oShift += "%d" % oShiftIter
-#       oShift_tensor = TensorInfo(name=oShift + ":0",
-#                               op_name=oShift,
-#                               dtype=np.dtype('uint16'),
-#                               shape=[1],
-#                               ugraph=tmp_ugraph
-#                               )
-#       oShift_op_info = OperationInfo(name=oShift,
-#                               input_tensors=list(),
-#                               output_tensors=[oShift_tensor],
-#                               op_type="Const",
-#                               backend="tensorflow",
-#                               ugraph=tmp_ugraph,
-#                               op_attr=bs_ops_attr(np.array([0], dtype=np.uint16))
-#                               )
-#       ugraph.add_op(oShift_op_info)
-
-#       scratch_space = "cmsis_scratch_"
-#       scratchIter = get_unique_number(scratch_space)
-#       scratch_space += "%d" % scratchIter
-#       scratch_shape = list(map(lambda x: x if x else 1, tensorInfo_from_name(ugraph, result[1]['matmal_eightbit/input/quantize:0']).shape))
-#       scratch_tensor = TensorInfo(name=scratch_space + ":0",
-#                               op_name=scratch_space,
-#                               dtype=np.dtype('uint16'),
-#                               shape=scratch_shape,
-#                               ugraph=tmp_ugraph
-#                               )
-#       scratch_op_info = OperationInfo(name=scratch_space,
-#                               input_tensors=list(),
-#                               output_tensors=[scratch_tensor],
-#                               op_type="Const",
-#                               backend="tensorflow",
-#                               ugraph=tmp_ugraph,
-#                               op_attr=bs_ops_attr(np.zeros(tuple(scratch_shape), dtype=np.uint16))
-#                               )
-#       ugraph.add_op(scratch_op_info)
-#       #import pdb; pdb.set_trace()
-#       #compile new op's the input list
-#       in_tensors = list()
-#       in_tensors.append(tensorInfo_from_name(ugraph, result[1]['matmal_eightbit/input/quantize:0'])) #pV
-#       in_tensors.append(tensorInfo_from_name(ugraph, result[1]['weight_quantized_const:0'])) # Weights pM
-#       in_tensors.append(tensorInfo_from_name(ugraph, result[1]['zscore_eightbit/bias/quantize:0'])) # Bias
-#       in_tensors.append(bShift_tensor)
-#       in_tensors.append(oShift_tensor)
-#       in_tensors.append(scratch_tensor)
-
-#       #TODO:
-#       # make sure weight and bias are in the format
-#       # supply S_TENSOR bShift and S_TENSOR oShift here
-#       # This can be found by either offline quantization profiling
-#       # Or, by taking statistic of the weight matrix
-#       # In uTensor runtime CMSIS Op, convert the number format back to the linear quantized format
-#       # update _CMSIS_NN_FCOperator in operator.py
-
-#       #compile new op's output list
-#       out_tensors = ugraph.ops_info[result[0]["zscore/eightbit/requantize"]].output_tensors
-#       #update updating all relevant tensors to point to the new op
-#       ugraph = replace_tensors_op(result[0]["zscore/eightbit/requantize"], new_op_name, ugraph)
-
-#       #FIXME: shouldn't be Tensorflow backend
-#       fused_op_info = OperationInfo(name=new_op_name,
-#                               input_tensors=in_tensors,
-#                               output_tensors=out_tensors,
-#                               op_type="CMSIS_NN_FC",
-#                               backend="tensorflow",
-#                               ugraph=tmp_ugraph
-#                               )
-
-#       ugraph.drop_op(result[0]['matmal/eightbit'])
-#       ugraph.drop_op(result[0]['matmal/eightbit/requant_range'])
-#       ugraph.drop_op(result[0]['matmal/eightbit/requantize'])
-#       ugraph.drop_op(result[0]['zscore/eightbit'])
-#       ugraph.drop_op(result[0]['zscore/eightbit/requant_range'])
-#       ugraph.drop_op(result[0]['zscore/eightbit/requantize'])
-#       ugraph.add_op(fused_op_info)
-#       graph_validate(ugraph)
-
-#     graph_check(ugraph)
-#     #ugraph.viz_graph(fname="cmsis_nn.gv")
-#     return ugraph
