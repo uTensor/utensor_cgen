@@ -441,6 +441,11 @@ def create_const_op(name, np_array, ugraph=None):
 
   return (const_op_info, output)
 
+def create_ram_op(name, np_array, ugraph=None):
+  (op_info, outs) = create_const_op(name, np_array, ugraph)
+  op_info.op_type = "Ram"
+  return (op_info, outs)
+
 def create_reshape_op(name, inputs, ugraph):
   #FIXME: ValueError: duplicate op detected
   #if ugraph == None:
@@ -495,10 +500,10 @@ class CMSIS_NN_Transformer(Transformer):
       meta["matmal_eightbit/input/quantize"] = ["End", "Any"]
 
       quant_graph_def = TransformGraph(input_graph_def=graph.as_graph_def(),
-                                     inputs=['input`'],
+                                     inputs=['input'],
                                      outputs=['zscore'],
                                      transforms=["quantize_weights", "quantize_nodes"])
-      mgraph = uTensorGraph(graph=quant_graph_def, output_nodes=['matmal/eightbit'])
+      mgraph = uTensorGraph(graph=quant_graph_def, output_nodes=['zscore/eightbit'])
 
     #mgraph.viz_graph(fname="matcher.gv")
     return (mgraph, meta)
@@ -524,33 +529,12 @@ class CMSIS_NN_Transformer(Transformer):
       for i, v in enumerate(act_reshape_shape):
         if v == None:
           act_reshape_shape[i] = 1
-### reshape shape const
-      #ct_reshape_op_name = pV.name + "_newshape"
-      #(act_reshape_const_opInfo, act_reshape_const_tensors) = create_const_op(act_reshape_op_name, np.array(act_reshape_shape))
-      #ugraph.add_op(act_reshape_const_opInfo)
 
 ### reshape
       act_transpose_op_name = pV.name + "_transpose"
-      #(act_transpose_opInfo, act_transposed_tensors) = create_reshape_op(act_transpose_op_name, [pV.output_tensors[0], act_reshape_const_tensors[0]], ugraph)
-      # act_transposed_tensor = TensorInfo(name=pV.output_tensors[0].name + "_transpose",
-      #                           op_name=act_transpose_op_name,  #ownership
-      #                           dtype=pV.output_tensors[0].dtype,
-      #                           shape=act_reshape_shape,
-      #                           ugraph=tmp_ugraph
-      #                           )
-
-      # act_transpose_opInfo = OperationInfo(name=act_transpose_op_name,
-      #                         input_tensors=[pV.output_tensors[0], act_reshape_const_tensors[0]],
-      #                         output_tensors=[act_transposed_tensor],
-      #                         op_type="Reshape",
-      #                         backend="tensorflow",
-      #                         ugraph=tmp_ugraph
-      #                         )
       (act_transpose_opInfo, act_transposed_tensors) = create_const_reshape(act_transpose_op_name, [pV.output_tensors[0]], act_reshape_shape, ugraph)
       ugraph.add_op(act_transpose_opInfo)
       #import pdb; pdb.set_trace()
-
-
 
       ## convert the inputs Uint8Q7OriginOp
       new_input0_op_name = "convert_uint8_q7_" + act_transposed_tensors[0].name  #pV
@@ -600,17 +584,7 @@ class CMSIS_NN_Transformer(Transformer):
       new_op_name = "cmsis_fc_" + result[0]["matmal/eightbit"]
 
       #bias
-      #import pdb; pdb.set_trace()
       bias_name = new_op_name + "_bias"
-      weight_transposed = pM.op_attr['value'].value.np_array
-      bias_values = np.matmul(weight_transposed, np.full(act_reshape_shape, 128))
-      max_bias = np.max(np.abs(bias_values))
-      bias_shift_value = np.log2(max_bias + 1)
-      bias_shift_value = np.ceil(bias_shift_value).astype(int) - (8 - 1)
-
-      bias_values = np.right_shift(bias_values, bias_shift_value)
-      bias_values = np.minimum(bias_values, 127).astype(np.int8)
-
       #FIXME: for debugging purpose, temporarily fixing the bias values to 0
       bias_values = np.full(act_reshape_shape, 0)
 
@@ -619,38 +593,15 @@ class CMSIS_NN_Transformer(Transformer):
       ugraph.add_op(bias_op_info)
 
       #bias shift
-      
-      bShift = "cmsis_bShift_"
-      bShiftIter = get_unique_number(bShift)
-      bShift += "%d" % bShiftIter
-      (bShift_op_info, bShift_tensors) = create_const_op(bShift, np.array([bias_shift_value], dtype=np.uint16))
+      (bShift_op_info, bShift_tensors) = create_const_op(result[0]["matmal/eightbit"] + "_bShift", np.array([0], dtype=np.uint16))
       ugraph.add_op(bShift_op_info)
 
-      oShift = "cmsis_oShift_"
-      oShiftIter = get_unique_number(oShift)
-      oShift += "%d" % oShiftIter
-      (oShift_op_info, oShift_tensors) = create_const_op(oShift, np.array([0], dtype=np.uint16))
+      (oShift_op_info, oShift_tensors) = create_const_op(result[0]["matmal/eightbit"] + "_oShift", np.array([0], dtype=np.uint16))
       ugraph.add_op(oShift_op_info)
 
-      scratch_space = "cmsis_scratch_"
-      scratchIter = get_unique_number(scratch_space)
-      scratch_space += "%d" % scratchIter
+      scratch_space = "cmsis_scratch_" + result[0]["matmal/eightbit"]
       scratch_shape = list(map(lambda x: x if x else 1, tensorInfo_from_name(ugraph, result[1]['matmal_eightbit/input/quantize:0']).shape))
-      scratch_tensor = TensorInfo(name=scratch_space + ":0",
-                              op_name=scratch_space,
-                              dtype=np.dtype('uint16'),
-                              shape=scratch_shape,
-                              ugraph=tmp_ugraph
-                              )
-      scratch_op_info = OperationInfo(name=scratch_space,
-                              input_tensors=list(),
-                              output_tensors=[scratch_tensor],
-                              op_type="Ram",  #fixme
-                              backend="tensorflow",
-                              ugraph=tmp_ugraph,
-                              #op_attr=op_info.op_attr["strides"].value.ints_value
-                              op_attr=bs_ops_attr(np.zeros(tuple(scratch_shape), dtype=np.uint16))
-                              )
+      (scratch_op_info, scratch_tensors) = create_ram_op(scratch_space, np.zeros(tuple(scratch_shape), dtype=np.uint16))
       ugraph.add_op(scratch_op_info)
       #compile new op's the input list
       in_tensors = list()
@@ -660,7 +611,7 @@ class CMSIS_NN_Transformer(Transformer):
       in_tensors.append(bias_out_tensor_info) # Bias #FIXME: needs to be the right dimension
       in_tensors.append(bShift_tensors[0])
       in_tensors.append(oShift_tensors[0])
-      in_tensors.append(scratch_tensor)
+      in_tensors.append(scratch_tensors[0])
 
       #TODO:
       # make sure weight and bias are in the format
