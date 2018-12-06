@@ -313,6 +313,7 @@ class uGraphMatcher(object):
       return
 
     if isinstance(info, OperationInfo):
+      replace_tensors_op(self.translator[0][name], info.name, self.subject_graph)
       self.subject_graph.ops_info[self.translator[0][name]] = info
       return
     

@@ -13,7 +13,7 @@ from utensor_cgen.ir.utils import graph_check
 from utensor_cgen.experimental.ugraph_util_functions import *
 
 
-__all__ = ["transpose_offline", "Const_Op", "Ram_Op", "Const_Reshape"]
+__all__ = ["transpose_offline", "Const_Op", "Ram_Op", "Const_Reshape", "Uint8Q7Origin_Op", "CMSIS_FC_Op"]
 
 # Let us get unique names for custom injected nodes
 def static_vars(**kwargs):
@@ -111,3 +111,44 @@ def Const_Reshape(name, input_tensor, shape, ugraph):
 
   reshape_const_tensor = Const_Op(const_name, np.array(shape), ugraph)
   return Reshape_Op(name, input_tensor, reshape_const_tensor, ugraph)
+
+def Uint8Q7Origin_Op(name, inputs, ugraph):
+  tmp_ugraph = uTensorGraph()
+  q7_out = TensorInfo(name=name + "_q7:0",
+                    op_name=name,
+                    dtype=np.dtype('int8'),
+                    shape=inputs[0].shape,
+                    ugraph=tmp_ugraph
+                    )
+  q7_op_info = OperationInfo(name=name,
+                        input_tensors=inputs,
+                        output_tensors=[q7_out],
+                        op_type="Uint8Q7OriginOp",
+                        backend="tensorflow",
+                        ugraph=tmp_ugraph)
+  
+  ugraph.add_op(q7_op_info)
+
+  return q7_op_info.output_tensors
+
+def CMSIS_FC_Op(name, pV, pM, bias, bShift, oShift, scratch, ugraph):
+  tmp_ugraph = uTensorGraph()
+  out_shape = [pM[0].shape[0], pV[0].shape[1]]
+
+  fc_out_tensor = TensorInfo(name=name + ":0",
+                    op_name=name,
+                    dtype=np.dtype('int32'), #hard coding to int32
+                    shape=out_shape,
+                    ugraph=tmp_ugraph
+                    )
+
+  fc_op_info = OperationInfo(name=name,
+                          input_tensors=[pV[0], pM[0], bias[0], bShift[0], oShift[0], scratch[0]],
+                          output_tensors=[fc_out_tensor],
+                          op_type="CMSIS_NN_FC",
+                          backend="tensorflow",
+                          ugraph=tmp_ugraph
+                          )
+                          
+  ugraph.add_op(fc_op_info)
+  return fc_op_info.output_tensors
