@@ -13,7 +13,7 @@ from utensor_cgen.ir.utils import graph_check
 from utensor_cgen.experimental.ugraph_util_functions import *
 
 
-__all__ = ["transpose_offline", "create_const_op", "create_ram_op", "create_const_reshape"]
+__all__ = ["transpose_offline", "Const_Op", "Ram_Op", "Const_Reshape"]
 
 # Let us get unique names for custom injected nodes
 def static_vars(**kwargs):
@@ -50,58 +50,64 @@ def transpose_offline(op_info):
   return op_info
 
 
-def create_const_op(name, np_array, ugraph=None):
-  if ugraph == None:
-    ugraph = uTensorGraph()
+def Const_Op(name, np_array, ugraph):
+  tmp_graph = uTensorGraph()
   const_tensor = TensorInfo(name=name + ":0",
                           op_name=name,
                           dtype=np_array.dtype,
                           shape=list(np_array.shape),
-                          ugraph=ugraph
+                          ugraph=tmp_graph
                           )
   const_op_info = OperationInfo(name=name,
                           input_tensors=list(),
                           output_tensors=[const_tensor],
                           op_type="Const",
                           backend="tensorflow",
-                          ugraph=ugraph,
+                          ugraph=tmp_graph,
                           op_attr=bs_ops_attr(np_array)
                           )
-  output = list()
-  output.append(const_tensor)
+  ugraph.add_op(const_op_info)
 
-  return (const_op_info, output)
+  return const_op_info.output_tensors
 
-def create_ram_op(name, np_array, ugraph=None):
-  (op_info, outs) = create_const_op(name, np_array, ugraph)
-  op_info.op_type = "Ram"
-  return (op_info, outs)
+def Ram_Op(name, np_array, ugraph):
+  out = Const_Op(name, np_array, ugraph)
+  ugraph.ops_info[name].op_type = "Ram"
 
-def create_reshape_op(name, inputs, ugraph):
+  return out
+
+def Reshape_Op(name, input_tensor, shape_tensor, ugraph):
   #FIXME: ValueError: duplicate op detected
   #if ugraph == None:
   tmp_ugraph = uTensorGraph()
 
-  shape_const_op = ugraph.ops_info[inputs[1].op_name]
+  shape_const_op = ugraph.ops_info[shape_tensor[0].op_name]
 
   reshape_out_tensor = TensorInfo(name=name + ":0",
                             op_name=name,
-                            dtype=inputs[0].dtype,
+                            dtype=input_tensor[0].dtype,
                             shape=shape_const_op.op_attr['value'].value.np_array.tolist(),
                             ugraph=tmp_ugraph
                             )
 
   reshape_opInfo = OperationInfo(name=name,
-                          input_tensors=inputs,
+                          input_tensors=[input_tensor[0], shape_tensor[0]],
                           output_tensors=[reshape_out_tensor],
                           op_type="Reshape",
                           backend="tensorflow",
                           ugraph=tmp_ugraph
                           )
-  return (reshape_opInfo, [reshape_out_tensor])
 
-def create_const_reshape(name, inputs, shape, ugraph):
+  ugraph.add_op(reshape_opInfo)
+
+  return reshape_opInfo.output_tensors
+
+def Const_Reshape(name, input_tensor, shape, ugraph):
   const_name = name + "_const"
-  (reshape_const_opInfo, reshape_const_tensors) = create_const_op(const_name, np.array(shape))
-  ugraph.add_op(reshape_const_opInfo)
-  return create_reshape_op(name, [inputs[0], reshape_const_tensors[0]], ugraph)
+
+  for i, v in enumerate(shape):
+    if v == None:
+      shape[i] = 1
+
+  reshape_const_tensor = Const_Op(const_name, np.array(shape), ugraph)
+  return Reshape_Op(name, input_tensor, reshape_const_tensor, ugraph)

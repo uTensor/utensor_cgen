@@ -14,6 +14,10 @@ __all__ = ["uGraphMatcher"]
 
 class uGraphMatcher(object):
 
+  translator = None
+  subject_graph = None
+  matcher_graph = None
+
   def get_ops_io_info(self, op_type):
   #please refer to OperatorFactory() in operators.py
     ops_io_table = dict()
@@ -216,6 +220,9 @@ class uGraphMatcher(object):
     matcher_to_subject_edges = dict()
     matcher_output_node_names = set()
 
+    self.subject_graph = subject_graph
+    self.matcher_graph = matcher_graph
+
     #identify matcher output nodes
     [_, matcher_output_edges] = self.subgraph_trace_exposed_edges(matcher_graph)
     
@@ -238,7 +245,9 @@ class uGraphMatcher(object):
     matcher_to_subject_nodes.update(partial_matcher_to_subject_nodes)
     matcher_to_subject_edges.update(partial_matcher_to_subject_edges)
 
-    return [matcher_to_subject_nodes, matcher_to_subject_edges]
+    self.translator = [matcher_to_subject_nodes, matcher_to_subject_edges]
+
+    return self.translator
 
   def get_node_meta(self, node_name, meta):
     if meta == None:
@@ -283,3 +292,32 @@ class uGraphMatcher(object):
       if len(path_potential_matches[i]) < 1:
         return False
     return True
+
+  def tensor_info(self, name):
+    return tensorInfo_from_name(self.subject_graph, self.translator[1][name])
+  
+  def op_info(self, name):
+    return self.subject_graph.ops_info[self.translator[0][name]]
+
+  def __getitem__(self, name):
+    if name in self.translator[0]:
+      return self.op_info(name)
+    if name in self.translator[1]:
+      return self.tensor_info(name)
+    
+    assert "% not found\r\n", name
+
+  def __setitem__(self, name, info):
+    if isinstance(info, TensorInfo):
+      replace_tensor(self.translator[1][name], info, self.subject_graph)
+      return
+
+    if isinstance(info, OperationInfo):
+      self.subject_graph.ops_info[self.translator[0][name]] = info
+      return
+    
+    if info == None:
+      self.subject_graph.drop_op(self.translator[0][name])
+      return
+    
+    assert False

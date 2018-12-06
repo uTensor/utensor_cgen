@@ -9,7 +9,7 @@ from utensor_cgen.ir.utils import graph_check
 
 __all__ = ["is_connected", "get_input_tensor_names", "get_output_tensor_names", "tensorInfo_from_name",
        "get_tensor_node_names", "replace_tensors_op", "replace_tensor_op_by_name",
-       "graph_validate", "get_input_node_names", "get_output_node_names"]
+       "graph_validate", "get_input_node_names", "get_output_node_names", "replace_tensor"]
 
 
 def is_connected(graph, node0, node1):
@@ -106,3 +106,14 @@ def get_output_node_names(graph, node_name):
   output_op_names = [op.name for op in output_op_infos]
 
   return output_op_names
+
+def replace_tensor(name, new_tensorInfo, ugraph):
+  for key, op_info in ugraph.ops_info.items():
+    #inputs
+    for i, t_info in enumerate(op_info.input_tensors):
+      if(t_info.name == name):
+        op_info.input_tensors[i] = new_tensorInfo
+    #outputs
+    for i, t_info in enumerate(op_info.output_tensors):
+      if(t_info.name == name):
+        op_info.output_tensors[i] = new_tensorInfo
