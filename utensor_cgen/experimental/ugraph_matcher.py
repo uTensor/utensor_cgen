@@ -310,15 +310,22 @@ class uGraphMatcher(object):
   def __setitem__(self, name, info):
     if isinstance(info, TensorInfo):
       replace_tensor(self.translator[1][name], info, self.subject_graph)
+      self.translator[1][name] = info.name
       return
 
     if isinstance(info, OperationInfo):
       replace_tensors_op(self.translator[0][name], info.name, self.subject_graph)
       self.subject_graph.ops_info[self.translator[0][name]] = info
+      self.translator[0][name] = info.name
       return
     
     if info == None:
-      self.subject_graph.drop_op(self.translator[0][name])
+      #TODO: tensor dependency checking here
+      if name in self.subject_graph.topo_order:
+        self.subject_graph.drop_op(self.translator[0][name])
+        del self.translator[0][name]
+      else:
+        assert "% not found\r\n", name
       return
     
     assert False

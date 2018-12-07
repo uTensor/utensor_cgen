@@ -66,13 +66,12 @@ class CMSIS_NN_Transformer(Transformer):
       result = matcher.isomorphic_match(ugraph, matcher_ugraph, metaData)
       if result == False:
         break
-      
-      tmp_ugraph = uTensorGraph()
 
       #turn v * M into M * v
       #pM = transpose_offline(matcher["weight_quantized_const"])
       pM = transpose_offline(matcher["weight_quantized_const"])
       matcher["weight_quantized_const"] = pM
+      matcher["weight_quantized_const:0"] = pM.output_tensors[0]
 
       #turn matmal_eightbit/input/quantize:0 from [1 n] to [n 1]
       pV = matcher["matmal_eightbit/input/quantize"]
@@ -81,26 +80,23 @@ class CMSIS_NN_Transformer(Transformer):
 ### reshape
       act_transpose_op_name = pV.name + "_transpose"
       act_transposed_tensors = Const_Reshape(act_transpose_op_name, [pV.output_tensors[0]], act_reshape_shape, ugraph)
-      #import pdb; pdb.set_trace()
 
       ## convert the inputs Uint8Q7OriginOp
       new_input0_op_name = "convert_uint8_q7_" + act_transposed_tensors[0].name  #pV
-      
-      input0_q7_inputs = list()
-      input0_q7_inputs.append(tensorInfo_from_name(ugraph, act_transposed_tensors[0].name))
-      input0_q7_inputs.append(tensorInfo_from_name(ugraph, matcher["matmal_eightbit/input/quantize:1"].name))
-      input0_q7_inputs.append(tensorInfo_from_name(ugraph, matcher["matmal_eightbit/input/quantize:2"].name))
 
-      input0_q7_out = Uint8Q7Origin_Op(new_input0_op_name, input0_q7_inputs, ugraph)
+      input0_q7_out = Uint8Q7Origin_Op(new_input0_op_name,
+                                     [act_transposed_tensors[0],
+                                      matcher["matmal_eightbit/input/quantize:1"],
+                                      matcher["matmal_eightbit/input/quantize:2"]],
+                                      ugraph)
 
       new_input1_op_name = "convert_uint8_q7_" + matcher["weight_quantized_const"].name  #pM
 
-      input1_q7_inputs = list()
-      input1_q7_inputs.append(matcher["weight_quantized_const:0"])
-      input1_q7_inputs.append(matcher["weight_quantized_min:0"])
-      input1_q7_inputs.append(matcher["weight_quantized_max:0"])
-
-      input1_q7_out = Uint8Q7Origin_Op(new_input1_op_name, input1_q7_inputs, ugraph)
+      input1_q7_out = Uint8Q7Origin_Op(new_input1_op_name,
+                                       [matcher["weight_quantized_const:0"],
+                                       matcher["weight_quantized_min:0"],
+                                       matcher["weight_quantized_max:0"]],
+                                       ugraph)
 
       #using CMSIS-NN FC as MatMul only, for now
       #generate new op name
@@ -122,15 +118,12 @@ class CMSIS_NN_Transformer(Transformer):
       scratch_shape = list(map(lambda x: x if x else 1, matcher['matmal_eightbit/input/quantize:0'].shape))
       scratch_tensors = Ram_Op(scratch_space, np.zeros(tuple(scratch_shape), dtype=np.uint16), ugraph)
     
-      subject_matmul_tensors = matcher["matmal/eightbit"].output_tensors
       new_op_name = "cmsis_fc_" + matcher["matmal/eightbit"].name
 
       cmsis_fc_out = CMSIS_FC_Op(new_op_name, input0_q7_out, input1_q7_out,
                   bias_out_tensors, bShift_tensors, oShift_tensors,
                   scratch_tensors, ugraph)
 
-      replace_tensors_op(matcher['matmal/eightbit'].name, new_op_name, ugraph)
-      matcher['matmal/eightbit'] = None
       # ugraph.drop_op(result[0]['matmal/eightbit/requant_range'])
       # ugraph.drop_op(result[0]['matmal/eightbit/requantize'])
       # ugraph.drop_op(result[0]['zscore/eightbit'])
@@ -139,37 +132,27 @@ class CMSIS_NN_Transformer(Transformer):
       #ugraph.add_op(fused_op_info)
 
       #output reshape
-      matmul_output_shape = subject_matmul_tensors[0].shape
       act_reshape_op_name = new_op_name + "_newshape"
+      matmul_output_shape = list(cmsis_fc_out[0].shape)
+      matmul_output_shape.reverse()
       reshape_out = Const_Reshape(act_reshape_op_name, cmsis_fc_out, matmul_output_shape, ugraph)
       matcher["matmal/eightbit:0"] = reshape_out[0]
-      #replace_tensor(subject_matmul_tensors[0].name, reshape_out[0], ugraph)
-
 
       #range op
       new_range_op_name = new_op_name + "_range"
 
-      new_range_op_inputs = list()
-      new_range_op_inputs.append(matcher["matmal_eightbit/input/quantize:1"])
-      new_range_op_inputs.append(matcher["matmal_eightbit/input/quantize:2"])
-      new_range_op_inputs.append(matcher["weight_quantized_min:0"])
-      new_range_op_inputs.append(matcher["weight_quantized_max:0"])
+      range_out = QuantRangeForMultiplicationu8u8int32_Op(new_range_op_name,
+                                                    [matcher["matmal_eightbit/input/quantize:1"], matcher["matmal_eightbit/input/quantize:2"]],
+                                                    [matcher["weight_quantized_min:0"], matcher["weight_quantized_max:0"]],
+                                                    ugraph)
 
-      new_range_op_outputs = list()
-      new_range_op_outputs.append(subject_matmul_tensors[1])
-      new_range_op_outputs.append(subject_matmul_tensors[2])
-      ugraph = replace_tensor_op_by_name(subject_matmul_tensors[1].name, new_range_op_name, ugraph)
-      ugraph = replace_tensor_op_by_name(subject_matmul_tensors[2].name, new_range_op_name, ugraph)
-      new_range_op_outputs[0].op_name = new_range_op_name
-      new_range_op_outputs[1].op_name = new_range_op_name
-      new_range_op_info = OperationInfo(name=new_range_op_name,
-                        input_tensors=new_range_op_inputs,
-                        output_tensors=new_range_op_outputs,
-                        op_type="QuantRangeForMultiplicationu8u8int32Op",
-                        backend="tensorflow",
-                        ugraph=tmp_ugraph
-                        )
-      ugraph.add_op(new_range_op_info)
+      matcher["matmal/eightbit:1"] = range_out[0]
+      matcher["matmal/eightbit:2"] = range_out[1]
+
+      matcher['matmal/eightbit'] = None
+
+      ugraph._topologic_order_graph()
+
       graph_validate(ugraph)
 
     graph_check(ugraph)

@@ -13,7 +13,7 @@ from utensor_cgen.ir.utils import graph_check
 from utensor_cgen.experimental.ugraph_util_functions import *
 
 
-__all__ = ["transpose_offline", "Const_Op", "Ram_Op", "Const_Reshape", "Uint8Q7Origin_Op", "CMSIS_FC_Op"]
+__all__ = ["transpose_offline", "Const_Op", "Ram_Op", "Const_Reshape", "Uint8Q7Origin_Op", "CMSIS_FC_Op", "QuantRangeForMultiplicationu8u8int32_Op"]
 
 # Let us get unique names for custom injected nodes
 def static_vars(**kwargs):
@@ -41,6 +41,7 @@ def bs_ops_attr(np_array):
   return op_attr
 
 def transpose_offline(op_info):
+  #FIXME: might need to use deep copy on this one
   out_tensor_info = op_info.output_tensors[0]
   out_tensor_info.shape.reverse()
   transposed_value = op_info.op_attr['value'].value.np_array.transpose()
@@ -131,9 +132,15 @@ def Uint8Q7Origin_Op(name, inputs, ugraph):
 
   return q7_op_info.output_tensors
 
-def CMSIS_FC_Op(name, pV, pM, bias, bShift, oShift, scratch, ugraph):
+def CMSIS_FC_Op(name, in0, in1, bias, bShift, oShift, scratch, ugraph):
   tmp_ugraph = uTensorGraph()
-  out_shape = [pM[0].shape[0], pV[0].shape[1]]
+
+  #in reality, CMSIS_FC is doing in1 * in0
+  out_shape = [in1[0].shape[0], in0[0].shape[1]]
+  # for i, v in enumerate(out_shape):
+  #   if v == None:
+  #     out_shape[i] = 1
+  #     break
 
   fc_out_tensor = TensorInfo(name=name + ":0",
                     op_name=name,
@@ -143,7 +150,7 @@ def CMSIS_FC_Op(name, pV, pM, bias, bShift, oShift, scratch, ugraph):
                     )
 
   fc_op_info = OperationInfo(name=name,
-                          input_tensors=[pV[0], pM[0], bias[0], bShift[0], oShift[0], scratch[0]],
+                          input_tensors=[in0[0], in1[0], bias[0], bShift[0], oShift[0], scratch[0]],
                           output_tensors=[fc_out_tensor],
                           op_type="CMSIS_NN_FC",
                           backend="tensorflow",
@@ -152,3 +159,31 @@ def CMSIS_FC_Op(name, pV, pM, bias, bShift, oShift, scratch, ugraph):
                           
   ugraph.add_op(fc_op_info)
   return fc_op_info.output_tensors
+
+def QuantRangeForMultiplicationu8u8int32_Op(name, a_range, b_range, ugraph):
+
+  tmp_ugraph = uTensorGraph()
+  min_out = TensorInfo(name=name + ":0",
+                    op_name=name,
+                    dtype=np.dtype('float'),
+                    shape=[1],
+                    ugraph=tmp_ugraph
+                    )
+  max_out = TensorInfo(name=name + ":1",
+                  op_name=name,
+                  dtype=np.dtype('float'),
+                  shape=[1],
+                  ugraph=tmp_ugraph
+                  )
+
+  new_range_op_info = OperationInfo(name=name,
+                    input_tensors=[a_range[0], a_range[1], b_range[0], b_range[1]],
+                    output_tensors=[min_out, max_out],
+                    op_type="QuantRangeForMultiplicationu8u8int32Op",
+                    backend="tensorflow",
+                    ugraph=tmp_ugraph
+                    )
+
+  ugraph.add_op(new_range_op_info)
+
+  return new_range_op_info.output_tensors
