@@ -7,8 +7,11 @@ import numpy as np
 from utensor_cgen.logger import logger
 from utensor_cgen.transformer.optimizer import RefCntOptimizer
 from utensor_cgen.utils import NamescopedKWArgsParser
+from utensor_cgen.matcher import OpEqualityDelegate, _morphism
 
 from .snippets import *  # pylint: disable=W0401,W0614
+
+__all__ = ['OperatorFactory']
 
 
 class OperatorFactory():
@@ -46,6 +49,9 @@ class _Operator(object):
 
 
 @OperatorFactory.register
+@OpEqualityDelegate.is_associative(
+  permutations=((0, 1), (1, 0))
+)
 class _AddOperator(_Operator):
 
   op_type = "Add" # tf op type
@@ -400,9 +406,10 @@ class _QuantRangeForMultiplication_u8_u8_int32_Operator(_Operator):
     self._snippet = QuantRangeForMultiplicationSnippet(inputs, outputs, output_type, ref_counts, to_eval)
 
 @OperatorFactory.register
+@OpEqualityDelegate.is_compatible_with("Const", _morphism.Inline2ConstMorphism)
 class _InlineOperator(_Operator):
 
-  op_type="Inline"
+  op_type = "Inline"
   
   def __init__(self, op_info, **kwargs):
     out_tensor_info = op_info.output_tensors[0]
@@ -438,6 +445,7 @@ class _InlineOperator(_Operator):
     return preapred
 
 @OperatorFactory.register
+@OpEqualityDelegate.is_compatible_with("Inline", _morphism.Const2InlineMorphism)
 class _ConstOperator(_Operator):
 
   op_type = "Const"
@@ -496,6 +504,7 @@ class _RamOperator(_Operator):
                                          tf_dtype=out_dtype,
                                          sptr_name=pre_tname,
                                          ref_count=ref_count)
+
   def _prepare_tensor_name(self, tensor_name):
     prepared = tensor_name.replace(":", "_").replace("/", "_")
     return prepared

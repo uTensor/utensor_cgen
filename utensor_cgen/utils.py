@@ -1,6 +1,7 @@
 # -*- coding: utf8 -*-
 import os
 import re
+from collections import deque
 from copy import deepcopy
 
 import idx2numpy as idx2np
@@ -116,6 +117,8 @@ def parse_tensor_name(tname):
 
 
 class NamescopedKWArgsParser:
+  """FIXME: this parser is badly designed, replace it with sth else
+  """
 
   def __init__(self, name_space, kwargs):
     ns_pattern = re.compile(r'^{}__([^\d\W][\w\d_]*)'.format(name_space))
@@ -191,6 +194,10 @@ MUST_OVERWRITEN = _MustOverwrite()
 
 
 def topologic_order_graph(ugraph):
+  if ugraph.backend != "tensorflow":
+    raise ValueError(
+      "topologic_order_graph works only on tensorflow graph"
+    )
   # https://en.wikipedia.org/wiki/Topological_sorting
   queue = deepcopy(ugraph.output_nodes)
   visited = set()    # temporary mark
@@ -217,3 +224,21 @@ def topologic_order_graph(ugraph):
     node_name = queue.pop(0)
     visit(node_name)
   ugraph.topo_order = ops_torder[::-1]
+
+def ops_bfs_queue(ugraph, init_nodes=None):
+  if init_nodes is None:
+    init_nodes = [
+      ugraph.ops_info[name] for name in ugraph.output_nodes
+    ]
+  queue = deque(init_nodes)
+  visited = set()
+  bfs_deck = deque([])
+
+  while queue:
+    op = queue.popleft()
+    if op.name in visited:
+      continue
+    visited.add(op.name)
+    queue.extend(op.input_nodes)
+    bfs_deck.append(op)
+  return bfs_deck
