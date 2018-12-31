@@ -35,7 +35,7 @@ setup(
         'click'
     ],
     extras_require={
-        'dev': ['pytest']
+        'dev': ['pytest', 'graphviz']
     },
     zip_safe=False,
     classifiers=[
