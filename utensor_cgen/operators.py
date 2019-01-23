@@ -295,7 +295,8 @@ class _ReshapeOperator(_Operator):
                                     op_info.op_attr)
     ref_count = parser.get('ref_counts', [0])[0]
     to_eval = parser.get('to_eval', False)
-    self._snippet = ReshapeOpSnippet(inputs, output, ref_count, to_eval)
+    dtype = op_info.input_tensors[0].dtype
+    self._snippet = ReshapeOpSnippet(inputs, output, dtype, ref_count, to_eval)
 
 
 @OperatorFactory.register
@@ -316,6 +317,30 @@ class _QuantizedReshapeOperator(_Operator):
                                               ref_counts=ref_counts,
                                               to_eval=to_eval)
 
+@OperatorFactory.register
+class _CMSIS_NN_FCOperator(_Operator):
+
+  op_type="CMSIS_NN_FC"
+  
+  def __init__(self, op_info, **kwargs):
+    _Operator.__init__(self)
+    #import pdb; pdb.set_trace()
+    # Note order of inputs/outputs is preserved
+    inputs = [tensor_info.name for tensor_info in op_info.input_tensors]
+    output = op_info.output_tensors[0].name
+    out_dtype = op_info.output_tensors[0].dtype
+    in_dtypes = [tensor_info.dtype for tensor_info in op_info.input_tensors]
+    assert (op_info.input_tensors[0].shape[1] == None or op_info.input_tensors[0].shape[1] == 1)
+    parser = NamescopedKWArgsParser(RefCntOptimizer.KWARGS_NAMESCOPE,
+                                    op_info.op_attr)
+    ref_counts = parser.get('ref_counts', [])
+    to_eval = parser.get('to_eval', False)
+    self._snippet = CMSISNNFCOpSnippet(inputs=inputs,
+                                              output=output,
+                                              ref_counts=ref_counts,
+                                              in_dtypes=in_dtypes,
+                                              out_dtype=out_dtype,
+                                              to_eval=to_eval)
 
 @OperatorFactory.register
 class _Conv2DOperator(_Operator):
@@ -338,7 +363,79 @@ class _Conv2DOperator(_Operator):
     self._snippet = Conv2DOpSnippent(inputs, outputs, strides, padding,
                                      in_dtype=in_dtype, filter_dtype=filter_dtype, out_dtypes=out_dtypes,
                                      ref_counts=ref_counts, to_eval=to_eval)
+@OperatorFactory.register
+class _Uint8Q7OriginOperator(_Operator):
 
+  op_type = "Uint8Q7OriginOp"
+  
+  def __init__(self, op_info, **kwargs):
+    _Operator.__init__(self)
+    inputs = [tensor_info.name for tensor_info in op_info.input_tensors]
+    output = op_info.output_tensors[0].name
+    parser = NamescopedKWArgsParser(RefCntOptimizer.KWARGS_NAMESCOPE, 
+                                    op_info.op_attr)
+    ref_count = parser.get('ref_counts', [0])[0]
+    to_eval = parser.get('to_eval', False)
+    self._snippet = Uint8Q7OriginSnippet(inputs, output, ref_count, to_eval)
+
+#hard coding to uint8_t uint8_t int32_t for now
+@OperatorFactory.register
+class _QuantRangeForMultiplication_u8_u8_int32_Operator(_Operator):
+
+  op_type = "QuantRangeForMultiplicationu8u8int32Op"
+
+  def __init__(self, op_info, **kwargs):
+    _Operator.__init__(self)
+    inputs = [tensor_info.name for tensor_info in op_info.input_tensors]
+    outputs = [tensor_info.name for tensor_info in op_info.output_tensors]
+    if op_info.output_tensors[0].dtype != op_info.output_tensors[1].dtype:
+      assert "output tensors must have the same data type"
+    #output_type = op_info.output_tensors[0].dtype
+    #FIXME: hard coding the output to int32 for now
+    output_type = np.dtype([('qint32', '<i4')])
+    parser = NamescopedKWArgsParser(RefCntOptimizer.KWARGS_NAMESCOPE, 
+                                    op_info.op_attr)
+    ref_counts = parser.get('ref_counts', [])
+    to_eval = parser.get('to_eval', False)
+    self._snippet = QuantRangeForMultiplicationSnippet(inputs, outputs, output_type, ref_counts, to_eval)
+
+@OperatorFactory.register
+class _InlineOperator(_Operator):
+
+  op_type="Inline"
+  
+  def __init__(self, op_info, **kwargs):
+    out_tensor_info = op_info.output_tensors[0]
+    out_tname, out_dtype, tensor_shape = (out_tensor_info.name,
+                            out_tensor_info.dtype,
+                            out_tensor_info.shape)
+    parser = NamescopedKWArgsParser(RefCntOptimizer.KWARGS_NAMESCOPE,
+                                    op_info.op_attr)
+    ref_count = parser.get('ref_counts', [0])[0]
+    pre_tname = self._prepare_tensor_name(out_tname)
+    inline_tname = self._prepare_inline_array_name(out_tname)
+    value = op_info.op_attr['value'].value.np_array.flatten()
+    self._snippet = CreateTensorBinarySnippet(out_tname, tensor_shape=tensor_shape,
+                                         tf_dtype=out_dtype,
+                                         sptr_name=pre_tname,
+                                         inline_name=inline_tname,
+                                         ref_count=ref_count)
+
+    weight_snippet = WeightSnippet(inline_tname,
+                                  out_dtype,
+                                  tensor_shape,
+                                  value)
+    weight_container = kwargs['weight_container']                             
+    weight_container.add_snippet(weight_snippet)
+
+  def _prepare_tensor_name(self, tensor_name):
+    prepared = tensor_name.replace(":", "_").replace("/", "_")
+    return prepared
+
+  def _prepare_inline_array_name(self, tensor_name):
+    inline = tensor_name.replace(":", "_").replace("/", "_")
+    preapred = "inline_{}".format(inline)
+    return preapred
 
 @OperatorFactory.register
 class _ConstOperator(_Operator):
@@ -379,11 +476,10 @@ class _ConstOperator(_Operator):
       idx2np.convert_to_file(fid, np_array)
     logger.info("saving %s", path)
 
-
 @OperatorFactory.register
-class _InlineOperator(_Operator):
+class _RamOperator(_Operator):
 
-  op_type = "Inline"
+  op_type = "Ram"
   
   def __init__(self, op_info, **kwargs):
     out_tensor_info = op_info.output_tensors[0]
@@ -394,26 +490,12 @@ class _InlineOperator(_Operator):
                                     op_info.op_attr)
     ref_count = parser.get('ref_counts', [0])[0]
     pre_tname = self._prepare_tensor_name(out_tname)
-    inline_tname = self._prepare_inline_array_name(out_tname)
-    value = op_info.op_attr['value'].value.np_array.flatten()
-    self._snippet = CreateTensorBinarySnippet(out_tname, tensor_shape=tensor_shape,
+    #inline_tname = self._prepare_inline_array_name(out_tname)
+    #value = op_info.op_attr['value'].value.np_array.flatten()
+    self._snippet = CreateTensorRamSnippet(out_tname, tensor_shape=tensor_shape,
                                          tf_dtype=out_dtype,
                                          sptr_name=pre_tname,
-                                         inline_name=inline_tname,
                                          ref_count=ref_count)
-
-    weight_snippet = WeightSnippet(inline_tname,
-                                  out_dtype,
-                                  tensor_shape,
-                                  value)
-    weight_container = kwargs['weight_container']                             
-    weight_container.add_snippet(weight_snippet)
-
   def _prepare_tensor_name(self, tensor_name):
     prepared = tensor_name.replace(":", "_").replace("/", "_")
     return prepared
-
-  def _prepare_inline_array_name(self, tensor_name):
-    inline = tensor_name.replace(":", "_").replace("/", "_")
-    preapred = "inline_{}".format(inline)
-    return preapred
