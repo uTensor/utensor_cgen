@@ -13,6 +13,7 @@ class QuantizeTransformer(Transformer):
   KWARGS_NAMESCOPE = '_quantize'
 
   def transform(self, ugraph):
+    #import pdb; pdb.set_trace()
     graph_def = ugraph.graph_def
     quant_graph_def = TransformGraph(input_graph_def=graph_def,
                                      inputs=[],

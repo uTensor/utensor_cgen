@@ -2,17 +2,21 @@
 import re
 from collections import defaultdict
 from copy import deepcopy
-import six
 
 import attr
 import numpy as np
+import six
 import tensorflow as tf
 from attr.validators import instance_of
 from tensorflow.core.framework.attr_value_pb2 import AttrValue as _AttrValue
-from tensorflow.core.framework.attr_value_pb2 import NameAttrList as _NameAttrList
+from tensorflow.core.framework.attr_value_pb2 import (
+    NameAttrList as _NameAttrList)
 from tensorflow.core.framework.tensor_pb2 import TensorProto as _TensorProto
-from tensorflow.core.framework.tensor_shape_pb2 import TensorShapeProto as _TensorShapeProto
+from tensorflow.core.framework.tensor_shape_pb2 import (
+    TensorShapeProto as _TensorShapeProto)
 from tensorflow.core.framework.types_pb2 import DataType as _DataType
+
+from utensor_cgen.utils import topologic_order_graph
 
 from .converter import AttrValueConverter, ConverterFactory
 
@@ -236,13 +240,42 @@ class uTensorGraph(IRBase, _NoShallowCopyMixin):
   def ops(self):
     return [self.ops_info[name] for name in self.topo_order]
 
+  def viz_graph(self, fname="graph.gv"):
+    from graphviz import Digraph
+    dot = Digraph()
+    nodes = {}
+    i = 0
+    for node in self.ops:
+        nodes[node.name] = chr(ord('a') + i)
+        dot.node(nodes[node.name], "%s: %s" % (node.name, node.op_type))
+        i += 1
+        for n in node.input_tensors:
+            if n.name in nodes:
+                continue
+            nodes[n.name] = chr(ord('a') + i)
+            dot.node(nodes[n.name], "%s: Tensor" % n.name)
+            i += 1
+        for n in node.output_tensors:
+            if n.name in nodes:
+                continue
+            nodes[n.name] = chr(ord('a') + i)
+            dot.node(nodes[n.name], "%s: Tensor" % n.name)
+            i += 1
+    for node in self.ops:
+        for n in node.input_tensors:
+            dot.edge(nodes[n.name], nodes[node.name])
+        for n in node.output_tensors:
+            dot.edge(nodes[node.name], nodes[n.name])
+    dot.render(fname, view=True)
+
   def add_op(self, op):
     if not isinstance(op, OperationInfo):
       raise ValueError('expecting OperationInfo, get {}'.format(type(op)))
     if op.name in self.ops_info:
       raise ValueError('duplicate op detected, {}'.format(op.name))
+    op.ugraph = self
     self.ops_info[op.name] = op
-    self._topologic_order_graph()
+    topologic_order_graph(self)
 
   def drop_op(self, op_name):
     if op_name not in self.ops_info:
