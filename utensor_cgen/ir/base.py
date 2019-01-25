@@ -249,11 +249,41 @@ class uTensorGraph(IRBase, _NoShallowCopyMixin):
   def ops(self):
     return [self.ops_info[name] for name in self.topo_order]
 
+  def viz_graph(self, fname="graph.gv"):
+    from graphviz import Digraph
+    dot = Digraph()
+    nodes = {}
+    i = 0
+    for node in self.ops:
+        nodes[node.name] = chr(ord('a') + i)
+        dot.node(nodes[node.name], "%s: %s" % (node.name, node.op_type))
+        i += 1
+        for n in node.input_tensors:
+            if n.name in nodes:
+                continue
+            nodes[n.name] = chr(ord('a') + i)
+            dot.node(nodes[n.name], "%s: Tensor" % n.name)
+            i += 1
+        for n in node.output_tensors:
+            if n.name in nodes:
+                continue
+            nodes[n.name] = chr(ord('a') + i)
+            dot.node(nodes[n.name], "%s: Tensor" % n.name)
+            i += 1
+    for node in self.ops:
+        for n in node.input_tensors:
+            dot.edge(nodes[n.name], nodes[node.name])
+        for n in node.output_tensors:
+            dot.edge(nodes[node.name], nodes[n.name])
+    dot.render(fname, view=True)
+
+
   def add_op(self, op):
     if not isinstance(op, OperationInfo):
       raise ValueError('expecting OperationInfo, get {}'.format(type(op)))
     if op.name in self.ops_info:
       raise ValueError('duplicate op detected, {}'.format(op.name))
+    op.ugraph = self
     self.ops_info[op.name] = op
     self._topologic_order_graph()
 
@@ -280,8 +310,7 @@ class uTensorGraph(IRBase, _NoShallowCopyMixin):
       op_info = self.ops_info[node_name]
 
       for t_info in op_info.input_tensors:
-        op_name = parse_tensor_name(t_info.name)[0]
-        visit(op_name)
+        visit(t_info.op_name)
 
       perm_visit.add(node_name)
       ops_torder.insert(0, node_name)
