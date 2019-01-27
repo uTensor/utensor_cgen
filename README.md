@@ -36,6 +36,31 @@ You can go to this [repo](https://github.com/pypa/pipenv) for detail information
     - plz downgrade to `setuptools==39.1.0`
     - my recommendation is to use `virtualenv`
 
+# Overall Architecture
+
+```
+  ============       +-----------------+       ===================
+|| model file || --> | frontend Parser | --> || uTensorGraph (IR) || 
+  ============       +-----------------+       ===================
+                                                           |
+                 +-------------------------------+         |
+                 |       graph transformer       |         |
+                 | (legalization & optimization) | <------‘ 
+                 +-------------------------------+
+                                |
+                                v
+                     ===========================
+                   ||       uTensorGraph        ||
+                   || (legalized and optimized) ||
+                     ===========================
+                                   |
++--------------------------+       |
+| backend (code generator) | <----‘  
++--------------------------+
+     |
+     `---> (target files, ex: model.cpp, model.hpp, weights.idx)
+```
+
 # Basic Usage
 
 ## `utensor-cli show <model.pb>`
