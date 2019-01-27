@@ -1,7 +1,7 @@
 # -*- coding:utf8 -*-
 from jinja2 import Environment, PackageLoader
 
-_loader = PackageLoader('utensor_cgen', 'snippets/templates')
+_loader = PackageLoader('utensor_cgen', 'backend/snippets/templates')
 
 env = Environment(loader=_loader, trim_blocks=True, lstrip_blocks=True)
 env.globals.update(zip=zip)

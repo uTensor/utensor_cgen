@@ -12,7 +12,8 @@ from tensorflow.tools.graph_transforms import TransformGraph
 
 from utensor_cgen.logger import logger
 
-__all__ = ["save_idx", "save_consts", "save_graph", "log_graph", "KWArgsParser"]
+__all__ = ["save_idx", "save_consts", "save_graph", "log_graph",
+           "NamescopedKWArgsParser", "NArgsParam", "MUST_OVERWRITEN"]
 
 
 def log_graph(graph_or_graph_def, logdir):
@@ -84,6 +85,7 @@ def prepare_meta_graph(meta_graph_path, output_nodes, chkp_path=None):
                                                               output_node_names=output_nodes)
   return sub_graph_def
 
+
 def _sanitize_op_name(op_name):
   """
   Sanitize the op name
@@ -92,6 +94,7 @@ def _sanitize_op_name(op_name):
   if op_name.startswith('^'):
     return op_name[1:]
   return op_name
+
 
 def parse_tensor_name(tname):
   """Adapt from TensorFlow source code
@@ -110,6 +113,7 @@ def parse_tensor_name(tname):
     return (op_name, 0)
   else:
     raise ValueError("invalid tensor name: {}".format(tname))
+
 
 class NamescopedKWArgsParser:
 
@@ -153,6 +157,7 @@ class NamescopedKWArgsParser:
     except KeyError:
       return self._shared_kwargs[argname]
 
+
 class NArgsParam(ParamType):
 
   def __init__(self, sep=','):
@@ -172,3 +177,43 @@ class NArgsParam(ParamType):
     else:
       final_args = args
     return final_args
+
+
+class _MustOverwrite(object):
+  _obj = None
+
+  def __new__(cls, *args, **kwargs):
+    if cls._obj is None:
+      cls._obj = object.__new__(cls, *args, **kwargs)
+    return cls._obj
+
+MUST_OVERWRITEN = _MustOverwrite()
+
+
+def topologic_order_graph(ugraph):
+  # https://en.wikipedia.org/wiki/Topological_sorting
+  queue = deepcopy(ugraph.output_nodes)
+  visited = set()    # temporary mark
+  perm_visit = set()  # Permanent mark
+  ops_torder = []  # L
+
+  def visit(node_name):
+    if node_name in perm_visit:
+      return
+    if node_name in visited:
+      raise ValueError("Input graph is not a DAG")
+
+    visited.add(node_name)
+    op_info = ugraph.ops_info[node_name]
+
+    for t_info in op_info.input_tensors:
+      op_name = parse_tensor_name(t_info.name)[0]
+      visit(op_name)
+
+    perm_visit.add(node_name)
+    ops_torder.insert(0, node_name)
+
+  while queue:
+    node_name = queue.pop(0)
+    visit(node_name)
+  ugraph.topo_order = ops_torder[::-1]

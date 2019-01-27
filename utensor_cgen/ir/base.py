@@ -8,17 +8,15 @@ import numpy as np
 import six
 import tensorflow as tf
 from attr.validators import instance_of
-from tensorflow import make_ndarray
 from tensorflow.core.framework.attr_value_pb2 import AttrValue as _AttrValue
-from tensorflow.core.framework.attr_value_pb2 import \
-    NameAttrList as _NameAttrList
+from tensorflow.core.framework.attr_value_pb2 import (
+    NameAttrList as _NameAttrList)
 from tensorflow.core.framework.tensor_pb2 import TensorProto as _TensorProto
-from tensorflow.core.framework.tensor_shape_pb2 import \
-    TensorShapeProto as _TensorShapeProto
+from tensorflow.core.framework.tensor_shape_pb2 import (
+    TensorShapeProto as _TensorShapeProto)
 from tensorflow.core.framework.types_pb2 import DataType as _DataType
-from tensorflow.tools.graph_transforms import TransformGraph
 
-from utensor_cgen.utils import parse_tensor_name
+from utensor_cgen.utils import topologic_order_graph
 
 from .converter import AttrValueConverter, ConverterFactory
 
@@ -190,6 +188,8 @@ class OperationInfo(IRBase, _NoShallowCopyMixin):
   def copy_into_graph(self, ugraph):
     return deepcopy(self, {'ugraph': ugraph})
 
+
+@attr.s
 class uTensorGraph(IRBase, _NoShallowCopyMixin):
   """
   Attributes
@@ -201,23 +201,14 @@ class uTensorGraph(IRBase, _NoShallowCopyMixin):
   """
   KWPARSER_PATTERN = re.compile(r'^([^\d\W][\w\d_]*)__([^\d\W][\w\d_]*)')
 
-  def __init__(self, graph=None, output_nodes=None):
-    if output_nodes is None:
-      output_nodes = []
-    if graph is None:
-      self.ops_info = {}
-      self.topo_order = []
-      self.output_nodes = []
-      self._backend = ''
-      return
-    assert isinstance(output_nodes, list), \
-        "output_nodes should be of type %s, get %s" % (list, type(output_nodes))
-    if isinstance(graph, tf.GraphDef):
-      if not output_nodes:
-        raise ValueError('No output_nodes given')
-      self._init_from_graph_def(graph, output_nodes)
-    else:
-      raise ValueError('Only support tensorflow now')
+  output_nodes = attr.ib(type=list)
+  _backend = attr.ib(default='', type=str)
+  ops_info = attr.ib(factory=dict)
+  topo_order = attr.ib(factory=list, init=False)
+
+  def __attrs_post_init__(self):
+    if not self.output_nodes:
+      raise ValueError('No output_nodes given')
   
   @property
   def backend(self):
@@ -277,7 +268,6 @@ class uTensorGraph(IRBase, _NoShallowCopyMixin):
             dot.edge(nodes[node.name], nodes[n.name])
     dot.render(fname, view=True)
 
-
   def add_op(self, op):
     if not isinstance(op, OperationInfo):
       raise ValueError('expecting OperationInfo, get {}'.format(type(op)))
@@ -285,7 +275,7 @@ class uTensorGraph(IRBase, _NoShallowCopyMixin):
       raise ValueError('duplicate op detected, {}'.format(op.name))
     op.ugraph = self
     self.ops_info[op.name] = op
-    self._topologic_order_graph()
+    topologic_order_graph(self)
 
   def drop_op(self, op_name):
     if op_name not in self.ops_info:
@@ -293,94 +283,13 @@ class uTensorGraph(IRBase, _NoShallowCopyMixin):
     del self.ops_info[op_name]
     self.topo_order.remove(op_name)
 
-  def _topologic_order_graph(self):
-    # https://en.wikipedia.org/wiki/Topological_sorting
-    queue = deepcopy(self.output_nodes)
-    visited = set()    # temporary mark
-    perm_visit = set()  # Permanent mark
-    ops_torder = []  # L
-
-    def visit(node_name):
-      if node_name in perm_visit:
-        return
-      if node_name in visited:
-        raise ValueError("Input graph is not a DAG")
-
-      visited.add(node_name)
-      op_info = self.ops_info[node_name]
-
-      for t_info in op_info.input_tensors:
-        visit(t_info.op_name)
-
-      perm_visit.add(node_name)
-      ops_torder.insert(0, node_name)
-
-    while queue:
-      node_name = queue.pop(0)
-      visit(node_name)
-    self.topo_order = ops_torder[::-1]
-
-  # tensorflow
-  @staticmethod
-  def _tf_parse_tshape(t_shape):
-    try:
-      shape = t_shape.as_list()
-    except ValueError:
-      shape = None
-    return shape
-
-  def _init_from_graph_def(self, graph_def, output_nodes):
-    """Initailize graph with Tensorflow GraphDef
-    """
-    if not self._tf_is_freeze_graph(graph_def):
-      raise ValueError('Given graph_def is not freezed')
-    self._backend = 'tensorflow'
-    self.ops_info = {}
-    self.topo_order = []
-    self.output_nodes = output_nodes
-    graph = tf.Graph()
-    with graph.as_default():
-      tf.import_graph_def(graph_def, name='')
-
-    for node in graph_def.node:
-      op = graph.get_operation_by_name(node.name)
-      in_tensors = [TensorInfo(name=tensor.name,
-                               ugraph=self,
-                               op_name=tensor.op.name,
-                               dtype=np.dtype(tensor.dtype.as_numpy_dtype),
-                               shape=self._tf_parse_tshape(tensor.shape))
-                    for tensor in op.inputs]
-      out_tensors = [TensorInfo(name=tensor.name,
-                                ugraph=self,
-                                op_name=op.name,
-                                dtype=np.dtype(tensor.dtype.as_numpy_dtype),
-                                shape=self._tf_parse_tshape(tensor.shape))
-                     for tensor in op.outputs]
-      op_type = node.op
-      op_attr = node.attr
-      op_info = OperationInfo(name=node.name,
-                              input_tensors=in_tensors,
-                              output_tensors=out_tensors,
-                              op_type=op_type,
-                              backend='tensorflow',
-                              op_attr=op_attr,
-                              ugraph=self)
-      op_info.op_attr['tensorflow__device'] = node.device
-      self.ops_info[node.name] = op_info
-    self._topologic_order_graph()
-  
-  def _tf_is_freeze_graph(self, graph_def):
-    is_frozen = all(node.op not in ['VariableV2'] for node in graph_def.node)
-    return is_frozen
-
   def __deepcopy__(self, memo):
-    new_graph = uTensorGraph()
+    new_graph = uTensorGraph(output_nodes=self.output_nodes)
     memo['ugraph'] = new_graph
     new_ops_info = dict((k, deepcopy(v, memo)) for k, v in self.ops_info.items())
     new_topo_order = [name for name in self.topo_order]
 
     new_graph.ops_info = new_ops_info
     new_graph.topo_order = new_topo_order
-    new_graph.output_nodes = self.output_nodes
     new_graph._backend = self._backend
     return new_graph

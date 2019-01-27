@@ -9,15 +9,17 @@ import tensorflow as tf
 from tensorflow.core.framework.graph_pb2 import GraphDef
 from tensorflow.tools.graph_transforms import TransformGraph
 
-from .ir import uTensorGraph
+from utensor_cgen.ir import uTensorGraph
+from utensor_cgen.frontend import FrontendSelector
+from utensor_cgen.transformer.optimizer import RefCntOptimizer
+from utensor_cgen.transformer.pipline import TransformerPipeline
+from utensor_cgen.utils import NamescopedKWArgsParser
+
 from .operators import OperatorFactory
 from .snippets import (CommentSnippet, ContextGlobalArrayContainer,
                        ContextHeaderSnippet, ContextSnippetsContainer,
                        CreateTensorBinarySnippet, CreateTensorIdxSnippet)
 from .snippets.composer import Composer
-from .transformer.optimizer import RefCntOptimizer
-from .transformer.pipline import TransformerPipeline
-from .utils import NamescopedKWArgsParser
 
 __all__ = ["CodeGenerator"]
 _logger = logging.getLogger('utensor-cli')
@@ -44,12 +46,11 @@ class CodeGenerator(object):
 
   def generate(self, src_fname):
     _, ext = os.path.splitext(self.model_file)
-    if ext == '.pb':
-      self._generate_from_pb(src_fname)
-    else:
-      raise ValueError('Support only pb file')
+    parser_cls = FrontendSelector.select_parser(ext)
+    ugraph = parser_cls.parse(self.model_file, self.output_nodes)
+    self._generate(src_fname, ugraph)
 
-  def _generate_from_pb(self, src_fname):
+  def _generate(self, src_fname, ugraph):
     """Generate source and header files
     """
     fname, _ = os.path.splitext(src_fname)
@@ -66,9 +67,7 @@ class CodeGenerator(object):
 
     opFactory = OperatorFactory()
 
-    graph_def = self._tf_load_graph_def(self.model_file)
-    self._expect_non_quantized(graph_def)
-    ugraph = uTensorGraph(graph_def, self.output_nodes)
+    self._expect_non_quantized(ugraph)
     _logger.info("Transforming graph: %s", self.model_file)
     _logger.info("Transform pipeline: %s", ' -> '.join(self.trans_methods))
     quant_ugraph = self._transform_graph(ugraph,
@@ -129,16 +128,18 @@ class CodeGenerator(object):
       wf.write(composer.compose())
   
   @classmethod
-  def _expect_non_quantized(cls, graph_def):
+  def _expect_non_quantized(cls, ugraph):
     is_quantized = False
-    for node in graph_def.node:
-      if node.op in ["Dequantize", "QuantizedMaxPool",
-                     "QuantizeV2", "QuantizedMatMul",
-                     "QuantizedRelu", "QuantizedAdd",
-                     "RequantizationRange",
-                     "Requantize",
-                     "QuantizedReshape",
-                     "QuantizedConv2D"]:
+    for op_info in ugraph.ops_info.values():
+      if op_info.op_type in [
+        "Dequantize", "QuantizedMaxPool",
+        "QuantizeV2", "QuantizedMatMul",
+        "QuantizedRelu", "QuantizedAdd",
+        "RequantizationRange",
+        "Requantize",
+        "QuantizedReshape",
+        "QuantizedConv2D"
+        ]:
         is_quantized = True
         break
     if is_quantized:

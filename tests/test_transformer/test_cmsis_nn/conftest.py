@@ -1,6 +1,8 @@
-import tensorflow as tf
 import numpy as np
 import pytest
+import tensorflow as tf
+
+from utensor_cgen.frontend.tensorflow import GraphDefParser
 from utensor_cgen.ir import uTensorGraph
 
 #provide ((graph), (subgraph), (replacement), (expected fused graph))
@@ -18,7 +20,6 @@ def make_rand_const(shape, name):
 #tensorboard --logdir=./logs_graph0
 def test_graph0():
   graph = tf.Graph()
-  summary = tf.summary.FileWriter('./logs_graph0')
   with graph.as_default():
     x = tf.placeholder(tf.float32, [None, 784], name="x")
     add_op = tf.add(x, x, name="inputAdd")
@@ -26,15 +27,13 @@ def test_graph0():
     b_fc1 = make_rand_const([128], name='b_fc1')
     a_fc1 = tf.add(tf.matmul(add_op, W_fc1), b_fc1, name="zscore")
     h_fc1 = tf.nn.relu(a_fc1, name="act1")
-    summary.add_graph(graph)
   
-  ugraph = uTensorGraph(graph.as_graph_def(), ["act1"])
+  ugraph = GraphDefParser.parse(graph.as_graph_def(), ["act1"])
   return ugraph
 
 #tensorboard --logdir=./logs_graph1 --port=8008
 def test_graph1():
   graph1 = tf.Graph()
-  summary = tf.summary.FileWriter('./logs_graph1')
   with graph1.as_default():
     x = tf.placeholder(tf.float32, [None, 784], name="x")
     W_fc1 = make_rand_const([784, 128], name='W_fc1')
@@ -46,9 +45,8 @@ def test_graph1():
     b_fc2 = make_rand_const([64], name='b_fc2')
     a_fc2 = tf.add(tf.matmul(h_fc1, W_fc2), b_fc2, name="zscore2")
     h_fc2 = tf.nn.relu(a_fc2, "act2")
-    summary.add_graph(graph1)
 
-  ugraph1 = uTensorGraph(graph1.as_graph_def(), ["act2"])
+  ugraph1 = GraphDefParser.parse(graph1.as_graph_def(), ["act2"])
   return ugraph1
 
 @pytest.fixture(scope='session', name='fusion_graph_tuple')

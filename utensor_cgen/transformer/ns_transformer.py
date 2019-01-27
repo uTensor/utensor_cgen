@@ -38,7 +38,7 @@ class DropoutTransformer(Transformer):
   TARGET_NODENAME_PATTERN = re.compile(r'(dropout[_\w\d]*)/.*')
 
   def transform(self, ugraph):
-    new_graph = uTensorGraph()
+    new_graph = uTensorGraph(output_nodes=ugraph.output_nodes)
     dropout_input_map = self._find_input(ugraph)
     new_ops_info = {}
     for node_name in ugraph.topo_order:
@@ -71,7 +71,6 @@ class DropoutTransformer(Transformer):
                                   ugraph=new_graph)
       new_ops_info[node_name] = new_op_info
     new_graph.ops_info = new_ops_info
-    new_graph.output_nodes = ugraph.output_nodes
     new_graph._backend = ugraph._backend
     return new_graph
 

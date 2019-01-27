@@ -1,10 +1,10 @@
-from utensor_cgen.ir import uTensorGraph
+from utensor_cgen.frontend.tensorflow import GraphDefParser
 from utensor_cgen.transformer import RefCntOptimizer
 
 
 def test_refcnt_optimizer(refgraph_tuple):
     (graph_def, refcnt_ans, output_nodes)= refgraph_tuple
-    ugraph = uTensorGraph(graph_def, output_nodes)
+    ugraph = GraphDefParser.parse(graph_def, output_nodes=output_nodes)
     transformer = RefCntOptimizer()
     ugraph = transformer.transform(ugraph)
     for node_name in ugraph.topo_order:

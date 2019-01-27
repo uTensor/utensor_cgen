@@ -1,6 +1,6 @@
 import tensorflow as tf
 
-from utensor_cgen.ir import uTensorGraph
+from utensor_cgen.frontend.tensorflow import GraphDefParser
 from utensor_cgen.transformer.ns_transformer import DropoutTransformer
 
 
@@ -8,7 +8,7 @@ def test_dropout_trans(droput_graph_tuple):
     (graph_def,
      (keep_prob_name, dropout_output_name),
      output_nodes) = droput_graph_tuple
-    ugraph = uTensorGraph(graph_def, output_nodes=output_nodes)
+    ugraph = GraphDefParser.parse(graph_def, output_nodes=output_nodes)
     transformer = DropoutTransformer()
     new_ugraph = transformer.transform(ugraph)
     for op in new_ugraph.ops_info.values():

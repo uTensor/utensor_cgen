@@ -1,6 +1,7 @@
 from tensorflow.tools.graph_transforms import TransformGraph
 
 from utensor_cgen.ir.base import uTensorGraph
+from utensor_cgen.frontend.tensorflow import GraphDefParser
 
 from .base import Transformer
 
@@ -18,4 +19,5 @@ class QuantizeTransformer(Transformer):
                                      inputs=[],
                                      outputs=ugraph.output_nodes,
                                      transforms=["quantize_weights", "quantize_nodes"])
-    return uTensorGraph(graph=quant_graph_def, output_nodes=ugraph.output_nodes)
+    return GraphDefParser.parse(quant_graph_def,
+                                output_nodes=ugraph.output_nodes)

@@ -8,19 +8,21 @@ import re
 from collections import defaultdict
 from copy import deepcopy
 
-import tensorflow as tf
 import numpy as np
-
-from utensor_cgen.ir import OperationInfo, uTensorGraph, TensorInfo
-from utensor_cgen.ir.converter import AttrValueConverter, GenericTensorConverterMixin # hue hue hue hue hue
-from utensor_cgen.utils import parse_tensor_name
+import tensorflow as tf
 from tensorflow.tools.graph_transforms import TransformGraph
+
+from utensor_cgen.experimental.ugraph_builder import *
+from utensor_cgen.experimental.ugraph_matcher import *
+from utensor_cgen.experimental.ugraph_util_functions import *
+from utensor_cgen.frontend.tensorflow import GraphDefParser
+from utensor_cgen.ir import OperationInfo, TensorInfo, uTensorGraph
+from utensor_cgen.ir.converter import AttrValueConverter  # hue hue hue hue hue
+from utensor_cgen.ir.converter import GenericTensorConverterMixin
 from utensor_cgen.ir.utils import graph_check
+from utensor_cgen.utils import parse_tensor_name, topologic_order_graph
 
 from .base import Transformer
-from utensor_cgen.experimental.ugraph_util_functions import *
-from utensor_cgen.experimental.ugraph_matcher import *
-from utensor_cgen.experimental.ugraph_builder import *
 
 __all__ = ["CMSIS_NN_Transformer"]
 
@@ -52,7 +54,7 @@ class CMSIS_NN_Transformer(Transformer):
                                      inputs=['input'],
                                      outputs=['zscore'],
                                      transforms=["quantize_weights", "quantize_nodes"])
-      mgraph = uTensorGraph(graph=quant_graph_def, output_nodes=['zscore/eightbit'])
+      mgraph = GraphDefParser.parse(quant_graph_def, output_nodes=['zscore/eightbit'])
 
     #mgraph.viz_graph(fname="matcher.gv")
     return (mgraph, meta)
@@ -151,10 +153,8 @@ class CMSIS_NN_Transformer(Transformer):
 
       matcher['matmal/eightbit'] = None
 
-      ugraph._topologic_order_graph()
-
+      topologic_order_graph(ugraph)
       graph_validate(ugraph)
 
     graph_check(ugraph)
-    ugraph.viz_graph(fname="cmsis_nn.gv")
     return ugraph
