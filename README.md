@@ -16,7 +16,7 @@ pip install utensor_cgen
 
 - with `pip`
 ```
-pip instal -e .[dev]
+pip install -e .[dev]
 ```
 
 - with `pipenv`
