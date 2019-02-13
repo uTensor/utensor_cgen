@@ -52,7 +52,7 @@ def transpose_offline(op_info):
 
 
 def Const_Op(name, np_array, ugraph):
-  tmp_graph = uTensorGraph()
+  tmp_graph = uTensorGraph(output_nodes=[name])
   const_tensor = TensorInfo(name=name + ":0",
                           op_name=name,
                           dtype=np_array.dtype,
@@ -80,7 +80,7 @@ def Ram_Op(name, np_array, ugraph):
 def Reshape_Op(name, input_tensor, shape_tensor, ugraph):
   #FIXME: ValueError: duplicate op detected
   #if ugraph == None:
-  tmp_ugraph = uTensorGraph()
+  tmp_ugraph = uTensorGraph(output_nodes=[name])
 
   shape_const_op = ugraph.ops_info[shape_tensor[0].op_name]
 
@@ -114,8 +114,8 @@ def Const_Reshape(name, input_tensor, shape, ugraph):
   return Reshape_Op(name, input_tensor, reshape_const_tensor, ugraph)
 
 def Uint8Q7Origin_Op(name, inputs, ugraph):
-  tmp_ugraph = uTensorGraph()
-  q7_out = TensorInfo(name=name + "_q7:0",
+  tmp_ugraph = uTensorGraph(output_nodes=[name])
+  q7_out = TensorInfo(name=name + ":0",
                     op_name=name,
                     dtype=np.dtype('int8'),
                     shape=inputs[0].shape,
@@ -128,12 +128,14 @@ def Uint8Q7Origin_Op(name, inputs, ugraph):
                         backend="tensorflow",
                         ugraph=tmp_ugraph)
   
+  # if(name == 'convert_uint8_q7_Relu/eightbit_transpose_0_q7'):
+  # import pdb; pdb.set_trace()
   ugraph.add_op(q7_op_info)
 
   return q7_op_info.output_tensors
 
 def CMSIS_FC_Op(name, in0, in1, bias, bShift, oShift, scratch, ugraph):
-  tmp_ugraph = uTensorGraph()
+  tmp_ugraph = uTensorGraph(output_nodes=[name])
 
   #in reality, CMSIS_FC is doing in1 * in0
   out_shape = [in1[0].shape[0], in0[0].shape[1]]
@@ -162,7 +164,7 @@ def CMSIS_FC_Op(name, in0, in1, bias, bShift, oShift, scratch, ugraph):
 
 def QuantRangeForMultiplicationu8u8int32_Op(name, a_range, b_range, ugraph):
 
-  tmp_ugraph = uTensorGraph()
+  tmp_ugraph = uTensorGraph(output_nodes=[name])
   min_out = TensorInfo(name=name + ":0",
                     op_name=name,
                     dtype=np.dtype('float'),

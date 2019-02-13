@@ -84,7 +84,7 @@ class CMSIS_NN_Transformer(Transformer):
       act_transposed_tensors = Const_Reshape(act_transpose_op_name, [pV.output_tensors[0]], act_reshape_shape, ugraph)
 
       ## convert the inputs Uint8Q7OriginOp
-      new_input0_op_name = "convert_uint8_q7_" + act_transposed_tensors[0].name  #pV
+      new_input0_op_name = "convert_uint8_q7_" + act_transposed_tensors[0].name.replace(":", "_")  #pV
 
       input0_q7_out = Uint8Q7Origin_Op(new_input0_op_name,
                                      [act_transposed_tensors[0],
