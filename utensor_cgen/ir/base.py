@@ -274,6 +274,9 @@ class uTensorGraph(IRBase, _NoShallowCopyMixin):
     if op.name in self.ops_info:
       raise ValueError('duplicate op detected, {}'.format(op.name))
     op.ugraph = self
+
+    # if(op.name == 'convert_uint8_q7_Relu/eightbit_transpose_0_q7'):
+    #   import pdb; pdb.set_trace()
     self.ops_info[op.name] = op
     topologic_order_graph(self)
 
