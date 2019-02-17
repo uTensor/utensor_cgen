@@ -1,2 +1,2 @@
 include LICENSE README.md
-recursive-include utensor_cgen/snippets/templates *
+recursive-include utensor_cgen/backend/snippets/templates *

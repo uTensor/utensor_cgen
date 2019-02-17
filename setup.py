@@ -22,7 +22,7 @@ setup(
     license=license,
     packages=find_packages(),
     include_package_data=True,
-    package_data={"utensor_cgen": ["templates/*"]},
+    package_data={"utensor_cgen": ["backend/snippets/templates/*"]},
     entry_points={
         "console_scripts": [
             "utensor-cli=utensor_cgen.cli:cli"
