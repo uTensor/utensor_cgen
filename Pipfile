@@ -5,9 +5,6 @@ name = "pypi"
 
 [packages]
 "e1839a8" = {path = ".", editable = true}
-torch = "*"
-torchvision = "*"
-onnx-tf = "*"
 
 [dev-packages]
 pylint = "*"

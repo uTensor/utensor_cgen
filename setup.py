@@ -32,7 +32,10 @@ setup(
         'tensorflow',
         'idx2numpy',
         'attrs',
-        'click'
+        'click',
+        'torch',
+        'torchvision',
+        'onnx-tf',
     ],
     extras_require={
         'dev': ['pytest', 'graphviz']
