@@ -56,12 +56,12 @@ class CMSIS_NN_Transformer(Transformer):
                                      transforms=["quantize_weights", "quantize_nodes"])
       mgraph = GraphDefParser.parse(quant_graph_def, output_nodes=['zscore/eightbit'])
 
-    #mgraph.viz_graph(fname="matcher.gv")
+    mgraph.viz_graph(fname="matcher.gv")
     return (mgraph, meta)
 
   def transform(self, ugraph):
     [matcher_ugraph, metaData] = self.get_matcher_graph()
-    #ugraph.viz_graph(fname="subject.gv")
+    ugraph.viz_graph(fname="subject.gv")
 
     while True:
       matcher = uGraphMatcher()
@@ -107,13 +107,28 @@ class CMSIS_NN_Transformer(Transformer):
       #bias
       bias_name = new_op_name + "_bias"
       #FIXME: for debugging purpose, temporarily fixing the bias values to 0
-      bias_values = np.full(act_reshape_shape, 0)
+      bias_values_original = np.full(act_reshape_shape, 64)
 
-      bias_out_tensors = Const_Op(bias_name + "_bias", bias_values, ugraph)
+      # bias_values_original[0] = 0
+      # bias_values_original[1] = -128
+      # bias_values_original[2] = 540
+      # bias_values_original[3] = -540
+
+      # import pdb; pdb.set_trace()
+      bias_drange = np.max(np.abs(bias_values_original))
+      bias_shift = int(np.max([np.ceil(np.log2(bias_drange)-7), 0]))
+      bias_values = np.right_shift(bias_values_original, bias_shift)
+      bias_values_int16 = np.full(int(np.ceil(bias_values.shape[0]/2)), 0, dtype=np.uint16)
+      bias_values_int16 = bias_values[::2]
+      bias_values_int16 = bias_values_int16 + np.left_shift(bias_values[1::2], 8)
+
+      #bias_out_tensors = Const_Op(bias_name + "_bias", bias_values, ugraph)
+      bias_out_tensors = Const_Op(bias_name + "_bias", bias_values_int16, ugraph)
 
       #bias shift
-      bShift_tensors = Const_Op(matcher["matmal/eightbit"].name + "_bShift", np.array([0], dtype=np.uint16), ugraph)
+      bShift_tensors = Const_Op(matcher["matmal/eightbit"].name + "_bShift", np.array([bias_shift]), ugraph)
 
+      #oShift_tensors = Const_Op(matcher["matmal/eightbit"].name + "_oShift", np.array(bias_values_original, dtype=np.uint8), ugraph)
       oShift_tensors = Const_Op(matcher["matmal/eightbit"].name + "_oShift", np.array([0], dtype=np.uint16), ugraph)
 
       scratch_space = "cmsis_scratch_" + matcher["matmal/eightbit"].name
@@ -125,13 +140,6 @@ class CMSIS_NN_Transformer(Transformer):
       cmsis_fc_out = CMSIS_FC_Op(new_op_name, input0_q7_out, input1_q7_out,
                   bias_out_tensors, bShift_tensors, oShift_tensors,
                   scratch_tensors, ugraph)
-
-      # ugraph.drop_op(result[0]['matmal/eightbit/requant_range'])
-      # ugraph.drop_op(result[0]['matmal/eightbit/requantize'])
-      # ugraph.drop_op(result[0]['zscore/eightbit'])
-      # ugraph.drop_op(result[0]['zscore/eightbit/requant_range'])
-      # ugraph.drop_op(result[0]['zscore/eightbit/requantize'])
-      #ugraph.add_op(fused_op_info)
 
       #output reshape
       act_reshape_op_name = new_op_name + "_newshape"
@@ -157,4 +165,7 @@ class CMSIS_NN_Transformer(Transformer):
       graph_validate(ugraph)
 
     graph_check(ugraph)
+    
+    ugraph.viz_graph(fname="result.gv")
+
     return ugraph
