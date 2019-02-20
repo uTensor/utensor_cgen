@@ -123,7 +123,7 @@ class CMSIS_NN_Transformer(Transformer):
       bias_values_int16 = bias_values_int16 + np.left_shift(bias_values[1::2], 8)
 
       #bias_out_tensors = Const_Op(bias_name + "_bias", bias_values, ugraph)
-      bias_out_tensors = Const_Op(bias_name + "_bias", bias_values_int16, ugraph)
+      bias_out_tensors = Const_Op(bias_name + "_bias", bias_values_int16.astype(np.uint16), ugraph)
 
       #bias shift
       bShift_tensors = Const_Op(matcher["matmal/eightbit"].name + "_bShift", np.array([bias_shift]), ugraph)
@@ -140,6 +140,7 @@ class CMSIS_NN_Transformer(Transformer):
       cmsis_fc_out = CMSIS_FC_Op(new_op_name, input0_q7_out, input1_q7_out,
                   bias_out_tensors, bShift_tensors, oShift_tensors,
                   scratch_tensors, ugraph)
+      
 
       #output reshape
       act_reshape_op_name = new_op_name + "_newshape"
