@@ -107,20 +107,26 @@ class CMSIS_NN_Transformer(Transformer):
       #bias
       bias_name = new_op_name + "_bias"
       #FIXME: for debugging purpose, temporarily fixing the bias values to 0
-      bias_values_original = np.full(act_reshape_shape, 64)
+      bias_values_original = np.full(act_reshape_shape, 0)
 
-      # bias_values_original[0] = 0
-      # bias_values_original[1] = -128
-      # bias_values_original[2] = 540
-      # bias_values_original[3] = -540
+      bias_values_original[0] = 0
+      bias_values_original[1] = 64
+      bias_values_original[2] = 128
+      bias_values_original[3] = 256
 
-      # import pdb; pdb.set_trace()
-      bias_drange = np.max(np.abs(bias_values_original))
+      #import pdb; pdb.set_trace()
+      bias_values_max = np.max(bias_values_original) + 1
+      bias_values_min = np.min(bias_values_original)
+      bias_drange = np.max(np.abs([bias_values_max, bias_values_min]))
+
+      #import pdb; pdb.set_trace()
       bias_shift = int(np.max([np.ceil(np.log2(bias_drange)-7), 0]))
-      bias_values = np.right_shift(bias_values_original, bias_shift)
-      bias_values_int16 = np.full(int(np.ceil(bias_values.shape[0]/2)), 0, dtype=np.uint16)
+      bias_values = np.right_shift(bias_values_original, bias_shift).astype(np.int8)
+      bias_values_int16 = np.full(int(np.ceil(bias_values.shape[0]/2)), 0, dtype=np.int16)
       bias_values_int16 = bias_values[::2]
-      bias_values_int16 = bias_values_int16 + np.left_shift(bias_values[1::2], 8)
+      bias_values_int16 = np.bitwise_and(bias_values_int16, 2**8-1)
+      bias_values_int16 = np.bitwise_or(bias_values_int16, np.left_shift(bias_values[1::2].astype(np.int16), 8))
+      # inline_cmsis_fc_MatMul_1_eightbit_bias_bias_0
 
       #bias_out_tensors = Const_Op(bias_name + "_bias", bias_values, ugraph)
       bias_out_tensors = Const_Op(bias_name + "_bias", bias_values_int16.astype(np.uint16), ugraph)
