@@ -168,6 +168,11 @@ class uGraphMatcher(object):
         if not self.compare_paths(subject_path_group, matcher_path_group, subject_graph, matcher_graph, None, matcher_meta):
           return False
 
+        #include the edges of the terminating node if the op_type matches
+        if subject_node.op_type == matcher_node.op_type:
+          for matcher_input_tensor, subject_input_tensor in zip(matcher_node.input_tensors, subject_node.input_tensors):
+            matcher_to_subject_edges[matcher_input_tensor.name] = subject_input_tensor.name
+
       return [matcher_to_subject_nodes, matcher_to_subject_edges]
 
     used_input_id = set()
@@ -244,6 +249,14 @@ class uGraphMatcher(object):
 
     matcher_to_subject_nodes.update(partial_matcher_to_subject_nodes)
     matcher_to_subject_edges.update(partial_matcher_to_subject_edges)
+
+    #include the output node's input edges
+    matcher_output_node_name = next(iter(matcher_output_node_names))
+    matcher_output_node = matcher_graph.ops_info[matcher_output_node_name]
+    subject_output_node = subject_graph.ops_info[matcher_to_subject_nodes[matcher_output_node_name]]
+    if matcher_output_node.op_type == subject_output_node.op_type:
+      for matcher_output_tensor, subject_output_tensor in zip(matcher_output_node.output_tensors, subject_output_node.output_tensors):
+        matcher_to_subject_edges[matcher_output_tensor.name] = subject_output_tensor.name
 
     self.translator = [matcher_to_subject_nodes, matcher_to_subject_edges]
 
