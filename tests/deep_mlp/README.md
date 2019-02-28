@@ -12,7 +12,7 @@ It's an end-to-end example of deploying a multilayer perceptron trained with `Te
     - In this notebook, you will see how to training, serializing and quantizing a `TensorFlow` computational graph (`tf.Graph`) into a protobuf file
     - The graph protobuf file is saved as `simple_mnist.pb`. You can use it for the following demo.
     - this is how the graph looks like in `tensorboard`:<br/><br/><div><img src=readme_imgs/quant_mnist.png width=200 height=400 /> <img src=readme_imgs/quant_mnist_expend.png width=200 height=400 /></div>
-3. run `utensor-cli simple_mnist.pb --output-nodes=y_pred`
+3. run `utensor-cli convert simple_mnist.pb --output-nodes=y_pred`
     - It will create two directories, `constants` and `models`
     - In `models`, you should see two files, `simple_mnist.cpp` and `simple_mnist.hpp`.
     - In `constants` directory, you will find a subdirectory `simple_mnist` with many idx files.
