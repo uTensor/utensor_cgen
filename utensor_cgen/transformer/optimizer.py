@@ -41,3 +41,36 @@ class RefCntOptimizer(Transformer):
         tname = tensor_info.name
         tensor_ref_count[tname] += 1
     return tensor_ref_count
+
+class IdOpRemoveOptimizer(Transformer):
+
+  METHOD_NAME = 'remove_id_op'
+  KWARGS_NAMESCOPE = '_utensor_remove_id_op'
+
+  def __init__(self, **kwargs):
+    self.prune_graph = True
+
+  def transform(self, ugraph):
+    if ugraph.backend == 'tensorflow':
+      return self._transform_tf(ugraph)
+    else:
+      raise RuntimeError('unsupported backend: {}'.format(ugraph.backend))
+
+  def _transform_tf(self, ugraph):
+    ops_to_remove = [
+      op
+      for op_name, op in ugraph.ops_info.items()
+      if op.op_type == 'Identity' 
+    ]
+    for op in ops_to_remove:
+      in_tensor = op.input_tensors[0]
+      out_tensor = op.output_tensors[0]
+      for out_node in op.output_nodes:
+        new_input_tensors = []
+        for tensor in out_node.input_tensors:
+          if tensor.name == out_tensor.name:
+            new_input_tensors.append(in_tensor)
+          else:
+            new_input_tensors.append(tensor)
+        out_node.input_tensors = new_input_tensors
+    return ugraph
