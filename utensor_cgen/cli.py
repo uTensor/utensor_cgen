@@ -1,9 +1,12 @@
 #-*- coding:utf8 -*-
 import os
 import sys
+from shutil import rmtree
 
 import click
 import pkg_resources
+
+import toml
 
 from .utils import NArgsParam
 
@@ -24,6 +27,11 @@ def cli():
 @cli.command(name='convert', help='convert graph to cpp/hpp files')
 @click.help_option('-h', '--help')
 @click.argument('pb_file', required=True, metavar='MODEL.pb')
+@click.option("--output-nodes",
+              type=NArgsParam(),
+              metavar="NODE_NAME,NODE_NAME,...",
+              required=True,
+              help="list of output nodes")
 @click.option('-o', '--output',
               metavar="FILE.cpp",
               help="output source file name, header file will be named accordingly. (defaults to protobuf name, e.g.: my_model.cpp)")
@@ -39,11 +47,6 @@ def cli():
               is_flag=True,
               help="Add debug comments in the output source file",
               show_default=True)
-@click.option("--output-nodes",
-              type=NArgsParam(),
-              metavar="NODE_NAME,NODE_NAME,...",
-              required=True,
-              help="list of output nodes")
 @click.option("--transform-methods",
               type=NArgsParam(),
               default='dropout,quantize,cmsisnn,refcnt,inline',
@@ -62,9 +65,6 @@ def convert_graph(pb_file, output, data_dir, embed_data_dir, save_graph,
                   debug_comment, output_nodes, transform_methods, model_dir):
   from utensor_cgen.backend import CodeGenerator
 
-  if pb_file is None:
-    raise ValueError("No pb file given")
-
   if not os.path.exists(model_dir):
     os.makedirs(model_dir)
   # MODEL should default to pb_file
@@ -78,11 +78,58 @@ def convert_graph(pb_file, output, data_dir, embed_data_dir, save_graph,
   if embed_data_dir is None:
     embed_data_dir = os.path.join("/fs", data_dir)
   # TODO: pass transformation kwargs to codegenerator (better argument parser)
-  generator = CodeGenerator(pb_file, data_dir, embed_data_dir,
-                            transform_methods, output_nodes,
-                            save_graph, debug_comment)
+  generator = CodeGenerator(
+                model_file=pb_file,
+                idx_dir=data_dir,
+                embed_data_dir=embed_data_dir,
+                trans_methods=transform_methods,
+                output_nodes=output_nodes,
+                save_graph=save_graph,
+                debug_cmt=debug_comment
+              )
   generator.generate(model_path)
 
+
+@cli.command(name='check', help='check the given model with uTensor')
+@click.help_option('-h', '--help')
+@click.argument('model_file', required=True, metavar='MODEL.pb')
+@click.option("--output-nodes",
+              type=NArgsParam(),
+              metavar="NODE_NAME,NODE_NAME,...",
+              required=True,
+              help="list of output nodes")
+@click.option('--plan-file',
+              help='the checking plan file (toml format)',
+              default='utensor_cli.toml',
+              show_default=True)
+@click.option('--clean-up', is_falg=True)
+def check_cmd(model_file, output_nodes, plan_file, clean_up):
+  from utensor_cgen.backend import CodeGenerator
+  from utensor_cgen.frontend import FrontendSelector
+
+  _, ext = os.path.extsep(model_file)
+  parser = FrontendSelector.select_parser(ext)
+  ugraph = parser.parse(model_file, output_nodes=output_nodes)
+
+  with open(plan_file) as fid:
+    check_plan = toml.load(fid)['utensor-cli']['check']
+  utensor_src = check_plan.get('utensor_src', 'uTensor/uTensor')
+  build_dir = check_plan.get('build_dir', '.utensor_build')
+  check_ops = check_plan.get('check_ops', [])
+  if not check_ops:
+    for op_name, op_info in ugraph.ops_info.items():
+      if op_info.op_type != "Const":
+        check_ops.append(op_name)
+  
+  # generate files, compile and run
+  # the utensor runtime result will be serialized at this step
+
+  if clean_up:
+    rmtree(build_dir, ignore_errors=True)
+
+
+def _compile_executable(main_fpath, utensor_dir, flags):
+  pass
 
 @cli.command(name='show', help='show node names in the pb file')
 @click.help_option('-h', '--help')

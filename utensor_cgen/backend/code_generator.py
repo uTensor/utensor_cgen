@@ -9,8 +9,8 @@ import tensorflow as tf
 from tensorflow.core.framework.graph_pb2 import GraphDef
 from tensorflow.tools.graph_transforms import TransformGraph
 
-from utensor_cgen.ir import uTensorGraph
 from utensor_cgen.frontend import FrontendSelector
+from utensor_cgen.ir import uTensorGraph
 from utensor_cgen.transformer.optimizer import RefCntOptimizer
 from utensor_cgen.transformer.pipline import TransformerPipeline
 from utensor_cgen.utils import NamescopedKWArgsParser
@@ -149,9 +149,3 @@ class CodeGenerator(object):
   def _transform_graph(self, ugraph, methods, trans_kwargs):
     pipeline = TransformerPipeline(methods, trans_kwargs)
     return pipeline.transform(ugraph)
-
-  def _tf_load_graph_def(self, pb_fname):
-    with tf.gfile.FastGFile(pb_fname, 'rb') as fid:
-      graph_def = tf.GraphDef()
-      graph_def.ParseFromString(fid.read())
-    return graph_def

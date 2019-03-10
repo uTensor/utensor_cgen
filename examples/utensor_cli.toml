@@ -1,0 +1,7 @@
+[utensor-cli.check]
+  # the source directory of uTensor run time
+  utensor_src = "uTensor/uTensor"
+  # op names to check as an array. All non-const ops will be checked if not given
+  check_ops = []
+  # the build directory for check cmd where all tempory files/dirs will be created
+  build_dir = ".utensor_build"
