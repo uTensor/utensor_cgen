@@ -36,6 +36,7 @@ setup(
         'torch',
         'torchvision',
         'onnx-tf',
+        'toml',
     ],
     extras_require={
         'dev': ['pytest', 'graphviz']

@@ -102,7 +102,7 @@ def convert_graph(pb_file, output, data_dir, embed_data_dir, save_graph,
               help='the checking plan file (toml format)',
               default='utensor_cli.toml',
               show_default=True)
-@click.option('--clean-up', is_falg=True)
+@click.option('--clean-up', is_flag=True)
 def check_cmd(model_file, output_nodes, plan_file, clean_up):
   from utensor_cgen.backend import CodeGenerator
   from utensor_cgen.frontend import FrontendSelector
