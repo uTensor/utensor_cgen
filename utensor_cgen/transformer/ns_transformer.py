@@ -13,7 +13,7 @@ from utensor_cgen.utils import parse_tensor_name
 
 from .base import Transformer
 
-__all__ = ["DropoutTransformer", "BatchNormTransformer", "InlineTransformer"]
+__all__ = ["DropoutTransformer", "BatchNormTransformer", "InlineTransformer", "TensorLifeProbe"]
 class TensorLifeProbe(Transformer):
   METHOD_NAME = 'tensorlife'
   KWARGS_NAMESCOPE = '_utensor_utlife'
@@ -27,113 +27,147 @@ class TensorLifeProbe(Transformer):
     while not allocate_success:
       allocate_table = dict()
       for node_name in ugraph.topo_order:
-        '''in_t_infos = ugraph.input_tensors[node_name] may be input tensor doest not need this
+
+        success = False
+        in_t_infos = ugraph.ops_info[node_name].input_tensors  # may be input tensor doest not need this
         for in_o in in_t_infos:
-          success = False
           for i in range(0, buffer_size, unit_size):
-            if self._check(ugraph, allocate_table, use_def_table, in_o, i, i + in_o.shape):
-              tensor_size = self._getSize(in_o.shape)
+            tensor_size = self._getSize(in_o.shape)
+            if self._check(ugraph, allocate_table, use_def_table, in_o, i, i + tensor_size):
               self._create_allocate_table(allocate_table, use_def_table, in_o, i, i + tensor_size)
-              success = True 
-            if success == False:
               break
-        '''
-        out_t_infos = ugraph.output_tensors[node_name]
+            else:
+              success = False 
+        
+        out_t_infos = ugraph.ops_info[node_name].output_tensors
         for out_o in out_t_infos:
           success = False
           for i in range(0, buffer_size, unit_size):
-            if self._check(ugraph, allocate_table, use_def_table, out_o, i, i + out_o.shape):
-              tensor_size = self._getSize(out_o.shape)
+            tensor_size = self._getSize(out_o.shape)
+            if self._check(ugraph, allocate_table, use_def_table, out_o, i, i + tensor_size):
               self._create_allocate_table(allocate_table, use_def_table, out_o, i, i + tensor_size)
               success = True
-            if success == False:
               break
-            
-      allocate_success = True
+            else:
+              success = False
+        if success == False:
+          break
+      if success == True:
+        allocate_success = True
+    return ugraph
 
 
   def _query_offset_fromallocate_table(self, allocate_table, start, end):
     new_start = start
     new_end = end
-    for key, value in allocate_table:
-      if value['offsetstart'] >= start and value['offsetend'] <= end:
+    for key in allocate_table:
+      if allocate_table[key]['offsetstart'] >= start and allocate_table[key]['offsetend'] <= end:
         continue
-      elif value['offsetstart'] <= start and value['offsetend'] >= start:
+      elif allocate_table[key]['offsetstart'] <= start and allocate_table[key]['offsetend'] >= start:
         new_start = key
-        if value['offsetend'] >= end:
-          new_end = max(new_end, value['offsetend'])
+        if allocate_table[key]['offsetend'] >= end:
+          new_end = max(new_end, allocate_table[key]['offsetend'])
         else:
           new_end = max(end, new_end)
-      elif value['offsetstart'] >= start and value['offsetend'] >= start:
-        if value['offsetend'] >= end:
-          new_end = max(new_end, value['offsetend'])
+      elif allocate_table[key]['offsetstart'] >= start and allocate_table[key]['offsetend'] >= start:
+        if allocate_table[key]['offsetend'] >= end:
+          new_end = max(new_end, allocate_table[key]['offsetend'])
         else:
           new_end = max(end, new_end)
     return new_start, new_end
 
-  def _query_time_fromallocate_table(self, allocate_table, op, offset, length, timestart,
+  def _query_time_fromallocate_table(self, allocate_table, start, end):
+    time_start = start
+    time_end = end
+    for key in allocate_table:
+      if allocate_table[key]['start'] >= start and allocate_table[key]['end'] <= end:
+        continue
+      elif allocate_table[key]['start'] <= start and allocate_table[key]['end'] >= start:
+        if allocate_table[key]['end'] >= end:
+          time_end = max(time_end, allocate_table[key]['end'])
+        else:
+          time_end = max(end, time_end)
+      elif allocate_table[key]['start'] >= start and allocate_table[key]['end'] >= start:
+        if allocate_table[key]['end'] >= end:
+          time_end = max(time_end, allocate_table[key]['end'])
+        else:
+          time_end = max(end, time_end)
+    return time_start, time_end
+
+  def _query_result(self, allocate_table, op, offset, length, timestart,
   timeend):
     ret = list()
-    for key, value in allocate_table:
-      if (key >= offset and key < offset + length) or (key < offset and key + length < offset + length):
-        if value['timestart'] <= timestart and value['timeend'] >= timestart:
+    for key in allocate_table:
+      print(key)
+      print(allocate_table[key]['offsetstart'])
+      print(allocate_table[key]['offsetend'])
+      print(allocate_table[key]['start'])
+      print(allocate_table[key]['end'])
+      if (allocate_table[key]['offsetstart'] >= offset and allocate_table[key]['offsetend'] <= offset + length):
+        print("go1")
+        if allocate_table[key]['start'] >= int(timestart) and allocate_table[key]['end'] <= int(timeend):
+          print("go")
           ret.append(op)
-        elif value['timestart'] >= timestart and value['timestart'] < timeend:
-          ret.append(op)
+
     return ret
 
-  def _check(self, ugraph, allocate_table, use_def_table, op, op_offset_start, op_offset_end):
+  def _check(self, ugraph, allocate_table, use_def_table, tensor, tensor_offset_start, tensor_offset_end):
     valid = False
-    timestart = use_def_table[op.name].start
-    timeend = use_def_table[op.name].end
-    offset, length = self._query_offset_fromallocate_table(allocate_table, op_offset_start, op_offset_end)
-    a = self._query_time_fromallocate_table(allocate_table, op, offset, length, timestart, timeend)
+    timestart = use_def_table[tensor.name]['start']
+    timeend = use_def_table[tensor.name]['end']
+    offset, length = self._query_offset_fromallocate_table(allocate_table, tensor_offset_start, tensor_offset_end)
+    timestart, timeend = self._query_time_fromallocate_table(allocate_table, timestart, timeend)
+    #print(timestart)
+    a = self._query_result(allocate_table, tensor, offset, length, timestart, timeend)
+    #a = []
     if len(a) == 0:
       return True
     return valid
 
-  def _create_allocate_table(self, resource_table, use_def_table, tensor,
+  def _create_allocate_table(self, allocate_table, use_def_table, tensor,
   offset_start, offset_end):   
-    time_start = use_def_table[tensor.name].start
-    time_end = use_def_table[tensor.name].end
+    time_start = use_def_table[tensor.name]['start']
+    time_end = use_def_table[tensor.name]['end']
     attribute = dict()
     attribute['start'] = time_start
     attribute['end'] = time_end
     attribute['offsetstart'] = offset_start
     attribute['offsetend'] = offset_end
-    resource_table[tensor.name] = attribute
-    return resource_table   
+    allocate_table[tensor.name] = attribute
+    return allocate_table   
 
   def _create_resource_table(self, ugraph):
     resource_table = dict()
-    len_map = self._create_length(ugraph)
+    len_map = self._create_topo_list(ugraph)
     for node_name in ugraph.topo_order:
-      #op_info_t = ugraph.ops_info[node_name]
-      #for op_info in ugraph.ops_info():
-      for tensor_info in ugraph.ops_info.input_tensors:
-        if not resource_table[tensor_info]:
+      #print("now is node %s, len is %s" %(node_name, len_map[node_name]))
+      for tensor_info in ugraph.ops_info[node_name].input_tensors:
+        #print("now the input tensor is %s" %tensor_info.name)
+        if tensor_info.name not in resource_table:
           lifetime = dict()
           lifetime['start'] = len_map[node_name]
           lifetime['end'] = len_map[node_name]  
           resource_table[tensor_info.name] = lifetime   
         resource_table[tensor_info.name]['end']= len_map[node_name] 
       
-      for outtensor in ugraph.ops_info.output_tensors:
-        if not resource_table[outtensor.name]:
+      for outtensor in ugraph.ops_info[node_name].output_tensors:
+        #print("now the output tensor is %s" %outtensor.name)
+        if outtensor.name not in resource_table:
           lifetime = dict()
           lifetime['start'] = len_map[node_name]
           lifetime['end'] = len_map[node_name]  
           resource_table[outtensor.name] = lifetime
-  
+
     return resource_table
   
-  def _create_length(self, ugraph):
+  def _create_topo_list(self, ugraph):
     my_map = dict()
     index = 0
     for name in ugraph.topo_order:
       my_map[name] = index
       index = index + 1
     return my_map
+    
   def _getSize(self, tensor_shape):
     ret = 1
     for i in tensor_shape:
