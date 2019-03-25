@@ -33,13 +33,15 @@ class GraphDefParser(Parser):
                                ugraph=ugraph,
                                op_name=tensor.op.name,
                                dtype=np.dtype(tensor.dtype.as_numpy_dtype),
-                               shape=cls._tf_parse_tshape(tensor.shape))
+                               shape=cls._tf_parse_tshape(tensor.shape),
+                               alloc_address=[0, 0])
                     for tensor in op.inputs]
       out_tensors = [TensorInfo(name=tensor.name,
                                 ugraph=ugraph,
                                 op_name=op.name,
                                 dtype=np.dtype(tensor.dtype.as_numpy_dtype),
-                                shape=cls._tf_parse_tshape(tensor.shape))
+                                shape=cls._tf_parse_tshape(tensor.shape),
+                                alloc_address=[0, 0])
                      for tensor in op.outputs]
       op_type = node.op
       op_attr = node.attr

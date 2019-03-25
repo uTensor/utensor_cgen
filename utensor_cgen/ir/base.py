@@ -47,6 +47,7 @@ class TensorInfo(IRBase, _NoShallowCopyMixin):
   op_name = attr.ib(validator=instance_of(six.text_type))
   dtype = attr.ib(validator=instance_of(np.dtype))
   shape = attr.ib(validator=instance_of((list, type(None))))
+  alloc_address = attr.ib(validator=instance_of((list, type(None))))
   @shape.validator
   def check(self, attrib, shape_values):
     if shape_values is not None:
@@ -75,7 +76,8 @@ class TensorInfo(IRBase, _NoShallowCopyMixin):
                             ugraph=memo['ugraph'],
                             op_name=self.op_name,
                             dtype=self.dtype,
-                            shape=deepcopy(self.shape, memo))
+                            shape=deepcopy(self.shape, memo),
+                            alloc_address=deepcopy(self.alloc_address))
     return new_tensor
 
 
