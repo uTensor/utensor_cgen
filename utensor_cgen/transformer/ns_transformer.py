@@ -21,9 +21,9 @@ class TensorLifeProbe(Transformer):
 
   def transform(self, ugraph):
     use_def_table = self._create_resource_table(ugraph)
-    unit_size = 8
+    unit_size = 4
     allocate_success = False
-    buffer_size = 1000 #1k bytes
+    buffer_size = 50 #1k bytes
     while not allocate_success:
       allocate_table = dict()
       for node_name in ugraph.topo_order:
@@ -54,6 +54,17 @@ class TensorLifeProbe(Transformer):
           break
       if success == True:
         allocate_success = True
+    for node_name in ugraph.topo_order:
+      in_t_infos = ugraph.ops_info[node_name].input_tensors
+      for in_o in in_t_infos:
+        if in_o.name in allocate_table:
+          in_o.alloc_address[0] = allocate_table[in_o.name]['offsetstart']
+          in_o.alloc_address[1] = allocate_table[in_o.name]['offsetend']
+      out_t_infos = ugraph.ops_info[node_name].output_tensors
+      for out_o in out_t_infos:
+        if out_o.name in allocate_table:
+          out_o.alloc_address[0] = allocate_table[out_o.name]['offsetstart']
+          out_o.alloc_address[1] = allocate_table[out_o.name]['offsetend']
     return ugraph
 
 
@@ -64,7 +75,7 @@ class TensorLifeProbe(Transformer):
       if allocate_table[key]['offsetstart'] >= start and allocate_table[key]['offsetend'] <= end:
         continue
       elif allocate_table[key]['offsetstart'] <= start and allocate_table[key]['offsetend'] >= start:
-        new_start = key
+        new_start = allocate_table[key]['offsetstart']
         if allocate_table[key]['offsetend'] >= end:
           new_end = max(new_end, allocate_table[key]['offsetend'])
         else:
@@ -98,15 +109,15 @@ class TensorLifeProbe(Transformer):
   timeend):
     ret = list()
     for key in allocate_table:
-      print(key)
+      '''print(key)
       print(allocate_table[key]['offsetstart'])
       print(allocate_table[key]['offsetend'])
       print(allocate_table[key]['start'])
       print(allocate_table[key]['end'])
-      if (allocate_table[key]['offsetstart'] >= offset and allocate_table[key]['offsetend'] <= offset + length):
-        print("go1")
-        if allocate_table[key]['start'] >= int(timestart) and allocate_table[key]['end'] <= int(timeend):
-          print("go")
+      '''
+      if (allocate_table[key]['offsetstart'] >= offset and allocate_table[key]['offsetstart'] <= offset + length) or (allocate_table[key]['offsetstart'] <= offset and allocate_table[key]['offsetend'] >= offset):
+        if (allocate_table[key]['start'] >= timestart and allocate_table[key]['start'] <= timeend) or (allocate_table[key]['start']
+        <= timestart and allocate_table[key]['end'] >= timeend):
           ret.append(op)
 
     return ret
@@ -117,9 +128,7 @@ class TensorLifeProbe(Transformer):
     timeend = use_def_table[tensor.name]['end']
     offset, length = self._query_offset_fromallocate_table(allocate_table, tensor_offset_start, tensor_offset_end)
     timestart, timeend = self._query_time_fromallocate_table(allocate_table, timestart, timeend)
-    #print(timestart)
     a = self._query_result(allocate_table, tensor, offset, length, timestart, timeend)
-    #a = []
     if len(a) == 0:
       return True
     return valid
