@@ -46,7 +46,7 @@ def cli():
               help="list of output nodes")
 @click.option("--transform-methods",
               type=NArgsParam(),
-              default='dropout,quantize,cmsisnn,refcnt,inline',
+              default='dropout,quantize,refcnt,inline',
               help='optimization methods',
               metavar='METHOD,METHOD,...',
               show_default=True)
