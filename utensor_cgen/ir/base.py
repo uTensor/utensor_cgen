@@ -244,7 +244,7 @@ class uTensorGraph(IRBase, _NoShallowCopyMixin):
     if not self.output_nodes:
       raise ValueError('No output_nodes given')
   
-  def get_ops_by_type(self, op_type):
+  def get_ops_by_type(self, given_op_type):
     if not self._type_to_op_map:
       for op_info in self.ops_info.values():
         op_type = op_info.op_type
@@ -255,7 +255,7 @@ class uTensorGraph(IRBase, _NoShallowCopyMixin):
         self._type_to_op_map.update(
           [(op_type, ops),]
         )
-    return self._type_to_op_map.get(op_type, [])
+    return self._type_to_op_map.get(given_op_type, [])
   
   @property
   def output_ops(self):

@@ -96,8 +96,8 @@ class OpEqualityDelegate(object):
       morphism = cls._compatibility_map[sub_op.op_type][patrn_op.op_type]
       equivalent_ops = [MetaOperationInfo(op_info=sub_op, morphism=morphism)]
     elif not patrn_op.input_tensors and \
-      patrn_op.op_attr.get("utensor_matcher__force_match_input", False):
-      # input node
+      patrn_op.op_type == 'Placeholder':
+      # match input node which is a placeholder anyway
       is_eq = True
       equivalent_ops = [sub_op]
 
@@ -118,17 +118,18 @@ class uTensorGraphMatcher(object):
         return []
       outputs_pool.append(same_ops)
     output_candidates = product(*outputs_pool)
-    for output in output_candidates:
+    for outputs in output_candidates:
       states = [
         _MatchState(
           match=uTensorGraphMatch(
             pattern_ugraph=self.pattern_ugraph,
             subject_ugraph=other_ugraph
           ),
-          sub_bfs_queue=ops_bfs_queue(other_ugraph, init_nodes=output),
+          sub_bfs_queue=ops_bfs_queue(other_ugraph, init_nodes=outputs),
           patrn_bfs_queue=ops_bfs_queue(self.pattern_ugraph),
         )
       ]
+      import pdb; pdb.set_trace()
       while True:
         states = self._visit(states)
         if not states:
@@ -146,9 +147,9 @@ class uTensorGraphMatcher(object):
     except StopIteration:
       pass
     return matches
-  
+
   def match_all(self, other_ugraph):
-    return list(self.match(other_ugraph))
+    return list(self._match(other_ugraph))
 
   def _visit(self, states):
     # visit the state with a top-down bfs fashion
