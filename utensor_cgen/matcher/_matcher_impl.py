@@ -129,7 +129,6 @@ class uTensorGraphMatcher(object):
           patrn_bfs_queue=ops_bfs_queue(self.pattern_ugraph),
         )
       ]
-      import pdb; pdb.set_trace()
       while True:
         states = self._visit(states)
         if not states:
@@ -154,6 +153,7 @@ class uTensorGraphMatcher(object):
   def _visit(self, states):
     # visit the state with a top-down bfs fashion
     # return the states that are still matched
+    # import pdb; pdb.set_trace()
     new_states = []
     for state in states:
       match = state.match
@@ -162,6 +162,11 @@ class uTensorGraphMatcher(object):
       is_eq, eq_ops = OpEqualityDelegate.query(sub_op, patrn_op)
       if is_eq:
         for eq_op in eq_ops:
+          new_sub_bfs_queue = deque(state.sub_bfs_queue)
+          for _ in eq_op.input_nodes:
+            new_sub_bfs_queue.popleft()
+          for node in eq_op.input_nodes[::-1]:
+            new_sub_bfs_queue.insert(0, node)
           new_state = _MatchState(
             match=uTensorGraphMatch(
               pattern_ugraph=match.pattern_ugraph,
@@ -171,7 +176,7 @@ class uTensorGraphMatcher(object):
               patrn2subj_tensor_map={k: v for k, v in match.patrn2subj_tensor_map.items()},
               subj2patrn_tensor_map={k: v for k, v in match.subj2patrn_tensor_map.items()}
             ),
-            sub_bfs_queue=deque(state.sub_bfs_queue),
+            sub_bfs_queue=new_sub_bfs_queue,
             patrn_bfs_queue=deque(state.patrn_bfs_queue),
           )
           new_state.match.update_op_map(patrn_op, eq_op)
@@ -219,6 +224,5 @@ class _MatchState(object):
     """
     a state is done, if
     1. the patrn_bfs_queue is empty
-    2. the sub_bfs_queue is empty
     """
     return not self.patrn_bfs_queue

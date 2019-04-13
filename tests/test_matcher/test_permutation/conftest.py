@@ -49,7 +49,6 @@ def subject_ugraph1_2():
         sub_input1 = tf.constant([i for i in range(10)], name='sub_input1')
         sub_input2 = tf.constant([i for i in range(10)], name='sub_input2')
         sub_add0 = tf.add(sub_input0, sub_input1, name='sub_add0')
-        # permute
         sub_add1 = tf.add(sub_input1, sub_add0, name='sub_add1')
         sub_output = tf.multiply(sub_add1, sub_input2, name='sub_output')
     ugraph = GraphDefParser.parse(graph.as_graph_def(), [sub_output.op.name])
