@@ -1,4 +1,6 @@
+from __future__ import absolute_import
 import os
+import six
 
 import tensorflow as tf
 import numpy as np
@@ -59,7 +61,7 @@ class GraphDefParser(Parser):
   def _load_graph_def(pb_file):
     if isinstance(pb_file, tf.GraphDef):
       return pb_file
-    assert isinstance(pb_file, str)
+    assert isinstance(pb_file, six.string_types)
     graph_def = tf.GraphDef()
     if pb_file[-3:] == ".pb":
       with open(pb_file, 'rb') as fid:
