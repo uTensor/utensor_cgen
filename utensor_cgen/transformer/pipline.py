@@ -3,7 +3,7 @@ from utensor_cgen.utils import NamescopedKWArgsParser
 from .base import Transformer
 from .cmsis_nn import CMSIS_NN_Transformer
 from .ns_transformer import (BatchNormTransformer, DropoutTransformer,
-                             InlineTransformer)
+                             InlineTransformer, BiasAddTransformer)
 from .optimizer import IdOpRemoveOptimizer, RefCntOptimizer
 from .quantize import QuantizeTransformer
 
@@ -16,6 +16,7 @@ class TransformerPipeline(object):
     BatchNormTransformer.METHOD_NAME: BatchNormTransformer,
     QuantizeTransformer.METHOD_NAME: QuantizeTransformer,
     InlineTransformer.METHOD_NAME: InlineTransformer,
+    BiasAddTransformer.METHOD_NAME: BiasAddTransformer,
     CMSIS_NN_Transformer.METHOD_NAME: CMSIS_NN_Transformer,
     IdOpRemoveOptimizer.METHOD_NAME: IdOpRemoveOptimizer,
   }
