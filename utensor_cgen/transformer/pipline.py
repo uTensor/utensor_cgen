@@ -58,9 +58,9 @@ class TransformerPipeline(object):
     return list(cls._TRANSFORMER_MAP.keys())
   
   @classmethod
-  def register_transformer(cls, method, trans_cls, overwrite=False):
+  def register_transformer(cls, trans_cls, overwrite=False):
     assert issubclass(trans_cls, Transformer), \
       "expecting Transformer type, get %s" % trans_cls
-    assert method not in cls._TRANSFORMER_MAP or overwrite, \
+    assert trans_cls.METHOD_NAME not in cls._TRANSFORMER_MAP or overwrite, \
       "Registering existing transformer without overwriting"
-    cls._TRANSFORMER_MAP[name] = trans_cls
+    cls._TRANSFORMER_MAP[trans_cls.METHOD_NAME] = trans_cls
