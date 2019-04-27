@@ -6,7 +6,7 @@ from .ns_transformer import (BatchNormTransformer, DropoutTransformer,
                              InlineTransformer, BiasAddTransformer)
 from .optimizer import IdOpRemoveOptimizer, RefCntOptimizer
 from .quantize import QuantizeTransformer
-
+from .graph_viz import GraphVizTransformer
 
 class TransformerPipeline(object):
 
@@ -19,6 +19,7 @@ class TransformerPipeline(object):
     BiasAddTransformer.METHOD_NAME: BiasAddTransformer,
     CMSIS_NN_Transformer.METHOD_NAME: CMSIS_NN_Transformer,
     IdOpRemoveOptimizer.METHOD_NAME: IdOpRemoveOptimizer,
+    GraphVizTransformer.METHOD_NAME: GraphVizTransformer,
   }
 
   def __init__(self, methods, kwargs):
