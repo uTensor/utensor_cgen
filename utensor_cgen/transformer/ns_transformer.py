@@ -14,6 +14,7 @@ from utensor_cgen.utils import parse_tensor_name
 from .base import Transformer
 
 __all__ = ["DropoutTransformer", "BatchNormTransformer", "InlineTransformer", "TensorLifeProbe"]
+
 class TensorLifeProbe(Transformer):
   METHOD_NAME = 'tensorlife'
   KWARGS_NAMESCOPE = '_utensor_utlife'
@@ -32,9 +33,10 @@ class TensorLifeProbe(Transformer):
         in_t_infos = ugraph.ops_info[node_name].input_tensors  # may be input tensor doest not need this
         for in_o in in_t_infos:
           for i in range(0, buffer_size, unit_size):
-            tensor_size = self._getSize(in_o.shape)
-            if self._check(ugraph, allocate_table, use_def_table, in_o, i, i + tensor_size):
+            tensor_size = self._getSize(in_o)
+            if self._check(allocate_table, use_def_table, in_o, i, i + tensor_size):
               self._create_allocate_table(allocate_table, use_def_table, in_o, i, i + tensor_size)
+              success = True
               break
             else:
               success = False 
@@ -43,8 +45,8 @@ class TensorLifeProbe(Transformer):
         for out_o in out_t_infos:
           success = False
           for i in range(0, buffer_size, unit_size):
-            tensor_size = self._getSize(out_o.shape)
-            if self._check(ugraph, allocate_table, use_def_table, out_o, i, i + tensor_size):
+            tensor_size = self._getSize(out_o)
+            if self._check(allocate_table, use_def_table, out_o, i, i + tensor_size):
               self._create_allocate_table(allocate_table, use_def_table, out_o, i, i + tensor_size)
               success = True
               break
@@ -109,12 +111,6 @@ class TensorLifeProbe(Transformer):
   timeend):
     ret = list()
     for key in allocate_table:
-      '''print(key)
-      print(allocate_table[key]['offsetstart'])
-      print(allocate_table[key]['offsetend'])
-      print(allocate_table[key]['start'])
-      print(allocate_table[key]['end'])
-      '''
       if (allocate_table[key]['offsetstart'] >= offset and allocate_table[key]['offsetstart'] <= offset + length) or (allocate_table[key]['offsetstart'] <= offset and allocate_table[key]['offsetend'] >= offset):
         if (allocate_table[key]['start'] >= timestart and allocate_table[key]['start'] <= timeend) or (allocate_table[key]['start']
         <= timestart and allocate_table[key]['end'] >= timeend):
@@ -122,7 +118,7 @@ class TensorLifeProbe(Transformer):
 
     return ret
 
-  def _check(self, ugraph, allocate_table, use_def_table, tensor, tensor_offset_start, tensor_offset_end):
+  def _check(self, allocate_table, use_def_table, tensor, tensor_offset_start, tensor_offset_end):
     valid = False
     timestart = use_def_table[tensor.name]['start']
     timeend = use_def_table[tensor.name]['end']
@@ -149,9 +145,7 @@ class TensorLifeProbe(Transformer):
     resource_table = dict()
     len_map = self._create_topo_list(ugraph)
     for node_name in ugraph.topo_order:
-      #print("now is node %s, len is %s" %(node_name, len_map[node_name]))
       for tensor_info in ugraph.ops_info[node_name].input_tensors:
-        #print("now the input tensor is %s" %tensor_info.name)
         if tensor_info.name not in resource_table:
           lifetime = dict()
           lifetime['start'] = len_map[node_name]
@@ -160,7 +154,6 @@ class TensorLifeProbe(Transformer):
         resource_table[tensor_info.name]['end']= len_map[node_name] 
       
       for outtensor in ugraph.ops_info[node_name].output_tensors:
-        #print("now the output tensor is %s" %outtensor.name)
         if outtensor.name not in resource_table:
           lifetime = dict()
           lifetime['start'] = len_map[node_name]
@@ -170,16 +163,13 @@ class TensorLifeProbe(Transformer):
     return resource_table
   
   def _create_topo_list(self, ugraph):
-    my_map = dict()
-    index = 0
-    for name in ugraph.topo_order:
-      my_map[name] = index
-      index = index + 1
+    my_map = {node_idx: name for (node_idx, name) in enumerate(ugraph.topo_order)}
     return my_map
-    
-  def _getSize(self, tensor_shape):
-    ret = 1
-    for i in tensor_shape:
+  
+  #should consider different type
+  def _getSize(self, tensor):
+    ret = 1   
+    for i in tensor.shape:
       ret = ret * i
     return ret
 
