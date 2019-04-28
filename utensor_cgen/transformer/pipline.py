@@ -22,27 +22,15 @@ class TransformerPipeline(object):
     GraphVizTransformer.METHOD_NAME: GraphVizTransformer,
   }
 
-  def __init__(self, methods, kwargs):
+  def __init__(self, methods):
     """
-    kwargs is a dict of following format:
-    {
-      "<name_scope>__kwargname": kwarg_value,
-      ....
-    }
-    where <name_scope> is the KWARGS_NAMESCOPE of 
-    desired transformer.
-    
-    ex:
-    {
-      'refcnt__kwarg': 3  # this is kwarg for RefCntOptimizer
-    }
+    methods : list
+      list of tuples, (transform_name, kwargs)
     """
     self._pipeline = []
-    for method in methods:
+    for method, kwargs in methods:
       trans_cls = self._TRANSFORMER_MAP[method]
-      trans_name = trans_cls.KWARGS_NAMESCOPE
-      parser = NamescopedKWArgsParser(trans_name, kwargs)
-      transformer = trans_cls(**parser.as_dict())
+      transformer = trans_cls(**kwargs)
       self._pipeline.append(transformer)
   
   def transform(self, ugraph):

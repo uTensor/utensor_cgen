@@ -5,7 +5,7 @@ import sys
 import click
 import pkg_resources
 
-from .utils import NArgsParam
+from .utils import NArgsParam, NArgsKwargsParam
 
 
 def _get_pb_model_name(path):
@@ -45,10 +45,10 @@ def cli():
               required=True,
               help="list of output nodes")
 @click.option("--transform-methods",
-              type=NArgsParam(),
-              default='dropout,quantize,inline,biasAdd,remove_id_op,refcnt',
+              type=NArgsKwargsParam(sep='|>'),
+              default='dropout|>quantize|>inline|>biasAdd|>remove_id_op|>refcnt',
               help='optimization pipeline',
-              metavar='METHOD,METHOD,...',
+              metavar='METHOD[|>METHOD|>...]',
               show_default=True)
 @click.option("-m", "--model-dir",
               metavar="DIR",
