@@ -203,7 +203,7 @@ class NArgsKwargsParam(NArgsParam):
     return trans_name, kwargs
   
   def _get_kwargs(self, kws_str):
-    kw_arg_strs = kws_str.split(',')
+    kw_arg_strs = [s.strip() for s in kws_str.split(',')]
     kwargs = {}
     for kw_str in kw_arg_strs:
       name, v_str = kw_str.split('=')

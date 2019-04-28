@@ -29,7 +29,9 @@ class TransformerPipeline(object):
     """
     self._pipeline = []
     for method, kwargs in methods:
-      trans_cls = self._TRANSFORMER_MAP[method]
+      trans_cls = self._TRANSFORMER_MAP.get(method, None)
+      if trans_cls is None:
+        raise ValueError("Unknown transformation method: {}".format(method))
       transformer = trans_cls(**kwargs)
       self._pipeline.append(transformer)
   
