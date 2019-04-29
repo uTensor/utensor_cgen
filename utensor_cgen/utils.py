@@ -1,6 +1,7 @@
 # -*- coding: utf8 -*-
 import os
 import re
+from ast import literal_eval
 from copy import deepcopy
 
 import idx2numpy as idx2np
@@ -177,6 +178,38 @@ class NArgsParam(ParamType):
     else:
       final_args = args
     return final_args
+
+
+class NArgsKwargsParam(NArgsParam):
+
+  _trans_name_patrn = re.compile(r"(\w[\w]*)\(?")
+
+  def convert(self, value, param, ctx):
+    args = super().convert(value, param, ctx)
+    return [self._parse_kwargs(arg) for arg in args]
+  
+  def _parse_kwargs(self, arg):
+    trans_match = self._trans_name_patrn.match(arg)
+    if not trans_match:
+      raise ValueError("Invalid args detected: {}".format(arg))
+    trans_name = trans_match.group(1)
+    _, end = trans_match.span()
+    if end == len(arg):
+      kwargs = {}
+    else:
+      if not arg.endswith(")"):
+        raise ValueError("parentheses mismatch: {}".format(arg))
+      kwargs = self._get_kwargs(arg[end:-1])
+    return trans_name, kwargs
+  
+  def _get_kwargs(self, kws_str):
+    kw_arg_strs = [s.strip() for s in kws_str.split(',')]
+    kwargs = {}
+    for kw_str in kw_arg_strs:
+      name, v_str = kw_str.split('=')
+      value = literal_eval(v_str)
+      kwargs[name] = value
+    return kwargs
 
 
 class _MustOverwrite(object):
