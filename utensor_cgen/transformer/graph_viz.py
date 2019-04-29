@@ -10,6 +10,7 @@ from copy import deepcopy
 from utensor_cgen.ir import OperationInfo, uTensorGraph
 from utensor_cgen.utils import parse_tensor_name
 from utensor_cgen.logger import logger
+from utensor_cgen.ir.misc.graph_viz import viz_graph
 
 from .base import Transformer
 
@@ -25,35 +26,6 @@ class GraphVizTransformer(Transformer):
     self.view = view
   
   def transform(self, ugraph):
-    self.viz_graph(ugraph)
+    viz_graph(self.out_fname, self.view , ugraph)
 
     return ugraph
-  
-  def viz_graph(self, ugraph):
-    from graphviz import Digraph
-    dot = Digraph()
-    nodes = {}
-    i = 0
-    for node in ugraph.ops:
-        nodes[node.name] = chr(ord('a') + i)
-        dot.node(nodes[node.name], "%s: %s" % (node.name, node.op_type))
-        i += 1
-        for n in node.input_tensors:
-            if n.name in nodes:
-                continue
-            nodes[n.name] = chr(ord('a') + i)
-            dot.node(nodes[n.name], "%s: Tensor" % n.name)
-            i += 1
-        for n in node.output_tensors:
-            if n.name in nodes:
-                continue
-            nodes[n.name] = chr(ord('a') + i)
-            dot.node(nodes[n.name], "%s: Tensor" % n.name)
-            i += 1
-    for node in ugraph.ops:
-        for n in node.input_tensors:
-            dot.edge(nodes[n.name], nodes[node.name])
-        for n in node.output_tensors:
-            dot.edge(nodes[node.name], nodes[n.name])
-    dot.render(self.out_fname, view=self.view)
-    logger.info('graph visualization file generated: %s', self.out_fname)
