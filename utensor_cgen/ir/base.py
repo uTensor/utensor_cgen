@@ -119,6 +119,7 @@ class OperationInfo(IRBase, _NoShallowCopyMixin):
   """
   name = attr.ib(type=str)
   _backend = attr.ib(type=str)
+  # FIXME: it's better to make OperationInfo to be instantiate without ugraph
   _ugraph = attr.ib(repr=False)
   @_ugraph.validator
   def check(self, attrib, value):
@@ -230,6 +231,18 @@ class uTensorGraph(IRBase, _NoShallowCopyMixin):
   topo_order : list
   output_nodes : list
   backend : str {"tensorflow", 'pytorch'(future work)}
+
+  How to Build a uTensorGraph
+  ===========================
+  1. create a empty graph
+    - give a list of names of output nodes (required)
+    - (optional) give backend string
+    - leave ops_info empty
+  2. setup the ops_info
+    - when you set the value of ops_info, which is an OperationInfo instance,
+      make sure its ugraph attribute is the ugraph you just created at step 1
+  3. pass the ugraph to topologic_order_graph to setup the order
+     of the ops
   """
   KWPARSER_PATTERN = re.compile(r'^([^\d\W][\w\d_]*)__([^\d\W][\w\d_]*)')
 
@@ -260,6 +273,14 @@ class uTensorGraph(IRBase, _NoShallowCopyMixin):
   @property
   def output_ops(self):
     return [self.ops_info[name] for name in self.output_nodes]
+
+  @property
+  def input_ops(self):
+    ops = []
+    for op in self.ops_info.values():
+      if not op.input_tensors:
+        ops.append(op)
+    return ops
   
   @property
   def backend(self):
@@ -289,6 +310,8 @@ class uTensorGraph(IRBase, _NoShallowCopyMixin):
   
   @property
   def ops(self):
+    if not self.topo_order:
+      topologic_order_graph(self)
     return [self.ops_info[name] for name in self.topo_order]
 
   def add_op(self, op):
