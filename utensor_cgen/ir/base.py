@@ -58,7 +58,7 @@ class TensorInfo(IRBase, _NoShallowCopyMixin):
   @_ugraph.validator
   def check(self, attrib, value):
     if not isinstance(value, uTensorGraph):
-      raise ValueError('Expecting a uTensorGraph, get {}'.format(type(value)))
+      raise ValueError('Expecting a uTensorGraph, get {}'.format(type(value)))  
   
   @property
   def ugraph(self):

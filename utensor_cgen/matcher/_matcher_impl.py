@@ -1,11 +1,14 @@
 from collections import deque
 from itertools import product
+from string import ascii_letters, digits
+from random import choices
+from copy import deepcopy
 
 import attr
 from attr.validators import instance_of
 
 from utensor_cgen.ir import MetaOperationInfo, OperationInfo, uTensorGraph
-from utensor_cgen.matcher._morphism import IdentityMorphism, Morphism
+from utensor_cgen.matcher._morphism import Morphism
 from utensor_cgen.utils import ops_bfs_queue
 
 __all__ = ["uTensorGraphMatcher"]
@@ -203,6 +206,48 @@ class uTensorGraphMatch(object):
     for pattern_tensor, target_tensor in zip(pattern_op.input_tensors, subj_op.input_tensors):
       self.patrn2subj_tensor_map[pattern_tensor.name] = target_tensor
       self.subj2patrn_tensor_map[target_tensor.name] = pattern_tensor
+    
+  def replace_with(self, other_ugraph):
+    """
+    Replace matched subgraph with a given ugraph
+    """
+    pass
+
+  _CHARSET = ascii_letters + digits
+
+  def _random_surfix(self, length=8):
+    chars = choices(self._CHARSET, k=length)
+    return ''.join(chars)
+
+  def _new_ugraph_with_surfix(self, ugraph, surfix=None):
+    if surfix is None:
+      surfix = self._random_surfix()
+    new_ugraph = deepcopy(ugraph)
+    new_ugraph.output_nodes = [
+      '{}_{}'.format(name, surfix) for name in ugraph.output_nodes
+    ]
+    new_ugraph.topo_order = ['{}_{}'.format(name, surfix) for name in ugraph.topo_order]
+    ops_to_remove = set([])
+    new_ops_info = {}
+    for ori_op_name, op in new_ugraph.ops_info.items():
+      new_op_name = '{}_{}'.format(ori_op_name, surfix)
+      op.name = new_op_name
+      for tensor in op.output_tensors:
+        tensor_idx = tensor.name.split(':')[1]
+        tensor.name = '{}_{}:{}'.format(tensor.op_name, surfix, tensor_idx)
+        tensor.op_name = new_op_name
+      for tensor in op.input_tensors:
+        in_op_name, tensor_idx = tensor.name.split(':')
+        new_in_op_name = '{}_{}'.format(in_op_name, surfix)
+        tensor.name = '{}:{}'.format(new_in_op_name, tensor_idx)
+        tensor.op_name = new_in_op_name
+      ops_to_remove.add(ori_op_name)
+      new_ops_info[new_op_name] = op
+    for op_name in ops_to_remove:
+      new_ugraph.ops_info.pop(op_name)
+    new_ugraph.ops_info = new_ops_info
+    return new_ugraph
+
 
 @attr.s
 class _MatchState(object):
