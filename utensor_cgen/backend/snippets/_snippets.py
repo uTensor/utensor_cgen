@@ -759,3 +759,19 @@ class ContextSnippetsContainer(SnippetContainerBase):
     self.template_vars["ref_counts"] = ref_counts
     self.add_header('"{}"'.format(ctx_header_name))
     self.add_header('"{}"'.format(ctx_weightheader_name))
+
+class GatherOpSnippet(Snippet):
+  __template_name__ = "snippets/gather_op.cpp"
+  __headers__ = set(['"uTensor/ops/ArrayOps.hpp"'])
+
+  def __init__(self, inputs, output, np_dtype,
+               ref_count=0,
+               to_eval=False):
+    Snippet.__init__(self)
+    if ref_count:
+      self.template_vars["ref_count"] = ref_count
+    self.template_vars["in_dtype"] = NP_TYPES_MAP[np_dtype].tensor_type_str
+    self.template_vars["out_dtype"] = NP_TYPES_MAP[np_dtype].tensor_type_str
+    self.template_vars["inputs"] = inputs
+    self.template_vars["output"] = output
+    self.template_vars["to_eval"] = to_eval

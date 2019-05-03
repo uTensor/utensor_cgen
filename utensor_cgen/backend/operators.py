@@ -678,3 +678,19 @@ class _SoftmaxOperator(_Operator):
         to_eval = parser.get('to_eval', True)
         out_dtype = op_info.output_tensors[0].dtype
         self._snippet = SoftmaxOpSnippet(inputs, output, out_dtype, ref_count, to_eval)
+
+@OperatorFactory.register
+class _GatherOperator(_Operator):
+
+  op_type = "Gather" # tf op type
+
+  def __init__(self, op_info, **kwargs):
+    _Operator.__init__(self)
+    inputs = [tensor_info.name for tensor_info in op_info.input_tensors]
+    output = op_info.output_tensors[0].name
+    tf_dtype = op_info.input_tensors[0].dtype
+    parser = NamescopedKWArgsParser(RefCntOptimizer.KWARGS_NAMESCOPE, 
+                                    op_info.op_attr)
+    ref_count = parser.get('ref_counts', [0])[0]
+    to_eval = parser.get('to_eval', False)
+    self._snippet = GatherOpSnippet(inputs, output, tf_dtype, ref_count, to_eval)
