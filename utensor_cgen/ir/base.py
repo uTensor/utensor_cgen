@@ -240,7 +240,7 @@ class uTensorGraph(IRBase, _NoShallowCopyMixin):
   def ops(self):
     return [self.ops_info[name] for name in self.topo_order]
 
-  def add_op(self, op):
+  def add_op(self, op, sort=True):
     if not isinstance(op, OperationInfo):
       raise ValueError('expecting OperationInfo, get {}'.format(type(op)))
     if op.name in self.ops_info:
@@ -250,7 +250,11 @@ class uTensorGraph(IRBase, _NoShallowCopyMixin):
     # if(op.name == 'convert_uint8_q7_Relu/eightbit_transpose_0_q7'):
     #   import pdb; pdb.set_trace()
     self.ops_info[op.name] = op
-    topologic_order_graph(self)
+
+    # FIXME: forcing a topo-order here prevent us from dynamic-graph-construction
+    # The temporary fix is to disable this as an option
+    if sort:
+      topologic_order_graph(self)
 
   def drop_op(self, op_name):
     if op_name not in self.ops_info:

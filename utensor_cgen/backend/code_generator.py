@@ -81,6 +81,8 @@ class CodeGenerator(object):
     )
     quant_ugraph = self._transform_graph(ugraph,
                                          self.trans_methods)
+    from utensor_cgen.ir.misc.graph_viz import viz_graph
+    viz_graph('out_graph', True, quant_ugraph)
     _logger.info('Graph transormation done')
 
     if self.save_graph:

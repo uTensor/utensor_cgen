@@ -13,7 +13,8 @@ from utensor_cgen.ir.utils import graph_check
 from utensor_cgen.experimental.ugraph_util_functions import *
 
 
-__all__ = ["transpose_offline", "Const_Op", "Ram_Op", "Const_Reshape", "Uint8Q7Origin_Op", "CMSIS_FC_Op", "QuantRangeForMultiplicationu8u8int32_Op"]
+__all__ = ["transpose_offline", "Const_Op", "Ram_Op", "Const_Reshape", "Uint8Q7Origin_Op", "CMSIS_FC_Op", "QuantRangeForMultiplicationu8u8int32_Op",
+            "conv2d_op", "relu_op", "maxpool_op"]
 
 # Let us get unique names for custom injected nodes
 def static_vars(**kwargs):
@@ -67,7 +68,7 @@ def Const_Op(name, np_array, ugraph):
                           ugraph=tmp_graph,
                           op_attr=bs_ops_attr(np_array)
                           )
-  ugraph.add_op(const_op_info)
+  ugraph.add_op(const_op_info, False)
 
   return const_op_info.output_tensors
 
@@ -99,7 +100,7 @@ def Reshape_Op(name, input_tensor, shape_tensor, ugraph):
                           ugraph=tmp_ugraph
                           )
 
-  ugraph.add_op(reshape_opInfo)
+  ugraph.add_op(reshape_opInfo, False)
 
   return reshape_opInfo.output_tensors
 
@@ -130,7 +131,7 @@ def Uint8Q7Origin_Op(name, inputs, ugraph):
   
   # if(name == 'convert_uint8_q7_Relu/eightbit_transpose_0_q7'):
   # import pdb; pdb.set_trace()
-  ugraph.add_op(q7_op_info)
+  ugraph.add_op(q7_op_info, False)
 
   return q7_op_info.output_tensors
 
@@ -159,7 +160,7 @@ def CMSIS_FC_Op(name, in0, in1, bias, bShift, oShift, scratch, ugraph):
                           ugraph=tmp_ugraph
                           )
                           
-  ugraph.add_op(fc_op_info)
+  ugraph.add_op(fc_op_info, False)
   return fc_op_info.output_tensors
 
 def QuantRangeForMultiplicationu8u8int32_Op(name, a_range, b_range, ugraph):
@@ -186,6 +187,57 @@ def QuantRangeForMultiplicationu8u8int32_Op(name, a_range, b_range, ugraph):
                     ugraph=tmp_ugraph
                     )
 
-  ugraph.add_op(new_range_op_info)
+  ugraph.add_op(new_range_op_info, False)
 
   return new_range_op_info.output_tensors
+
+def conv2d_op(name, inputs, ugraph):
+  tmp_ugraph = uTensorGraph(output_nodes=[name])
+  conv_out = TensorInfo(name=name + ":0",
+                    op_name=name,
+                    dtype=np.dtype('float32'),
+                    shape=inputs[0].shape,
+                    ugraph=tmp_ugraph
+                    )
+  conv2d_op_info = OperationInfo(name=name,
+                        input_tensors=inputs,
+                        output_tensors=[conv_out],
+                        op_type="Conv2D",
+                        backend="tensorflow",
+                        ugraph=tmp_ugraph)
+  
+  ugraph.add_op(conv2d_op_info, False)
+  return conv2d_op_info.output_tensors
+def relu_op(name, inputs, ugraph):
+  tmp_ugraph = uTensorGraph(output_nodes=[name])
+  relu_out = TensorInfo(name=name + ":0",
+                    op_name=name,
+                    dtype=np.dtype('float32'),
+                    shape=inputs[0].shape,
+                    ugraph=tmp_ugraph
+                    )
+  relu_op_info = OperationInfo(name=name,
+                        input_tensors=inputs,
+                        output_tensors=[relu_out],
+                        op_type="Relu",
+                        backend="tensorflow",
+                        ugraph=tmp_ugraph)
+  
+  ugraph.add_op(relu_op_info, False)
+  return relu_op_info.output_tensors
+def maxpool_op(name, inputs, ugraph):
+  tmp_ugraph = uTensorGraph(output_nodes=[name])
+  max_out = TensorInfo(name=name + ":0",
+                    op_name=name,
+                    dtype=np.dtype('float32'),
+                    shape=inputs[0].shape,
+                    ugraph=tmp_ugraph
+                    )
+  max_op_info = OperationInfo(name=name,
+                        input_tensors=inputs,
+                        output_tensors=[max_out],
+                        op_type="MaxPool",
+                        backend="tensorflow",
+                        ugraph=tmp_ugraph)
+  ugraph.add_op(max_op_info, False)
+  return max_op_info.output_tensors
