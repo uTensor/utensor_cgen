@@ -240,7 +240,10 @@ def topologic_order_graph(ugraph):
     op_info = ugraph.ops_info[node_name]
 
     for t_info in op_info.input_tensors:
-      op_name = parse_tensor_name(t_info.name)[0]
+      # NT: we should not rely on tensor-name conventions for back-tracing
+      # op_name = parse_tensor_name(t_info.name)[0]
+      # It would be nice to rely on something similar to get_tensor_node_names(), but based on ops_info instead of topo_order
+      op_name = t_info.op_name
       visit(op_name)
 
     perm_visit.add(node_name)

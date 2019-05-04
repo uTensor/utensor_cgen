@@ -56,19 +56,22 @@ class Linear_Reorder_Transformer(Transformer):
       result = matcher.isomorphic_match(ugraph, matcher_ugraph, metaData)
       if result == False:
         break
-      #import pdb; pdb.set_trace()
-      relu_name = matcher['relu'].name + '_'
-      maxpool_name = matcher['maxpool'].name + '_'
 
-      new_relu_out = relu_op(relu_name, [matcher['relu:0']], ugraph)
-      new_maxpool_out = maxpool_op(maxpool_name, [matcher['convolution2d:0']], ugraph)
-      matcher['relu:0'] = new_maxpool_out[0]
-      matcher['maxpool:0'] = new_relu_out[0]
-      matcher['relu'] = None
-      matcher['maxpool'] = None
+      max_pool_op = matcher['maxpool']
+      relu_op = matcher['relu']
 
-      topologic_order_graph(ugraph)
+      max_pool_op.input_tensors[0] = matcher['convolution2d:0']
+      max_pool_op.output_tensors[0] = matcher['relu:0']
+      relu_op.input_tensors[0] = matcher['relu:0']
+      relu_op.output_tensors[0] = matcher['maxpool:0']
+
+      matcher['maxpool'] = max_pool_op
+      matcher['relu'] = relu_op
+
+      update_tensor_op_names(ugraph)
       graph_validate(ugraph)
+      topologic_order_graph(ugraph)
+      #import pdb; pdb.set_trace()
 
       viz_graph('matcher', True, ugraph)
     return ugraph ##remove me
