@@ -10,7 +10,7 @@ from utensor_cgen.ir.utils import graph_check
 __all__ = ["is_connected", "get_input_tensor_names", "get_output_tensor_names", "tensorInfo_from_name",
        "get_tensor_node_names", "replace_tensors_op", "replace_tensor_op_by_name",
        "graph_validate", "get_input_node_names", "get_output_node_names", "replace_tensor",
-       "update_tensor_op_names", "print_graph"]
+       "update_tensor_op_names", "print_graph", "rename_tensor"]
 
 
 def is_connected(graph, node0, node1):
@@ -134,3 +134,14 @@ def print_graph(graph):
     print(key, " :\r\n")
     print("  In: ", [tensor.name for tensor in op_info.input_tensors])
     print("  Out: ", [tensor.name for tensor in op_info.output_tensors])
+
+def rename_tensor(name, new_name, graph):
+    for key, op_info in graph.ops_info.items():
+      for i, tensor in enumerate(op_info.input_tensors):
+        if tensor.name == name:
+          op_info.input_tensors[i].name = new_name
+    for key, op_info in graph.ops_info.items():
+      for i, tensor in enumerate(op_info.output_tensors):
+        if tensor.name == name:
+          op_info.output_tensors[i].name = new_name
+      graph.ops_info[key] = op_info

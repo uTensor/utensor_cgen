@@ -57,6 +57,7 @@ class Linear_Reorder_Transformer(Transformer):
       if result == False:
         break
 
+      #swapping the ops
       max_pool_op = matcher['maxpool']
       relu_op = matcher['relu']
 
@@ -68,6 +69,14 @@ class Linear_Reorder_Transformer(Transformer):
       matcher['maxpool'] = max_pool_op
       matcher['relu'] = relu_op
 
+      #swapping the tensor names
+      relu_tensor_name = matcher['relu:0'].name
+      maxpool_tensor_name = matcher['maxpool:0'].name
+
+      rename_tensor(relu_tensor_name, 'tmp_relu_name', ugraph)
+      rename_tensor(maxpool_tensor_name, relu_tensor_name, ugraph)
+      rename_tensor('tmp_relu_name', maxpool_tensor_name, ugraph)
+      
       update_tensor_op_names(ugraph)
       graph_validate(ugraph)
       topologic_order_graph(ugraph)
