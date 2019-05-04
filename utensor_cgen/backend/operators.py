@@ -425,6 +425,28 @@ class _Conv2DOperator(_Operator):
     self._snippet = Conv2DOpSnippent(inputs, output, strides, padding,
                                      in_dtype=in_dtype, filter_dtype=filter_dtype, out_dtype=out_dtype,
                                      ref_count=ref_count, to_eval=to_eval)
+@OperatorFactory.register
+class _FusedConv2DMaxpoolOperator(_Operator):
+
+  op_type = "FusedConv2DMaxpool"
+
+  def __init__(self, op_info, **kwargs):
+    _Operator.__init__(self)
+    inputs = [tensor_info.name for tensor_info in op_info.input_tensors]
+    output = op_info.output_tensors[0].name
+    in_dtype, filter_dtype = (op_info.input_tensors[0].dtype,
+                              op_info.input_tensors[1].dtype)
+    out_dtype = op_info.output_tensors[0].dtype
+    strides = op_info.op_attr["strides"].value.ints_value
+    ksize = op_info.op_attr["ksize"].value.ints_value
+    padding = op_info.op_attr["padding"].value.decode('utf8')
+    parser = NamescopedKWArgsParser(RefCntOptimizer.KWARGS_NAMESCOPE,
+                                    op_info.op_attr)
+    ref_count = parser.get('ref_counts', [0])[0]
+    to_eval = parser.get('to_eval', False)
+    self._snippet = FusedConv2DMaxpoolOpSnippent(inputs, output, strides, ksize, padding,
+                                     in_dtype=in_dtype, filter_dtype=filter_dtype, out_dtype=out_dtype,
+                                     ref_count=ref_count, to_eval=to_eval)
 
 @OperatorFactory.register
 class _Conv2DQuantOperator(_Operator):
@@ -656,3 +678,19 @@ class _SoftmaxOperator(_Operator):
         to_eval = parser.get('to_eval', True)
         out_dtype = op_info.output_tensors[0].dtype
         self._snippet = SoftmaxOpSnippet(inputs, output, out_dtype, ref_count, to_eval)
+
+@OperatorFactory.register
+class _GatherOperator(_Operator):
+
+  op_type = "Gather" # tf op type
+
+  def __init__(self, op_info, **kwargs):
+    _Operator.__init__(self)
+    inputs = [tensor_info.name for tensor_info in op_info.input_tensors]
+    output = op_info.output_tensors[0].name
+    tf_dtype = op_info.input_tensors[0].dtype
+    parser = NamescopedKWArgsParser(RefCntOptimizer.KWARGS_NAMESCOPE, 
+                                    op_info.op_attr)
+    ref_count = parser.get('ref_counts', [0])[0]
+    to_eval = parser.get('to_eval', False)
+    self._snippet = GatherOpSnippet(inputs, output, tf_dtype, ref_count, to_eval)
