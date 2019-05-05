@@ -82,9 +82,7 @@ class CONV_POOL_Transformer(Transformer):
       update_tensor_op_names(ugraph)
       topologic_order_graph(ugraph)
       graph_validate(ugraph)
-
     
     viz_graph('matcher', True, ugraph)
-    import pdb; pdb.set_trace()
 
     return ugraph ##remove me

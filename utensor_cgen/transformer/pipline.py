@@ -8,6 +8,7 @@ from .optimizer import IdOpRemoveOptimizer, RefCntOptimizer
 from .quantize import QuantizeTransformer
 from .graph_viz import GraphVizTransformer
 from .linear_reoder import Linear_Reorder_Transformer
+from .conv_pool import CONV_POOL_Transformer
 
 class TransformerPipeline(object):
 
@@ -22,6 +23,7 @@ class TransformerPipeline(object):
     IdOpRemoveOptimizer.METHOD_NAME: IdOpRemoveOptimizer,
     GraphVizTransformer.METHOD_NAME: GraphVizTransformer,
     Linear_Reorder_Transformer.METHOD_NAME: Linear_Reorder_Transformer,
+    CONV_POOL_Transformer.METHOD_NAME: CONV_POOL_Transformer,
   }
 
   def __init__(self, methods):

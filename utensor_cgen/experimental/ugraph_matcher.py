@@ -333,7 +333,7 @@ class uGraphMatcher(object):
     
     if info == None:
       #TODO: tensor dependency checking here
-      if name in self.subject_graph.topo_order:
+      if self.translator[0][name] in self.subject_graph.topo_order:  #FIXME: name here reference matcher name, should be subject name
         self.subject_graph.drop_op(self.translator[0][name])
         del self.translator[0][name]
       else:
