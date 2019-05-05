@@ -44,7 +44,7 @@ def get_tensor_node_names(graph, t_name):
   start_nodes = list()
   end_nodes = list()
 
-  for it_node in graph.topo_order:
+  for it_node, info in graph.ops_info.items():
     for t in graph.ops_info[it_node].input_tensors:
       if t.name == t_name:
         end_nodes.append(it_node)
