@@ -42,7 +42,7 @@ class CONV_POOL_Transformer(Transformer):
     dummpy_input1_min = Const_Op('dummy_input1_min', np.zeros([1]), ugraph)
     dummpy_input1_max = Const_Op('dummy_input1_max', np.zeros([1]), ugraph)
 
-    conv_out = quantized_conv2d_op('convolution2d', [dummpy_input0[0],
+    conv_out = quantized_conv2d_op('quant_convolution2d', [dummpy_input0[0],
                 dummpy_input1[0], dummpy_input0_min[0], dummpy_input0_max[0],
                 dummpy_input1_min[0], dummpy_input1_max[0]], ugraph)
 
@@ -55,11 +55,9 @@ class CONV_POOL_Transformer(Transformer):
 
     topologic_order_graph(ugraph)
 
-    #viz_graph('matcher_quant', True, ugraph)
-    #import pdb; pdb.set_trace()
     
     meta = dict()
-    meta["convolution2d"] = ["End"]
+    meta["quant_convolution2d"] = ["End"]
     
     return (ugraph, meta)
 
@@ -70,37 +68,23 @@ class CONV_POOL_Transformer(Transformer):
       result = matcher.isomorphic_match(ugraph, matcher_ugraph, metaData)
       if result == False:
         break
-    
-      import pdb; pdb.set_trace() #remove me
-      return ugraph  #remove me
 
-      #swapping the ops
-      max_pool_op = matcher['maxpool']
-      relu_op = matcher['relu']
-
-      max_pool_op.input_tensors[0] = matcher['convolution2d:0']
-      max_pool_op.output_tensors[0] = matcher['relu:0']
-      relu_op.input_tensors[0] = matcher['relu:0']
-      relu_op.output_tensors[0] = matcher['maxpool:0']
-
-      matcher['maxpool'] = max_pool_op
-      matcher['relu'] = relu_op
-
-      #swapping the tensor names
-      relu_tensor_name = matcher['relu:0'].name
-      maxpool_tensor_name = matcher['maxpool:0'].name
-
-      rename_tensor(relu_tensor_name, 'tmp_relu_name', ugraph)
-      rename_tensor(maxpool_tensor_name, relu_tensor_name, ugraph)
-      rename_tensor('tmp_relu_name', maxpool_tensor_name, ugraph)
+      fused_op_name = matcher['quant_convolution2d'].name + "_" + matcher['quantized_maxpool'].name
+      fused_op_out = quantized_conv2d_pool_op(fused_op_name, matcher['quant_convolution2d'].input_tensors, ugraph)
+      matcher['quantized_maxpool:0'] = fused_op_out[0]
+      matcher['quantized_maxpool:1'] = fused_op_out[1]
+      matcher['quantized_maxpool:2'] = fused_op_out[2]
+      matcher['quant_convolution2d'] = None
+      matcher['requantization_range'] = None
+      matcher['requantize'] = None
+      matcher['quantized_maxpool'] = None
       
       update_tensor_op_names(ugraph)
-      graph_validate(ugraph)
       topologic_order_graph(ugraph)
-      #import pdb; pdb.set_trace()
+      graph_validate(ugraph)
 
-      viz_graph('matcher', True, ugraph)
+    
+    viz_graph('matcher', True, ugraph)
+    import pdb; pdb.set_trace()
+
     return ugraph ##remove me
-
-    # graph_check(ugraph)
-    # return ugraph
