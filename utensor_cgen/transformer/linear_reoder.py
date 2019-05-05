@@ -40,8 +40,6 @@ class Linear_Reorder_Transformer(Transformer):
     relu_out = relu_op('relu', conv_out, ugraph)
     out_tensor = maxpool_op('maxpool', relu_out, ugraph)
     topologic_order_graph(ugraph)
-
-    #viz_graph('matcher', True, ugraph)
     
     meta = dict()
     meta["dummy_input0"] = ["End", "Any"]
@@ -78,9 +76,7 @@ class Linear_Reorder_Transformer(Transformer):
       rename_tensor('tmp_relu_name', maxpool_tensor_name, ugraph)
       
       update_tensor_op_names(ugraph)
-      graph_validate(ugraph)
       topologic_order_graph(ugraph)
-      #import pdb; pdb.set_trace()
+      graph_validate(ugraph)
 
-      viz_graph('matcher', True, ugraph)
     return ugraph

@@ -15,7 +15,8 @@ from utensor_cgen.experimental.ugraph_util_functions import *
 
 __all__ = ["transpose_offline", "Const_Op", "Ram_Op", "Const_Reshape", "Uint8Q7Origin_Op",
            "CMSIS_FC_Op", "QuantRangeForMultiplicationu8u8int32_Op", "conv2d_op", "quantized_conv2d_op",
-           "relu_op", "maxpool_op", "requantize_op", "requantization_range_op", "quantized_maxpool_op"]
+           "relu_op", "maxpool_op", "requantize_op", "requantization_range_op", "quantized_maxpool_op",
+           "quantized_conv2d_pool_op"]
 
 # Let us get unique names for custom injected nodes
 def static_vars(**kwargs):
@@ -365,3 +366,34 @@ def requantize_op(name, inputs, ugraph):
 
   ugraph.add_op(rqnt_op_info, False)
   return [value_out, min_out, max_out]
+
+def quantized_conv2d_pool_op(name, inputs, ugraph):
+  tmp_ugraph = uTensorGraph(output_nodes=[name])
+  conv_out = TensorInfo(name=name + ":0",
+                    op_name=name,
+                    dtype=np.dtype('uint8'),
+                    shape=inputs[0].shape, #FIXME: wrong shape most likely
+                    ugraph=tmp_ugraph
+                    )
+  min_out = TensorInfo(name=name + ":1",
+            op_name=name,
+            dtype=np.dtype('float32'),
+            shape=[1],
+            ugraph=tmp_ugraph
+            )
+  max_out = TensorInfo(name=name + ":2",
+              op_name=name,
+              dtype=np.dtype('float32'),
+              shape=[1],
+              ugraph=tmp_ugraph
+              )
+
+  quantized_conv2d_op_info = OperationInfo(name=name,
+                        input_tensors=inputs,
+                        output_tensors=[conv_out, min_out, max_out],
+                        op_type="FusedConv2DMaxpool",
+                        backend="tensorflow",
+                        ugraph=tmp_ugraph)
+
+  ugraph.add_op(quantized_conv2d_op_info, False)
+  return quantized_conv2d_op_info.output_tensors
