@@ -70,7 +70,10 @@ class CONV_POOL_Transformer(Transformer):
         break
 
       fused_op_name = matcher['quant_convolution2d'].name + "_" + matcher['quantized_maxpool'].name
-      fused_op_out = quantized_conv2d_pool_op(fused_op_name, matcher['quant_convolution2d'].input_tensors, ugraph)
+      op_attr = dict()
+      op_attr['_utensor_conv'] = matcher['quant_convolution2d'].op_attr
+      op_attr['_utensor_pool'] = matcher['quantized_maxpool'].op_attr
+      fused_op_out = quantized_conv2d_pool_op(fused_op_name, matcher['quant_convolution2d'].input_tensors, op_attr, ugraph)
       matcher['quantized_maxpool:0'] = fused_op_out[0]
       matcher['quantized_maxpool:1'] = fused_op_out[1]
       matcher['quantized_maxpool:2'] = fused_op_out[2]
@@ -83,6 +86,5 @@ class CONV_POOL_Transformer(Transformer):
       topologic_order_graph(ugraph)
       graph_validate(ugraph)
     
-    viz_graph('matcher', True, ugraph)
-
-    return ugraph ##remove me
+    #viz_graph('matcher', True, ugraph)
+    return ugraph

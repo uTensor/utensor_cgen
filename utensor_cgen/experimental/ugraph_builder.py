@@ -367,7 +367,9 @@ def requantize_op(name, inputs, ugraph):
   ugraph.add_op(rqnt_op_info, False)
   return [value_out, min_out, max_out]
 
-def quantized_conv2d_pool_op(name, inputs, ugraph):
+
+#FIXME: The content in op_attr should be passed in as proper parameters
+def quantized_conv2d_pool_op(name, inputs, op_attr, ugraph):
   tmp_ugraph = uTensorGraph(output_nodes=[name])
   conv_out = TensorInfo(name=name + ":0",
                     op_name=name,
@@ -393,6 +395,7 @@ def quantized_conv2d_pool_op(name, inputs, ugraph):
                         output_tensors=[conv_out, min_out, max_out],
                         op_type="FusedConv2DMaxpool",
                         backend="tensorflow",
+                        op_attr=op_attr,
                         ugraph=tmp_ugraph)
 
   ugraph.add_op(quantized_conv2d_op_info, False)
