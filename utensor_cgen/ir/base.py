@@ -5,21 +5,25 @@ from copy import deepcopy
 import attr
 import numpy as np
 import six
-import tensorflow as tf
 from attr.validators import instance_of
-from tensorflow.core.framework.attr_value_pb2 import AttrValue as _AttrValue
-from tensorflow.core.framework.attr_value_pb2 import (
-    NameAttrList as _NameAttrList)
-from tensorflow.core.framework.tensor_pb2 import TensorProto as _TensorProto
-from tensorflow.core.framework.tensor_shape_pb2 import (
-    TensorShapeProto as _TensorShapeProto)
-from tensorflow.core.framework.types_pb2 import DataType as _DataType
 
+import tensorflow as tf
+from tensorflow.core.framework.attr_value_pb2 import AttrValue as _AttrValue
+from tensorflow.core.framework.attr_value_pb2 import \
+    NameAttrList as _NameAttrList
+from tensorflow.core.framework.tensor_pb2 import TensorProto as _TensorProto
+from tensorflow.core.framework.tensor_shape_pb2 import \
+    TensorShapeProto as _TensorShapeProto
+from tensorflow.core.framework.types_pb2 import DataType as _DataType
 from utensor_cgen.utils import topologic_order_graph
 
 from .converter import AttrValueConverter, ConverterFactory
 
-__all__ = ['TensorInfo', 'OperationInfo', 'MetaOperationInfo', 'uTensorGraph']
+__all__ = [
+  'TensorInfo', 'OperationInfo',
+  'MetaOperationInfo', 'uTensorGraph',
+  'uTensorGraphView'
+]
 
 
 class _NoShallowCopyMixin(object):
@@ -132,14 +136,20 @@ class OperationInfo(IRBase, _NoShallowCopyMixin):
   input_tensors = attr.ib(validator=instance_of(list))
   @input_tensors.validator
   def check(self, attribute, value):
-    if not all([isinstance(v, TensorInfo) for v in value]):
+    # FIXME: we need a refactor of IR, allowing None here is just temporary
+    # especially for graph rewrite
+    if not all([isinstance(v, (TensorInfo, type(None))) for v in value]):
       raise ValueError('Expecting a list of TensorInfo for input_tensors')
+  
+  n_inputs = attr.ib(validator=instance_of(int))
 
   output_tensors = attr.ib(validator=instance_of(list))
   @output_tensors.validator
   def check(self, attribute, value):
     if not all([isinstance(v, TensorInfo) for v in value]):
       raise ValueError('Expecting a list of TensorInfo for output_tensors')
+
+  n_outputs = attr.ib(validator=instance_of(int))
 
   op_type = attr.ib(type=str)
   op_attr = attr.ib(factory=dict, converter=dict)
@@ -178,14 +188,6 @@ class OperationInfo(IRBase, _NoShallowCopyMixin):
     """
     return None in self.input_nodes
 
-  @property
-  def n_inputs(self):
-    return len(self.input_tensors)
-
-  @property
-  def n_outputs(self):
-    return len(self.output_tensors)
-
   def __attrs_post_init__(self):
     skip_pattern = re.compile(r'_utensor_[^_]*')
     if self.op_attr:
@@ -198,11 +200,17 @@ class OperationInfo(IRBase, _NoShallowCopyMixin):
           op_attr[k] = ConverterFactory.get_generic_value(v)
       self.op_attr = op_attr
     self._ugraph.ops_info[self.name] = self
+    if not self.n_inputs == len(self.input_tensors):
+      raise ValueError('n_inputs is not equal to the length of input_tensors')
+    if not self.n_outputs == len(self.output_tensors):
+      raise ValueError('n_outputs is not equal to the length of output_tensors')
 
   def __deepcopy__(self, memo):
     op_info = OperationInfo(name=self.name,
                             input_tensors=deepcopy(self.input_tensors, memo),
+                            n_inputs=self.n_inputs,
                             output_tensors=deepcopy(self.output_tensors, memo),
+                            n_outputs=self.n_outputs,
                             op_type=self.op_type,
                             backend=self.backend,
                             op_attr=deepcopy(self.op_attr, memo),
@@ -221,6 +229,7 @@ class MetaOperationInfo(OperationInfo):
 
   def __getattr__(self, name):
     return getattr(self._op_info, name)
+
 
 @attr.s
 class uTensorGraph(IRBase, _NoShallowCopyMixin):
@@ -273,6 +282,14 @@ class uTensorGraph(IRBase, _NoShallowCopyMixin):
   @property
   def output_ops(self):
     return [self.ops_info[name] for name in self.output_nodes]
+  
+  @property
+  def output_tensors(self):
+    out_tensors = []
+    for op in self.output_ops:
+      for tensor in op.output_tensors:
+        out_tensors.append(tensor)
+    return out_tensors
 
   @property
   def input_ops(self):
@@ -281,6 +298,14 @@ class uTensorGraph(IRBase, _NoShallowCopyMixin):
       if not op.input_tensors:
         ops.append(op)
     return ops
+  
+  @property
+  def input_tensors(self):
+    in_tensors = []
+    for op in self.input_ops:
+      for tensor in op.input_tensors:
+        in_tensors.append(tensor)
+    return in_tensors
   
   @property
   def backend(self):
@@ -343,3 +368,56 @@ class uTensorGraph(IRBase, _NoShallowCopyMixin):
     new_graph._backend = self._backend
     topologic_order_graph(new_graph)
     return new_graph
+
+
+@attr.s
+class uTensorGraphView(IRBase, _NoShallowCopyMixin):
+
+  _ugraph = attr.ib(type=uTensorGraph)
+  _op_names = attr.ib(type=list)
+  output_nodes = attr.ib(type=list)
+
+  topo_order = attr.ib(init=False, factory=list)
+  ops_info = attr.ib(init=False, factory=dict)
+
+  def __attrs_post_init__(self):
+    for name in self._op_names:
+      self.ops_info[name] = self._ugraph.ops_info[name]
+    topologic_order_graph(self)
+  
+  @property
+  def backend(self):
+    return self._ugraph.backend
+
+  @property
+  def input_ops(self):
+    ops = []
+    for name in self.topo_order:
+      op = self.ops_info[name]
+      input_tensors = op.input_tensors
+      if all([
+        tensor.op.name not in self.ops_info
+        for tensor in input_tensors
+      ]):
+        ops.append(op)
+    return ops
+  
+  @property
+  def input_tensors(self):
+    in_tensors = []
+    for op in self.input_ops:
+      for tensor in op.input_tensors:
+        in_tensors.append(tensor)
+    return in_tensors
+  
+  @property
+  def output_ops(self):
+    return [self.ops_info[name] for name in self.output_nodes]
+  
+  @property
+  def output_tensors(self):
+    out_tensors = []
+    for op in self.output_ops:
+      for tensor in op.output_tensors:
+        out_tensors.append(tensor)
+    return out_tensors

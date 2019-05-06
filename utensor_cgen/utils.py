@@ -262,6 +262,7 @@ def topologic_order_graph(ugraph):
     visit(node_name)
   ugraph.topo_order = ops_torder[::-1]
 
+
 def ops_bfs_queue(ugraph, init_nodes=None):
   if init_nodes is None:
     init_nodes = [
@@ -279,6 +280,7 @@ def ops_bfs_queue(ugraph, init_nodes=None):
     queue.extend(op.input_nodes)
     bfs_deck.append(op)
   return bfs_deck
+
 
 def prune_graph(ugraph):
   """Remove nodes that is no longer needed

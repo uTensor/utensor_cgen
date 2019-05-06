@@ -1,14 +1,15 @@
 from __future__ import absolute_import
+
 import os
+
+import numpy as np
 import six
 
 import tensorflow as tf
-import numpy as np
 from google.protobuf import text_format
-
-from utensor_cgen.frontend.base import Parser
 from utensor_cgen.frontend import FrontendSelector
-from utensor_cgen.ir.base import TensorInfo, OperationInfo, uTensorGraph
+from utensor_cgen.frontend.base import Parser
+from utensor_cgen.ir.base import OperationInfo, TensorInfo, uTensorGraph
 from utensor_cgen.utils import topologic_order_graph
 
 
@@ -47,7 +48,9 @@ class GraphDefParser(Parser):
       op_attr = node.attr
       op_info = OperationInfo(name=node.name,
                               input_tensors=in_tensors,
+                              n_inputs=len(in_tensors),
                               output_tensors=out_tensors,
+                              n_outputs=len(out_tensors),
                               op_type=op_type,
                               backend='tensorflow',
                               op_attr=op_attr,

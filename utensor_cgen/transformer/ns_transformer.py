@@ -84,7 +84,9 @@ class DropoutTransformer(Transformer):
           in_t_infos.insert(i, dropout_in_tensor)
       new_op_info = OperationInfo(name=op_info.name,
                                   input_tensors=in_t_infos,
+                                  n_inputs=len(in_t_infos),
                                   output_tensors=out_t_infos,
+                                  n_outputs=len(out_t_infos),
                                   op_type=op_info.op_type,
                                   backend=op_info.backend,
                                   op_attr=op_attr,

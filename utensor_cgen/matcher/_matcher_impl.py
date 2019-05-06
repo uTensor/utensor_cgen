@@ -1,15 +1,17 @@
 from collections import deque
-from itertools import product
-from string import ascii_letters, digits
-from random import choices
 from copy import deepcopy
+from itertools import product
+from random import choices
+from string import ascii_letters, digits
 
 import attr
 from attr.validators import instance_of
 
-from utensor_cgen.ir import MetaOperationInfo, OperationInfo, uTensorGraph
+from utensor_cgen.ir import (MetaOperationInfo, OperationInfo, uTensorGraph,
+                             uTensorGraphView)
 from utensor_cgen.matcher._morphism import Morphism
-from utensor_cgen.utils import ops_bfs_queue, topologic_order_graph
+from utensor_cgen.utils import (ops_bfs_queue, prune_graph,
+                                topologic_order_graph)
 
 __all__ = ["uTensorGraphMatcher"]
 
@@ -89,7 +91,9 @@ class OpEqualityDelegate(object):
             backend=sub_op.backend,
             ugraph=sub_op.ugraph,
             input_tensors=[sub_op.input_tensors[j] for j in perm],
+            n_inputs=sub_op.n_inputs,
             output_tensors=sub_op.output_tensors,
+            n_outputs=sub_op.n_outputs,
             op_type=sub_op.op_type,
             op_attr=sub_op.op_attr,
           )
@@ -209,6 +213,41 @@ class uTensorGraphMatch(object):
     for pattern_tensor, target_tensor in zip(pattern_op.input_tensors, subj_op.input_tensors):
       self.patrn2subj_tensor_map[pattern_tensor.name] = target_tensor
       self.subj2patrn_tensor_map[target_tensor.name] = pattern_tensor
+  
+  @property
+  def is_valid(self):
+    """Check if the match is valid
+    1. only input/output ops of the subgraph view are allowed to have external linkage
+    2. input ops have only external linkage for its inputs
+    3. output ops have only external linkage for its outputs
+
+    If any of above fail, there is no trivial way to determine how to replace the matched
+    subgraph other than very hard code way.
+    """
+    subj_view = self.subject_graph_view
+    valid = True
+    checked_ops = set()
+    for in_op in subj_view.input_ops:
+      for op in in_op.output_nodes:
+        if op.name not in subj_view.ops_info:
+          valid = False
+      checked_ops.add(in_op.name)
+    for out_op in subj_view.output_ops:
+      for op in out_op.input_nodes:
+        if op.name not in subj_view.ops_info:
+          valid = False
+      checked_ops.add(out_op.name)
+    
+    for name, op in subj_view.ops_info.items():
+      if name in checked_ops:
+        continue
+      for in_op in op.input_nodes:
+        if in_op.name not in subj_view.ops_info:
+          valid = False
+      for out_op in op.output_nodes:
+        if out_op.name not in subj_view.ops_info:
+          valid = Falses
+    return valid
     
   def replace_with(self, callback, suffix=None):
     """
@@ -217,9 +256,6 @@ class uTensorGraphMatch(object):
     Arguments
     ---------
     callback : callable
-      a callable which takes the match object and return a new ugraph to be replaced with
-      and a dict which maps the name of input nodes of pattern ugraph to the names of input
-      nodes of replacing ugraph
 
     Return
     ------
@@ -227,60 +263,66 @@ class uTensorGraphMatch(object):
       a *new* graph with matched subgraph replaced with the graph given by the callback
     """
     # build a matched subgraph and pass it to callback
-    replace_ugraph, input_map = callback(self)
-    if not self._is_replacible(replace_ugraph):
+    # input_map (dict): 
+    #  {
+    #     (input op name of pattern graph, index) : (op name of replacing graph, index)
+    #  }
+    # output_map (dict):
+    #  {
+    #     (output op name of pattern graph, index) : (op name of replacing graph, index)
+    #  }
+    replace_ugraph, input_map, output_map = callback(self)
+    replaceible, reasons = self._is_replacible(replace_ugraph, input_map, output_map)
+    if not replaceible:
       raise ValueError(
-        'matched subgraph can not be replaced with the ugraph given'
+        'matched subgraph can not be replaced with the ugraph given: {}'.format(reasons)
       )
-    replace_ugraph, input_map = self.new_ugraph_with_suffix(
-      replace_ugraph, input_map, suffix
+    replace_ugraph, input_map, output_map = self.new_ugraph_with_suffix(
+      replace_ugraph, input_map, output_map, suffix
     )
     new_ugraph = deepcopy(self.subject_ugraph)
+    subj_graph_view = self.subject_graph_view
+    # replacing input tensors
+    for (patrn_op_name, patrn_idx), (repl_op_name, repl_idx) in input_map.items():
+      subj_op = self.patrn2subj_op_map[patrn_op_name]
+      subj_in_tensor = subj_op.input_tensors[patrn_idx]
+      repl_op = replace_ugraph.ops_info[repl_op_name]
+      repl_op.input_tensors[repl_idx] = subj_in_tensor
+    # replacing output tensors
 
+    new_ugraph = prune_graph(new_ugraph)
+    return new_ugraph
 
-  def _is_replacible(self, replace_ugraph):
-    sub_ugraph = self._build_subgraph()
+  def _is_replacible(self, replace_ugraph, input_map, output_map):
+    """Given a ugraph to replace with, check if it's replacible with 
+    the matched sub ugraph
+    """
     replacible = True
-    if len(replace_ugraph.ouptut_nodes) != len(sub_ugraph.output_nodes):
+    reasons = []
+    if not self.is_valid:
+      replaceible = False
+      reasons.append('the match is not valid')
+    subj_graph_view = self.subject_graph_view
+    if len(input_map) != len(subj_graph_view.input_tensors):
       replacible = False
-    if len(replace_ugraph.input_ops) != len(sub_ugraph.input_ops):
+      reasons.append('the number of input tensors does not match')
+    if len(output_map) != len(subj_graph_view.output_tensors):
       replacible = False
-    input_node_names = set([op.name for op in sub_ugraph.input_ops])
-    output_node_names = set(sub_ugraph.output_nodes)
-    for subj_op in self.patrn2subj_op_map.values():
-      if subj_op.name in input_node_names:
+      reasons.append('the number of output tensors does not match')
+    for in_patrn_op_name, _ in input_map:
+      if not in_patrn_op_name in self.pattern_ugraph.ops_info:
+        replacible = False
+        reasons.append(
+          '{} is not found in the pattern graph'.format(in_patrn_op_name)
+        )
         continue
-      for in_op in subj_op.input_nodes:
-        if in_op.name not in sub_ugraph.ops_info:
-          replacible = False
-      if subj_op.name in output_node_names:
-        continue
-      for out_op in subj_op.output_nodes:
-        if out_op.name not in sub_ugraph.ops_info:
-          replacible = False
-    return replacible
-  
-  def _build_subgraph(self):
-    output_nodes = [
-      self.get_op_in_subject_ugraph(name)
-      for name in self.pattern_ugraph.output_nodes
-    ]
-    ugraph = uTensorGraph(
-      output_nodes=[op.name for op in output_nodes],
-      backend=self.subject_ugraph.backend
-    )
-    ugraph.output_nodes = [op.name for op in output_nodes]
-    for op_name in self.pattern_ugraph.ops_info:
-      op = self.get_op_in_subject_ugraph(op_name)
-      ugraph.ops_info[op.name] = deepcopy(op, {'ugraph': ugraph})
-    topologic_order_graph(ugraph)
-    return ugraph
-  
-  def get_op_in_subject_ugraph(self, patrn_op_name):
-    return self.patrn2subj_op_map[patrn_op_name]
-  
-  def get_op_in_pattern_ugraph(self, subj_op_name):
-    return self.subj2patrn_op_map[subj_op_name]
+    for out_patrn_op_name, _ in output_map:
+      if not out_patrn_op_name in self.pattern_ugraph.ops_info:
+        replacible = False
+        reasons.append(
+          '{} is not found in the pattern graph'.format(out_patrn_op_name)
+        )
+    return replacible, reasons
 
   CHARSET = ascii_letters + digits
 
@@ -290,10 +332,15 @@ class uTensorGraphMatch(object):
     return ''.join(chars)
 
   @classmethod
-  def new_ugraph_with_suffix(cls, ugraph, input_map, suffix=None):
+  def new_ugraph_with_suffix(cls, ugraph, input_map, output_map, suffix=None):
     if suffix is None:
       suffix = cls._random_suffix()
-    new_input_map = {k: '{}_{}'.format(v, suffix) for k, v in input_map.items()}
+    new_input_map = {}
+    for (op_name, idx), v in input_map.items():
+      new_input_map[('{}_{}'.format(op_name, suffix), idx)] = v
+    new_output_map = {}
+    for (op_name, idx), v in output_map.items():
+      new_output_map[('{}_{}'.format(op_name, suffix), idx)] = v
     new_ugraph = deepcopy(ugraph)
     new_ugraph.output_nodes = [
       '{}_{}'.format(name, suffix) for name in ugraph.output_nodes
@@ -318,7 +365,20 @@ class uTensorGraphMatch(object):
     for op_name in ops_to_remove:
       new_ugraph.ops_info.pop(op_name)
     new_ugraph.ops_info = new_ops_info
-    return new_ugraph, new_input_map
+    return new_ugraph, new_input_map, new_output_map
+
+  @property
+  def subject_graph_view(self):
+    output_nodes = [
+      self.patrn2subj_op_map[name].name
+      for name in self.pattern_ugraph.output_nodes
+    ]
+    op_names = list(self.subj2patrn_op_map.keys())
+    return uTensorGraphView(
+      ugraph=self.subject_ugraph,
+      op_names=op_names,
+      output_nodes=output_nodes,
+    )
 
 
 @attr.s
