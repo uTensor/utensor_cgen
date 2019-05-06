@@ -444,11 +444,34 @@ class _FusedConv2DMaxpoolOperator(_Operator):
                                     op_info.op_attr)
     ref_count = parser.get('ref_counts', [0])[0]
     to_eval = parser.get('to_eval', False)
-    self._snippet = FusedConv2DMaxpoolOpSnippent(inputs, output, strides, ksize, padding,
+    self._snippet = FusedConv2DMaxpoolOpSnippet(inputs, output, strides, ksize, padding,
                                      in_dtype=in_dtype, filter_dtype=filter_dtype, out_dtype=out_dtype,
                                      ref_count=ref_count, to_eval=to_eval)
 
 @OperatorFactory.register
+class _QuantizedFusedConv2DMaxpoolOperator(_Operator):
+
+  op_type = "QuantizedFusedConv2DMaxpool"
+
+  def __init__(self, op_info, **kwargs):
+    _Operator.__init__(self)
+    inputs = [tensor_info.name for tensor_info in op_info.input_tensors]
+    output = op_info.output_tensors[0].name
+    in_dtype, filter_dtype = (op_info.input_tensors[0].dtype,
+                              op_info.input_tensors[1].dtype)
+    out_dtype = op_info.output_tensors[0].dtype
+    strides = op_info.op_attr["strides"].value.ints_value
+    ksize = op_info.op_attr["ksize"].value.ints_value
+    padding = op_info.op_attr["padding"].value.decode('utf8')
+    parser = NamescopedKWArgsParser(RefCntOptimizer.KWARGS_NAMESCOPE,
+                                    op_info.op_attr)
+    ref_count = parser.get('ref_counts', [0])[0]
+    to_eval = parser.get('to_eval', False)
+    self._snippet = QuantizedFusedConv2DMaxpoolOpSnippet(inputs, output, strides, ksize, padding,
+                                     in_dtype=in_dtype, filter_dtype=filter_dtype, out_dtype=out_dtype,
+                                     ref_count=ref_count, to_eval=to_eval)
+
+@OperatorFactory.registder
 class _Conv2DQuantOperator(_Operator):
 
   op_type = "QuantizedConv2D"
