@@ -45,7 +45,7 @@ You can go to this [repo](https://github.com/pypa/pipenv) for detail information
                                                            |
                  +-------------------------------+         |
                  |       graph transformer       |         |
-                 | (legalization & optimization) | <------‘ 
+                 | (legalization & optimization) | <------/ 
                  +-------------------------------+
                                 |
                                 v
@@ -55,7 +55,7 @@ You can go to this [repo](https://github.com/pypa/pipenv) for detail information
                      ===========================
                                    |
 +--------------------------+       |
-| backend (code generator) | <----‘  
+| backend (code generator) | <----/  
 +--------------------------+
      |
      `---> (target files, ex: model.cpp, model.hpp, weights.idx)
