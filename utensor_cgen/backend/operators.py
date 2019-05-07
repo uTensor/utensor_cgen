@@ -460,9 +460,9 @@ class _QuantizedFusedConv2DMaxpoolOperator(_Operator):
     in_dtype, filter_dtype = (op_info.input_tensors[0].dtype,
                               op_info.input_tensors[1].dtype)
     out_dtype = op_info.output_tensors[0].dtype
-    strides = op_info.op_attr["strides"].value.ints_value
-    ksize = op_info.op_attr["ksize"].value.ints_value
-    padding = op_info.op_attr["padding"].value.decode('utf8')
+    strides = op_info.op_attr['_utensor_conv']["strides"].value.ints_value
+    ksize = op_info.op_attr['_utensor_pool']["ksize"].value.ints_value
+    padding = op_info.op_attr['_utensor_conv']["padding"].value.decode('utf8')
     parser = NamescopedKWArgsParser(RefCntOptimizer.KWARGS_NAMESCOPE,
                                     op_info.op_attr)
     ref_count = parser.get('ref_counts', [0])[0]
@@ -471,7 +471,7 @@ class _QuantizedFusedConv2DMaxpoolOperator(_Operator):
                                      in_dtype=in_dtype, filter_dtype=filter_dtype, out_dtype=out_dtype,
                                      ref_count=ref_count, to_eval=to_eval)
 
-@OperatorFactory.registder
+@OperatorFactory.register
 class _Conv2DQuantOperator(_Operator):
 
   op_type = "QuantizedConv2D"
@@ -717,3 +717,28 @@ class _GatherOperator(_Operator):
     ref_count = parser.get('ref_counts', [0])[0]
     to_eval = parser.get('to_eval', False)
     self._snippet = GatherOpSnippet(inputs, output, tf_dtype, ref_count, to_eval)
+
+
+@OperatorFactory.register
+class _QuantizedMulOperator(_Operator):
+
+  op_type = "QuantizedMul"
+
+  def __init__(self, op_info, **kwargs):
+    _Operator.__init__(self)
+    inputs = [tensor_info.name for tensor_info in op_info.input_tensors]
+    outputs = [tensor_info.name for tensor_info in op_info.output_tensors]
+    in_dtype, qout_dtype = (op_info.input_tensors[0].dtype,
+                            op_info.output_tensors[0].dtype)  #NT: why separate this out?
+                                                              #DB: I don't know, it's in the uTensor C code
+    out_dtypes = [tensor_info.dtype for tensor_info in op_info.output_tensors[1:]]
+    parser = NamescopedKWArgsParser(RefCntOptimizer.KWARGS_NAMESCOPE,
+                                    op_info.op_attr)
+    ref_counts = parser.get('ref_counts', [])
+    to_eval = parser.get('to_eval', False)
+    self._snippet = QuantizedReluOpSnippet(inputs, outputs, in_dtype,
+                                           out_dtypes, qout_dtype, 
+                                           ref_counts, to_eval)
+    print("FIXME: _QuantizedMulOperator not implemented")
+    print("FIXME: _QuantizedMulOperator not implemented")
+    print("FIXME: _QuantizedMulOperator not implemented")
