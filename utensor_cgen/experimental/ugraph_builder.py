@@ -281,7 +281,7 @@ def quantized_maxpool_op(name, inputs, ugraph):
   tmp_ugraph = uTensorGraph(output_nodes=[name])
   max_value_out = TensorInfo(name=name + ":0",
                     op_name=name,
-                    dtype=np.dtype('float32'),
+                    dtype=inputs[0].dtype,
                     shape=inputs[0].shape,
                     ugraph=tmp_ugraph
                     )
