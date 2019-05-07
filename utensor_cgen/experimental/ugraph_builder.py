@@ -13,7 +13,10 @@ from utensor_cgen.ir.utils import graph_check
 from utensor_cgen.experimental.ugraph_util_functions import *
 
 
-__all__ = ["transpose_offline", "Const_Op", "Ram_Op", "Const_Reshape", "Uint8Q7Origin_Op", "CMSIS_FC_Op", "QuantRangeForMultiplicationu8u8int32_Op"]
+__all__ = ["transpose_offline", "Const_Op", "Ram_Op", "Const_Reshape", "Uint8Q7Origin_Op",
+           "CMSIS_FC_Op", "QuantRangeForMultiplicationu8u8int32_Op", "conv2d_op", "quantized_conv2d_op",
+           "relu_op", "maxpool_op", "requantize_op", "requantization_range_op", "quantized_maxpool_op",
+           "quantized_conv2d_pool_op"]
 
 # Let us get unique names for custom injected nodes
 def static_vars(**kwargs):
@@ -67,7 +70,7 @@ def Const_Op(name, np_array, ugraph):
                           ugraph=tmp_graph,
                           op_attr=bs_ops_attr(np_array)
                           )
-  ugraph.add_op(const_op_info)
+  ugraph.add_op(const_op_info, False)
 
   return const_op_info.output_tensors
 
@@ -99,7 +102,7 @@ def Reshape_Op(name, input_tensor, shape_tensor, ugraph):
                           ugraph=tmp_ugraph
                           )
 
-  ugraph.add_op(reshape_opInfo)
+  ugraph.add_op(reshape_opInfo, False)
 
   return reshape_opInfo.output_tensors
 
@@ -130,7 +133,7 @@ def Uint8Q7Origin_Op(name, inputs, ugraph):
   
   # if(name == 'convert_uint8_q7_Relu/eightbit_transpose_0_q7'):
   # import pdb; pdb.set_trace()
-  ugraph.add_op(q7_op_info)
+  ugraph.add_op(q7_op_info, False)
 
   return q7_op_info.output_tensors
 
@@ -159,7 +162,7 @@ def CMSIS_FC_Op(name, in0, in1, bias, bShift, oShift, scratch, ugraph):
                           ugraph=tmp_ugraph
                           )
                           
-  ugraph.add_op(fc_op_info)
+  ugraph.add_op(fc_op_info, False)
   return fc_op_info.output_tensors
 
 def QuantRangeForMultiplicationu8u8int32_Op(name, a_range, b_range, ugraph):
@@ -186,6 +189,214 @@ def QuantRangeForMultiplicationu8u8int32_Op(name, a_range, b_range, ugraph):
                     ugraph=tmp_ugraph
                     )
 
-  ugraph.add_op(new_range_op_info)
+  ugraph.add_op(new_range_op_info, False)
 
   return new_range_op_info.output_tensors
+
+def conv2d_op(name, inputs, ugraph):
+  tmp_ugraph = uTensorGraph(output_nodes=[name])
+  conv_out = TensorInfo(name=name + ":0",
+                    op_name=name,
+                    dtype=np.dtype('float32'),
+                    shape=inputs[0].shape,  #FIXME: wrong shape most likely
+                    ugraph=tmp_ugraph
+                    )
+  conv2d_op_info = OperationInfo(name=name,
+                        input_tensors=inputs,
+                        output_tensors=[conv_out],
+                        op_type="Conv2D",
+                        backend="tensorflow",
+                        ugraph=tmp_ugraph)
+  
+  ugraph.add_op(conv2d_op_info, False)
+  return conv2d_op_info.output_tensors
+
+def quantized_conv2d_op(name, inputs, ugraph):
+  tmp_ugraph = uTensorGraph(output_nodes=[name])
+  conv_out = TensorInfo(name=name + ":0",
+                    op_name=name,
+                    dtype=np.dtype('uint8'),
+                    shape=inputs[0].shape, #FIXME: wrong shape most likely
+                    ugraph=tmp_ugraph
+                    )
+  min_out = TensorInfo(name=name + ":1",
+            op_name=name,
+            dtype=np.dtype('float32'),
+            shape=[1],
+            ugraph=tmp_ugraph
+            )
+  max_out = TensorInfo(name=name + ":2",
+              op_name=name,
+              dtype=np.dtype('float32'),
+              shape=[1],
+              ugraph=tmp_ugraph
+              )
+
+  quantized_conv2d_op_info = OperationInfo(name=name,
+                        input_tensors=inputs,
+                        output_tensors=[conv_out, min_out, max_out],
+                        op_type="QuantizedConv2D",
+                        backend="tensorflow",
+                        ugraph=tmp_ugraph)
+
+  ugraph.add_op(quantized_conv2d_op_info, False)
+  return quantized_conv2d_op_info.output_tensors
+
+def relu_op(name, inputs, ugraph):
+  tmp_ugraph = uTensorGraph(output_nodes=[name])
+  relu_out = TensorInfo(name=name + ":0",
+                    op_name=name,
+                    dtype=np.dtype('float32'),
+                    shape=inputs[0].shape,
+                    ugraph=tmp_ugraph
+                    )
+  relu_op_info = OperationInfo(name=name,
+                        input_tensors=inputs,
+                        output_tensors=[relu_out],
+                        op_type="Relu",
+                        backend="tensorflow",
+                        ugraph=tmp_ugraph)
+  
+  ugraph.add_op(relu_op_info, False)
+  return relu_op_info.output_tensors
+
+def maxpool_op(name, inputs, ugraph):
+  tmp_ugraph = uTensorGraph(output_nodes=[name])
+  max_out = TensorInfo(name=name + ":0",
+                    op_name=name,
+                    dtype=np.dtype('float32'),
+                    shape=inputs[0].shape,
+                    ugraph=tmp_ugraph
+                    )
+  max_op_info = OperationInfo(name=name,
+                        input_tensors=inputs,
+                        output_tensors=[max_out],
+                        op_type="MaxPool",
+                        backend="tensorflow",
+                        ugraph=tmp_ugraph)
+  ugraph.add_op(max_op_info, False)
+  return max_op_info.output_tensors
+
+def quantized_maxpool_op(name, inputs, ugraph):
+  tmp_ugraph = uTensorGraph(output_nodes=[name])
+  max_value_out = TensorInfo(name=name + ":0",
+                    op_name=name,
+                    dtype=np.dtype('float32'),
+                    shape=inputs[0].shape,
+                    ugraph=tmp_ugraph
+                    )
+  min_out = TensorInfo(name=name + ":1",
+            op_name=name,
+            dtype=np.dtype('float32'),
+            shape=[1],
+            ugraph=tmp_ugraph
+            )
+  max_out = TensorInfo(name=name + ":2",
+              op_name=name,
+              dtype=np.dtype('float32'),
+              shape=[1],
+              ugraph=tmp_ugraph
+              )
+
+  qnt_max_op_info = OperationInfo(name=name,
+                        input_tensors=inputs,
+                        output_tensors=[max_value_out, min_out, max_out],
+                        op_type="QuantizedMaxPool",
+                        backend="tensorflow",
+                        ugraph=tmp_ugraph)
+  ugraph.add_op(qnt_max_op_info, False)
+  return qnt_max_op_info.output_tensors
+
+def requantization_range_op(name, inputs, ugraph):
+  tmp_ugraph = uTensorGraph(output_nodes=[name])
+
+  min_out = TensorInfo(name=name + ":0",
+              op_name=name,
+              dtype=np.dtype('float32'),
+              shape=[1],
+              ugraph=tmp_ugraph
+              )
+  max_out = TensorInfo(name=name + ":1",
+              op_name=name,
+              dtype=np.dtype('float32'),
+              shape=[1],
+              ugraph=tmp_ugraph
+              )
+
+  rqntr_op_info = OperationInfo(name=name,
+                    input_tensors=inputs,
+                    output_tensors=[min_out, max_out],
+                    op_type="RequantizationRange",
+                    backend="tensorflow",
+                    ugraph=tmp_ugraph)
+
+  ugraph.add_op(rqntr_op_info, False)
+  return rqntr_op_info.output_tensors
+
+
+def requantize_op(name, inputs, ugraph):
+  tmp_ugraph = uTensorGraph(output_nodes=[name])
+
+  value_out = TensorInfo(name=name + ":0",
+              op_name=name,
+              dtype=np.dtype('uint8'),
+              shape=inputs[0].shape,
+              ugraph=tmp_ugraph
+              )
+
+  min_out = TensorInfo(name=name + ":1",
+              op_name=name,
+              dtype=np.dtype('float32'),
+              shape=[1],
+              ugraph=tmp_ugraph
+              )
+  max_out = TensorInfo(name=name + ":2",
+              op_name=name,
+              dtype=np.dtype('float32'),
+              shape=[1],
+              ugraph=tmp_ugraph
+              )
+
+  rqnt_op_info = OperationInfo(name=name,
+                    input_tensors=inputs,
+                    output_tensors=[value_out, min_out, max_out],
+                    op_type="Requantize",
+                    backend="tensorflow",
+                    ugraph=tmp_ugraph)
+
+  ugraph.add_op(rqnt_op_info, False)
+  return [value_out, min_out, max_out]
+
+
+#FIXME: The content in op_attr should be passed in as proper parameters
+def quantized_conv2d_pool_op(name, inputs, op_attr, ugraph):
+  tmp_ugraph = uTensorGraph(output_nodes=[name])
+  conv_out = TensorInfo(name=name + ":0",
+                    op_name=name,
+                    dtype=np.dtype('uint8'),
+                    shape=inputs[0].shape, #FIXME: wrong shape most likely
+                    ugraph=tmp_ugraph
+                    )
+  min_out = TensorInfo(name=name + ":1",
+            op_name=name,
+            dtype=np.dtype('float32'),
+            shape=[1],
+            ugraph=tmp_ugraph
+            )
+  max_out = TensorInfo(name=name + ":2",
+              op_name=name,
+              dtype=np.dtype('float32'),
+              shape=[1],
+              ugraph=tmp_ugraph
+              )
+
+  quantized_conv2d_op_info = OperationInfo(name=name,
+                        input_tensors=inputs,
+                        output_tensors=[conv_out, min_out, max_out],
+                        op_type="FusedConv2DMaxpool",
+                        backend="tensorflow",
+                        op_attr=op_attr,
+                        ugraph=tmp_ugraph)
+
+  ugraph.add_op(quantized_conv2d_op_info, False)
+  return quantized_conv2d_op_info.output_tensors

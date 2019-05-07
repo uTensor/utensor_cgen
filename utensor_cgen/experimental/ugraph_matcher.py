@@ -40,6 +40,9 @@ class uGraphMatcher(object):
     ops_io_table["Const"] =               [None, [0]]
     ops_io_table["Placeholder"] =         [None, [0]]
     ops_io_table["Inline"] =              [None, [0]]
+    ops_io_table["MaxPool"] =             [[0],[0]]
+    ops_io_table["Conv2D"] =              [[0, 1],[0]]
+    ops_io_table["Relu"] =                [[0],[0]]
 
     return ops_io_table[op_type]
 
@@ -245,6 +248,15 @@ class uGraphMatcher(object):
     matcher_to_subject_nodes.update(partial_matcher_to_subject_nodes)
     matcher_to_subject_edges.update(partial_matcher_to_subject_edges)
 
+
+    #including output tensors from the output node
+    sgraph_out_node = subject_graph.ops_info[matcher_to_subject_nodes[next(iter(matcher_output_node_names))]]
+    mgraph_out_node = matcher_graph.ops_info[next(iter(matcher_output_node_names))]
+    for mgraph_out_edge, sgraph_out_edge in zip(mgraph_out_node.output_tensors, sgraph_out_node.output_tensors):
+      partial_matcher_to_subject_edges[mgraph_out_edge.name] = sgraph_out_edge.name
+
+    matcher_to_subject_edges.update(partial_matcher_to_subject_edges)
+
     self.translator = [matcher_to_subject_nodes, matcher_to_subject_edges]
 
     return self.translator
@@ -321,7 +333,7 @@ class uGraphMatcher(object):
     
     if info == None:
       #TODO: tensor dependency checking here
-      if name in self.subject_graph.topo_order:
+      if self.translator[0][name] in self.subject_graph.topo_order:  #FIXME: name here reference matcher name, should be subject name
         self.subject_graph.drop_op(self.translator[0][name])
         del self.translator[0][name]
       else:

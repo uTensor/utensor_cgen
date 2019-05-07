@@ -46,7 +46,7 @@ def cli():
               help="list of output nodes")
 @click.option("--transform-methods",
               type=NArgsKwargsParam(sep='|>'),
-              default='dropout|>quantize|>inline|>biasAdd|>remove_id_op|>refcnt',
+              default='dropout|>linear_reoder|>quantize|>conv_pool|>inline|>biasAdd|>remove_id_op|>refcnt',
               help='optimization pipeline',
               metavar='METHOD[|>METHOD|>...]',
               show_default=True)
