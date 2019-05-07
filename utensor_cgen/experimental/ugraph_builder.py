@@ -373,7 +373,7 @@ def quantized_conv2d_pool_op(name, inputs, op_attr, ugraph):
   tmp_ugraph = uTensorGraph(output_nodes=[name])
   conv_out = TensorInfo(name=name + ":0",
                     op_name=name,
-                    dtype=np.dtype('uint8'),
+                    dtype=inputs[0].dtype,
                     shape=inputs[0].shape, #FIXME: wrong shape most likely
                     ugraph=tmp_ugraph
                     )
@@ -393,7 +393,7 @@ def quantized_conv2d_pool_op(name, inputs, op_attr, ugraph):
   quantized_conv2d_op_info = OperationInfo(name=name,
                         input_tensors=inputs,
                         output_tensors=[conv_out, min_out, max_out],
-                        op_type="FusedConv2DMaxpool",
+                        op_type="QuantizedFusedConv2DMaxpool",
                         backend="tensorflow",
                         op_attr=op_attr,
                         ugraph=tmp_ugraph)
