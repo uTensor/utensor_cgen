@@ -17,9 +17,12 @@ __all__ = ["Snippet", "SnippetContainerBase",
            "RequantizationRangeOpSnippet", "RequantizeOpSnippet",
            "CommentSnippet", "ContextHeaderSnippet",
            "ContextSnippetsContainer", "QuantizedAddOpSnippet",
+           "QuantizedMulOpSnippet",
            "CreateTensorBinarySnippet", "WeightSnippet",
            "ContextGlobalArrayContainer", "QuantRangeForMultiplicationSnippet",
-           "CreateTensorRamSnippet", "Uint8Q7OriginSnippet", "QuantizedFusedConv2DMaxpoolOpSnippet"]
+           "FusedConv2DOpMaxpoolSnippet", "QuantizedFusedConv2DOpMaxpoolSnippet",
+           "GatherOpSnippet",
+           "CreateTensorRamSnippet", "Uint8Q7OriginSnippet"]
 
 # TODO: Better abstraction, i.e a better backend for code generation
 class CreateTensorIdxSnippet(Snippet):
@@ -348,6 +351,31 @@ class QuantizedMatMulOpSnippet(Snippet):
 
 class QuantizedAddOpSnippet(Snippet):
   __template_name__ = "snippets/qadd_op.cpp"
+  __headers__ = set(['"uTensor/ops/MathOps.hpp"'])
+
+  def __init__(self, inputs, outputs, x_dtype, w_dtype, out_dtype,
+               ref_counts=None,
+               to_eval=False):
+    Snippet.__init__(self)
+    if ref_counts is None:
+      ref_counts = []
+    # hack on different arguments order between tensorflow and uTensor
+    inputs = _permute_args(inputs, [0, 2, 3, 1, 4, 5])
+    if ref_counts:
+      err_msg = ("incorrect number of ref_counts and outputs: {}, {}"
+                 .format(ref_counts, outputs))
+      assert len(ref_counts) == len(outputs), err_msg
+      self.template_vars['ref_counts'] = ref_counts
+
+    self.template_vars["inputs"] = inputs
+    self.template_vars["outputs"] = outputs
+    self.template_vars["x_dtype"] = NP_TYPES_MAP[x_dtype].tensor_type_str
+    self.template_vars["w_dtype"] = NP_TYPES_MAP[w_dtype].tensor_type_str
+    self.template_vars["out_dtype"] = NP_TYPES_MAP[out_dtype].tensor_type_str
+    self.template_vars["to_eval"] = to_eval
+
+class QuantizedMulOpSnippet(Snippet):
+  __template_name__ = "snippets/qmul_op.cpp"
   __headers__ = set(['"uTensor/ops/MathOps.hpp"'])
 
   def __init__(self, inputs, outputs, x_dtype, w_dtype, out_dtype,
