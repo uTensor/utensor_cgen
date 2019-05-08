@@ -19,6 +19,8 @@ __all__ = ["Snippet", "SnippetContainerBase",
            "ContextSnippetsContainer", "QuantizedAddOpSnippet",
            "CreateTensorBinarySnippet", "WeightSnippet",
            "ContextGlobalArrayContainer", "QuantRangeForMultiplicationSnippet",
+           "FusedConv2DOpMaxpoolSnippet", "QuantizedFusedConv2DOpMaxpoolSnippet",
+           "GatherOpSnippet",
            "CreateTensorRamSnippet", "Uint8Q7OriginSnippet"]
 
 # TODO: Better abstraction, i.e a better backend for code generation
