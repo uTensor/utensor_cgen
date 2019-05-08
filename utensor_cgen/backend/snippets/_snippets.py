@@ -20,7 +20,7 @@ __all__ = ["Snippet", "SnippetContainerBase",
            "QuantizedMulOpSnippet",
            "CreateTensorBinarySnippet", "WeightSnippet",
            "ContextGlobalArrayContainer", "QuantRangeForMultiplicationSnippet",
-           "FusedConv2DOpMaxpoolSnippet", "QuantizedFusedConv2DOpMaxpoolSnippet",
+           "FusedConv2DOpMaxpoolSnippet", "QuantizedFusedConv2DMaxpoolOpSnippet",
            "GatherOpSnippet",
            "CreateTensorRamSnippet", "Uint8Q7OriginSnippet"]
 
