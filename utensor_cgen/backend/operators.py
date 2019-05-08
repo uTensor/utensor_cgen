@@ -306,6 +306,27 @@ class _QuantizedAddOperator(_Operator):
                                           x_dtype, w_dtype, out_dtype, 
                                           ref_counts, to_eval)
 
+    
+@OperatorFactory.register
+class _QuantizedMulOperator(_Operator):
+
+  op_type = "QuantizedMul"
+
+  def __init__(self, op_info, **kwargs):
+    _Operator.__init__(self)
+    inputs = [tensor_info.name for tensor_info in op_info.input_tensors]
+    outputs = [tensor_info.name for tensor_info in op_info.output_tensors]
+    x_dtype, w_dtype, out_dtype = (op_info.input_tensors[0].dtype,
+                                   op_info.input_tensors[1].dtype,
+                                   op_info.output_tensors[0].dtype)
+    parser = NamescopedKWArgsParser(RefCntOptimizer.KWARGS_NAMESCOPE,
+                                    op_info.op_attr)
+    ref_counts = parser.get('ref_counts', [])
+    to_eval = parser.get('to_eval', False)
+    self._snippet = QuantizedMulOpSnippet(inputs, outputs, 
+                                          x_dtype, w_dtype, out_dtype, 
+                                          ref_counts, to_eval)
+
 
 @OperatorFactory.register
 class _RequantizationRangeOperator(_Operator):
