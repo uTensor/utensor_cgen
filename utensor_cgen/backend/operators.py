@@ -492,7 +492,7 @@ class _QuantizedFusedConv2DMaxpoolOperator(_Operator):
                                      in_dtype=in_dtype, filter_dtype=filter_dtype, out_dtype=out_dtype,
                                      ref_count=ref_count, to_eval=to_eval)
 
-@OperatorFactory.registder
+@OperatorFactory.register
 class _Conv2DQuantOperator(_Operator):
 
   op_type = "QuantizedConv2D"
