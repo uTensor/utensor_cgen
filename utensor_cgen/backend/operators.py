@@ -1,13 +1,13 @@
 # -*- coding:utf8 -*-
 import os
 
-import idx2numpy as idx2np
 import numpy as np
 
+import idx2numpy as idx2np
 from utensor_cgen.logger import logger
+from utensor_cgen.matcher import OpEqualityDelegate, _morphism
 from utensor_cgen.transformer.optimizer import RefCntOptimizer
 from utensor_cgen.utils import NamescopedKWArgsParser
-from utensor_cgen.matcher import OpEqualityDelegate, _morphism
 
 from .snippets import *  # pylint: disable=W0401,W0614
 
@@ -124,6 +124,7 @@ class _MaxOperator(_Operator):
     to_eval = parser.get('to_eval', False)
     self._snippet = MaxOpSnippet(inputs, output, out_dtype, out_shape, ref_count, to_eval)
 
+
 @OperatorFactory.register
 class _MaxPool(_Operator):
 
@@ -228,6 +229,7 @@ class _MatMulOperator(_Operator):
                                     x_dtype, w_dtype, out_dtype,
                                     ref_count, to_eval)
 
+
 @OperatorFactory.register
 class _QuantizedMatMulOperator(_Operator):
 
@@ -309,6 +311,27 @@ class _QuantizedAddOperator(_Operator):
     ref_counts = parser.get('ref_counts', [])
     to_eval = parser.get('to_eval', False)
     self._snippet = QuantizedAddOpSnippet(inputs, outputs, 
+                                          x_dtype, w_dtype, out_dtype, 
+                                          ref_counts, to_eval)
+
+    
+@OperatorFactory.register
+class _QuantizedMulOperator(_Operator):
+
+  op_type = "QuantizedMul"
+
+  def __init__(self, op_info, **kwargs):
+    _Operator.__init__(self)
+    inputs = [tensor_info.name for tensor_info in op_info.input_tensors]
+    outputs = [tensor_info.name for tensor_info in op_info.output_tensors]
+    x_dtype, w_dtype, out_dtype = (op_info.input_tensors[0].dtype,
+                                   op_info.input_tensors[1].dtype,
+                                   op_info.output_tensors[0].dtype)
+    parser = NamescopedKWArgsParser(RefCntOptimizer.KWARGS_NAMESCOPE,
+                                    op_info.op_attr)
+    ref_counts = parser.get('ref_counts', [])
+    to_eval = parser.get('to_eval', False)
+    self._snippet = QuantizedMulOpSnippet(inputs, outputs, 
                                           x_dtype, w_dtype, out_dtype, 
                                           ref_counts, to_eval)
 
@@ -410,6 +433,7 @@ class _CMSIS_NN_FCOperator(_Operator):
                                               out_dtype=out_dtype,
                                               to_eval=to_eval)
 
+
 @OperatorFactory.register
 class _Conv2DOperator(_Operator):
 
@@ -432,6 +456,55 @@ class _Conv2DOperator(_Operator):
                                      in_dtype=in_dtype, filter_dtype=filter_dtype, out_dtype=out_dtype,
                                      ref_count=ref_count, to_eval=to_eval)
 
+
+@OperatorFactory.register
+class _FusedConv2DMaxpoolOperator(_Operator):
+
+  op_type = "FusedConv2DMaxpool"
+
+  def __init__(self, op_info, **kwargs):
+    _Operator.__init__(self)
+    inputs = [tensor_info.name for tensor_info in op_info.input_tensors]
+    output = op_info.output_tensors[0].name
+    in_dtype, filter_dtype = (op_info.input_tensors[0].dtype,
+                              op_info.input_tensors[1].dtype)
+    out_dtype = op_info.output_tensors[0].dtype
+    strides = op_info.op_attr["strides"].value.ints_value
+    ksize = op_info.op_attr["ksize"].value.ints_value
+    padding = op_info.op_attr["padding"].value.decode('utf8')
+    parser = NamescopedKWArgsParser(RefCntOptimizer.KWARGS_NAMESCOPE,
+                                    op_info.op_attr)
+    ref_count = parser.get('ref_counts', [0])[0]
+    to_eval = parser.get('to_eval', False)
+    self._snippet = FusedConv2DMaxpoolOpSnippet(inputs, output, strides, ksize, padding,
+                                     in_dtype=in_dtype, filter_dtype=filter_dtype, out_dtype=out_dtype,
+                                     ref_count=ref_count, to_eval=to_eval)
+
+
+@OperatorFactory.register
+class _QuantizedFusedConv2DMaxpoolOperator(_Operator):
+
+  op_type = "QuantizedFusedConv2DMaxpool"
+
+  def __init__(self, op_info, **kwargs):
+    _Operator.__init__(self)
+    inputs = [tensor_info.name for tensor_info in op_info.input_tensors]
+    output = op_info.output_tensors[0].name
+    in_dtype, filter_dtype = (op_info.input_tensors[0].dtype,
+                              op_info.input_tensors[1].dtype)
+    out_dtype = op_info.output_tensors[0].dtype
+    strides = op_info.op_attr["strides"].value.ints_value
+    ksize = op_info.op_attr["ksize"].value.ints_value
+    padding = op_info.op_attr["padding"].value.decode('utf8')
+    parser = NamescopedKWArgsParser(RefCntOptimizer.KWARGS_NAMESCOPE,
+                                    op_info.op_attr)
+    ref_count = parser.get('ref_counts', [0])[0]
+    to_eval = parser.get('to_eval', False)
+    self._snippet = QuantizedFusedConv2DMaxpoolOpSnippet(inputs, output, strides, ksize, padding,
+                                     in_dtype=in_dtype, filter_dtype=filter_dtype, out_dtype=out_dtype,
+                                     ref_count=ref_count, to_eval=to_eval)
+
+
 @OperatorFactory.register
 class _Conv2DQuantOperator(_Operator):
 
@@ -453,6 +526,8 @@ class _Conv2DQuantOperator(_Operator):
     self._snippet = Conv2DQuantOpSnippent(inputs, outputs, strides, padding,
                                      in_dtype=in_dtype, filter_dtype=filter_dtype, out_dtypes=out_dtypes,
                                      ref_counts=ref_counts, to_eval=to_eval)
+
+
 @OperatorFactory.register
 class _Uint8Q7OriginOperator(_Operator):
 
@@ -467,6 +542,7 @@ class _Uint8Q7OriginOperator(_Operator):
     ref_count = parser.get('ref_counts', [0])[0]
     to_eval = parser.get('to_eval', False)
     self._snippet = Uint8Q7OriginSnippet(inputs, output, ref_count, to_eval)
+
 
 #hard coding to uint8_t uint8_t int32_t for now
 @OperatorFactory.register
@@ -488,6 +564,7 @@ class _QuantRangeForMultiplication_u8_u8_int32_Operator(_Operator):
     ref_counts = parser.get('ref_counts', [])
     to_eval = parser.get('to_eval', False)
     self._snippet = QuantRangeForMultiplicationSnippet(inputs, outputs, output_type, ref_counts, to_eval)
+
 
 @OperatorFactory.register
 @OpEqualityDelegate.is_compatible_with("Const", _morphism.Inline2ConstMorphism)
@@ -527,6 +604,7 @@ class _InlineOperator(_Operator):
     inline = tensor_name.replace(":", "_").replace("/", "_")
     preapred = "inline_{}".format(inline)
     return preapred
+
 
 @OperatorFactory.register
 @OpEqualityDelegate.is_compatible_with("Inline", _morphism.Const2InlineMorphism)
@@ -568,6 +646,7 @@ class _ConstOperator(_Operator):
       idx2np.convert_to_file(fid, np_array)
     logger.info("saving %s", path)
 
+
 @OperatorFactory.register
 class _RamOperator(_Operator):
 
@@ -592,6 +671,7 @@ class _RamOperator(_Operator):
   def _prepare_tensor_name(self, tensor_name):
     prepared = tensor_name.replace(":", "_").replace("/", "_")
     return prepared
+
 
 @OperatorFactory.register
 class _ShapeOperator(_Operator):
@@ -633,6 +713,7 @@ class _StridedSliceOperator(_Operator):
                                               new_axis_mask, shrink_axis_mask,
                                               ref_count, to_eval)
 
+
 @OperatorFactory.register
 class _PackOperator(_Operator):
     op_type = "Pack"
@@ -651,6 +732,7 @@ class _PackOperator(_Operator):
         axis = op_info.op_attr['axis'].value
         self._snippet = PackOpSnippet(inputs, output, dtype, out_dtype, N, axis, ref_count, to_eval)
 
+
 @OperatorFactory.register
 class _SoftmaxOperator(_Operator):
     op_type = "Softmax"
@@ -665,3 +747,20 @@ class _SoftmaxOperator(_Operator):
         to_eval = parser.get('to_eval', True)
         out_dtype = op_info.output_tensors[0].dtype
         self._snippet = SoftmaxOpSnippet(inputs, output, out_dtype, ref_count, to_eval)
+
+
+@OperatorFactory.register
+class _GatherOperator(_Operator):
+
+  op_type = "Gather" # tf op type
+
+  def __init__(self, op_info, **kwargs):
+    _Operator.__init__(self)
+    inputs = [tensor_info.name for tensor_info in op_info.input_tensors]
+    output = op_info.output_tensors[0].name
+    tf_dtype = op_info.input_tensors[0].dtype
+    parser = NamescopedKWArgsParser(RefCntOptimizer.KWARGS_NAMESCOPE, 
+                                    op_info.op_attr)
+    ref_count = parser.get('ref_counts', [0])[0]
+    to_eval = parser.get('to_eval', False)
+    self._snippet = GatherOpSnippet(inputs, output, tf_dtype, ref_count, to_eval)

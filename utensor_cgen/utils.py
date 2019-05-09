@@ -188,7 +188,7 @@ class NArgsKwargsParam(NArgsParam):
   _trans_name_patrn = re.compile(r"(\w[\w]*)\(?")
 
   def convert(self, value, param, ctx):
-    args = super().convert(value, param, ctx)
+    args = super(NArgsKwargsParam, self).convert(value, param, ctx)
     return [self._parse_kwargs(arg) for arg in args]
   
   def _parse_kwargs(self, arg):

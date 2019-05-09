@@ -91,7 +91,7 @@ def convert_graph(pb_file, output, data_dir, embed_data_dir, save_graph,
 @click.argument('model_file', required=True, metavar='MODEL.{pb,pkl}')
 def show_graph(model_file, **kwargs):
   _, ext = os.path.splitext(model_file)
-  if ext == '.pb':
+  if ext == '.pb' or ext == '.pbtxt':
     _show_pb_file(model_file, **kwargs)
   elif ext == '.pkl':
     import pickle

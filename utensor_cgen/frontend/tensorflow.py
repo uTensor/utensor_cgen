@@ -69,7 +69,7 @@ class GraphDefParser(Parser):
     if pb_file[-3:] == ".pb":
       with open(pb_file, 'rb') as fid:
         graph_def.ParseFromString(fid.read())
-    elif pb_file[-3:] == ".pbtxt":
+    elif pb_file[-6:] == ".pbtxt":
       with open(pb_file, 'r') as fid:
         text_format.Parse(fid.read(), graph_def)
     else:
