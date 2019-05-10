@@ -1,8 +1,6 @@
 from collections import deque
 from copy import deepcopy
 from itertools import product
-from random import choices
-from string import ascii_letters, digits
 
 import attr
 from attr.validators import instance_of
@@ -10,7 +8,7 @@ from attr.validators import instance_of
 from utensor_cgen.ir import (MetaOperationInfo, OperationInfo, uTensorGraph,
                              uTensorGraphView)
 from utensor_cgen.matcher._morphism import Morphism
-from utensor_cgen.utils import (ops_bfs_queue, prune_graph,
+from utensor_cgen.utils import (ops_bfs_queue, prune_graph, random_str,
                                 topologic_order_graph)
 
 __all__ = ["uTensorGraphMatcher"]
@@ -78,7 +76,9 @@ class OpEqualityDelegate(object):
 
     is_eq = False
     equivalent_ops = []
-    if sub_op.op_type == patrn_op.op_type and sub_op.op_type not in cls._association_map:
+    if sub_op is None or patrn_op is None:
+      pass
+    elif sub_op.op_type == patrn_op.op_type and sub_op.op_type not in cls._association_map:
       is_eq = True
       equivalent_ops = [patrn_op]
     elif sub_op.op_type == patrn_op.op_type:
@@ -102,9 +102,8 @@ class OpEqualityDelegate(object):
       is_eq = True
       morphism = cls._compatibility_map[sub_op.op_type][patrn_op.op_type]
       equivalent_ops = [MetaOperationInfo(op_info=sub_op, morphism=morphism)]
-    elif not patrn_op.input_tensors and \
-      patrn_op.op_type == 'Placeholder':
-      # match input node which is a placeholder anyway
+    elif patrn_op.is_input_op:
+      # match input node anyway
       is_eq = True
       equivalent_ops = [sub_op]
 
@@ -143,7 +142,17 @@ class uTensorGraphMatcher(object):
         states = []
         for state in visited_states:
           if state.is_done:
-            yield state.match
+            input_checked = True
+            for patrn_op in self.pattern_ugraph.input_ops:
+              subj_op = state.match.patrn2subj_op_map[patrn_op.name]
+              if len(subj_op.input_tensors) != len(patrn_op.input_tensors):
+                input_checked = False
+                break
+              for (patrn_tensor, subj_tensor) in zip(patrn_op.input_tensors, subj_op.input_tensors):
+                state.match.subj2patrn_tensor_map[subj_tensor.name] = patrn_tensor
+                state.match.patrn2subj_tensor_map[patrn_tensor.name] = subj_tensor
+            if input_checked:
+              yield state.match
           else:
             states.append(state)
 
@@ -210,7 +219,7 @@ class uTensorGraphMatch(object):
   def update_op_map(self, pattern_op, subj_op):
     self.patrn2subj_op_map[pattern_op.name] = subj_op
     self.subj2patrn_op_map[subj_op.name] = pattern_op
-    for pattern_tensor, target_tensor in zip(pattern_op.input_tensors, subj_op.input_tensors):
+    for pattern_tensor, target_tensor in zip(pattern_op.output_tensors, subj_op.output_tensors):
       self.patrn2subj_tensor_map[pattern_tensor.name] = target_tensor
       self.subj2patrn_tensor_map[target_tensor.name] = pattern_tensor
   
@@ -263,13 +272,9 @@ class uTensorGraphMatch(object):
       a *new* graph with matched subgraph replaced with the graph given by the callback
     """
     # build a matched subgraph and pass it to callback
-    # input_map (dict): 
+    # input/output_map (dict): 
     #  {
-    #     (input op name of pattern graph, index) : (op name of replacing graph, index)
-    #  }
-    # output_map (dict):
-    #  {
-    #     (output op name of pattern graph, index) : (op name of replacing graph, index)
+    #     tensor in pattern graph : tensor in replacing graph
     #  }
     replace_ugraph, input_map, output_map = callback(self)
     replaceible, reasons = self._is_replacible(replace_ugraph, input_map, output_map)
@@ -283,13 +288,19 @@ class uTensorGraphMatch(object):
     new_ugraph = deepcopy(self.subject_ugraph)
     subj_graph_view = self.subject_graph_view
     # replacing input tensors
-    for (patrn_op_name, patrn_idx), (repl_op_name, repl_idx) in input_map.items():
-      subj_op = self.patrn2subj_op_map[patrn_op_name]
-      subj_in_tensor = subj_op.input_tensors[patrn_idx]
-      repl_op = replace_ugraph.ops_info[repl_op_name]
-      repl_op.input_tensors[repl_idx] = subj_in_tensor
+    for patrn_in_tensor, repl_in_tensor in input_map.items():
+      subj_tensor = self.patrn2subj_tensor_map[patrn_in_tensor.name]
+      for op in repl_in_tensor.output_nodes:
+        for i, in_tensor in enumerate(op.input_tensors):
+          if in_tensor.name == repl_in_tensor.name:
+            op.input_tensors[i] = subj_tensor 
     # replacing output tensors
-
+    for patrn_out_tensor, repl_out_tensor in output_map.items():
+      subj_tensor = self.patrn2subj_tensor_map[patrn_out_tensor.name]
+      for op in subj_tensor.output_nodes:
+        for i, in_tensor in enumerate(op.input_tensors):
+          if in_tensor.name == subj_tensor.name:
+            op.input_tensors[i] = repl_out_tensor
     new_ugraph = prune_graph(new_ugraph)
     return new_ugraph
 
@@ -324,23 +335,15 @@ class uTensorGraphMatch(object):
         )
     return replacible, reasons
 
-  CHARSET = ascii_letters + digits
-
   @classmethod
   def _random_suffix(cls, length=8):
-    chars = choices(cls.CHARSET, k=length)
-    return ''.join(chars)
+    return random_str(length)
 
   @classmethod
   def new_ugraph_with_suffix(cls, ugraph, input_map, output_map, suffix=None):
     if suffix is None:
       suffix = cls._random_suffix()
-    new_input_map = {}
-    for (op_name, idx), v in input_map.items():
-      new_input_map[('{}_{}'.format(op_name, suffix), idx)] = v
-    new_output_map = {}
-    for (op_name, idx), v in output_map.items():
-      new_output_map[('{}_{}'.format(op_name, suffix), idx)] = v
+    
     new_ugraph = deepcopy(ugraph)
     new_ugraph.output_nodes = [
       '{}_{}'.format(name, suffix) for name in ugraph.output_nodes
@@ -365,6 +368,33 @@ class uTensorGraphMatch(object):
     for op_name in ops_to_remove:
       new_ugraph.ops_info.pop(op_name)
     new_ugraph.ops_info = new_ops_info
+    new_input_map = {}
+    for op, v in input_map.items():
+      new_op = deepcopy(op, {'ugraph': new_ugraph})
+      new_op.name = '{}_{}'.format(op.name, suffix)
+      for in_tensor in new_op.input_tensors:
+        op_name, idx = in_tensor.name.split(':')
+        in_tensor.op_name = '{}_{}'.format(op_name, suffix)
+        in_tensor.name = '{}:{}'.format(in_tensor.op_name, idx)
+      for out_tensor in new_op.output_tensors:
+        op_name, idx = out_tensor.name.split(':')
+        out_tensor.op_name = '{}_{}'.format(op_name, suffix)
+        out_tensor.name = '{}:{}'.format(out_tensor.op_name, idx)
+      new_input_map[new_op] = v
+    new_output_map = {}
+    for op, v in output_map.items():
+      new_op = deepcopy(op, {'ugraph': new_ugraph})
+      new_op.name = '{}_{}'.format(op.name, suffix)
+      for in_tensor in new_op.input_tensors:
+        op_name, idx = in_tensor.name.split(':')
+        in_tensor.op_name = '{}_{}'.format(op_name, suffix)
+        in_tensor.name = '{}:{}'.format(in_tensor.op_name, idx)
+      for out_tensor in new_op.output_tensors:
+        op_name, idx = out_tensor.name.split(':')
+        out_tensor.op_name = '{}_{}'.format(op_name, suffix)
+        out_tensor.name = '{}:{}'.format(out_tensor.op_name, idx)
+      new_output_map[new_op] = v
+    
     return new_ugraph, new_input_map, new_output_map
 
   @property

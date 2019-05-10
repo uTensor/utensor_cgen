@@ -4,6 +4,8 @@ import re
 from ast import literal_eval
 from collections import deque
 from copy import deepcopy
+from random import choices
+from string import ascii_letters, digits
 
 import numpy as np
 from click.types import ParamType
@@ -274,7 +276,9 @@ def ops_bfs_queue(ugraph, init_nodes=None):
 
   while queue:
     op = queue.popleft()
-    if op.name in visited:
+    if op is None or op.name in visited:
+      # op is None => traversal via a null tensor
+      # or been visited before
       continue
     visited.add(op.name)
     queue.extend(op.input_nodes)
@@ -322,3 +326,8 @@ def prune_graph(ugraph):
   for op_name in ops_to_remove:
     new_ugraph.ops_info.pop(op_name)
   return new_ugraph
+
+
+def random_str(length=8):
+  chars = choices(ascii_letters+digits, k=length)
+  return ''.join(chars)

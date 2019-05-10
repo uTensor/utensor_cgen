@@ -15,7 +15,7 @@ from tensorflow.core.framework.tensor_pb2 import TensorProto as _TensorProto
 from tensorflow.core.framework.tensor_shape_pb2 import \
     TensorShapeProto as _TensorShapeProto
 from tensorflow.core.framework.types_pb2 import DataType as _DataType
-from utensor_cgen.utils import topologic_order_graph
+from utensor_cgen.utils import random_str, topologic_order_graph
 
 from .converter import AttrValueConverter, ConverterFactory
 
@@ -38,13 +38,19 @@ class IRBase(object):
   def all_supported_backends(self):
     return ['tensorflow']
 
+  def __hash__(self):
+    return id(self)
 
-@attr.s
+
+@attr.s(cmp=False)
 class TensorInfo(IRBase, _NoShallowCopyMixin):
   """
   name : str
   dtype : numpy.dtype
   shape : list
+
+  TODO: the need for null tensor info, that is,
+  a tensor which may not be attached to an op
   """
   name = attr.ib(validator=instance_of(six.text_type))
   op_name = attr.ib(validator=instance_of(six.text_type))
@@ -92,6 +98,24 @@ class TensorInfo(IRBase, _NoShallowCopyMixin):
     op = self.op
     out_tnames = [t_info.name for t_info in op.output_tensors]
     return out_tnames.index(self.name)
+  
+  _NULL_PREFIX = 'utensor_null'
+
+  @classmethod
+  def make_null_tensor(cls, ugraph):
+    op_name = '{}_{}'.format(cls._NULL_PREFIX, random_str())
+    name = '{}:0'.format(op_name)
+    return cls(
+      name=name,
+      op_name=op_name,
+      dtype=np.dtype('float'),
+      shape=None,
+      ugraph=ugraph
+    )
+  
+  @property
+  def is_null_tensor(self):
+    return self.op_name.startswith(self._NULL_PREFIX)
 
   def __deepcopy__(self, memo):
     new_tensor = TensorInfo(name=self.name,
@@ -102,7 +126,7 @@ class TensorInfo(IRBase, _NoShallowCopyMixin):
     return new_tensor
 
 
-@attr.s
+@attr.s(cmp=False)
 class OperationInfo(IRBase, _NoShallowCopyMixin):
   """
   name : str
@@ -166,6 +190,8 @@ class OperationInfo(IRBase, _NoShallowCopyMixin):
   def input_nodes(self):
     in_ops = []
     for tensor in self.input_tensors:
+      if tensor.op is None:
+        continue
       if tensor.op_name not in in_ops:
         in_ops.append(tensor.op_name)
     return [self._ugraph.ops_info.get(name, None) for name in in_ops]
@@ -187,6 +213,25 @@ class OperationInfo(IRBase, _NoShallowCopyMixin):
     False: otherwise
     """
     return None in self.input_nodes
+  
+  @property
+  def is_input_op(self):
+    return all(
+      [tensor.op_name not in self._ugraph.ops_info 
+       for tensor in self.input_tensors]
+    )
+
+  def add_null_input_tensor(self, idx=-1):
+    if idx > len(self.input_tensors):
+      raise ValueError(
+        "can't insert null tensor at {} as {} input tensors present".format(
+          idx, len(self,input_tensors)
+        )
+      )
+    null_tensor = TensorInfo.make_null_tensor(ugraph=self._ugraph)
+    self.input_tensors.insert(idx, null_tensor)
+    self.n_inputs += 1
+    return null_tensor
 
   def __attrs_post_init__(self):
     skip_pattern = re.compile(r'_utensor_[^_]*')
@@ -218,6 +263,8 @@ class OperationInfo(IRBase, _NoShallowCopyMixin):
     return op_info
 
   def copy_into_graph(self, ugraph):
+    """experimental, don't use
+    """
     return deepcopy(self, {'ugraph': ugraph})
 
 
@@ -231,7 +278,7 @@ class MetaOperationInfo(OperationInfo):
     return getattr(self._op_info, name)
 
 
-@attr.s
+@attr.s(cmp=False)
 class uTensorGraph(IRBase, _NoShallowCopyMixin):
   """
   Attributes
@@ -285,26 +332,28 @@ class uTensorGraph(IRBase, _NoShallowCopyMixin):
   
   @property
   def output_tensors(self):
-    out_tensors = []
+    out_tensors = set([])
     for op in self.output_ops:
       for tensor in op.output_tensors:
-        out_tensors.append(tensor)
+        out_tensors.add(tensor)
     return out_tensors
 
   @property
   def input_ops(self):
     ops = []
     for op in self.ops_info.values():
-      if not op.input_tensors:
+      if not op.input_tensors or all(
+        [tensor.is_null_tensor for tensor in op.input_tensors]
+      ):
         ops.append(op)
     return ops
   
   @property
   def input_tensors(self):
-    in_tensors = []
+    in_tensors = set([])
     for op in self.input_ops:
       for tensor in op.input_tensors:
-        in_tensors.append(tensor)
+        in_tensors.add(tensor)
     return in_tensors
   
   @property
@@ -370,7 +419,7 @@ class uTensorGraph(IRBase, _NoShallowCopyMixin):
     return new_graph
 
 
-@attr.s
+@attr.s(cmp=False)
 class uTensorGraphView(IRBase, _NoShallowCopyMixin):
 
   _ugraph = attr.ib(type=uTensorGraph)
@@ -391,7 +440,7 @@ class uTensorGraphView(IRBase, _NoShallowCopyMixin):
 
   @property
   def input_ops(self):
-    ops = []
+    ops = set([])
     for name in self.topo_order:
       op = self.ops_info[name]
       input_tensors = op.input_tensors
@@ -399,7 +448,7 @@ class uTensorGraphView(IRBase, _NoShallowCopyMixin):
         tensor.op.name not in self.ops_info
         for tensor in input_tensors
       ]):
-        ops.append(op)
+        ops.add(op)
     return ops
   
   @property
