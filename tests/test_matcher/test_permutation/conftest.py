@@ -56,5 +56,5 @@ def subject_ugraph1_2():
         sub_add1 = tf.add(sub_input1, sub_add0, name='sub_add1')
         sub_output = tf.multiply(sub_add1, sub_input2, name='sub_output')
     ugraph = GraphDefParser.parse(graph.as_graph_def(), [sub_output.op.name])
-    ugraph.ops_info[sub_input0.op.name].add_null_input_tensor()
+    ugraph.ops_info[sub_input1.op.name].add_null_input_tensor()
     return ugraph

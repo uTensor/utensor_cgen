@@ -19,9 +19,10 @@ def test_id_match(patrn_ugraph):
 
 def test_match_sub1(patrn_ugraph, subject_ugraph1):
     matcher = uTensorGraphMatcher(patrn_ugraph)
-    matches = matcher.match(subject_ugraph1)
+    matches = matcher.match_all(subject_ugraph1)
     assert matches, 'expecting matches, get {} matches'.format(len(matches))
     match = matches[0]
+    assert len(matches) == 1, 'should be exactly one match, get {}'.format(len(matches))
     assert match.patrn2subj_op_map['input0'].name == 'sub_input0'
     assert match.patrn2subj_op_map['input1'].name == 'sub_input1'
     assert match.patrn2subj_op_map['add0'].name == 'sub_add0'
@@ -39,10 +40,10 @@ def test_match_sub1_1(patrn_ugraph, subject_ugraph1_1):
 
 def test_match_sub1_2(patrn_ugraph, subject_ugraph1_2):
     matcher = uTensorGraphMatcher(patrn_ugraph)
-    matches = matcher.match_all(subject_ugraph1_2)
+    matches = matcher.match(subject_ugraph1_2)
     assert matches, 'expecting matches, get {} matches'.format(len(matches))
     match = matches[0]
-    assert match.patrn2subj_op_map['input0'].name == 'sub_input0'
-    assert match.patrn2subj_op_map['input1'].name == 'sub_input1'
+    assert match.patrn2subj_op_map['input0'].name == 'sub_input1'
+    assert match.patrn2subj_op_map['input1'].name == 'sub_input0'
     assert match.patrn2subj_op_map['add0'].name == 'sub_add0'
     assert match.patrn2subj_op_map['output'].name == 'sub_add1'
