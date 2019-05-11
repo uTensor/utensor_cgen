@@ -5,7 +5,8 @@ import sys
 import click
 import pkg_resources
 
-from .utils import NArgsParam, NArgsKwargsParam
+from utensor_cgen.backend.operators import OperatorFactory
+from utensor_cgen.utils import NArgsKwargsParam, NArgsParam
 
 
 def _get_pb_model_name(path):
@@ -111,6 +112,7 @@ def _show_pb_file(pb_file, **kwargs):
 
 def _show_ugraph(ugraph, oneline=False):
   import textwrap
+  unknown_ops = set([])
   if oneline:
     tmpl = click.style("{op_name} ", fg='yellow', bold=True) + \
       "op_type: {op_type}, inputs: {inputs}, outputs: {outputs}"
@@ -120,6 +122,8 @@ def _show_ugraph(ugraph, oneline=False):
                         inputs=[tensor.name for tensor in op_info.input_tensors],
                         outputs=[tensor.name for tensor in op_info.output_tensors])
       click.echo(msg)
+      if not OperatorFactory.is_supported(op_info.op_type):
+        unknown_ops.add(op_info)
   else:
     tmpl = click.style('op_name: {op_name}\n', fg='yellow', bold=True) + \
     '''\
@@ -139,7 +143,17 @@ def _show_ugraph(ugraph, oneline=False):
         inputs=op_info.input_tensors,
         outputs=op_info.output_tensors)
       paragraphs.append(op_str)
+      if not OperatorFactory.is_supported(op_info.op_type):
+        unknown_ops.add(op_info)
     click.echo('\n'.join(paragraphs))
+  if unknown_ops:
+    click.echo(
+      click.style('Unknown Ops Detected', fg='red', bold=True)
+    )
+    for op_info in unknown_ops:
+      click.echo(
+        click.style('    {}: {}'.format(op_info.name, op_info.op_type), fg='red')
+      )
   return 0
 
 if __name__ == '__main__':

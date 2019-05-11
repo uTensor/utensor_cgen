@@ -33,9 +33,15 @@ class OperatorFactory():
 
   @classmethod
   def support_op_types(cls):
-    """Return the list of all supported ops
+    """Return the set of all supported ops
     """
-    return list(cls._operators.keys())
+    return set(cls._operators.keys())
+  
+  @classmethod
+  def is_supported(cls, op_type):
+    if op_type != 'Placeholder' and op_type not in cls._operators:
+      return False
+    return True
 
 
 class _Operator(object):
