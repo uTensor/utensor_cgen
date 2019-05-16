@@ -6,6 +6,9 @@ class MemoryAllocation:
 
     def __setattr__(self,att,value):
         self._address_map[att] = value
+    
+    def __getattr__(self, att):
+        return self._address_map[att]
 
 class DataManager:
     InfoCenterMap = {
@@ -26,12 +29,18 @@ class DataManager:
 
     def __getattr__(self,attr):
         cls_instance = self.StorageCenter[attr]
-        return getattr(cls_instance, attr)
+        return cls_instance
 
     def __setattr__(self,attr,value):
         cls_instance = self.StorageCenter[attr]
         k, v= value
         cls_instance.__setattr__(self, k, v)
+    
+    def group(self, op):
+        ret = {}
+        for key, value in self.StorageCenter.items():
+            ret.update({op:  value.op})
+        return ret
 
 
 
