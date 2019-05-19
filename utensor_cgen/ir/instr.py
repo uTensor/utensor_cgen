@@ -1,5 +1,5 @@
 class MemoryAllocation:
-    store_name = "MemoryInfo"
+    _store_name = "address"
     
     def __init__(self):
         self._address_map = {}
@@ -35,13 +35,13 @@ class DataManager:
         cls_instance = self.StorageCenter[attr]
         k, v= value
         cls_instance.__setattr__(self, k, v)
-    
+
     def group(self, op):
         ret = {}
-        for key, value in self.StorageCenter.items():
-            ret.update({op:  value.op})
+        for key, cls_object in self.StorageCenter.items():
+            ans = cls_object.__getattr__(op)
+            ret.update({cls_object._store_name:  ans})
         return ret
-
 
 
 
