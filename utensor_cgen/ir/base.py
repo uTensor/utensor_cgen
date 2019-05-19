@@ -222,6 +222,10 @@ class OperationInfo(IRBase, _NoShallowCopyMixin):
     )
 
   def add_null_input_tensor(self, idx=-1):
+    if self.op_type != 'Placeholder':
+      raise ValueError(
+        'can only add null tensor to op of type Placeholder: %s' % self.op_type
+      )
     if idx > len(self.input_tensors):
       raise ValueError(
         "can't insert null tensor at {} as {} input tensors present".format(
@@ -232,6 +236,13 @@ class OperationInfo(IRBase, _NoShallowCopyMixin):
     self.input_tensors.insert(idx, null_tensor)
     self.n_inputs += 1
     return null_tensor
+  
+  def replace_with_null_input_tensor(self, idx):
+    if idx >= len(self.input_tensors):
+      raise ValueError(
+        'index out of bound: %s' % idx
+      )
+    self.input_tensors[idx] = TensorInfo.make_null_tensor(ugraph=self._ugraph)
 
   def __attrs_post_init__(self):
     skip_pattern = re.compile(r'_utensor_[^_]*')

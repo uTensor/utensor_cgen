@@ -20,7 +20,7 @@ def patrn_ugraph():
 def subject_ugraph1():
     graph = tf.Graph()
     with graph.as_default():
-        sub_input0 = tf.constant([i for i in range(10)], name='sub_input0')
+        sub_input0 = tf.placeholder(name='sub_input0', dtype=tf.int32)
         sub_input1 = tf.constant([i for i in range(10)], name='sub_input1')
         sub_input2 = tf.constant([i for i in range(10)], name='sub_input2')
         sub_add0 = tf.add(sub_input0, sub_input1, name='sub_add0')
@@ -34,7 +34,7 @@ def subject_ugraph1():
 def subject_ugraph1_1():
     graph = tf.Graph()
     with graph.as_default():
-        sub_input0 = tf.constant([i for i in range(10)], name='sub_input0')
+        sub_input0 = tf.placeholder(name='sub_input0', dtype=tf.int32)
         sub_input1 = tf.constant([i for i in range(10)], name='sub_input1')
         sub_input2 = tf.constant([i for i in range(10)], name='sub_input2')
         # permute
@@ -50,7 +50,7 @@ def subject_ugraph1_2():
     graph = tf.Graph()
     with graph.as_default():
         sub_input0 = tf.constant([i for i in range(10)], name='sub_input0')
-        sub_input1 = tf.constant([i for i in range(10)], name='sub_input1')
+        sub_input1 = tf.placeholder(name='sub_input1', dtype=tf.int32)
         sub_input2 = tf.constant([i for i in range(10)], name='sub_input2')
         sub_add0 = tf.add(sub_input0, sub_input1, name='sub_add0')
         sub_add1 = tf.add(sub_input1, sub_add0, name='sub_add1')

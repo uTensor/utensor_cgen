@@ -80,7 +80,7 @@ class OpEqualityDelegate(object):
       pass
     elif sub_op.op_type == patrn_op.op_type and sub_op.op_type not in cls._association_map:
       is_eq = True
-      equivalent_ops = [patrn_op]
+      equivalent_ops = [sub_op]
     elif sub_op.op_type == patrn_op.op_type:
       is_eq = True
       equivalent_ops = []
@@ -172,7 +172,6 @@ class uTensorGraphMatcher(object):
   def _visit(self, states):
     # visit the state with a top-down bfs fashion
     # return the states that are still matched
-    # import pdb; pdb.set_trace()
     new_states = []
     for state in states:
       match = state.match
@@ -182,10 +181,19 @@ class uTensorGraphMatcher(object):
       if is_eq:
         for eq_op in eq_ops:
           new_sub_bfs_queue = deque(state.sub_bfs_queue)
-          for _ in eq_op.input_nodes:
-            new_sub_bfs_queue.popleft()
-          for node in eq_op.input_nodes[::-1]:
-            new_sub_bfs_queue.insert(0, node)
+          in_nodes = eq_op.input_nodes
+          in_names = set([op.name for op in in_nodes])
+          in_idx = 0
+          for i, op in enumerate(new_sub_bfs_queue):
+            if op.name in in_names:
+              new_sub_bfs_queue[i] = in_nodes[in_idx]
+              in_idx += 1
+              if in_idx >= len(in_nodes):
+                break
+          # for _ in eq_op.input_nodes:
+          #   new_sub_bfs_queue.popleft()
+          # for node in eq_op.input_nodes[::-1]:
+          #   new_sub_bfs_queue.insert(0, node)
           new_state = _MatchState(
             match=uTensorGraphMatch(
               pattern_ugraph=match.pattern_ugraph,
