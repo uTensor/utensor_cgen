@@ -5,9 +5,8 @@ from copy import deepcopy
 import attr
 import numpy as np
 import six
-from attr.validators import instance_of
-
 import tensorflow as tf
+from attr.validators import instance_of
 from tensorflow.core.framework.attr_value_pb2 import AttrValue as _AttrValue
 from tensorflow.core.framework.attr_value_pb2 import \
     NameAttrList as _NameAttrList
@@ -15,6 +14,7 @@ from tensorflow.core.framework.tensor_pb2 import TensorProto as _TensorProto
 from tensorflow.core.framework.tensor_shape_pb2 import \
     TensorShapeProto as _TensorShapeProto
 from tensorflow.core.framework.types_pb2 import DataType as _DataType
+
 from utensor_cgen.utils import random_str, topologic_order_graph
 
 from .converter import AttrValueConverter, ConverterFactory
@@ -37,9 +37,6 @@ class IRBase(object):
   @property
   def all_supported_backends(self):
     return ['tensorflow']
-
-  def __hash__(self):
-    return id(self)
 
 
 @attr.s(cmp=False)
@@ -124,6 +121,14 @@ class TensorInfo(IRBase, _NoShallowCopyMixin):
                             dtype=self.dtype,
                             shape=deepcopy(self.shape, memo))
     return new_tensor
+  
+  def __hash__(self):
+    return hash(self.name)
+  
+  def __eq__(self, other):
+    if not isinstance(other, type(self)):
+      return False
+    return self.name == other.name
 
 
 @attr.s(cmp=False)
@@ -273,6 +278,14 @@ class OperationInfo(IRBase, _NoShallowCopyMixin):
                             ugraph=memo['ugraph'])
     return op_info
 
+  def __hash__(self):
+    return hash(self.name)
+  
+  def __eq__(self, other):
+    if not isinstance(other, type(self)):
+      return False
+    return self.name == other.name
+  
   def copy_into_graph(self, ugraph):
     """experimental, don't use
     """
@@ -404,10 +417,8 @@ class uTensorGraph(IRBase, _NoShallowCopyMixin):
       raise ValueError('expecting OperationInfo, get {}'.format(type(op)))
     if op.name in self.ops_info:
       raise ValueError('duplicate op detected, {}'.format(op.name))
-    op.ugraph = self
+    op._ugraph = self
 
-    # if(op.name == 'convert_uint8_q7_Relu/eightbit_transpose_0_q7'):
-    #   import pdb; pdb.set_trace()
     self.ops_info[op.name] = op
     topologic_order_graph(self)
 
@@ -418,14 +429,16 @@ class uTensorGraph(IRBase, _NoShallowCopyMixin):
     self.topo_order.remove(op_name)
 
   def __deepcopy__(self, memo):
-    new_graph = uTensorGraph(output_nodes=self.output_nodes)
+    new_graph = uTensorGraph(
+      output_nodes=self.output_nodes,
+      backend=self._backend
+    )
     memo['ugraph'] = new_graph
 
     new_graph.ops_info = {
       k: deepcopy(v, memo)
       for k, v in self.ops_info.items()
     }
-    new_graph._backend = self._backend
     topologic_order_graph(new_graph)
     return new_graph
 

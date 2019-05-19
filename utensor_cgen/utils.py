@@ -7,13 +7,13 @@ from copy import deepcopy
 from random import choices
 from string import ascii_letters, digits
 
-import numpy as np
-from click.types import ParamType
-
 import idx2numpy as idx2np
+import numpy as np
 import tensorflow as tf
+from click.types import ParamType
 from tensorflow.python.framework import graph_util
 from tensorflow.tools.graph_transforms import TransformGraph
+
 from utensor_cgen.logger import logger
 
 __all__ = ["save_idx", "save_consts", "save_graph", "log_graph",
@@ -250,7 +250,9 @@ def topologic_order_graph(ugraph):
       raise ValueError("Input graph is not a DAG")
 
     visited.add(node_name)
-    op_info = ugraph.ops_info[node_name]
+    op_info = ugraph.ops_info.get(node_name, None)
+    if not op_info:
+      return
 
     for t_info in op_info.input_tensors:
       op_name = parse_tensor_name(t_info.name)[0]
@@ -307,7 +309,7 @@ def prune_graph(ugraph):
     tensors_in = set([t.name for t in ugraph.ops_info[op_name].input_tensors])
     in_ops = set()
     for it_node in ugraph.topo_order:
-      if(it_node == op_name):
+      if it_node == op_name:
         continue
       it_tensors_out = [t.name for t in ugraph.ops_info[it_node].output_tensors]
       if not tensors_in.isdisjoint(it_tensors_out):

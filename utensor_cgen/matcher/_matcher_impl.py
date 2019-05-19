@@ -190,10 +190,6 @@ class uTensorGraphMatcher(object):
               in_idx += 1
               if in_idx >= len(in_nodes):
                 break
-          # for _ in eq_op.input_nodes:
-          #   new_sub_bfs_queue.popleft()
-          # for node in eq_op.input_nodes[::-1]:
-          #   new_sub_bfs_queue.insert(0, node)
           new_state = _MatchState(
             match=uTensorGraphMatch(
               pattern_ugraph=match.pattern_ugraph,
@@ -294,21 +290,36 @@ class uTensorGraphMatch(object):
       replace_ugraph, input_map, output_map, suffix
     )
     new_ugraph = deepcopy(self.subject_ugraph)
+    for op in replace_ugraph.ops_info.values():
+      op._ugraph = new_ugraph
+      for tensor in op.input_tensors:
+        tensor._ugraph = new_ugraph
+      for tensor in op.output_tensors:
+        tensor._ugraph = new_ugraph
+    for tensor in input_map.values():
+      tensor._ugraph = new_ugraph
+    for tensor in output_map.values():
+      tensor._ugraph = new_ugraph
     subj_graph_view = self.subject_graph_view
-    # replacing input tensors
-    for patrn_in_tensor, repl_in_tensor in input_map.items():
-      subj_tensor = self.patrn2subj_tensor_map[patrn_in_tensor.name]
-      for op in repl_in_tensor.output_nodes:
-        for i, in_tensor in enumerate(op.input_tensors):
-          if in_tensor.name == repl_in_tensor.name:
-            op.input_tensors[i] = subj_tensor 
     # replacing output tensors
-    for patrn_out_tensor, repl_out_tensor in output_map.items():
-      subj_tensor = self.patrn2subj_tensor_map[patrn_out_tensor.name]
-      for op in subj_tensor.output_nodes:
-        for i, in_tensor in enumerate(op.input_tensors):
-          if in_tensor.name == subj_tensor.name:
+    for out_tensor in subj_graph_view.output_tensors:
+      repl_out_tensor = output_map[self.subj2patrn_tensor_map[out_tensor.name]]
+      out_ops = [new_ugraph.ops_info[op.name] for op in out_tensor.op.output_nodes]
+      for op in out_ops:
+        for i, tensor in enumerate(op.input_tensors):
+          if tensor.name == out_tensor.name:
             op.input_tensors[i] = repl_out_tensor
+    # replacing input tensors
+    inv_input_map = dict([(v, k) for k, v in input_map.items()])
+    for op in replace_ugraph.input_ops:
+      for i, repl_in_tensor in enumerate(op.input_tensors):
+        patrn_in_tensor = inv_input_map[repl_in_tensor]
+        subj_in_tensor = self.patrn2subj_tensor_map[patrn_in_tensor.name]
+        op.input_tensors[i] = subj_in_tensor
+    new_ugraph.ops_info.update(
+      replace_ugraph.ops_info
+    )
+    topologic_order_graph(new_ugraph)
     new_ugraph = prune_graph(new_ugraph)
     return new_ugraph
 
@@ -328,15 +339,17 @@ class uTensorGraphMatch(object):
     if len(output_map) != len(subj_graph_view.output_tensors):
       replacible = False
       reasons.append('the number of output tensors does not match')
-    for in_patrn_op_name, _ in input_map:
-      if not in_patrn_op_name in self.pattern_ugraph.ops_info:
+    for in_patrn_tensor, _ in input_map.items():
+      in_tensor_names = set([t.name for t in self.pattern_ugraph.input_tensors])
+      if not in_patrn_tensor.name in in_tensor_names:
         replacible = False
         reasons.append(
           '{} is not found in the pattern graph'.format(in_patrn_op_name)
         )
         continue
-    for out_patrn_op_name, _ in output_map:
-      if not out_patrn_op_name in self.pattern_ugraph.ops_info:
+    for out_patrn_tensor, _ in output_map.items():
+      out_tensor_names = set([t.name for t in self.pattern_ugraph.output_tensors])
+      if not out_patrn_tensor.name in out_tensor_names:
         replacible = False
         reasons.append(
           '{} is not found in the pattern graph'.format(out_patrn_op_name)
@@ -357,52 +370,39 @@ class uTensorGraphMatch(object):
       '{}_{}'.format(name, suffix) for name in ugraph.output_nodes
     ]
     new_ugraph.topo_order = ['{}_{}'.format(name, suffix) for name in ugraph.topo_order]
-    ops_to_remove = set([])
     new_ops_info = {}
     for ori_op_name, op in new_ugraph.ops_info.items():
+      new_op = deepcopy(op, {'ugraph': new_ugraph})
       new_op_name = '{}_{}'.format(ori_op_name, suffix)
-      op.name = new_op_name
-      for tensor in op.output_tensors:
+      new_op.name = new_op_name
+      for tensor in new_op.output_tensors:
         tensor_idx = tensor.name.split(':')[1]
-        tensor.name = '{}_{}:{}'.format(tensor.op_name, suffix, tensor_idx)
         tensor.op_name = new_op_name
-      for tensor in op.input_tensors:
+        tensor.name = '{}:{}'.format(new_op_name, tensor_idx)
+      for tensor in new_op.input_tensors:
         in_op_name, tensor_idx = tensor.name.split(':')
         new_in_op_name = '{}_{}'.format(in_op_name, suffix)
         tensor.name = '{}:{}'.format(new_in_op_name, tensor_idx)
         tensor.op_name = new_in_op_name
-      ops_to_remove.add(ori_op_name)
-      new_ops_info[new_op_name] = op
-    for op_name in ops_to_remove:
-      new_ugraph.ops_info.pop(op_name)
+      new_ops_info[new_op_name] = new_op
     new_ugraph.ops_info = new_ops_info
     new_input_map = {}
-    for op, v in input_map.items():
-      new_op = deepcopy(op, {'ugraph': new_ugraph})
-      new_op.name = '{}_{}'.format(op.name, suffix)
-      for in_tensor in new_op.input_tensors:
-        op_name, idx = in_tensor.name.split(':')
-        in_tensor.op_name = '{}_{}'.format(op_name, suffix)
-        in_tensor.name = '{}:{}'.format(in_tensor.op_name, idx)
-      for out_tensor in new_op.output_tensors:
-        op_name, idx = out_tensor.name.split(':')
-        out_tensor.op_name = '{}_{}'.format(op_name, suffix)
-        out_tensor.name = '{}:{}'.format(out_tensor.op_name, idx)
-      new_input_map[new_op] = v
+    for k, in_tensor in input_map.items():
+      new_in_tensor = deepcopy(in_tensor, {'ugraph': new_ugraph})
+      op_name, idx = in_tensor.name.split(':')
+      new_op_name = '{}_{}'.format(op_name, suffix)
+      new_in_tensor.op_name = new_op_name
+      new_in_tensor.name = '{}:{}'.format(new_op_name, idx)
+      new_input_map[k] = new_in_tensor
     new_output_map = {}
-    for op, v in output_map.items():
-      new_op = deepcopy(op, {'ugraph': new_ugraph})
-      new_op.name = '{}_{}'.format(op.name, suffix)
-      for in_tensor in new_op.input_tensors:
-        op_name, idx = in_tensor.name.split(':')
-        in_tensor.op_name = '{}_{}'.format(op_name, suffix)
-        in_tensor.name = '{}:{}'.format(in_tensor.op_name, idx)
-      for out_tensor in new_op.output_tensors:
-        op_name, idx = out_tensor.name.split(':')
-        out_tensor.op_name = '{}_{}'.format(op_name, suffix)
-        out_tensor.name = '{}:{}'.format(out_tensor.op_name, idx)
-      new_output_map[new_op] = v
-    
+    for k, out_tensor in output_map.items():
+      new_out_tensor = deepcopy(out_tensor, {'ugraph': new_ugraph})
+      op_name, idx = out_tensor.name.split(':')
+      new_op_name = '{}_{}'.format(op_name, suffix)
+      new_out_tensor.op_name = new_op_name
+      new_out_tensor.name = '{}:{}'.format(new_op_name, idx)
+      new_output_map[k] = new_out_tensor
+
     return new_ugraph, new_input_map, new_output_map
 
   @property
