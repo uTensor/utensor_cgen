@@ -6,16 +6,16 @@ from copy import deepcopy
 import attr
 import numpy as np
 import six
-import tensorflow as tf
 from attr.validators import instance_of
-from tensorflow.core.framework.attr_value_pb2 import AttrValue as _AttrValue
-from tensorflow.core.framework.attr_value_pb2 import (
-    NameAttrList as _NameAttrList)
-from tensorflow.core.framework.tensor_pb2 import TensorProto as _TensorProto
-from tensorflow.core.framework.tensor_shape_pb2 import (
-    TensorShapeProto as _TensorShapeProto)
-from tensorflow.core.framework.types_pb2 import DataType as _DataType
 
+import tensorflow as tf
+from tensorflow.core.framework.attr_value_pb2 import AttrValue as _AttrValue
+from tensorflow.core.framework.attr_value_pb2 import \
+    NameAttrList as _NameAttrList
+from tensorflow.core.framework.tensor_pb2 import TensorProto as _TensorProto
+from tensorflow.core.framework.tensor_shape_pb2 import \
+    TensorShapeProto as _TensorShapeProto
+from tensorflow.core.framework.types_pb2 import DataType as _DataType
 from utensor_cgen.utils import topologic_order_graph
 
 from .converter import AttrValueConverter, ConverterFactory
@@ -43,8 +43,8 @@ class TensorInfo(IRBase, _NoShallowCopyMixin):
   dtype : numpy.dtype
   shape : list
   """
-  name = attr.ib(validator=instance_of(six.text_type))
-  op_name = attr.ib(validator=instance_of(six.text_type))
+  name = attr.ib(validator=instance_of(six.string_types))
+  op_name = attr.ib(validator=instance_of(six.string_types))
   dtype = attr.ib(validator=instance_of(np.dtype))
   shape = attr.ib(validator=instance_of((list, type(None))))
   @shape.validator

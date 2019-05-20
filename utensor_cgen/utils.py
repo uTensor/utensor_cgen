@@ -4,13 +4,13 @@ import re
 from ast import literal_eval
 from copy import deepcopy
 
-import idx2numpy as idx2np
 import numpy as np
-import tensorflow as tf
 from click.types import ParamType
+
+import idx2numpy as idx2np
+import tensorflow as tf
 from tensorflow.python.framework import graph_util
 from tensorflow.tools.graph_transforms import TransformGraph
-
 from utensor_cgen.logger import logger
 
 __all__ = ["save_idx", "save_consts", "save_graph", "log_graph",
@@ -185,7 +185,7 @@ class NArgsKwargsParam(NArgsParam):
   _trans_name_patrn = re.compile(r"(\w[\w]*)\(?")
 
   def convert(self, value, param, ctx):
-    args = super().convert(value, param, ctx)
+    args = super(NArgsKwargsParam, self).convert(value, param, ctx)
     return [self._parse_kwargs(arg) for arg in args]
   
   def _parse_kwargs(self, arg):
