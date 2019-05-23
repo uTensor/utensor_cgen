@@ -49,8 +49,8 @@ class TensorInfo(IRBase, _NoShallowCopyMixin):
   TODO: the need for null tensor info, that is,
   a tensor which may not be attached to an op
   """
-  name = attr.ib(validator=instance_of(six.text_type))
-  op_name = attr.ib(validator=instance_of(six.text_type))
+  name = attr.ib(validator=instance_of(six.string_types))
+  op_name = attr.ib(validator=instance_of(six.string_types))
   dtype = attr.ib(validator=instance_of(np.dtype))
 
   shape = attr.ib(validator=instance_of((list, type(None))))
