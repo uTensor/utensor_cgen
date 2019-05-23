@@ -109,6 +109,7 @@ class OpEqualityDelegate(object):
 
     return is_eq, equivalent_ops
 
+
 @attr.s
 class uTensorGraphMatcher(object):
 
@@ -206,6 +207,7 @@ class uTensorGraphMatcher(object):
           new_states.append(new_state)
     return new_states
 
+
 @attr.s
 class uTensorGraphMatch(object):
 
@@ -290,25 +292,24 @@ class uTensorGraphMatch(object):
       replace_ugraph, input_map, output_map, suffix
     )
     new_ugraph = deepcopy(self.subject_ugraph)
-    for op in replace_ugraph.ops_info.values():
-      op._ugraph = new_ugraph
-      for tensor in op.input_tensors:
-        tensor._ugraph = new_ugraph
-      for tensor in op.output_tensors:
-        tensor._ugraph = new_ugraph
+    # make replace_ugraph be a subgraph in the new_ugraph
+    replace_ugraph.merge_into(new_ugraph)
     for tensor in input_map.values():
-      tensor._ugraph = new_ugraph
+      tensor.move_into(new_ugraph)
     for tensor in output_map.values():
-      tensor._ugraph = new_ugraph
+      tensor.move_into(new_ugraph)
     subj_graph_view = self.subject_graph_view
     # replacing output tensors
     for out_tensor in subj_graph_view.output_tensors:
       repl_out_tensor = output_map[self.subj2patrn_tensor_map[out_tensor.name]]
-      out_ops = [new_ugraph.ops_info[op.name] for op in out_tensor.op.output_nodes]
+      out_ops = [new_ugraph[op.name] for op in out_tensor.op.output_nodes]
       for op in out_ops:
         for i, tensor in enumerate(op.input_tensors):
           if tensor.name == out_tensor.name:
             op.input_tensors[i] = repl_out_tensor
+      for i, node_name in enumerate(new_ugraph.output_nodes):
+        if node_name == out_tensor.op.name:
+          new_ugraph.output_nodes[i] = repl_out_tensor.op.name
     # replacing input tensors
     inv_input_map = dict([(v, k) for k, v in input_map.items()])
     for op in replace_ugraph.input_ops:

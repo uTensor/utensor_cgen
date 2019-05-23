@@ -5,8 +5,9 @@ from copy import deepcopy
 import attr
 import numpy as np
 import six
-import tensorflow as tf
 from attr.validators import instance_of
+
+import tensorflow as tf
 from tensorflow.core.framework.attr_value_pb2 import AttrValue as _AttrValue
 from tensorflow.core.framework.attr_value_pb2 import \
     NameAttrList as _NameAttrList
@@ -14,7 +15,6 @@ from tensorflow.core.framework.tensor_pb2 import TensorProto as _TensorProto
 from tensorflow.core.framework.tensor_shape_pb2 import \
     TensorShapeProto as _TensorShapeProto
 from tensorflow.core.framework.types_pb2 import DataType as _DataType
-
 from utensor_cgen.utils import random_str, topologic_order_graph
 
 from .converter import AttrValueConverter, ConverterFactory
@@ -78,23 +78,6 @@ class TensorInfo(IRBase, _NoShallowCopyMixin):
   @property
   def backend(self):
     return self._ugraph.backend
-
-  @property
-  def is_dangling(self):
-    op = self.op
-    if not op:
-      return True
-    return op.is_dangling
-  
-  @property
-  def n_th_output(self):
-    if self.is_dangling:
-      raise ValueError(
-        "dangling tensor: {}".format(self.name)
-      )
-    op = self.op
-    out_tnames = [t_info.name for t_info in op.output_tensors]
-    return out_tnames.index(self.name)
   
   _NULL_PREFIX = 'utensor_null'
 
@@ -128,8 +111,13 @@ class TensorInfo(IRBase, _NoShallowCopyMixin):
   def __eq__(self, other):
     if not isinstance(other, type(self)):
       return False
-    return self.name == other.name
+    return (self.name == other.name) and (self._ugraph is other._ugraph)
 
+  def move_into(self, ugraph):
+    """
+    Move Synmatic of the OperationInfo objects
+    """
+    self._ugraph = ugraph
 
 @attr.s(cmp=False)
 class OperationInfo(IRBase, _NoShallowCopyMixin):
@@ -183,6 +171,23 @@ class OperationInfo(IRBase, _NoShallowCopyMixin):
   op_type = attr.ib(type=str)
   op_attr = attr.ib(factory=dict, converter=dict)
 
+  def __attrs_post_init__(self):
+    skip_pattern = re.compile(r'_utensor_[^_]*')
+    if self.op_attr:
+      op_attr = {}
+      for k, v in self.op_attr.items():
+        match = skip_pattern.match(k)
+        if match:
+          op_attr[k] = v
+        else:
+          op_attr[k] = ConverterFactory.get_generic_value(v)
+      self.op_attr = op_attr
+    self._ugraph.ops_info[self.name] = self
+    if not self.n_inputs == len(self.input_tensors):
+      raise ValueError('n_inputs is not equal to the length of input_tensors')
+    if not self.n_outputs == len(self.output_tensors):
+      raise ValueError('n_outputs is not equal to the length of output_tensors')
+
   @property
   def ugraph(self):
     return self._ugraph
@@ -210,14 +215,6 @@ class OperationInfo(IRBase, _NoShallowCopyMixin):
           out_ops.append(op.name)
           break
     return [self._ugraph.ops_info[name] for name in out_ops]
-  
-  @property
-  def is_dangling(self):
-    """
-    True: the op is dangling in the graph
-    False: otherwise
-    """
-    return None in self.input_nodes
   
   @property
   def is_input_op(self):
@@ -249,23 +246,16 @@ class OperationInfo(IRBase, _NoShallowCopyMixin):
       )
     self.input_tensors[idx] = TensorInfo.make_null_tensor(ugraph=self._ugraph)
 
-  def __attrs_post_init__(self):
-    skip_pattern = re.compile(r'_utensor_[^_]*')
-    if self.op_attr:
-      op_attr = {}
-      for k, v in self.op_attr.items():
-        match = skip_pattern.match(k)
-        if match:
-          op_attr[k] = v
-        else:
-          op_attr[k] = ConverterFactory.get_generic_value(v)
-      self.op_attr = op_attr
-    self._ugraph.ops_info[self.name] = self
-    if not self.n_inputs == len(self.input_tensors):
-      raise ValueError('n_inputs is not equal to the length of input_tensors')
-    if not self.n_outputs == len(self.output_tensors):
-      raise ValueError('n_outputs is not equal to the length of output_tensors')
-
+  def move_into(self, ugraph):
+    """
+    Move Synmatic of the OperationInfo objects
+    """
+    self._ugraph = ugraph
+    for tensor in self.input_tensors:
+      tensor.move_into(ugraph)
+    for tensor in self.output_tensors:
+      tensor.move_into(ugraph)
+  
   def __deepcopy__(self, memo):
     op_info = OperationInfo(name=self.name,
                             input_tensors=deepcopy(self.input_tensors, memo),
@@ -284,12 +274,15 @@ class OperationInfo(IRBase, _NoShallowCopyMixin):
   def __eq__(self, other):
     if not isinstance(other, type(self)):
       return False
-    return self.name == other.name
+    return (self.name == other.name) and (self._ugraph is other._ugraph)
   
-  def copy_into_graph(self, ugraph):
-    """experimental, don't use
-    """
-    return deepcopy(self, {'ugraph': ugraph})
+  def __getitem__(self, tensor_idx):
+    num_out_tensors = len(self.output_tensors)
+    if tensor_idx > num_out_tensors:
+      raise IndexError(
+        'index out of bound: {} out of {}'.format(tensor_idx, num_out_tensors)
+      )
+    return self.output_tensors[tensor_idx]
 
 
 class MetaOperationInfo(OperationInfo):
@@ -427,6 +420,26 @@ class uTensorGraph(IRBase, _NoShallowCopyMixin):
       raise ValueError('op not found in the graph: {}'.format(op_name))
     del self.ops_info[op_name]
     self.topo_order.remove(op_name)
+  
+  def merge_into(self, other_ugraph):
+    """
+    NOTE:(IMPORTANT) after this method call, you should
+    consider both the graph and the other ugraph is at a
+    dangling state, which means the output nodes may not
+    be correct, the topological ordering may not be correct
+    ...etc. After all modifications to the graph are done,
+    you may need to call following functions in order to
+    maintain the state of the graph:
+    
+    1. prune_graph (from `utensor_cgen.utils`)
+    2. topologic_order_graph (from `utensor_cgen.utils`)
+    """
+    for op in self.ops_info.values():
+      op._ugraph = other_ugraph
+      for input_tensor in op.input_tensors:
+        input_tensor.move_into(other_ugraph)
+      for output_tensor in op.output_tensors:
+        output_tensor.move_into(other_ugraph)
 
   def __deepcopy__(self, memo):
     new_graph = uTensorGraph(
@@ -441,6 +454,11 @@ class uTensorGraph(IRBase, _NoShallowCopyMixin):
     }
     topologic_order_graph(new_graph)
     return new_graph
+
+  def __getitem__(self, op_name):
+    if op_name not in self.ops_info:
+      raise KeyError('{} not found in the graph'.format(op_name))
+    return self.ops_info[op_name]
 
 
 @attr.s(cmp=False)
@@ -494,3 +512,8 @@ class uTensorGraphView(IRBase, _NoShallowCopyMixin):
       for tensor in op.output_tensors:
         out_tensors.append(tensor)
     return out_tensors
+
+  def __getitem__(self, op_name):
+    if op_name not in self.ops_info:
+      raise KeyError('{} not found in the graph view'.format(op_name))
+    return self.ops_info[op_name]
