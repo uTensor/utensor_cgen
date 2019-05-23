@@ -1,5 +1,6 @@
 import numpy as np
 import pytest
+
 import tensorflow as tf
 
 
@@ -11,7 +12,7 @@ def dropout_graph_tuple():
                         name='x', dtype=tf.float32)
         keep_prob = tf.placeholder(dtype=tf.float32,
                                    name='keep_prob')
-        dropout_x = tf.nn.dropout(x, keep_prob, name='dropout_x')
+        dropout_x = tf.nn.dropout(x, rate=1-keep_prob, name='dropout_x')
         bias = tf.constant(0.5, name='bias', dtype=tf.float32)
         y = tf.add(dropout_x, bias, name='y')
     return (graph.as_graph_def(),
