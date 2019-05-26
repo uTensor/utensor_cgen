@@ -406,6 +406,8 @@ class uTensorGraph(IRBase, _NoShallowCopyMixin):
     return [self.ops_info[name] for name in self.topo_order]
     
   def add_op(self, op):
+    """Experimental, don't use.
+    """
     if not isinstance(op, OperationInfo):
       raise ValueError('expecting OperationInfo, get {}'.format(type(op)))
     if op.name in self.ops_info:
@@ -416,6 +418,8 @@ class uTensorGraph(IRBase, _NoShallowCopyMixin):
     topologic_order_graph(self)
 
   def drop_op(self, op_name):
+    """Experimental, don't use.
+    """
     if op_name not in self.ops_info:
       raise ValueError('op not found in the graph: {}'.format(op_name))
     del self.ops_info[op_name]
@@ -440,6 +444,9 @@ class uTensorGraph(IRBase, _NoShallowCopyMixin):
         input_tensor.move_into(other_ugraph)
       for output_tensor in op.output_tensors:
         output_tensor.move_into(other_ugraph)
+      if op.op_type not in self._type_to_op_map:
+        self._type_to_op_map[op.op_type] = []
+      self._type_to_op_map[op.op_type].append(op)
 
   def __deepcopy__(self, memo):
     new_graph = uTensorGraph(
