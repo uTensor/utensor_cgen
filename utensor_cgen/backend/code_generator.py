@@ -12,7 +12,7 @@ from tensorflow.tools.graph_transforms import TransformGraph
 from utensor_cgen.ir import uTensorGraph
 from utensor_cgen.frontend import FrontendSelector
 from utensor_cgen.transformer.optimizer import RefCntOptimizer
-from utensor_cgen.transformer.pipline import TransformerPipeline
+from utensor_cgen.transformer.pipeline import TransformerPipeline
 from utensor_cgen.utils import NamescopedKWArgsParser
 
 from .operators import OperatorFactory
