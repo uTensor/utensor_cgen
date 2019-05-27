@@ -40,7 +40,6 @@ class InlineTransformer(Transformer):
   KWARGS_NAMESCOPE = '_utensor_inline'
   TARGET_NODENAME_PATTERN = re.compile(r'(const[_\w\d]*)/.*')
 
-
   def transform(self, ugraph):
     for node_name in ugraph.topo_order:
       op_type = ugraph.ops_info[node_name].op_type

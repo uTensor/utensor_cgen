@@ -1,7 +1,8 @@
 from abc import ABCMeta, abstractmethod
 from functools import wraps
 
-from utensor_cgen.utils import topologic_order_graph, prune_graph as _prune_graph
+from utensor_cgen.utils import prune_graph as _prune_graph
+from utensor_cgen.utils import topologic_order_graph
 
 
 class Transformer(object):
@@ -36,7 +37,7 @@ class Transformer(object):
     return self
 
   def __init__(self, prune_graph=True, **kwargs):
-    # just for define the __init__ signature
+    # just for defining the __init__ signature
     pass
 
   @abstractmethod

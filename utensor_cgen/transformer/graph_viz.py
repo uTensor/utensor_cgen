@@ -8,9 +8,9 @@ from collections import defaultdict
 from copy import deepcopy
 
 from utensor_cgen.ir import OperationInfo, uTensorGraph
-from utensor_cgen.utils import parse_tensor_name
-from utensor_cgen.logger import logger
 from utensor_cgen.ir.misc.graph_viz import viz_graph
+from utensor_cgen.logger import logger
+from utensor_cgen.utils import parse_tensor_name
 
 from .base import Transformer
 
@@ -24,6 +24,7 @@ class GraphVizTransformer(Transformer):
   def __init__(self, out_fname="graph.gv", view=False):
     self.out_fname = out_fname
     self.view = view
+    self.prune_graph = False
   
   def transform(self, ugraph):
     viz_graph(self.out_fname, self.view , ugraph)
