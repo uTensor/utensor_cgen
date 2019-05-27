@@ -26,7 +26,7 @@ from utensor_cgen.utils import (parse_tensor_name, prune_graph,
 
 from .base import Transformer
 
-__all__ = ["Linear_Reorder_Transformer"]
+__all__ = ["Linear_Reorder_Transformer", "LinearReorderTransformerV2"]
 
 class Linear_Reorder_Transformer(Transformer):
   METHOD_NAME = 'linear_reoder'
