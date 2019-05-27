@@ -3,10 +3,13 @@ from utensor_cgen.utils import NamescopedKWArgsParser
 from .base import Transformer
 from .cmsis_nn import CMSIS_NN_Transformer
 from .ns_transformer import (BatchNormTransformer, DropoutTransformer,
-                             InlineTransformer, BiasAddTransformer)
+                             InlineTransformer, BiasAddTransformer,
+                             FakeGatherV2Transformer)
 from .optimizer import IdOpRemoveOptimizer, RefCntOptimizer
 from .quantize import QuantizeTransformer
 from .graph_viz import GraphVizTransformer
+from .linear_reoder import Linear_Reorder_Transformer
+from .conv_pool import CONV_POOL_Transformer
 
 class TransformerPipeline(object):
 
@@ -20,6 +23,9 @@ class TransformerPipeline(object):
     CMSIS_NN_Transformer.METHOD_NAME: CMSIS_NN_Transformer,
     IdOpRemoveOptimizer.METHOD_NAME: IdOpRemoveOptimizer,
     GraphVizTransformer.METHOD_NAME: GraphVizTransformer,
+    Linear_Reorder_Transformer.METHOD_NAME: Linear_Reorder_Transformer,
+    CONV_POOL_Transformer.METHOD_NAME: CONV_POOL_Transformer,
+    FakeGatherV2Transformer.METHOD_NAME: FakeGatherV2Transformer
   }
 
   def __init__(self, methods):

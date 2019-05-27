@@ -20,7 +20,7 @@ __all__ = ["Snippet", "SnippetContainerBase",
            "QuantizedMulOpSnippet",
            "CreateTensorBinarySnippet", "WeightSnippet",
            "ContextGlobalArrayContainer", "QuantRangeForMultiplicationSnippet",
-           "FusedConv2DOpMaxpoolSnippet", "QuantizedFusedConv2DOpMaxpoolSnippet",
+           "FusedConv2DOpMaxpoolSnippet", "QuantizedFusedConv2DMaxpoolOpSnippet",
            "GatherOpSnippet",
            "CreateTensorRamSnippet", "Uint8Q7OriginSnippet"]
 
@@ -665,7 +665,7 @@ class FusedConv2DOpMaxpoolSnippet(Snippet):
     self.template_vars["padding"] = padding
     self.template_vars["to_eval"] = to_eval
 
-class QuantizedFusedConv2DOpMaxpoolSnippet(Snippet):
+class QuantizedFusedConv2DMaxpoolOpSnippet(Snippet):
   __template_name__ = "snippets/fused_conv2d_maxpool_op.cpp"
   __headers__ = set(['"uTensor/ops/MatrixOps.hpp"'])
 

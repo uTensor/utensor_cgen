@@ -139,3 +139,19 @@ class BatchNormTransformer(Transformer):
   def transform(self, ugraph):
     # TODO: implement this!
     pass
+
+
+class FakeGatherV2Transformer(Transformer):
+  """Force converting GatherV2 op to Gather op
+  """
+  METHOD_NAME = 'FakeGatherV2'
+  KWARGS_NAMESCOPE = '_fake_gatherv2'
+  TARGET_NODENAME_PATTERN = re.compile(r'(GatherV2[_\w\d]*)/.*')
+
+  def transform(self, ugraph):
+    print("warning: force replacing GatherV2 with Gather")
+    for key, op in ugraph.ops_info.items():
+      if op.op_type == "GatherV2":
+        op.op_type = "Gather"
+        ugraph.ops_info[key] = op
+    return ugraph

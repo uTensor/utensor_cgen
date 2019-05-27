@@ -9,7 +9,8 @@ from utensor_cgen.ir.utils import graph_check
 
 __all__ = ["is_connected", "get_input_tensor_names", "get_output_tensor_names", "tensorInfo_from_name",
        "get_tensor_node_names", "replace_tensors_op", "replace_tensor_op_by_name",
-       "graph_validate", "get_input_node_names", "get_output_node_names", "replace_tensor"]
+       "graph_validate", "get_input_node_names", "get_output_node_names", "replace_tensor",
+       "update_tensor_op_names", "print_graph", "rename_tensor"]
 
 
 def is_connected(graph, node0, node1):
@@ -43,7 +44,7 @@ def get_tensor_node_names(graph, t_name):
   start_nodes = list()
   end_nodes = list()
 
-  for it_node in graph.topo_order:
+  for it_node, info in graph.ops_info.items():
     for t in graph.ops_info[it_node].input_tensors:
       if t.name == t_name:
         end_nodes.append(it_node)
@@ -94,6 +95,10 @@ def graph_validate(graph):
       if input_tensor_info.op_name not in graph.topo_order:
         print("In %r: input tensor %r points to an op (%r) that does not exist in graph.topo_order" % (op_name, input_tensor_info.name, input_tensor_info.op_name))
         conflicts.append((input_tensor_info.name, input_tensor_info.op_name))
+      for out_tensor in op_info.output_tensors:
+        if out_tensor.op_name != op_info.name:
+          print("In %r: output tensor %r does not point to its origin, it points to (%r)" % (op_info.name, out_tensor.name, out_tensor.op_name))
+          conflicts.append((op_info.name, out_tensor.name, out_tensor.op_name))
 
 def get_input_node_names(graph, node_name):
   input_op_infos = graph.ops_info[node_name].input_nodes
@@ -117,3 +122,26 @@ def replace_tensor(name, new_tensorInfo, ugraph):
     for i, t_info in enumerate(op_info.output_tensors):
       if(t_info.name == name):
         op_info.output_tensors[i] = new_tensorInfo
+
+def update_tensor_op_names(graph):
+  for key, op_info in graph.ops_info.items():
+    for out_tensor in op_info.output_tensors:
+      out_tensor.op_name = op_info.name
+      graph.ops_info[key] = op_info
+
+def print_graph(graph):
+  for key, op_info in graph.ops_info.items():
+    print(key, " :\r\n")
+    print("  In: ", [tensor.name for tensor in op_info.input_tensors])
+    print("  Out: ", [tensor.name for tensor in op_info.output_tensors])
+
+def rename_tensor(name, new_name, graph):
+    for key, op_info in graph.ops_info.items():
+      for i, tensor in enumerate(op_info.input_tensors):
+        if tensor.name == name:
+          op_info.input_tensors[i].name = new_name
+    for key, op_info in graph.ops_info.items():
+      for i, tensor in enumerate(op_info.output_tensors):
+        if tensor.name == name:
+          op_info.output_tensors[i].name = new_name
+      graph.ops_info[key] = op_info

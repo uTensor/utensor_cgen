@@ -499,9 +499,9 @@ class _QuantizedFusedConv2DMaxpoolOperator(_Operator):
     in_dtype, filter_dtype = (op_info.input_tensors[0].dtype,
                               op_info.input_tensors[1].dtype)
     out_dtype = op_info.output_tensors[0].dtype
-    strides = op_info.op_attr["strides"].value.ints_value
-    ksize = op_info.op_attr["ksize"].value.ints_value
-    padding = op_info.op_attr["padding"].value.decode('utf8')
+    strides = op_info.op_attr['_utensor_conv']["strides"].value.ints_value
+    ksize = op_info.op_attr['_utensor_pool']["ksize"].value.ints_value
+    padding = op_info.op_attr['_utensor_conv']["padding"].value.decode('utf8')
     parser = NamescopedKWArgsParser(RefCntOptimizer.KWARGS_NAMESCOPE,
                                     op_info.op_attr)
     ref_count = parser.get('ref_counts', [0])[0]
