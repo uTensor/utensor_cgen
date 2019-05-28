@@ -13,7 +13,7 @@ class RefCntOptimizer(Transformer):
   KWARGS_NAMESCOPE = '_utensor_refcnt'
 
   def __init__(self, **kwargs):
-    self.prune_graph = False
+    self.prune = False
 
   def transform(self, ugraph):
     """Optimization with reference count
@@ -48,7 +48,7 @@ class IdOpRemoveOptimizer(Transformer):
   KWARGS_NAMESCOPE = '_utensor_remove_id_op'
 
   def __init__(self, **kwargs):
-    self.prune_graph = True
+    self.prune = True
 
   def transform(self, ugraph):
     if ugraph.backend == 'tensorflow':
