@@ -5,10 +5,10 @@ import pickle
 from tempfile import NamedTemporaryFile
 
 import numpy as np
+
 import tensorflow as tf
 from tensorflow.core.framework.graph_pb2 import GraphDef
 from tensorflow.tools.graph_transforms import TransformGraph
-
 from utensor_cgen.frontend import FrontendSelector
 from utensor_cgen.ir import uTensorGraph
 from utensor_cgen.transformer.optimizer import RefCntOptimizer
@@ -81,8 +81,6 @@ class CodeGenerator(object):
     )
     quant_ugraph = self._transform_graph(ugraph,
                                          self.trans_methods)
-    from utensor_cgen.ir.misc.graph_viz import viz_graph
-    viz_graph('out_graph', True, quant_ugraph)
     _logger.info('Graph transormation done')
 
     if self.save_graph:
