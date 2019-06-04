@@ -5,8 +5,9 @@ from copy import deepcopy
 import attr
 import numpy as np
 import six
-import tensorflow as tf
 from attr.validators import instance_of
+
+import tensorflow as tf
 from tensorflow.core.framework.attr_value_pb2 import AttrValue as _AttrValue
 from tensorflow.core.framework.attr_value_pb2 import \
     NameAttrList as _NameAttrList
@@ -14,7 +15,6 @@ from tensorflow.core.framework.tensor_pb2 import TensorProto as _TensorProto
 from tensorflow.core.framework.tensor_shape_pb2 import \
     TensorShapeProto as _TensorShapeProto
 from tensorflow.core.framework.types_pb2 import DataType as _DataType
-
 from utensor_cgen.utils import random_str, topologic_order_graph
 
 from .converter import AttrValueConverter, ConverterFactory
@@ -476,14 +476,11 @@ class uTensorGraphView(IRBase, _NoShallowCopyMixin):
   _ugraph = attr.ib(type=uTensorGraph)
   _op_names = attr.ib(type=list)
   output_nodes = attr.ib(type=list)
-
-  topo_order = attr.ib(init=False, factory=list)
   ops_info = attr.ib(init=False, factory=dict)
 
   def __attrs_post_init__(self):
     for name in self._op_names:
       self.ops_info[name] = self._ugraph.ops_info[name]
-    topologic_order_graph(self)
   
   @property
   def backend(self):
@@ -492,7 +489,7 @@ class uTensorGraphView(IRBase, _NoShallowCopyMixin):
   @property
   def input_ops(self):
     ops = set([])
-    for name in self.topo_order:
+    for name in self.ops_info:
       op = self.ops_info[name]
       input_tensors = op.input_tensors
       if all([

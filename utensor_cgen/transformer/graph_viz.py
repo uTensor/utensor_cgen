@@ -27,6 +27,9 @@ class GraphVizTransformer(Transformer):
     self.prune_graph = False
   
   def transform(self, ugraph):
-    viz_graph(self.out_fname, self.view , ugraph)
-
+    viz_graph(
+      ugraph=ugraph,
+      out_fname=self.out_fname,
+      view=self.view
+    )
     return ugraph

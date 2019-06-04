@@ -7,13 +7,13 @@ from copy import deepcopy
 from random import choices
 from string import ascii_letters, digits
 
-import idx2numpy as idx2np
 import numpy as np
-import tensorflow as tf
 from click.types import ParamType
+
+import idx2numpy as idx2np
+import tensorflow as tf
 from tensorflow.python.framework import graph_util
 from tensorflow.tools.graph_transforms import TransformGraph
-
 from utensor_cgen.logger import logger
 
 __all__ = ["save_idx", "save_consts", "save_graph", "log_graph",
@@ -248,7 +248,6 @@ def topologic_order_graph(ugraph):
       return
     if node_name in visited:
       raise ValueError("Input graph is not a DAG")
-
     visited.add(node_name)
     op_info = ugraph.ops_info.get(node_name, None)
     if not op_info:
