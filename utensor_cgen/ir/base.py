@@ -352,8 +352,9 @@ class uTensorGraph(IRBase, _NoShallowCopyMixin):
   def input_ops(self):
     ops = []
     for op in self.ops_info.values():
-      if not op.input_tensors or all(
-        [tensor.is_null_tensor for tensor in op.input_tensors]
+      if (
+        not op.input_tensors 
+        or any([tensor.is_null_tensor for tensor in op.input_tensors])
       ):
         ops.append(op)
     return ops
