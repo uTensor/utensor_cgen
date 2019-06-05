@@ -21,8 +21,8 @@ def test_replace_fc_with_add(subj_graph_1, patrn_fc_1):
         patrn_ugraph = match.pattern_ugraph
         
         input_map = {
-            patrn_ugraph.ops_info['z_prime'].input_tensors[0]: ugraph.ops_info['fused_node'].input_tensors[0],
-            patrn_ugraph.ops_info['z_prime'].input_tensors[1]: ugraph.ops_info['fused_node'].input_tensors[1]
+            patrn_ugraph.ops_info['a_prime'].input_tensors[0]: ugraph.ops_info['fused_node'].input_tensors[0],
+            patrn_ugraph.ops_info['a_prime'].input_tensors[1]: ugraph.ops_info['fused_node'].input_tensors[1]
         }
         output_map = {
             patrn_ugraph.ops_info['r_prime'].output_tensors[0]: ugraph.ops_info['fused_node'].output_tensors[0]

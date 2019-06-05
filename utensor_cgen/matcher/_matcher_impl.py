@@ -77,6 +77,7 @@ class OpEqualityDelegate(object):
     is_eq = False
     equivalent_ops = []
     if sub_op is None or patrn_op is None:
+      # null tensor, do nothing
       pass
     elif sub_op.op_type == patrn_op.op_type and sub_op.op_type not in cls._association_map:
       is_eq = True
@@ -102,10 +103,6 @@ class OpEqualityDelegate(object):
       is_eq = True
       morphism = cls._compatibility_map[sub_op.op_type][patrn_op.op_type]
       equivalent_ops = [MetaOperationInfo(op_info=sub_op, morphism=morphism)]
-    elif patrn_op.is_input_op:
-      # match input node anyway
-      is_eq = True
-      equivalent_ops = [sub_op]
 
     return is_eq, equivalent_ops
 
@@ -208,7 +205,7 @@ class uTensorGraphMatcher(object):
     return new_states
 
 
-@attr.s
+@attr.s(repr=False)
 class uTensorGraphMatch(object):
 
   pattern_ugraph = attr.ib(type=uTensorGraph)
@@ -419,6 +416,12 @@ class uTensorGraphMatch(object):
       output_nodes=output_nodes,
     )
 
+  def __repr__(self):
+    repr_str = self.__class__.__name__ + '(\n'
+    for patrn_op_name, subj_op in self.patrn2subj_op_map.items():
+      repr_str += '    {} -> {}\n'.format(patrn_op_name, subj_op.name)
+    repr_str += ')'
+    return repr_str
 
 @attr.s
 class _MatchState(object):

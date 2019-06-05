@@ -215,13 +215,6 @@ class OperationInfo(IRBase, _NoShallowCopyMixin):
           out_ops.append(op.name)
           break
     return [self._ugraph.ops_info[name] for name in out_ops]
-  
-  @property
-  def is_input_op(self):
-    return all(
-      [tensor.op_name not in self._ugraph.ops_info 
-       for tensor in self.input_tensors]
-    )
 
   def add_null_input_tensor(self, idx=-1):
     if self.op_type != 'Placeholder':
