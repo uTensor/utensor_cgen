@@ -108,7 +108,8 @@ class CodeGenerator(object):
         snippet = opFactory.createOperatorSnippet(op_info,
                                                   idx_dir=self.idx_dir,
                                                   embed_data_dir=self.embed_data_dir,
-                                                  weight_container=weight_container)
+                                                  weight_container=weight_container,
+                                                  data_manager=quant_ugraph.data_manager)
         container.add_snippet(snippet)
 
       if self.debug_cmt:

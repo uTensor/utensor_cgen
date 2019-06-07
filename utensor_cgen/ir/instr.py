@@ -36,10 +36,10 @@ class DataManager:
         k, v= value
         cls_instance.__setattr__(self, k, v)
 
-    def group(self, op):
+    def group(self, tensor):
         ret = {}
         for key, cls_object in self.StorageCenter.items():
-            ans = cls_object.__getattr__(op)
+            ans = cls_object.__getattr__(tensor)
             ret.update({cls_object._store_name:  ans})
         return ret
 

@@ -194,10 +194,14 @@ class _QuantizeV2Operator(_Operator):
     inputs = [tensor_info.name for tensor_info in op_info.input_tensors]
     outputs = [tensor_info.name for tensor_info in op_info.output_tensors]
     out_dtype = op_info.output_tensors[0].dtype
+    data_manager = kwargs['data_manager']
     parser = NamescopedKWArgsParser(RefCntOptimizer.KWARGS_NAMESCOPE,
-                                    op_info.op_attr)
+                                    op_info.op_attr,
+                                    data_manager,
+                                    op_info)
     ref_counts = parser.get('ref_counts', [])
     to_eval = parser.get('to_eval', False)
+    address = parser.get('address', 0)
     self._snippet = QuantizeV2OpSnippet(inputs, outputs, out_dtype, ref_counts, to_eval)
 
 
