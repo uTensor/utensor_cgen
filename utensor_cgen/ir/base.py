@@ -248,6 +248,7 @@ class OperationInfo(IRBase, _NoShallowCopyMixin):
       tensor.move_into(ugraph)
     for tensor in self.output_tensors:
       tensor.move_into(ugraph)
+    ugraph.ops_info[self.name] = self
   
   def __deepcopy__(self, memo):
     op_info = OperationInfo(name=self.name,
@@ -435,11 +436,7 @@ class uTensorGraph(IRBase, _NoShallowCopyMixin):
     2. topologic_order_graph (from `utensor_cgen.utils`)
     """
     for op in self.ops_info.values():
-      op._ugraph = other_ugraph
-      for input_tensor in op.input_tensors:
-        input_tensor.move_into(other_ugraph)
-      for output_tensor in op.output_tensors:
-        output_tensor.move_into(other_ugraph)
+      op.move_into(other_ugraph)
       if op.op_type not in self._type_to_op_map:
         self._type_to_op_map[op.op_type] = []
       self._type_to_op_map[op.op_type].append(op)

@@ -21,15 +21,17 @@ class GraphVizTransformer(Transformer):
   METHOD_NAME = 'graph_viz'
   KWARGS_NAMESCOPE = '_utensor_graph_viz'
 
-  def __init__(self, out_fname="graph.gv", view=False):
+  def __init__(self, out_fname="graph.gv", view=False, cleanup=True):
     self.out_fname = out_fname
     self.view = view
     self.prune_graph = False
+    self.cleanup = cleanup
   
   def transform(self, ugraph):
     viz_graph(
       ugraph=ugraph,
       out_fname=self.out_fname,
-      view=self.view
+      view=self.view,
+      cleanup=self.cleanup
     )
     return ugraph
