@@ -310,7 +310,7 @@ def prune_graph(ugraph):
     #      Or, use this: in_ops = [node.name for node in ugraph.ops_info[op_name].input_nodes]
     tensors_in = set([t.name for t in ugraph.ops_info[op_name].input_tensors])
     in_ops = set()
-    for it_node in ugraph.topo_order:
+    for it_node in ugraph.ops_info:
       if it_node == op_name:
         continue
       it_tensors_out = [t.name for t in ugraph.ops_info[it_node].output_tensors]
