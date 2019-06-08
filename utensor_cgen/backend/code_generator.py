@@ -28,11 +28,10 @@ class CodeGenerator(object):
   def __init__(self, model_file,
                idx_dir,
                embed_data_dir,
-               trans_methods,
+               trans_methods, # [(trans_name, kwargs),...]
                output_nodes,
                save_graph=False,
-               debug_cmt=False,
-               **trans_kwargs):
+               debug_cmt=False):
     self.model_file = model_file
     if not os.path.exists(idx_dir):
       os.makedirs(idx_dir)
@@ -42,7 +41,6 @@ class CodeGenerator(object):
     self.output_nodes = output_nodes
     self.save_graph = save_graph
     self.debug_cmt = debug_cmt
-    self.trans_kwargs = trans_kwargs
 
   def generate(self, src_fname):
     _, ext = os.path.splitext(self.model_file)
@@ -67,12 +65,22 @@ class CodeGenerator(object):
 
     opFactory = OperatorFactory()
 
-    self._expect_non_quantized(ugraph)
+    self._check_non_quantized(ugraph)
     _logger.info("Transforming graph: %s", self.model_file)
-    _logger.info("Transform pipeline: %s", ' -> '.join(self.trans_methods))
+    def formatter(name, kwargs):
+      if kwargs:
+        return '{}({})'.format(
+          name,
+          ', '.join(['{}={!r}'.format(k, v) for k, v in kwargs.items()])
+        )
+      else:
+        return name
+    _logger.info("Transform pipeline: %s", ' -> '.join([
+      formatter(name, kwargs) for name, kwargs in self.trans_methods
+      ])
+    )
     quant_ugraph = self._transform_graph(ugraph,
-                                         self.trans_methods,
-                                         self.trans_kwargs)
+                                         self.trans_methods)
     _logger.info('Graph transormation done')
 
     if self.save_graph:
@@ -100,7 +108,8 @@ class CodeGenerator(object):
         snippet = opFactory.createOperatorSnippet(op_info,
                                                   idx_dir=self.idx_dir,
                                                   embed_data_dir=self.embed_data_dir,
-                                                  weight_container=weight_container)
+                                                  weight_container=weight_container,
+                                                  data_manager=quant_ugraph.data_manager)
         container.add_snippet(snippet)
 
       if self.debug_cmt:
@@ -128,7 +137,7 @@ class CodeGenerator(object):
       wf.write(composer.compose())
   
   @classmethod
-  def _expect_non_quantized(cls, ugraph):
+  def _check_non_quantized(cls, ugraph):
     is_quantized = False
     for op_info in ugraph.ops_info.values():
       if op_info.op_type in [
@@ -146,8 +155,8 @@ class CodeGenerator(object):
       _logger.warning(("Expecting non-quantized graph, "
                         "graph transformation/optimization might not work properly"))
 
-  def _transform_graph(self, ugraph, methods, trans_kwargs):
-    pipeline = TransformerPipeline(methods, trans_kwargs)
+  def _transform_graph(self, ugraph, methods):
+    pipeline = TransformerPipeline(methods)
     return pipeline.transform(ugraph)
 
   def _tf_load_graph_def(self, pb_fname):

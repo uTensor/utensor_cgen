@@ -5,7 +5,7 @@ import sys
 import click
 import pkg_resources
 
-from .utils import NArgsParam
+from .utils import NArgsParam, NArgsKwargsParam
 
 
 def _get_pb_model_name(path):
@@ -45,10 +45,10 @@ def cli():
               required=True,
               help="list of output nodes")
 @click.option("--transform-methods",
-              type=NArgsParam(),
-              default='dropout,quantize,cmsisnn,refcnt,inline',
-              help='optimization methods',
-              metavar='METHOD,METHOD,...',
+              type=NArgsKwargsParam(sep='|>'),
+              default='dropout|>quantize|>inline|>biasAdd|>remove_id_op|>refcnt',
+              help='optimization pipeline',
+              metavar='METHOD[|>METHOD|>...]',
               show_default=True)
 @click.option("-m", "--model-dir",
               metavar="DIR",
@@ -91,7 +91,7 @@ def convert_graph(pb_file, output, data_dir, embed_data_dir, save_graph,
 @click.argument('model_file', required=True, metavar='MODEL.{pb,pkl}')
 def show_graph(model_file, **kwargs):
   _, ext = os.path.splitext(model_file)
-  if ext == '.pb':
+  if ext == '.pb' or ext == '.pbtxt':
     _show_pb_file(model_file, **kwargs)
   elif ext == '.pkl':
     import pickle

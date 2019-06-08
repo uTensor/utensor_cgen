@@ -6,18 +6,18 @@ from copy import deepcopy
 import attr
 import numpy as np
 import six
-import tensorflow as tf
 from attr.validators import instance_of
+
+import tensorflow as tf
 from tensorflow.core.framework.attr_value_pb2 import AttrValue as _AttrValue
-from tensorflow.core.framework.attr_value_pb2 import (
-    NameAttrList as _NameAttrList)
+from tensorflow.core.framework.attr_value_pb2 import \
+    NameAttrList as _NameAttrList
 from tensorflow.core.framework.tensor_pb2 import TensorProto as _TensorProto
-from tensorflow.core.framework.tensor_shape_pb2 import (
-    TensorShapeProto as _TensorShapeProto)
+from tensorflow.core.framework.tensor_shape_pb2 import \
+    TensorShapeProto as _TensorShapeProto
 from tensorflow.core.framework.types_pb2 import DataType as _DataType
-
 from utensor_cgen.utils import topologic_order_graph
-
+from utensor_cgen.ir.instr import DataManager
 from .converter import AttrValueConverter, ConverterFactory
 
 __all__ = ['TensorInfo', 'OperationInfo', 'uTensorGraph']
@@ -43,8 +43,8 @@ class TensorInfo(IRBase, _NoShallowCopyMixin):
   dtype : numpy.dtype
   shape : list
   """
-  name = attr.ib(validator=instance_of(six.text_type))
-  op_name = attr.ib(validator=instance_of(six.text_type))
+  name = attr.ib(validator=instance_of(six.string_types))
+  op_name = attr.ib(validator=instance_of(six.string_types))
   dtype = attr.ib(validator=instance_of(np.dtype))
   shape = attr.ib(validator=instance_of((list, type(None))))
   alloc_address = attr.ib(validator=instance_of((list, type(None))))
@@ -207,6 +207,7 @@ class uTensorGraph(IRBase, _NoShallowCopyMixin):
   _backend = attr.ib(default='', type=str)
   ops_info = attr.ib(factory=dict)
   topo_order = attr.ib(factory=list, init=False)
+  data_manager = None
 
   def __attrs_post_init__(self):
     if not self.output_nodes:
@@ -242,34 +243,6 @@ class uTensorGraph(IRBase, _NoShallowCopyMixin):
   def ops(self):
     return [self.ops_info[name] for name in self.topo_order]
 
-  def viz_graph(self, fname="graph.gv"):
-    from graphviz import Digraph
-    dot = Digraph()
-    nodes = {}
-    i = 0
-    for node in self.ops:
-        nodes[node.name] = chr(ord('a') + i)
-        dot.node(nodes[node.name], "%s: %s" % (node.name, node.op_type))
-        i += 1
-        for n in node.input_tensors:
-            if n.name in nodes:
-                continue
-            nodes[n.name] = chr(ord('a') + i)
-            dot.node(nodes[n.name], "%s: Tensor" % n.name)
-            i += 1
-        for n in node.output_tensors:
-            if n.name in nodes:
-                continue
-            nodes[n.name] = chr(ord('a') + i)
-            dot.node(nodes[n.name], "%s: Tensor" % n.name)
-            i += 1
-    for node in self.ops:
-        for n in node.input_tensors:
-            dot.edge(nodes[n.name], nodes[node.name])
-        for n in node.output_tensors:
-            dot.edge(nodes[node.name], nodes[n.name])
-    dot.render(fname, view=True)
-
   def add_op(self, op):
     if not isinstance(op, OperationInfo):
       raise ValueError('expecting OperationInfo, get {}'.format(type(op)))
@@ -287,6 +260,10 @@ class uTensorGraph(IRBase, _NoShallowCopyMixin):
       raise ValueError('op not found in the graph: {}'.format(op_name))
     del self.ops_info[op_name]
     self.topo_order.remove(op_name)
+  
+  def create_data(self, datas):
+    manager = DataManager(datas)
+    self.data_manager = manager
 
   def __deepcopy__(self, memo):
     new_graph = uTensorGraph(output_nodes=self.output_nodes)
@@ -297,4 +274,5 @@ class uTensorGraph(IRBase, _NoShallowCopyMixin):
     new_graph.ops_info = new_ops_info
     new_graph.topo_order = new_topo_order
     new_graph._backend = self._backend
+    new_graph.data_manager = self.data_manager
     return new_graph

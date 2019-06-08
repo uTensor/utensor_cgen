@@ -173,6 +173,26 @@ class TensorLifeProbe(Transformer):
       ret = ret * i
     return ret
 
+
+class BiasAddTransformer(Transformer):
+  METHOD_NAME = 'biasAdd'
+  KWARGS_NAMESCOPE = '_utensor_biasAdd'
+  TARGET_NODENAME_PATTERN = re.compile(r'(BiasAdd[_\w\d]*)/.*')
+
+  def transform(self, ugraph):
+    for node_name in ugraph.topo_order:
+      op_type = ugraph.ops_info[node_name].op_type
+      if op_type == 'QuantizedBiasAdd':
+        op_info = ugraph.ops_info[node_name]
+        op_info.op_type = 'QuantizedAdd'
+      elif op_type == 'BiasAdd':
+        op_info = ugraph.ops_info[node_name]
+        op_info.op_type = 'Add'
+
+
+    return ugraph
+
+
 class InlineTransformer(Transformer):
   METHOD_NAME = 'inline'
   KWARGS_NAMESCOPE = '_utensor_inline'
