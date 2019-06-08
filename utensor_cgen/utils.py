@@ -234,11 +234,20 @@ def topologic_order_graph(ugraph):
 
   - https://en.wikipedia.org/wiki/Topological_sorting
   """
+  ugraph.topo_order = get_topologic_order(ugraph, ugraph.output_nodes)[::-1]
+
+
+def get_topologic_order(ugraph, init_nodes):
+  """
+  return list of op names in topological order
+
+  - https://en.wikipedia.org/wiki/Topological_sorting
+  """
   if ugraph.backend != "tensorflow":
     raise ValueError(
       "topologic_order_graph works only on tensorflow graph"
     )
-  queue = deepcopy(ugraph.output_nodes)
+  queue = deepcopy(init_nodes)
   visited = set()    # temporary mark
   perm_visit = set()  # Permanent mark
   ops_torder = []  # L
@@ -266,7 +275,7 @@ def topologic_order_graph(ugraph):
   while queue:
     node_name = queue.pop(0)
     visit(node_name)
-  ugraph.topo_order = ops_torder[::-1]
+  return ops_torder
 
 
 def ops_bfs_queue(ugraph, init_nodes=None):
