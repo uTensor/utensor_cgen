@@ -4,6 +4,7 @@ from itertools import product
 
 import attr
 from attr.validators import instance_of
+from click import style
 
 from utensor_cgen.ir import (MetaOperationInfo, OperationInfo, uTensorGraph,
                              uTensorGraphView)
@@ -200,9 +201,25 @@ class uTensorGraphMatcher(object):
             sub_bfs_queue=new_sub_bfs_queue,
             patrn_bfs_queue=deque(state.patrn_bfs_queue),
           )
+          new_state = self._handle_null_tensors(new_state, eq_op, patrn_op)
           new_state.match.update_op_map(patrn_op, eq_op)
           new_states.append(new_state)
     return new_states
+  
+  def _handle_null_tensors(self, state, subj_op, patrn_op):
+    subj_ugraph = state.match.subject_ugraph
+    for idx, patrn_tensor in enumerate(patrn_op.input_tensors):
+      if patrn_tensor.is_null_tensor:
+        subj_tensor = subj_op.input_tensors[idx]
+        subj_ops_to_remove = set([subj_tensor.op.name])
+        all_subgraph_ops = set(op.name for op in ops_bfs_queue(subj_ugraph, [subj_tensor.op]))
+        for op_name in all_subgraph_ops:
+          if all(out_op.name in all_subgraph_ops for out_op in subj_ugraph[op_name].output_nodes):
+            subj_ops_to_remove.add(op_name)
+        state.sub_bfs_queue = deque(
+          [op for op in state.sub_bfs_queue if op.name not in subj_ops_to_remove]
+        )
+    return state
 
 
 @attr.s(repr=False)
@@ -418,6 +435,7 @@ class uTensorGraphMatch(object):
 
   def __repr__(self):
     repr_str = self.__class__.__name__ + '(\n'
+    repr_str += style('    <op in pattern graph> -> <op in subject graph>', bold=True) + '\n'
     for patrn_op_name, subj_op in self.patrn2subj_op_map.items():
       repr_str += '    {} -> {}\n'.format(patrn_op_name, subj_op.name)
     repr_str += ')'

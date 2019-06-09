@@ -73,7 +73,10 @@ class TensorInfo(IRBase, _NoShallowCopyMixin):
 
   @property
   def op(self):
-    return self._ugraph.ops_info.get(self.op_name, None)
+    op = self._ugraph.ops_info.get(self.op_name, None)
+    if not op and not self.is_null_tensor:
+      raise ValueError('Unknown op name: {}'.format(self.op_name))
+    return op
 
   @property
   def backend(self):
@@ -363,9 +366,14 @@ class uTensorGraph(IRBase, _NoShallowCopyMixin):
   @property
   def input_tensors(self):
     in_tensors = set([])
+    in_op_names = set(op.name for op in self.input_ops)
     for op in self.input_ops:
-      for tensor in op.input_tensors:
-        in_tensors.add(tensor)
+      in_tensors.update(
+        [
+          tensor for tensor in op.input_tensors
+          if tensor.op_name not in in_op_names
+        ]
+      )
     return in_tensors
   
   @property
@@ -401,6 +409,7 @@ class uTensorGraph(IRBase, _NoShallowCopyMixin):
     return [self.ops_info[name] for name in self.topo_order]
 
   def add_op(self, op, sort=True):
+    # experimental, don't use
     if not isinstance(op, OperationInfo):
       raise ValueError('expecting OperationInfo, get {}'.format(type(op)))
     if op.name in self.ops_info:
