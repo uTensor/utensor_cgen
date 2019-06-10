@@ -79,6 +79,14 @@ In graph theory terminology, they are `leaf` nodes of your graph.
 
 Run `utensor-cli convert --help` for detailed information.
 
+# Use `utensor_cgen` as Library
+
+## Subgraph Isomorphic Matcher and Nodes Fusion
+
+With `uTensorGraphMatcher`, performing a subgraph isomorphic match, fuse or replace the match with another graph is just a few line of code!
+
+![conv-pool-fuce](images/conv_pool_fuse.png)
+
 # Example
 
 Please refer to [tests/deep_mlp](https://github.com/uTensor/utensor_cgen/tree/develop/tests/deep_mlp) for detailed example
