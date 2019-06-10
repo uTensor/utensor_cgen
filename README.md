@@ -100,12 +100,6 @@ Following steps are a general guild for user how to porting a `TensorFlow` proto
 2. run `make tests`
     - Or you can use `pipenv run pytest tests` instead
 
-# Known Limitations
-
-- If you want to use dropout with placeholders for the `keep_prob`, you have to name the `keep_prob` placeholder by any name that starts with "keep_prob".
-    - You can still use any input tensor with name starts with "keep_prob" as long as it's not the output tensor of a placeholder node.
-    - You can't wrap `dropout` in any `namescope` 
-
 # Philosophy
 
 - [12 Factor CLI App](https://medium.com/@jdxcode/12-factor-cli-apps-dd3c227a0e46?fbclid=IwAR1Gfq0D7oh3b-mXaIMV3RwYu39TAPrPXfz5sBKC4Rz1t-cckvC8WjBVl_w)
