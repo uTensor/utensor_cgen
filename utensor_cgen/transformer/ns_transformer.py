@@ -106,6 +106,9 @@ class DropoutTransformer(Transformer):
       for idx, tensor in enumerate(op.input_tensors):
         if tensor.name == subj_out_tensor.name:
           op.input_tensors[idx] = subj_in_tensor
+    for idx, op_name in enumerate(subj_ugraph.output_nodes):
+      if op_name == subj_out_op.name:
+        subj_ugraph.output_nodes[idx] = subj_in_tensor.op_name
     match.subject_ugraph = prune_graph(subj_ugraph)
     topologic_order_graph(match.subject_ugraph)
     return match.subject_ugraph
