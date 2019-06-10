@@ -4,7 +4,6 @@ r"""Namescope Transformer
 Transformers that get rid of namescope/nodes which are not needed 
 for inference
 """
-import re
 from copy import deepcopy
 
 import numpy as np
@@ -22,7 +21,6 @@ __all__ = ["DropoutTransformer", "BatchNormTransformer", "InlineTransformer"]
 class BiasAddTransformer(Transformer):
   METHOD_NAME = 'biasAdd'
   KWARGS_NAMESCOPE = '_utensor_biasAdd'
-  TARGET_NODENAME_PATTERN = re.compile(r'(BiasAdd[_\w\d]*)/.*')
 
   def transform(self, ugraph):
     for node_name in ugraph.topo_order:
@@ -41,7 +39,6 @@ class BiasAddTransformer(Transformer):
 class InlineTransformer(Transformer):
   METHOD_NAME = 'inline'
   KWARGS_NAMESCOPE = '_utensor_inline'
-  TARGET_NODENAME_PATTERN = re.compile(r'(const[_\w\d]*)/.*')
 
   def transform(self, ugraph):
     for node_name in ugraph.topo_order:
@@ -57,7 +54,6 @@ class DropoutTransformer(Transformer):
   """
   METHOD_NAME = 'dropout'
   KWARGS_NAMESCOPE = '_utensor_dropout'
-  TARGET_NODENAME_PATTERN = re.compile(r'(dropout[_\w\d]*)/.*')
 
   @property
   def pattern_ugraph(self):
@@ -119,7 +115,6 @@ class BatchNormTransformer(Transformer):
   """
   METHOD_NAME = 'batch_norm'
   KWARGS_NAMESCOPE = '_batch_norm'
-  TARGET_NODENAME_PATTERN = re.compile(r'(BatchNorm[_\w\d]*)/.*')
 
   def transform(self, ugraph):
     # TODO: implement this!
@@ -131,7 +126,6 @@ class FakeGatherV2Transformer(Transformer):
   """
   METHOD_NAME = 'FakeGatherV2'
   KWARGS_NAMESCOPE = '_fake_gatherv2'
-  TARGET_NODENAME_PATTERN = re.compile(r'(GatherV2[_\w\d]*)/.*')
 
   def transform(self, ugraph):
     print("warning: force replacing GatherV2 with Gather")
