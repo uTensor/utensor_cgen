@@ -87,6 +87,10 @@ With `uTensorGraphMatcher`, performing a subgraph isomorphic match, fuse or repl
 
 ![conv-pool-fuce](images/conv_pool_fuse.png)
 
+- Left: Original graph
+- Middle: Matched convolution layer
+- Right: Replace the matched layer with specialized `QuantConvPool` node
+
 # Example
 
 Please refer to [tests/deep_mlp](https://github.com/uTensor/utensor_cgen/tree/develop/tests/deep_mlp) for detailed example
