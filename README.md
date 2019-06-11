@@ -83,17 +83,29 @@ Run `utensor-cli convert --help` for detailed information.
 
 ## Subgraph Isomorphic Matcher and Nodes Fusion
 
-With `uTensorGraphMatcher`, performing a subgraph isomorphic match, fuse or replace the match with another graph is just a few line of code!
+With `uTensorGraphMatcher`, performing a subgraph isomorphic match, replace or manipulate the matched subgraph is just a few line of code!
+
+### Node Fusion
 
 ![conv-pool-fuce](images/conv_pool_fuse.png)
 
-- Left: Original graph
-- Middle: Matched convolution layer
-- Right: Replace the matched layer with specialized `QuantConvPool` node
+- Left: original graph
+- Middle: matched convolution layer
+- Right: replace the matched layer with specialized `QuantConvPool` node
 
-# Example
+### Dropout Layer Removal
 
-Please refer to [tests/deep_mlp](https://github.com/uTensor/utensor_cgen/tree/develop/tests/deep_mlp) for detailed example
+![cnn-dropout](images/cnn_dropout.png)
+
+- Left: original graph with dropout Layers
+- Middle: matched dropout layers
+- Right: graph with dropout layers removed
+
+# Examples
+
+- [Deep Multilayer Perceptron](https://github.com/uTensor/utensor_cgen/tree/develop/tests/deep_mlp)
+- [End-to-End Convolution NN](https://github.com/uTensor/simple_cnn_tutorial)
+
 
 # User Guide
 
