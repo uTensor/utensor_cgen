@@ -31,8 +31,6 @@ class BiasAddTransformer(Transformer):
       elif op_type == 'BiasAdd':
         op_info = ugraph.ops_info[node_name]
         op_info.op_type = 'Add'
-
-
     return ugraph
 
 
@@ -59,12 +57,16 @@ class DropoutTransformer(Transformer):
   def pattern_ugraph(self):
     graph = tf.Graph()
     with graph.as_default():
-        dummy_x = tf.constant(np.random.rand(10), dtype=tf.float32, name='dummy_x')
-        dummy_rate = tf.constant(0.5, dtype=tf.float32, name='dummy_rate')
+        dummy_x = tf.constant(np.random.rand(10, 10), dtype=tf.float32, name='dummy_x')
+        dummy_rate = tf.placeholder(dtype=tf.float32, name='dummy_rate')
         dropout = tf.nn.dropout(dummy_x, rate=dummy_rate, name='dropout')
     patrn_ugraph = GraphDefParser.parse(graph.as_graph_def(), output_nodes=[dropout.op.name])
-    patrn_ugraph['dropout/truediv'].replace_with_null_input_tensor(0) # replace dummy_x
-    patrn_ugraph['dropout/sub'].replace_with_null_input_tensor(1) # replce dummy_rate
+    # replace dummy_x
+    patrn_ugraph['dropout/truediv'].replace_with_null_input_tensor(0)
+    # # replace dummy_rate
+    patrn_ugraph['dropout/sub'].replace_with_null_input_tensor(1)
+    # # replace Shape Op
+    patrn_ugraph['dropout/random_uniform/RandomUniform'].replace_with_null_input_tensor(0)
     patrn_ugraph = prune_graph(patrn_ugraph)
     topologic_order_graph(patrn_ugraph)
     return patrn_ugraph

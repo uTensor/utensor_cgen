@@ -8,6 +8,7 @@ from click import style
 
 from utensor_cgen.ir import (MetaOperationInfo, OperationInfo, uTensorGraph,
                              uTensorGraphView)
+from utensor_cgen.logger import logger
 from utensor_cgen.matcher._morphism import Morphism
 from utensor_cgen.utils import (ops_bfs_queue, prune_graph, random_str,
                                 topologic_order_graph)
@@ -462,4 +463,4 @@ class _MatchState(object):
     a state is done, if
     1. the patrn_bfs_queue is empty
     """
-    return not self.patrn_bfs_queue
+    return not (self.patrn_bfs_queue and self.sub_bfs_queue)

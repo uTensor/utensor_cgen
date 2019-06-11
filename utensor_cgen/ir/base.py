@@ -122,7 +122,7 @@ class TensorInfo(IRBase, _NoShallowCopyMixin):
     """
     self._ugraph = ugraph
 
-@attr.s(cmp=False)
+@attr.s(cmp=False, repr=False)
 class OperationInfo(IRBase, _NoShallowCopyMixin):
   """
   name : str
@@ -281,6 +281,8 @@ class OperationInfo(IRBase, _NoShallowCopyMixin):
       )
     return self.output_tensors[tensor_idx]
 
+  def __repr__(self):
+    return str((self.name, self.op_type))
 
 class MetaOperationInfo(OperationInfo):
 

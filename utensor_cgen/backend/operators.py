@@ -21,7 +21,7 @@ class OperatorFactory():
   def createOperatorSnippet(self, op_info, **kwargs):
     op_type = op_info.op_type
     if op_type not in self._operators:
-      err_msg = "unsupported op type in uTensor: {}".format(op_type)
+      err_msg = "unsupported op type in uTensor: {op.name}, {op.op_type}".format(op=op_info)
       raise ValueError(err_msg)
 
     op = self._operators[op_type](op_info, **kwargs)  # Create desired object

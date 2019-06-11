@@ -42,3 +42,12 @@ def test_dropout_trans_2(dropout_graph_tuple2):
     new_ugraph = trans.transform(ugraph)
     assert len(new_ugraph.ops_info) == 1
     assert 'x' in new_ugraph.ops_info
+
+
+def test_dropout_vgg(vgg_ugraph):
+    trans = DropoutTransformer()
+    from utensor_cgen.ir.misc.graph_viz import viz_graph
+    viz_graph(trans.pattern_ugraph, 'dropout_pattern')
+    new_ugraph = trans.transform(vgg_ugraph)
+    for op_name in new_ugraph.ops_info:
+        assert not op_name.startswith('dropout')
