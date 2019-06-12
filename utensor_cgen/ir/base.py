@@ -160,8 +160,6 @@ class OperationInfo(IRBase, _NoShallowCopyMixin):
     # especially for graph rewrite
     if not all([isinstance(v, (TensorInfo, type(None))) for v in value]):
       raise ValueError('Expecting a list of TensorInfo for input_tensors')
-  
-  n_inputs = attr.ib(validator=instance_of(int))
 
   output_tensors = attr.ib(validator=instance_of(list))
   @output_tensors.validator
@@ -169,10 +167,19 @@ class OperationInfo(IRBase, _NoShallowCopyMixin):
     if not all([isinstance(v, TensorInfo) for v in value]):
       raise ValueError('Expecting a list of TensorInfo for output_tensors')
 
-  n_outputs = attr.ib(validator=instance_of(int))
-
   op_type = attr.ib(type=str)
+
   op_attr = attr.ib(factory=dict, converter=dict)
+
+  n_inputs = attr.ib()
+  @n_inputs.default
+  def default_n_inputs(self):
+    return len(self.input_tensors)
+
+  n_outputs = attr.ib()
+  @n_outputs.default
+  def default_n_outputs(self):
+    return len(self.output_tensors)
 
   def __attrs_post_init__(self):
     skip_pattern = re.compile(r'_utensor_[^_]*')
@@ -187,9 +194,13 @@ class OperationInfo(IRBase, _NoShallowCopyMixin):
       self.op_attr = op_attr
     self._ugraph.ops_info[self.name] = self
     if not self.n_inputs == len(self.input_tensors):
-      raise ValueError('n_inputs is not equal to the length of input_tensors')
+      raise ValueError(
+        'n_inputs is not equal to the length of input_tensors: {}'.format(self.name)
+      )
     if not self.n_outputs == len(self.output_tensors):
-      raise ValueError('n_outputs is not equal to the length of output_tensors')
+      raise ValueError(
+        'n_outputs is not equal to the length of output_tensors: {}'.format(self.name)
+      )
 
   @property
   def ugraph(self):
