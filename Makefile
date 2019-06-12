@@ -12,4 +12,4 @@ test_%:
 	 fi;
 
 clean:
-	rm -f tests_log.txt
+	rm -f tests_log.txt *.pdf

@@ -5,17 +5,18 @@ from .graph_viz import GraphVizTransformer
 from .linear_reoder import (Linear_Reorder_Transformer,
                             LinearReorderTransformerV2)
 from .ns_transformer import (BatchNormTransformer, BiasAddTransformer,
-                             DropoutTransformer, FakeGatherV2Transformer,
-                             InlineTransformer)
+                             DropoutTransformer, DropoutTransformerV2,
+                             FakeGatherV2Transformer, InlineTransformer)
 from .optimizer import IdOpRemoveOptimizer, RefCntOptimizer
 from .quantize import QuantizeTransformer
 
 
 class TransformerPipeline(object):
 
-  _TRANSFORMER_MAP = {
+  TRANSFORMER_MAP = {
     RefCntOptimizer.METHOD_NAME: RefCntOptimizer,
     DropoutTransformer.METHOD_NAME: DropoutTransformer,
+    DropoutTransformerV2.METHOD_NAME: DropoutTransformerV2,
     BatchNormTransformer.METHOD_NAME: BatchNormTransformer,
     QuantizeTransformer.METHOD_NAME: QuantizeTransformer,
     InlineTransformer.METHOD_NAME: InlineTransformer,
@@ -37,7 +38,7 @@ class TransformerPipeline(object):
     """
     self._pipeline = []
     for method, kwargs in methods:
-      trans_cls = self._TRANSFORMER_MAP.get(method, None)
+      trans_cls = self.TRANSFORMER_MAP.get(method, None)
       if trans_cls is None:
         raise ValueError("Unknown transformation method: {}".format(method))
       transformer = trans_cls(**kwargs)
@@ -54,12 +55,12 @@ class TransformerPipeline(object):
 
   @classmethod
   def all_transform_methods(cls):
-    return list(cls._TRANSFORMER_MAP.keys())
+    return list(cls.TRANSFORMER_MAP.keys())
   
   @classmethod
   def register_transformer(cls, trans_cls, overwrite=False):
     assert issubclass(trans_cls, Transformer), \
       "expecting Transformer type, get %s" % trans_cls
-    assert trans_cls.METHOD_NAME not in cls._TRANSFORMER_MAP or overwrite, \
+    assert trans_cls.METHOD_NAME not in cls.TRANSFORMER_MAP or overwrite, \
       "Registering existing transformer without overwriting"
-    cls._TRANSFORMER_MAP[trans_cls.METHOD_NAME] = trans_cls
+    cls.TRANSFORMER_MAP[trans_cls.METHOD_NAME] = trans_cls

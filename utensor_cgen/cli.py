@@ -21,7 +21,6 @@ def _get_pb_model_name(path):
 def cli():
   pass
 
-
 @cli.command(name='convert', help='convert graph to cpp/hpp files')
 @click.help_option('-h', '--help')
 @click.argument('pb_file', required=True, metavar='MODEL.pb')
@@ -84,6 +83,22 @@ def convert_graph(pb_file, output, data_dir, embed_data_dir, save_graph,
                             save_graph, debug_comment)
   generator.generate(model_path)
 
+@cli.command(name='list-trans-methods', help='list all available graph transformation')
+@click.help_option('-h', '--help')
+@click.option('--verbose', is_flag=True)
+def list_trans_methods(verbose):
+  from utensor_cgen.transformer import TransformerPipeline
+
+  if verbose:
+    for name, trans_cls in TransformerPipeline.TRANSFORMER_MAP.items():
+      click.secho(name, fg='white', bold=True)
+      click.secho(trans_cls.__doc__, fg='yellow', bold=True)
+  else:
+    click.secho(
+      str(TransformerPipeline.all_transform_methods()),
+      fg='white', bold=True
+    )
+  return 0
 
 @cli.command(name='show', help='show node names in the pb file')
 @click.help_option('-h', '--help')
