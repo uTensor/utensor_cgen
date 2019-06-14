@@ -666,7 +666,7 @@ class FusedConv2DOpMaxpoolSnippet(Snippet):
     self.template_vars["to_eval"] = to_eval
 
 class QuantizedFusedConv2DOpMaxpoolSnippet(Snippet):
-  __template_name__ = "snippets/fused_conv2d_maxpool_op.cpp"
+  __template_name__ = "snippets/quantized_fused_conv2d_maxpool_op.cpp"
   __headers__ = set(['"uTensor/ops/MatrixOps.hpp"'])
 
   def __init__(self, inputs, output, strides, ksize, padding,
