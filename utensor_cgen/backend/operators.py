@@ -443,7 +443,7 @@ class _Conv2DOperator(_Operator):
                                     op_info.op_attr)
     ref_count = parser.get('ref_counts', [0])[0]
     to_eval = parser.get('to_eval', False)
-    self._snippet = Conv2DOpSnippent(inputs, output, strides, padding,
+    self._snippet = Conv2DOpSnippet(inputs, output, strides, padding,
                                      in_dtype=in_dtype, filter_dtype=filter_dtype, out_dtype=out_dtype,
                                      ref_count=ref_count, to_eval=to_eval)
 @OperatorFactory.register
@@ -510,7 +510,7 @@ class _Conv2DQuantOperator(_Operator):
                                     op_info.op_attr)
     ref_counts = parser.get('ref_counts', [])
     to_eval = parser.get('to_eval', False)
-    self._snippet = Conv2DQuantOpSnippent(inputs, outputs, strides, padding,
+    self._snippet = Conv2DQuantOpSnippet(inputs, outputs, strides, padding,
                                      in_dtype=in_dtype, filter_dtype=filter_dtype, out_dtypes=out_dtypes,
                                      ref_counts=ref_counts, to_eval=to_eval)
 @OperatorFactory.register

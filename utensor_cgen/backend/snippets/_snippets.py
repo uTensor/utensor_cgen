@@ -13,7 +13,7 @@ __all__ = ["Snippet", "SnippetContainerBase",
            "ReluOpSnippet", "QuantizedReluOpSnippet", "ShapeOpSnippet",
            "StridedSliceOpSnippet", "PackOpSnippet", "SoftmaxOpSnippet",
            "ReshapeOpSnippet", "QuantizedReshapeOpSnippet",
-           "Conv2DOpSnippent", "Conv2DQuantOpSnippent", "CMSISNNFCOpSnippet",
+           "Conv2DOpSnippet", "Conv2DQuantOpSnippet", "CMSISNNFCOpSnippet",
            "RequantizationRangeOpSnippet", "RequantizeOpSnippet",
            "CommentSnippet", "ContextHeaderSnippet",
            "ContextSnippetsContainer", "QuantizedAddOpSnippet",
@@ -624,7 +624,7 @@ class CMSISNNFCOpSnippet(Snippet):
     self.template_vars["out_dtype"] = NP_TYPES_MAP[out_dtype].tensor_type_str
     self.template_vars["to_eval"] = to_eval
 
-class Conv2DOpSnippent(Snippet):
+class Conv2DOpSnippet(Snippet):
   __template_name__ = "snippets/conv2d_op.cpp"
   __headers__ = set(['"uTensor/ops/MatrixOps.hpp"'])
 
@@ -666,7 +666,7 @@ class FusedConv2DOpMaxpoolSnippet(Snippet):
     self.template_vars["to_eval"] = to_eval
 
 class QuantizedFusedConv2DOpMaxpoolSnippet(Snippet):
-  __template_name__ = "snippets/fused_conv2d_maxpool_op.cpp"
+  __template_name__ = "snippets/quantized_fused_conv2d_maxpool_op.cpp"
   __headers__ = set(['"uTensor/ops/MatrixOps.hpp"'])
 
   def __init__(self, inputs, output, strides, ksize, padding,
@@ -686,7 +686,7 @@ class QuantizedFusedConv2DOpMaxpoolSnippet(Snippet):
     self.template_vars["padding"] = padding
     self.template_vars["to_eval"] = to_eval
 
-class Conv2DQuantOpSnippent(Snippet):
+class Conv2DQuantOpSnippet(Snippet):
   __template_name__ = "snippets/qconv2d_op.cpp"
   __headers__ = set(['"uTensor/ops/MatrixOps.hpp"'])
 
