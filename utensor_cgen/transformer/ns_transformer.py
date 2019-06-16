@@ -69,12 +69,15 @@ class DropoutTransformer(Transformer):
   KWARGS_NAMESCOPE = '_utensor_dropout'
   TARGET_NODENAME_PATTERN = re.compile(r'(dropout[_\w\d]*)/.*')
 
+  def __init__(self, name_pattern=r'(dropout[_\w\d]*)/.*'):
+    self._op_name_pattern = re.compile(name_pattern)
+
   def transform(self, ugraph):
     new_graph = uTensorGraph(output_nodes=ugraph.output_nodes)
     dropout_input_map = self._find_input(ugraph)
     new_ops_info = {}
     for node_name in ugraph.ops_info:
-      match = self.TARGET_NODENAME_PATTERN.match(node_name)
+      match = self._op_name_pattern.match(node_name)
       if match:
         # ignore all dropout nodes
         continue
@@ -87,7 +90,7 @@ class DropoutTransformer(Transformer):
       op_attr = deepcopy(op_info.op_attr)
       for i, t_info in enumerate(in_t_infos):
         op_name = parse_tensor_name(t_info.name)[0]
-        match = self.TARGET_NODENAME_PATTERN.match(op_name)
+        match = self._op_name_pattern.match(op_name)
         if match:
           name_scope = match.group(1)
           # assume there should be only on input except keep_prob
@@ -111,7 +114,7 @@ class DropoutTransformer(Transformer):
   def _find_dropout_clusters(self, ugraph):
     clusters = defaultdict(lambda: [])
     for node_name in ugraph.topo_order:
-      match = self.TARGET_NODENAME_PATTERN.match(node_name)
+      match = self._op_name_pattern.match(node_name)
       if match:
         name_scope = match.group(1)
         clusters[name_scope].append(node_name)
@@ -127,7 +130,7 @@ class DropoutTransformer(Transformer):
     clusters = self._find_dropout_clusters(ugraph)
     input_map = {}
     for node_name in ugraph.topo_order:
-      match = self.TARGET_NODENAME_PATTERN.match(node_name)
+      match = self._op_name_pattern.match(node_name)
       if match:
         name_scope = match.group(1)
         cluster = clusters[name_scope]
