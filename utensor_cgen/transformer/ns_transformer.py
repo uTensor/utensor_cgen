@@ -62,8 +62,9 @@ class DropoutTransformer(Transformer):
 
   Cons
   ====
-  - naming constrains on the dropout layers, layer name must starts with 'dropout'
-    and the keep_prob op must be with name starts with 'keep_prop'
+  - naming constrains on the dropout layers, layer name must matched to the
+    given `name_pattern` (default to r'(dropout[_\w\d]*)/.*') and the keep_prob
+    op must be with name starts with 'keep_prop'
   """
   METHOD_NAME = 'dropout'
   KWARGS_NAMESCOPE = '_utensor_dropout'
@@ -136,7 +137,7 @@ class DropoutTransformer(Transformer):
         cluster = clusters[name_scope]
         op_info = ugraph.ops_info[node_name]
         for in_tensor_info in op_info.input_tensors:
-          in_op_name = parse_tensor_name(in_tensor_info.name)[0]
+          in_op_name = in_tensor_info.op.name
           if in_op_name not in cluster and not in_op_name.startswith('keep_prob'):
             input_map[name_scope] = in_tensor_info
             # assuming there is only one input for dropout
