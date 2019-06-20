@@ -107,6 +107,12 @@ def list_trans_methods(verbose):
 @click.help_option('-h', '--help')
 @click.option('--oneline', is_flag=True,
               help='show in oneline format (no detail information)')
+@click.option('--ignore-unknown-op', is_flag=True,
+              help='ignore unknown/unsupported ops')
+@click.option("--output-nodes",
+              type=NArgsParam(),
+              metavar="NODE_NAME,NODE_NAME,...",
+              help="list of output nodes")
 @click.argument('model_file', required=True, metavar='MODEL.{pb,pkl}')
 def show_graph(model_file, **kwargs):
   _, ext = os.path.splitext(model_file)
@@ -124,11 +130,11 @@ def show_graph(model_file, **kwargs):
 def _show_pb_file(pb_file, **kwargs):
   import tensorflow as tf
   from utensor_cgen.frontend.tensorflow import GraphDefParser
-
-  ugraph = GraphDefParser.parse(pb_file)
+  output_nodes = kwargs.pop('output_nodes')
+  ugraph = GraphDefParser.parse(pb_file, output_nodes=output_nodes)
   _show_ugraph(ugraph, **kwargs)
 
-def _show_ugraph(ugraph, oneline=False):
+def _show_ugraph(ugraph, oneline=False, ignore_unknown_op=False):
   import textwrap
   unknown_ops = set([])
   if oneline:
@@ -148,8 +154,10 @@ def _show_ugraph(ugraph, oneline=False):
       op_type: {op_type}
       input(s):
         {inputs}
+        {input_shapes}
       ouptut(s):
         {outputs}
+        {output_shapes}
     '''
     tmpl = textwrap.dedent(tmpl)
     paragraphs = []
@@ -159,12 +167,14 @@ def _show_ugraph(ugraph, oneline=False):
         op_name=op_name,
         op_type=op_info.op_type,
         inputs=op_info.input_tensors,
-        outputs=op_info.output_tensors)
+        outputs=op_info.output_tensors,
+        input_shapes=[tensor.shape for tensor in op_info.input_tensors],
+        output_shapes=[tensor.shape for tensor in op_info.output_tensors])
       paragraphs.append(op_str)
       if not OperatorFactory.is_supported(op_info.op_type):
         unknown_ops.add(op_info)
     click.echo('\n'.join(paragraphs))
-  if unknown_ops:
+  if unknown_ops and not ignore_unknown_op:
     click.echo(
       click.style('Unknown Ops Detected', fg='red', bold=True)
     )
