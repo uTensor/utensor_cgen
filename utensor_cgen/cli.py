@@ -48,7 +48,8 @@ def cli():
               type=NArgsKwargsParam(sep='|>'),
               default=(
                 'dropout(name_pattern=r"(dropout[_\w\d]*)/.*")|>linear_reorder_v2'
-                '|>quantize|>conv_pool_v2|>inline|>biasAdd|>remove_id_op|>refcnt'
+                '|>quantize|>conv_pool_v2|>inline|>biasAdd|>remove_id_op'
+                '|>fake_gather_v2|>refcnt'
               ),
               help='optimization pipeline',
               metavar='METHOD[|>METHOD|>...]',
@@ -116,8 +117,9 @@ def list_trans_methods(verbose):
 @click.argument('model_file', required=True, metavar='MODEL.{pb,pkl}')
 def show_graph(model_file, **kwargs):
   _, ext = os.path.splitext(model_file)
+  output_nodes = kwargs.pop('output_nodes')
   if ext == '.pb' or ext == '.pbtxt':
-    _show_pb_file(model_file, **kwargs)
+    _show_pb_file(model_file, output_nodes=output_nodes, **kwargs)
   elif ext == '.pkl':
     import pickle
     with open(model_file, 'rb') as fid:
@@ -127,10 +129,9 @@ def show_graph(model_file, **kwargs):
     msg = click.style('unknown file extension: {}'.format(ext), fg='red', bold=True)
     click.echo(msg, file=sys.stderr)
 
-def _show_pb_file(pb_file, **kwargs):
+def _show_pb_file(pb_file, output_nodes, **kwargs):
   import tensorflow as tf
-  from utensor_cgen.frontend.tensorflow import GraphDefParser
-  output_nodes = kwargs.pop('output_nodes')
+  from utensor_cgen.frontend.tensorflow import GraphDefParse
   ugraph = GraphDefParser.parse(pb_file, output_nodes=output_nodes)
   _show_ugraph(ugraph, **kwargs)
 

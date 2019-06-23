@@ -13,6 +13,7 @@ import numpy as np
 import tensorflow as tf
 from utensor_cgen.frontend.tensorflow import GraphDefParser
 from utensor_cgen.ir import OperationInfo, uTensorGraph
+from utensor_cgen.logger import logger
 from utensor_cgen.matcher import uTensorGraphMatcher
 from utensor_cgen.utils import (parse_tensor_name, prune_graph,
                                 topologic_order_graph)
@@ -231,17 +232,19 @@ class BatchNormTransformer(Transformer):
 
   def transform(self, ugraph):
     # TODO: implement this!
-    pass
+    raise RuntimeError('bach norm transformer is not yet implemented')
 
 
 class FakeGatherV2Transformer(Transformer):
   """Force converting GatherV2 op to Gather op
   """
-  METHOD_NAME = 'FakeGatherV2'
+  METHOD_NAME = 'fake_gather_v2'
   KWARGS_NAMESCOPE = '_fake_gatherv2'
 
   def transform(self, ugraph):
-    print("warning: force replacing GatherV2 with Gather")
+    logger.warning(
+      "enabling {} will force replacing GatherV2 with Gather".format(self.METHOD_NAME)
+    )
     for key, op in ugraph.ops_info.items():
       if op.op_type == "GatherV2":
         op.op_type = "Gather"
