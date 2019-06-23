@@ -8,15 +8,18 @@ import pkg_resources
 from utensor_cgen.backend.operators import OperatorFactory
 from utensor_cgen.utils import NArgsKwargsParam, NArgsParam
 
+_version = (
+  pkg_resources
+  .get_distribution('utensor_cgen')
+  .version
+)
 
 def _get_pb_model_name(path):
   return os.path.basename(os.path.splitext(path)[0])
 
 @click.group(name='utensor-cli')
 @click.help_option('-h', '--help')
-@click.version_option((pkg_resources
-                       .get_distribution('utensor_cgen')
-                       .version),
+@click.version_option(_version,
                        '-V', '--version')
 def cli():
   pass

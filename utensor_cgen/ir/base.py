@@ -1,4 +1,17 @@
 # -*- coding: utf8 -*-
+'''
+The ``base`` module of intermediate representation
+
+Concept
+-------
+
+Conceptually, `uTensorGraph` works like a container of `TensorInfo` and `OperationInfo`.
+That is, as long as the `TensorInfo` and `OperationInfo` is not dangling, they always
+belong to some `uTensorGraph` which should be accessible via `ugraph` property of both
+`TensorInfo` and `OperationInfo`. Otherwise, the graph, tensor or op is considered as dangling.
+
+For short, we'll refer an instance of `OperationInfo` as an **op** or a **node**.
+'''
 import re
 from copy import deepcopy
 
@@ -42,12 +55,26 @@ class IRBase(object):
 @attr.s(cmp=False)
 class TensorInfo(IRBase, _NoShallowCopyMixin):
   """
-  name : str
-  dtype : numpy.dtype
-  shape : list
+  Parameters
+  ----------
+  :param name: the name of the tensor
+  :type name: six.string_types
 
-  TODO: the need for null tensor info, that is,
-  a tensor which may not be attached to an op
+  :param op_name: the name of the operator which generate
+    this tensor
+  :type op_name: six.string_types
+
+  :param dtype: the data type of the elements.
+  :type dtype: numpy.dtype
+
+  :param shape: the shape of the tensor. Should be a list
+    of integers or ``None``.
+  :type shape: list
+
+  :param ugraph: a `uTensorGraph`, which this tensor belongs to
+  :type utensor_cgen.ir.uTensorGraph:
+
+  `TensorInfo` defines an tensor in an computational graph
   """
   name = attr.ib(validator=instance_of(six.string_types))
   op_name = attr.ib(validator=instance_of(six.string_types))
@@ -69,6 +96,12 @@ class TensorInfo(IRBase, _NoShallowCopyMixin):
   
   @property
   def ugraph(self):
+    """
+    The `uTensorGraph` which the tensor belongs to
+
+    :getter: return the `uTensorGraph`
+    :type: utensor_cgen.ir.uTensorGraph
+    """
     return self._ugraph
 
   @property
@@ -118,27 +151,49 @@ class TensorInfo(IRBase, _NoShallowCopyMixin):
 
   def move_into(self, ugraph):
     """
-    Move Synmatic of the OperationInfo objects
+    Move Synmatic of the `TensorInfo` objects
+
+    ``move_info(ugraph)`` will move the tensor to the given graph, 
+    that is, transferring ownership of the tensor from original graph
+    to other graph
+
+    Very useful for implementing an optimization pass (`Tranformer`)
     """
     self._ugraph = ugraph
 
 @attr.s(cmp=False, repr=False)
 class OperationInfo(IRBase, _NoShallowCopyMixin):
   """
-  name : str
-  input_tensors : List[TensorInfo]
-  output_tensors : List[TensorInfo]
-  input_nodes : Set[OperationInfo]
-  output_nodes : Set[OperationInfo]
-  op_type : str
-  backend : str {"tensorflow", 'pytorch'(future work)}
-  op_attr : dict
+  Parameters
+  ----------
+  :param name: the name of the node
+  :type name: str
 
-  Note
-  ====
-  - `op_attr` will be a dictionary with key as str and value as generic
-    types defined in `converter.ConverterFactor.all_generic_types`. The
-    only exception is the key which match regex pattern r'_[^_]*'. The 
+  :param input_tensors: the input tensors of the node
+  :type input_tensors: List[TensorInfo]
+
+  :param output_tensors: the output tensors of the node
+  :type output_tensors: List[TensorInfo]
+
+  :param input_nodes: the nodes which generate the tensors in ``input_tensors``
+  :type input_nodes: Set[OperationInfo]
+
+  :param output_nodes: the nodes which consume the ``output_tensors`` in the graph
+  :type output_nodes: Set[OperationInfo]
+
+  :param op_type: the type of the node (ex: ``Add``)
+  :type op_type: str
+
+  :param backend: the name of the backend, the library/framework for the training phase
+    {"tensorflow", 'pytorch'}
+  :type backend: str
+
+  :param op_attr: a dict containing extra information of this op
+  :type op_attr: dict
+
+  - `op_attr` will be a dictionary with key as str and value as generic \
+    types defined in ``converter.ConverterFactor.all_generic_types``. The \
+    only exception is the key which match regex pattern ``r'_[^_]*'``. The \
     values of such keys will be saved as-is without any type conversion.
   """
   name = attr.ib(type=str)
@@ -318,12 +373,16 @@ class uTensorGraph(IRBase, _NoShallowCopyMixin):
   How to Build a uTensorGraph
   ===========================
   1. create a empty graph
+
     - give a list of names of output nodes (required)
     - (optional) give backend string
     - leave ops_info empty
+
   2. setup the ops_info
+
     - when you set the value of ops_info, which is an OperationInfo instance,
       make sure its ugraph attribute is the ugraph you just created at step 1
+
   3. pass the ugraph to topologic_order_graph to setup the order
      of the ops
   """
