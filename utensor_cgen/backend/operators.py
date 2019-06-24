@@ -477,10 +477,10 @@ class _QuantizedFusedConv2DMaxpoolOperator(_Operator):
   def __init__(self, op_info, **kwargs):
     _Operator.__init__(self)
     inputs = [tensor_info.name for tensor_info in op_info.input_tensors]
-    output = op_info.output_tensors[0].name
+    outputs = [tensor_info.name for tensor_info in op_info.output_tensors]
     in_dtype, filter_dtype = (op_info.input_tensors[0].dtype,
                               op_info.input_tensors[1].dtype)
-    out_dtype = op_info.output_tensors[0].dtype
+    out_dtypes = [tensor_info.dtype for tensor_info in op_info.output_tensors]
     strides = op_info.op_attr['_utensor_conv']["strides"].value.ints_value
     ksize = op_info.op_attr['_utensor_pool']["ksize"].value.ints_value
     padding = op_info.op_attr['_utensor_conv']["padding"].value.decode('utf8')
@@ -488,8 +488,8 @@ class _QuantizedFusedConv2DMaxpoolOperator(_Operator):
                                     op_info.op_attr)
     ref_count = parser.get('ref_counts', [0])[0]
     to_eval = parser.get('to_eval', False)
-    self._snippet = QuantizedFusedConv2DMaxpoolOpSnippet(inputs, output, strides, ksize, padding,
-                                     in_dtype=in_dtype, filter_dtype=filter_dtype, out_dtype=out_dtype,
+    self._snippet = QuantizedFusedConv2DMaxpoolOpSnippet(inputs, outputs, strides, ksize, padding,
+                                     in_dtype=in_dtype, filter_dtype=filter_dtype, out_dtypes=out_dtypes,
                                      ref_count=ref_count, to_eval=to_eval)
 
 @OperatorFactory.register
@@ -726,7 +726,7 @@ class _SoftmaxOperator(_Operator):
 @OperatorFactory.register
 class _GatherOperator(_Operator):
 
-  op_type = "Gather" # tf op type
+  op_type = "GatherV2" # tf op type
 
   def __init__(self, op_info, **kwargs):
     _Operator.__init__(self)
