@@ -18,11 +18,25 @@ __all__ = ["Snippet", "SnippetContainerBase",
            "CommentSnippet", "ContextHeaderSnippet",
            "ContextSnippetsContainer", "QuantizedAddOpSnippet",
            "QuantizedMulOpSnippet",
-           "CreateTensorBinarySnippet", "WeightSnippet",
+           "CreateTensorBinarySnippet", "WeightSnippet", "TensorStringReferenceSnippet",
            "ContextGlobalArrayContainer", "QuantRangeForMultiplicationSnippet",
            "FusedConv2DOpMaxpoolSnippet", "QuantizedFusedConv2DMaxpoolOpSnippet",
            "GatherOpSnippet",
            "CreateTensorRamSnippet", "Uint8Q7OriginSnippet"]
+
+#TODO Put this in the correct location
+def mhash(mstr):
+    """
+    Simple java string hash
+    """
+    v = 7
+    for c in mstr:
+        v = v*31 + ord(c)
+    return v
+def prepare_string_ref_name(tensor_name):
+  inline = tensor_name.replace(":", "_").replace("/", "_")
+  prepared = "sref_{}".format(inline)
+  return prepared
 
 # TODO: Better abstraction, i.e a better backend for code generation
 class CreateTensorIdxSnippet(Snippet):
@@ -768,9 +782,31 @@ class ContextHeaderSnippet(Snippet):
     self.template_vars["graph_name"] = graph_name
     self.template_vars["placeholders"] = placeholders
 
+class TensorStringReferenceSnippet(Snippet):
+  __template_name__ = "snippets/tensor_string_reference.hpp"
+  __headers__ = set([])
+  __references__ = set([])
+
+
+  def __init__(self, sref_name):
+    Snippet.__init__(self)
+    self.template_vars['sref_name'] = sref_name
+    self.template_vars['string_id'] = mhash(sref_name)
+    # Dont render duplicates
+    if sref_name not in __references:
+      self.renderable = True
+    else:
+      self.renderable = False
+    __references.add(sref_name)
+  
+  def render(self):
+    if self.renderable:
+      return Snippet.render(self)
+
 class WeightSnippet(Snippet):
   __template_name__ = "snippets/weight_snippet.hpp"
   __headers__ = set([])
+
 
   def __init__(self, inline_name, type, shape, value):
       Snippet.__init__(self)
