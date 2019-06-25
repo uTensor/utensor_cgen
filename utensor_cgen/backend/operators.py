@@ -19,12 +19,16 @@ def add_tensor_string_references(inputs, outputs, **kwargs):
   def add_things(mthings, **kwargs):
     if isinstance(mthings, list):
       for sref_name in mthings:
-        add_tensor_string_reference(sref_name, kwargs)
+        add_tensor_string_reference(sref_name, **kwargs)
     else:
-      add_tensor_string_reference(mthings, kwargs)
-  add_things(inputs, kwargs)
-  add_things(outputs, kwargs)
+      add_tensor_string_reference(mthings, **kwargs)
+  add_things(inputs, **kwargs)
+  add_things(outputs, **kwargs)
 
+def prepare_string_ref_name(tensor_name):
+  inline = tensor_name.replace(":", "_").replace("/", "_")
+  prepared = "sref_{}".format(inline)
+  return prepared
 
 class OperatorFactory():
   # Can easily do something smarter
@@ -76,7 +80,7 @@ class _AddOperator(_Operator):
     to_eval = parser.get('to_eval', False)
     self._snippet = AddOpSnippet(inputs, output, tf_dtype, ref_count, to_eval)
     
-    add_tensor_string_references(inputs, output, kwargs)
+    add_tensor_string_references(inputs, output, **kwargs)
 
 
 @OperatorFactory.register
@@ -88,7 +92,7 @@ class _ArgMaxOperator(_Operator):
     _Operator.__init__(self)
     inputs = [prepare_string_ref_name(tensor_info.name) for tensor_info in op_info.input_tensors]
     out_tensor_info = op_info.output_tensors[0]
-    output, out_dtype = out_tensor_info.name, out_tensor_info.dtype
+    output, out_dtype = prepare_string_ref_name(out_tensor_info.name), out_tensor_info.dtype
     in_dtype = op_info.input_tensors[0].dtype
     parser = NamescopedKWArgsParser(RefCntOptimizer.KWARGS_NAMESCOPE, 
                                     op_info.op_attr)
@@ -96,7 +100,7 @@ class _ArgMaxOperator(_Operator):
     to_eval = parser.get('to_eval', False)
     self._snippet = ArgMaxOpSnippet(inputs, output, in_dtype, out_dtype, ref_count, to_eval)
 
-    add_tensor_string_references(inputs, output, kwargs)
+    add_tensor_string_references(inputs, output, **kwargs)
 
 @OperatorFactory.register
 class _DequantizeOperator(_Operator):
@@ -107,14 +111,14 @@ class _DequantizeOperator(_Operator):
     _Operator.__init__(self)
     inputs = [prepare_string_ref_name(tensor_info.name) for tensor_info in op_info.input_tensors]
     out_tensor_info = op_info.output_tensors[0]
-    output, out_dtype = out_tensor_info.name, out_tensor_info.dtype
+    output, out_dtype = prepare_string_ref_name(out_tensor_info.name), out_tensor_info.dtype
     parser = NamescopedKWArgsParser(RefCntOptimizer.KWARGS_NAMESCOPE, 
                                     op_info.op_attr)
     ref_count = parser.get('ref_counts', [0])[0]
     to_eval = parser.get('to_eval', False)
     self._snippet = DequantizeOpSnippet(inputs, output, out_dtype, ref_count, to_eval)
 
-    add_tensor_string_references(inputs, output, kwargs)
+    add_tensor_string_references(inputs, output, **kwargs)
 
 @OperatorFactory.register
 class _MaxOperator(_Operator):
@@ -125,7 +129,7 @@ class _MaxOperator(_Operator):
     _Operator.__init__(self)
     inputs = [prepare_string_ref_name(tensor_info.name) for tensor_info in op_info.input_tensors]
     out_tensor_info = op_info.output_tensors[0]
-    output, out_dtype, out_shape = (out_tensor_info.name,
+    output, out_dtype, out_shape = (prepare_string_ref_name(out_tensor_info.name),
                                     out_tensor_info.dtype,
                                     out_tensor_info.shape)
     # FIXME: automatic alloc for uTensor fail
@@ -137,7 +141,7 @@ class _MaxOperator(_Operator):
     to_eval = parser.get('to_eval', False)
     self._snippet = MaxOpSnippet(inputs, output, out_dtype, out_shape, ref_count, to_eval)
     
-    add_tensor_string_references(inputs, output, kwargs)
+    add_tensor_string_references(inputs, output, **kwargs)
 
 @OperatorFactory.register
 class _MaxPool(_Operator):
@@ -160,7 +164,7 @@ class _MaxPool(_Operator):
                                             ksize, strides, padding,
                                             ref_count, to_eval)
     
-    add_tensor_string_references(inputs, output, kwargs)
+    add_tensor_string_references(inputs, output, **kwargs)
 
 
 @OperatorFactory.register
@@ -184,7 +188,7 @@ class _QuantizedMaxPool(_Operator):
                                             ksize, strides, padding,
                                             ref_counts, to_eval)
 
-    add_tensor_string_references(inputs, outputs, kwargs)
+    add_tensor_string_references(inputs, outputs, **kwargs)
 
 @OperatorFactory.register
 class _MinOperator(_Operator):
@@ -195,7 +199,7 @@ class _MinOperator(_Operator):
     _Operator.__init__(self)
     inputs = [prepare_string_ref_name(tensor_info.name) for tensor_info in op_info.input_tensors]
     out_info = op_info.output_tensors[0]
-    output, out_dtype, out_shape = (out_info.name,
+    output, out_dtype, out_shape = (prepare_string_ref_name(out_info.name),
                                     out_info.dtype,
                                     out_info.shape)
     # FIXME: automatic alloc for uTensor fail
@@ -207,7 +211,7 @@ class _MinOperator(_Operator):
     to_eval = parser.get('to_eval', False)
     self._snippet = MinOpSnippet(inputs, output, out_dtype, out_shape, ref_count, to_eval)
 
-    add_tensor_string_references(inputs, output, kwargs)
+    add_tensor_string_references(inputs, output, **kwargs)
 
 @OperatorFactory.register
 class _QuantizeV2Operator(_Operator):
@@ -225,7 +229,7 @@ class _QuantizeV2Operator(_Operator):
     to_eval = parser.get('to_eval', False)
     self._snippet = QuantizeV2OpSnippet(inputs, outputs, out_dtype, ref_counts, to_eval)
 
-    add_tensor_string_references(inputs, outputs, kwargs)
+    add_tensor_string_references(inputs, outputs, **kwargs)
 
 @OperatorFactory.register
 class _MatMulOperator(_Operator):
@@ -248,7 +252,7 @@ class _MatMulOperator(_Operator):
                                     x_dtype, w_dtype, out_dtype,
                                     ref_count, to_eval)
     
-    add_tensor_string_references(inputs, output, kwargs)
+    add_tensor_string_references(inputs, output, **kwargs)
 
 @OperatorFactory.register
 class _QuantizedMatMulOperator(_Operator):
@@ -271,7 +275,7 @@ class _QuantizedMatMulOperator(_Operator):
                                              x_dtype, w_dtype, out_dtype, 
                                              ref_counts, to_eval)
 
-    add_tensor_string_references(inputs, outputs, kwargs)
+    add_tensor_string_references(inputs, outputs, **kwargs)
 
 @OperatorFactory.register
 class _ReluOperator(_Operator):
@@ -293,7 +297,7 @@ class _ReluOperator(_Operator):
                                            out_dtype,
                                            ref_count, to_eval)
 
-    add_tensor_string_references(inputs, output, kwargs)
+    add_tensor_string_references(inputs, output, **kwargs)
 
 @OperatorFactory.register
 class _QuantizedReluOperator(_Operator):
@@ -316,7 +320,7 @@ class _QuantizedReluOperator(_Operator):
                                            out_dtypes, qout_dtype, 
                                            ref_counts, to_eval)
 
-    add_tensor_string_references(inputs, outputs, kwargs)
+    add_tensor_string_references(inputs, outputs, **kwargs)
 
 @OperatorFactory.register
 class _QuantizedAddOperator(_Operator):
@@ -338,7 +342,7 @@ class _QuantizedAddOperator(_Operator):
                                           x_dtype, w_dtype, out_dtype, 
                                           ref_counts, to_eval)
 
-    add_tensor_string_references(inputs, outputs, kwargs)
+    add_tensor_string_references(inputs, outputs, **kwargs)
     
 @OperatorFactory.register
 class _QuantizedMulOperator(_Operator):
@@ -360,7 +364,7 @@ class _QuantizedMulOperator(_Operator):
                                           x_dtype, w_dtype, out_dtype, 
                                           ref_counts, to_eval)
 
-    add_tensor_string_references(inputs, outputs, kwargs)
+    add_tensor_string_references(inputs, outputs, **kwargs)
 
 @OperatorFactory.register
 class _RequantizationRangeOperator(_Operator):
@@ -378,7 +382,7 @@ class _RequantizationRangeOperator(_Operator):
     to_eval = parser.get('to_eval', False)
     self._snippet = RequantizationRangeOpSnippet(inputs, outputs, out_dtype, 
                                                  ref_counts, to_eval)
-    add_tensor_string_references(inputs, outputs, kwargs)
+    add_tensor_string_references(inputs, outputs, **kwargs)
 
 
 @OperatorFactory.register
@@ -399,7 +403,7 @@ class _RequantizeOperator(_Operator):
                                         qout_dtype, range_dtype,
                                         ref_counts, to_eval)
 
-    add_tensor_string_references(inputs, outputs, kwargs)
+    add_tensor_string_references(inputs, outputs, **kwargs)
 
 @OperatorFactory.register
 class _ReshapeOperator(_Operator):
@@ -417,7 +421,7 @@ class _ReshapeOperator(_Operator):
     dtype = op_info.input_tensors[0].dtype
     self._snippet = ReshapeOpSnippet(inputs, output, dtype, ref_count, to_eval)
     
-    add_tensor_string_references(inputs, output, kwargs)
+    add_tensor_string_references(inputs, output, **kwargs)
 
 
 @OperatorFactory.register
@@ -438,7 +442,7 @@ class _QuantizedReshapeOperator(_Operator):
                                               ref_counts=ref_counts,
                                               to_eval=to_eval)
 
-    add_tensor_string_references(inputs, outputs, kwargs)
+    add_tensor_string_references(inputs, outputs, **kwargs)
 @OperatorFactory.register
 class _CMSIS_NN_FCOperator(_Operator):
 
@@ -464,7 +468,7 @@ class _CMSIS_NN_FCOperator(_Operator):
                                               out_dtype=out_dtype,
                                               to_eval=to_eval)
 
-    add_tensor_string_references(inputs, output, kwargs)
+    add_tensor_string_references(inputs, output, **kwargs)
 @OperatorFactory.register
 class _Conv2DOperator(_Operator):
 
@@ -486,7 +490,7 @@ class _Conv2DOperator(_Operator):
     self._snippet = Conv2DOpSnippent(inputs, output, strides, padding,
                                      in_dtype=in_dtype, filter_dtype=filter_dtype, out_dtype=out_dtype,
                                      ref_count=ref_count, to_eval=to_eval)
-    add_tensor_string_references(inputs, output, kwargs)
+    add_tensor_string_references(inputs, output, **kwargs)
 @OperatorFactory.register
 class _FusedConv2DMaxpoolOperator(_Operator):
 
@@ -510,7 +514,7 @@ class _FusedConv2DMaxpoolOperator(_Operator):
                                      in_dtype=in_dtype, filter_dtype=filter_dtype, out_dtype=out_dtype,
                                      ref_count=ref_count, to_eval=to_eval)
 
-    add_tensor_string_references(inputs, output, kwargs)
+    add_tensor_string_references(inputs, output, **kwargs)
 
 @OperatorFactory.register
 class _QuantizedFusedConv2DMaxpoolOperator(_Operator):
@@ -535,7 +539,7 @@ class _QuantizedFusedConv2DMaxpoolOperator(_Operator):
                                      in_dtype=in_dtype, filter_dtype=filter_dtype, out_dtypes=out_dtypes,
                                      ref_count=ref_count, to_eval=to_eval)
 
-    add_tensor_string_references(inputs, outputs, kwargs)
+    add_tensor_string_references(inputs, outputs, **kwargs)
 
 @OperatorFactory.register
 class _Conv2DQuantOperator(_Operator):
@@ -558,7 +562,7 @@ class _Conv2DQuantOperator(_Operator):
     self._snippet = Conv2DQuantOpSnippent(inputs, outputs, strides, padding,
                                      in_dtype=in_dtype, filter_dtype=filter_dtype, out_dtypes=out_dtypes,
                                      ref_counts=ref_counts, to_eval=to_eval)
-    add_tensor_string_references(inputs, outputs, kwargs)
+    add_tensor_string_references(inputs, outputs, **kwargs)
 @OperatorFactory.register
 class _Uint8Q7OriginOperator(_Operator):
 
@@ -573,7 +577,7 @@ class _Uint8Q7OriginOperator(_Operator):
     ref_count = parser.get('ref_counts', [0])[0]
     to_eval = parser.get('to_eval', False)
     self._snippet = Uint8Q7OriginSnippet(inputs, output, ref_count, to_eval)
-    add_tensor_string_references(inputs, output, kwargs)
+    add_tensor_string_references(inputs, output, **kwargs)
 
 #hard coding to uint8_t uint8_t int32_t for now
 @OperatorFactory.register
@@ -595,7 +599,7 @@ class _QuantRangeForMultiplication_u8_u8_int32_Operator(_Operator):
     ref_counts = parser.get('ref_counts', [])
     to_eval = parser.get('to_eval', False)
     self._snippet = QuantRangeForMultiplicationSnippet(inputs, outputs, output_type, ref_counts, to_eval)
-    add_tensor_string_references(inputs, outputs, kwargs)
+    add_tensor_string_references(inputs, outputs, **kwargs)
 
 @OperatorFactory.register
 class _InlineOperator(_Operator):
@@ -604,7 +608,7 @@ class _InlineOperator(_Operator):
   
   def __init__(self, op_info, **kwargs):
     out_tensor_info = op_info.output_tensors[0]
-    out_tname, out_dtype, tensor_shape = (out_tensor_info.name,
+    out_tname, out_dtype, tensor_shape = (prepare_string_ref_name(out_tensor_info.name),
                             out_tensor_info.dtype,
                             out_tensor_info.shape)
     parser = NamescopedKWArgsParser(RefCntOptimizer.KWARGS_NAMESCOPE,
@@ -612,7 +616,6 @@ class _InlineOperator(_Operator):
     ref_count = parser.get('ref_counts', [0])[0]
     pre_tname = self._prepare_tensor_name(out_tname)
     inline_tname = self._prepare_inline_array_name(out_tname)
-    out_tname = prepare_string_ref_name(out_tname)
     value = op_info.op_attr['value'].value.np_array.flatten()
     self._snippet = CreateTensorBinarySnippet(out_tname, tensor_shape=tensor_shape,
                                          tf_dtype=out_dtype,
@@ -626,7 +629,7 @@ class _InlineOperator(_Operator):
                                   value)
     weight_container = kwargs['weight_container']                             
     weight_container.add_snippet(weight_snippet)
-    add_tensor_string_references([], out_tname, kwargs)
+    add_tensor_string_references([], out_tname, **kwargs)
 
   def _prepare_tensor_name(self, tensor_name):
     prepared = tensor_name.replace(":", "_").replace("/", "_")
@@ -638,6 +641,7 @@ class _InlineOperator(_Operator):
     return preapred
 
 
+# TODO check for correctness with cstring stuffs
 @OperatorFactory.register
 class _ConstOperator(_Operator):
 
@@ -645,7 +649,7 @@ class _ConstOperator(_Operator):
 
   def __init__(self, op_info, **kwargs):
     out_tensor_info = op_info.output_tensors[0]
-    out_tname, out_dtype = (out_tensor_info.name,
+    out_tname, out_dtype = (prepare_string_ref_name(out_tensor_info.name),
                             out_tensor_info.dtype)
     parser = NamescopedKWArgsParser(RefCntOptimizer.KWARGS_NAMESCOPE,
                                     op_info.op_attr)
@@ -655,7 +659,7 @@ class _ConstOperator(_Operator):
     idx_dir = kwargs['idx_dir']
     embed_data_dir = kwargs.get('embed_data_dir',
                                 os.path.join("/fs", idx_dir))
-    out_tname = prepare_string_ref_name(out_tname)
+    #out_tname = prepare_string_ref_name(out_tname)
     self._snippet = CreateTensorIdxSnippet(embed_data_dir, out_tname,
                                            idx_fname=idx_fname,
                                            np_dtype=out_dtype,
@@ -663,7 +667,7 @@ class _ConstOperator(_Operator):
     idx_path = os.path.join(idx_dir, idx_fname)
     value = op_info.op_attr['value'].value
     self._tf_save_data(idx_path, value)
-    add_tensor_string_references([], out_tname, kwargs)
+    add_tensor_string_references([], out_tname, **kwargs)
 
   def _tf_prepare_tensor_name(self, tensor_name):
     """Replace all ':' and '/' with '_' in a given tensor name
@@ -686,14 +690,14 @@ class _RamOperator(_Operator):
   
   def __init__(self, op_info, **kwargs):
     out_tensor_info = op_info.output_tensors[0]
-    out_tname, out_dtype, tensor_shape = (out_tensor_info.name,
+    out_tname, out_dtype, tensor_shape = (prepare_string_ref_name(out_tensor_info.name),
                             out_tensor_info.dtype,
                             out_tensor_info.shape)
     parser = NamescopedKWArgsParser(RefCntOptimizer.KWARGS_NAMESCOPE,
                                     op_info.op_attr)
     ref_count = parser.get('ref_counts', [0])[0]
     pre_tname = self._prepare_tensor_name(out_tname)
-    out_tname = prepare_string_ref_name(out_tname)
+    #out_tname = prepare_string_ref_name(out_tname)
     #inline_tname = self._prepare_inline_array_name(out_tname)
     #value = op_info.op_attr['value'].value.np_array.flatten()
     self._snippet = CreateTensorRamSnippet(out_tname, tensor_shape=tensor_shape,
@@ -701,7 +705,7 @@ class _RamOperator(_Operator):
                                          sptr_name=pre_tname,
                                          ref_count=ref_count)
     
-    add_tensor_string_references([], out_tname, kwargs)
+    add_tensor_string_references([], out_tname, **kwargs)
 
   def _prepare_tensor_name(self, tensor_name):
     prepared = tensor_name.replace(":", "_").replace("/", "_")
@@ -721,7 +725,7 @@ class _ShapeOperator(_Operator):
     to_eval = parser.get('to_eval', True)
     out_dtype = op_info.output_tensors[0].dtype
     self._snippet = ShapeOpSnippet(inputs, output, out_dtype, ref_count, to_eval)
-    add_tensor_string_references(inputs, output, kwargs)
+    add_tensor_string_references(inputs, output, **kwargs)
 
 
 @OperatorFactory.register
@@ -747,7 +751,7 @@ class _StridedSliceOperator(_Operator):
                                           begin_mask, ellipsis_mask, end_mask,
                                           new_axis_mask, shrink_axis_mask,
                                           ref_count, to_eval)
-    add_tensor_string_references(inputs, output, kwargs)
+    add_tensor_string_references(inputs, output, **kwargs)
 
 @OperatorFactory.register
 class _PackOperator(_Operator):
@@ -766,7 +770,7 @@ class _PackOperator(_Operator):
     N = op_info.op_attr['N'].value
     axis = op_info.op_attr['axis'].value
     self._snippet = PackOpSnippet(inputs, output, dtype, out_dtype, N, axis, ref_count, to_eval)
-    add_tensor_string_references(inputs, output, kwargs)
+    add_tensor_string_references(inputs, output, **kwargs)
 
 @OperatorFactory.register
 class _SoftmaxOperator(_Operator):
@@ -782,7 +786,7 @@ class _SoftmaxOperator(_Operator):
     to_eval = parser.get('to_eval', True)
     out_dtype = op_info.output_tensors[0].dtype
     self._snippet = SoftmaxOpSnippet(inputs, output, out_dtype, ref_count, to_eval)
-    add_tensor_string_references(inputs, output, kwargs)
+    add_tensor_string_references(inputs, output, **kwargs)
 
 @OperatorFactory.register
 class _GatherOperator(_Operator):
@@ -799,4 +803,4 @@ class _GatherOperator(_Operator):
     ref_count = parser.get('ref_counts', [0])[0]
     to_eval = parser.get('to_eval', False)
     self._snippet = GatherOpSnippet(inputs, output, tf_dtype, ref_count, to_eval)
-    add_tensor_string_references(inputs, output, kwargs)
+    add_tensor_string_references(inputs, output, **kwargs)

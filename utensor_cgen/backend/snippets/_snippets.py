@@ -29,14 +29,11 @@ def mhash(mstr):
     """
     Simple java string hash
     """
-    v = 7
+    v = int(7)
     for c in mstr:
-        v = v*31 + ord(c)
+        v = (v*31 + ord(c)) & 0xffffffff
     return v
-def prepare_string_ref_name(tensor_name):
-  inline = tensor_name.replace(":", "_").replace("/", "_")
-  prepared = "sref_{}".format(inline)
-  return prepared
+
 
 # TODO: Better abstraction, i.e a better backend for code generation
 class CreateTensorIdxSnippet(Snippet):
@@ -787,21 +784,27 @@ class TensorStringReferenceSnippet(Snippet):
   __headers__ = set([])
   __references__ = set([])
 
+  @classmethod
+  def add_reference(cls, sref_name):
+      cls.__references__.add(sref_name)
+
+  @classmethod
+  def have_reference(cls, sref_name):
+    return sref_name not in cls.__references__
 
   def __init__(self, sref_name):
     Snippet.__init__(self)
     self.template_vars['sref_name'] = sref_name
     self.template_vars['string_id'] = mhash(sref_name)
     # Dont render duplicates
-    if sref_name not in __references:
-      self.renderable = True
-    else:
-      self.renderable = False
-    __references.add(sref_name)
+    self.renderable = self.have_reference(sref_name)
+    self.add_reference(sref_name)
   
   def render(self):
     if self.renderable:
       return Snippet.render(self)
+    else:
+        return ''
 
 class WeightSnippet(Snippet):
   __template_name__ = "snippets/weight_snippet.hpp"
