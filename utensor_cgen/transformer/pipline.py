@@ -3,7 +3,7 @@ from utensor_cgen.utils import NamescopedKWArgsParser
 from .base import Transformer
 from .cmsis_nn import CMSIS_NN_Transformer
 from .ns_transformer import (BatchNormTransformer, DropoutTransformer,
-                             InlineTransformer, BiasAddTransformer)
+                             InlineTransformer, BiasAddTransformer, TensorLifeProbe)
 from .optimizer import IdOpRemoveOptimizer, RefCntOptimizer
 from .quantize import QuantizeTransformer
 from .graph_viz import GraphVizTransformer
@@ -20,6 +20,7 @@ class TransformerPipeline(object):
     CMSIS_NN_Transformer.METHOD_NAME: CMSIS_NN_Transformer,
     IdOpRemoveOptimizer.METHOD_NAME: IdOpRemoveOptimizer,
     GraphVizTransformer.METHOD_NAME: GraphVizTransformer,
+    TensorLifeProbe.METHOD_NAME: TensorLifeProbe,
   }
 
   def __init__(self, methods):
