@@ -118,11 +118,12 @@ def parse_tensor_name(tname):
 
 class NamescopedKWArgsParser:
 
-  def __init__(self, name_space, kwargs):
+  def __init__(self, name_space, kwargs, data_manager=None, op_info=None):
     ns_pattern = re.compile(r'^{}__([^\d\W][\w\d_]*)'.format(name_space))
     self._namespace = name_space
     self._private_kwargs = {}
     self._shared_kwargs = {}
+    outputs = [tensor_info.name for tensor_info in op_info.output_tensors]
     for key, value in kwargs.items():
       match = ns_pattern.match(key)
       if match:
@@ -130,6 +131,14 @@ class NamescopedKWArgsParser:
         self._private_kwargs[argname] = value
       else:
         self._shared_kwargs[key] = value
+    for tensor in outputs:
+      values = data_manager.group(tensor)
+      for key, value in values():
+        if key not in self._private_kwargs:
+          self._private_kwargs = []
+          self._private_kwargs[key].append(value)
+        else:
+          self._private_kwargs[key].append(value)
   
   def get(self, argname, default=None):
     try:

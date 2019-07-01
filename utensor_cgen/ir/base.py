@@ -17,7 +17,7 @@ from tensorflow.core.framework.tensor_shape_pb2 import \
     TensorShapeProto as _TensorShapeProto
 from tensorflow.core.framework.types_pb2 import DataType as _DataType
 from utensor_cgen.utils import topologic_order_graph
-
+from utensor_cgen.ir.instr import DataManager
 from .converter import AttrValueConverter, ConverterFactory
 
 __all__ = ['TensorInfo', 'OperationInfo', 'uTensorGraph']
@@ -47,6 +47,7 @@ class TensorInfo(IRBase, _NoShallowCopyMixin):
   op_name = attr.ib(validator=instance_of(six.string_types))
   dtype = attr.ib(validator=instance_of(np.dtype))
   shape = attr.ib(validator=instance_of((list, type(None))))
+  alloc_address = attr.ib(validator=instance_of((list, type(None))))
   @shape.validator
   def check(self, attrib, shape_values):
     if shape_values is not None:
@@ -75,7 +76,8 @@ class TensorInfo(IRBase, _NoShallowCopyMixin):
                             ugraph=memo['ugraph'],
                             op_name=self.op_name,
                             dtype=self.dtype,
-                            shape=deepcopy(self.shape, memo))
+                            shape=deepcopy(self.shape, memo),
+                            alloc_address=deepcopy(self.alloc_address))
     return new_tensor
 
 
@@ -205,6 +207,7 @@ class uTensorGraph(IRBase, _NoShallowCopyMixin):
   _backend = attr.ib(default='', type=str)
   ops_info = attr.ib(factory=dict)
   topo_order = attr.ib(factory=list, init=False)
+  data_manager = None
 
   def __attrs_post_init__(self):
     if not self.output_nodes:
@@ -257,6 +260,10 @@ class uTensorGraph(IRBase, _NoShallowCopyMixin):
       raise ValueError('op not found in the graph: {}'.format(op_name))
     del self.ops_info[op_name]
     self.topo_order.remove(op_name)
+  
+  def create_data(self, datas):
+    manager = DataManager(datas)
+    self.data_manager = manager
 
   def __deepcopy__(self, memo):
     new_graph = uTensorGraph(output_nodes=self.output_nodes)
@@ -267,4 +274,5 @@ class uTensorGraph(IRBase, _NoShallowCopyMixin):
     new_graph.ops_info = new_ops_info
     new_graph.topo_order = new_topo_order
     new_graph._backend = self._backend
+    new_graph.data_manager = self.data_manager
     return new_graph
