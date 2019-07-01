@@ -123,7 +123,6 @@ class NamescopedKWArgsParser:
     self._namespace = name_space
     self._private_kwargs = {}
     self._shared_kwargs = {}
-    outputs = [tensor_info.name for tensor_info in op_info.output_tensors]
     for key, value in kwargs.items():
       match = ns_pattern.match(key)
       if match:
@@ -131,14 +130,16 @@ class NamescopedKWArgsParser:
         self._private_kwargs[argname] = value
       else:
         self._shared_kwargs[key] = value
-    for tensor in outputs:
-      values = data_manager.group(tensor)
-      for key, value in values():
-        if key not in self._private_kwargs:
-          self._private_kwargs = []
-          self._private_kwargs[key].append(value)
-        else:
-          self._private_kwargs[key].append(value)
+    if op_info is not None and data_manager is not None:
+      outputs = [tensor_info.name for tensor_info in op_info.output_tensors]
+      for tensor in outputs:
+        values = data_manager.group(tensor)
+        for key, value in values():
+          if key not in self._private_kwargs:
+            self._private_kwargs[key] = []
+            self._private_kwargs[key].append(value)
+          else:
+            self._private_kwargs[key].append(value)
   
   def get(self, argname, default=None):
     try:

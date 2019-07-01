@@ -9,8 +9,7 @@ from collections import defaultdict
 from copy import deepcopy
 
 from utensor_cgen.ir import OperationInfo, uTensorGraph
-from utensor_cgen.utils import parse_tensor_name
-
+from utensor_cgen.utils import parse_tensor_name 
 from .base import Transformer
 
 __all__ = ["DropoutTransformer", "BatchNormTransformer", "InlineTransformer", "TensorLifeProbe"]
@@ -18,17 +17,20 @@ __all__ = ["DropoutTransformer", "BatchNormTransformer", "InlineTransformer", "T
 class TensorLifeProbe(Transformer):
   METHOD_NAME = 'tensorlife'
   KWARGS_NAMESCOPE = '_utensor_utlife'
+  DATA_NAME = 'address'
 
 
   def transform(self, ugraph):
+    ugraph.create_data({self.DATA_NAME: " "})
     use_def_table = self._create_resource_table(ugraph)
     unit_size = 4
     allocate_success = False
-    buffer_size = 50 #1k bytes
+    buffer_size = 30000 #1k bytes
     while not allocate_success:
+      print("go")
       allocate_table = dict()
       for node_name in ugraph.topo_order:
-
+        print(node_name)
         success = False
         in_t_infos = ugraph.ops_info[node_name].input_tensors  # may be input tensor doest not need this
         for in_o in in_t_infos:
@@ -44,29 +46,29 @@ class TensorLifeProbe(Transformer):
         out_t_infos = ugraph.ops_info[node_name].output_tensors
         for out_o in out_t_infos:
           success = False
-          for i in range(0, buffer_size, unit_size):
-            tensor_size = self._getSize(out_o)
-            if self._check(allocate_table, use_def_table, out_o, i, i + tensor_size):
-              self._create_allocate_table(allocate_table, use_def_table, out_o, i, i + tensor_size)
+          allocation_offsets = self.candidates(allocate_table, use_def_table, buffer_size, unit_size)
+          for candidate in allocate_success:
+            self._create_allocate_table(allocate_table, use_def_table, out_o, i, i + tensor_size)
               success = True
               break
             else:
               success = False
         if success == False:
+          print("failed fisnish node {}".format(node_name))
           break
+        print("success allocate node {}".format(node_name))
       if success == True:
         allocate_success = True
+    
     for node_name in ugraph.topo_order:
       in_t_infos = ugraph.ops_info[node_name].input_tensors
       for in_o in in_t_infos:
         if in_o.name in allocate_table:
-          in_o.alloc_address[0] = allocate_table[in_o.name]['offsetstart']
-          in_o.alloc_address[1] = allocate_table[in_o.name]['offsetend']
+          ugraph.data_manager.address = (in_o.name, allocate_table[in_o.name]['offsetstart'])
       out_t_infos = ugraph.ops_info[node_name].output_tensors
       for out_o in out_t_infos:
         if out_o.name in allocate_table:
-          out_o.alloc_address[0] = allocate_table[out_o.name]['offsetstart']
-          out_o.alloc_address[1] = allocate_table[out_o.name]['offsetend']
+          ugraph.data_manager.address = (out_o.name, allocate_table[out_o.name]['offsetstart'])
     return ugraph
 
 
@@ -117,6 +119,33 @@ class TensorLifeProbe(Transformer):
           ret.append(op)
 
     return ret
+  
+  def allocate_node(self, nodes, index):
+    tensors = []
+    for node_name in ugraph.topo_order:
+      in_t_infos = ugraph.ops_info[node_name].input_tensors 
+      out_t_infos = ugraph.ops_info[node_name].output_tensors
+      tensors.extend(in_t_infos)
+      tensors.extend(out_t_infos)
+    succ = self.allocate_tensor(tensors, 0)
+    return succ
+
+  def allocate_tensor(self, tensor, tensor_index):
+    if tensors[tensor_Index] is in allocate_table:
+      return self.allocate_tensor(tensors, tensor_index + 1)
+    candidates = self.get_candidates(tensor)
+    if candidates.empty() is None:
+      return False
+    success = False
+    for candidate in candidates:
+      succ = self._create_allocate_table(allocate_table, use_def_table, tensor, candidate, candidate + tensor_size)
+      if succ is False:
+        return False
+      else:
+        return self.allocate_tensor(tensors, tensor_index + 1)
+    return success
+
+
 
   def _check(self, allocate_table, use_def_table, tensor, tensor_offset_start, tensor_offset_end):
     valid = False
@@ -128,7 +157,14 @@ class TensorLifeProbe(Transformer):
     if len(a) == 0:
       return True
     return valid
-
+  def candidates(self, allocate_table, use_def_table, buffer_size, unit_size, in_o):
+    ret = []
+    for i in range(0, buffer_size, unit_size):
+            tensor_size = self._getSize(in_o)
+            if self._check(allocate_table, use_def_table, in_o, i, i + tensor_size):
+              ret.append(i)
+    return ret
+  
   def _create_allocate_table(self, allocate_table, use_def_table, tensor,
   offset_start, offset_end):   
     time_start = use_def_table[tensor.name]['start']
@@ -163,14 +199,15 @@ class TensorLifeProbe(Transformer):
     return resource_table
   
   def _create_topo_list(self, ugraph):
-    my_map = {node_idx: name for (node_idx, name) in enumerate(ugraph.topo_order)}
+    my_map = {name: node_idx for (node_idx, name) in enumerate(ugraph.topo_order)}
     return my_map
   
   #should consider different type
   def _getSize(self, tensor):
     ret = 1   
     for i in tensor.shape:
-      ret = ret * i
+      if i is not None:
+        ret = ret * i
     return ret
 
 
@@ -202,7 +239,6 @@ class InlineTransformer(Transformer):
   def transform(self, ugraph):
     for node_name in ugraph.topo_order:
       op_type = ugraph.ops_info[node_name].op_type
-      op_inputs = ugraph.tensor
       if op_type == 'Const':
         op_info = ugraph.ops_info[node_name]
         op_info.op_type = 'Inline'
