@@ -131,7 +131,7 @@ def show_graph(model_file, **kwargs):
 
 def _show_pb_file(pb_file, output_nodes, **kwargs):
   import tensorflow as tf
-  from utensor_cgen.frontend.tensorflow import GraphDefParse
+  from utensor_cgen.frontend.tensorflow import GraphDefParser
   ugraph = GraphDefParser.parse(pb_file, output_nodes=output_nodes)
   _show_ugraph(ugraph, **kwargs)
 

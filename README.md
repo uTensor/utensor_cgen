@@ -83,7 +83,9 @@ Run `utensor-cli convert --help` for detailed information.
 
 ## Subgraph Isomorphic Matcher and Nodes Fusion
 
-With `uTensorGraphMatcher`, performing a subgraph isomorphic match, replace or manipulate the matched subgraph is just a few line of code!
+With `uTensorGraphMatcher`, performing common subgraph tasks such as isomorphic matching along with replacing or manipulating the matched subgraph(s) takes just a few line of code!
+
+- (**Future Work**) High-level api for graph pattern declaration. Currently relies on `TensorFlow` api for building graph and converting to `utensor_cgen` IR graph.
 
 ### Node Fusion
 
