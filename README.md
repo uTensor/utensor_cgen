@@ -89,19 +89,22 @@ With `uTensorGraphMatcher`, performing common subgraph tasks such as isomorphic 
 
 ### Node Fusion
 
-![conv-pool-fuce](images/conv_pool_fuse.png)
+Note: we'll use operation/node/layer interchangeably in the documentation
 
-- Left: original graph
-- Middle: matched convolution layer
-- Right: replace the matched layer with specialized `QuantConvPool` node
+- It's commonly seen pattern in convolution neural network (`CNN`), `conv -> relu -> pooling`. That is, a 2D convolution followed by a relu layer and then a pooliing down sampling layer. With our `uTensorGraphMatcher`, you can locate such pattern in your `CNN` model and fuse/replace matched nodes into one optimized `QuantConvPool` node.
+    - Left: original graph
+    - Middle: matched convolution layer
+    - Right: replace the matched layer with specialized `QuantConvPool` node
+
+![conv-pool-fuce](images/conv_pool_fuse.png)
 
 ### Dropout Layer Removal
 
+- Though `dropout` is an effective technique to improve training performance of your model, it's not necessary during inference phrase. In the mainstream frameworks such as `Tensorflow` or `PyTorch`, an `dropout` layer is typically implemented with other elementary operations/nodes. As a result, finding and removing those nodes for interence optimization (both in model size and prediciton time) is not trivial and error prone. With our `uTensorGraphMatcher`, you can find and remove the dropout nodes as illustrated in the following picture.
+    - Left: original graph with dropout Layers
+    - Middle: matched dropout layers
+    - Right: graph with dropout layers removed
 ![cnn-dropout](images/cnn_dropout.png)
-
-- Left: original graph with dropout Layers
-- Middle: matched dropout layers
-- Right: graph with dropout layers removed
 
 # Examples
 
