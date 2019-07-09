@@ -1,1 +1,1 @@
-static const uint32_t {{ sref_name }} = {{ string_id }} 
+static const uint32_t {{ sref_name }} = {{ string_id }};
