@@ -504,12 +504,12 @@ class _QuantizedFusedConv2DMaxpoolOperator(_Operator):
     padding = op_info.op_attr['_utensor_conv']["padding"].value.decode('utf8')
     parser = NamescopedKWArgsParser(RefCntOptimizer.KWARGS_NAMESCOPE,
                                     op_info.op_attr)
-    ref_count = parser.get('ref_counts', [0])[0]
+    ref_counts = parser.get('ref_counts', None)
     to_eval = parser.get('to_eval', False)
     self._snippet = QuantizedFusedConv2DMaxpoolOpSnippet(
       inputs, outputs, strides, ksize, padding,
       in_dtype=in_dtype, filter_dtype=filter_dtype, out_dtypes=out_dtypes,
-      ref_count=ref_count, to_eval=to_eval
+      ref_counts=ref_counts, to_eval=to_eval
     )
 
 
