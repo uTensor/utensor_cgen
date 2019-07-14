@@ -47,8 +47,8 @@ def cli():
 @click.option("--transform-methods",
               type=NArgsKwargsParam(sep='|>'),
               default=(
-                'dropout(name_pattern=r"(dropout[_\w\d]*)/.*")|>linear_reorder_v2'
-                '|>quantize|>conv_pool_v2|>inline|>biasAdd|>remove_id_op'
+                'dropout(name_pattern=r"(dropout[_\w\d]*)/.*")|>linear_reorder'
+                '|>quantize|>conv_pool|>inline|>biasAdd|>remove_id_op'
                 '|>fake_gather_v2|>refcnt'
               ),
               help='optimization pipeline',

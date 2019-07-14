@@ -1,9 +1,7 @@
 from .base import Transformer
-from .cmsis_nn import CMSIS_NN_Transformer
-from .conv_pool import CONV_POOL_Transformer, ConvPoolTransformer
+from .conv_pool import ConvPoolTransformer
 from .graph_viz import GraphVizTransformer
-from .linear_reoder import (Linear_Reorder_Transformer,
-                            LinearReorderTransformerV2)
+from .linear_reoder import LinearReorderTransformerV2
 from .ns_transformer import (BatchNormTransformer, BiasAddTransformer,
                              DropoutTransformer, DropoutTransformerV2,
                              FakeGatherV2Transformer, InlineTransformer)
@@ -21,11 +19,8 @@ class TransformerPipeline(object):
     QuantizeTransformer.METHOD_NAME: QuantizeTransformer,
     InlineTransformer.METHOD_NAME: InlineTransformer,
     BiasAddTransformer.METHOD_NAME: BiasAddTransformer,
-    CMSIS_NN_Transformer.METHOD_NAME: CMSIS_NN_Transformer,
     IdOpRemoveOptimizer.METHOD_NAME: IdOpRemoveOptimizer,
     GraphVizTransformer.METHOD_NAME: GraphVizTransformer,
-    Linear_Reorder_Transformer.METHOD_NAME: Linear_Reorder_Transformer,
-    CONV_POOL_Transformer.METHOD_NAME: CONV_POOL_Transformer,
     FakeGatherV2Transformer.METHOD_NAME: FakeGatherV2Transformer,
     ConvPoolTransformer.METHOD_NAME: ConvPoolTransformer,
     LinearReorderTransformerV2.METHOD_NAME: LinearReorderTransformerV2
