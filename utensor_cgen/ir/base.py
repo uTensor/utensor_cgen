@@ -203,7 +203,7 @@ class uTensorGraph(IRBase, _NoShallowCopyMixin):
 
   output_nodes = attr.ib(type=list)
   _backend = attr.ib(default='', type=str)
-  ops_info = attr.ib(factory=dict)
+  ops_info = attr.ib(factory=dict, repr=False)
   topo_order = attr.ib(factory=list, init=False)
 
   def __attrs_post_init__(self):
