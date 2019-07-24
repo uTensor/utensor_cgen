@@ -15,3 +15,7 @@ tests/*/cpp
 */*/models
 tests/deep_mlp/data 
 .vscode
+*.pyc
+.*.pyc
+*.swp
+.*.swp

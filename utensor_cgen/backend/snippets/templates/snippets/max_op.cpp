@@ -9,15 +9,15 @@ S_TENSOR {{sptr_name}};
     out_tensor = new RamTensor<{{out_dtype}}>();
     {%endif%}
     {%if ref_count %}
-    ctx.add(out_tensor, "{{output}}", {{ref_count}});
+    ctx.add(out_tensor, {{output}}, {{ref_count}});
     {%else%}
-    ctx.add(out_tensor, "{{output}}");
+    ctx.add(out_tensor, {{output}});
     {%endif%}
     ctx.push(new MaxOp(), 
-             { {% for tname in inputs[:-1]%}"{{tname}}", {%endfor%}"{{inputs[-1]}}" },
-             { "{{output}}" });
+             { {% for tname in inputs[:-1]%}{{tname}}, {%endfor%}{{inputs[-1]}} },
+             { {{output}} });
     {% if create_sptr %}
-    {{sptr_name}} = ctx.get("{{output}}");
+    {{sptr_name}} = ctx.get({{output}});
     {% endif %}
     {%if to_eval%}
     ctx.eval();

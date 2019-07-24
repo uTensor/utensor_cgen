@@ -18,11 +18,22 @@ __all__ = ["Snippet", "SnippetContainerBase",
            "CommentSnippet", "ContextHeaderSnippet",
            "ContextSnippetsContainer", "QuantizedAddOpSnippet",
            "QuantizedMulOpSnippet",
-           "CreateTensorBinarySnippet", "WeightSnippet",
+           "CreateTensorBinarySnippet", "WeightSnippet", "TensorStringReferenceSnippet",
            "ContextGlobalArrayContainer", "QuantRangeForMultiplicationSnippet",
            "FusedConv2DOpMaxpoolSnippet", "QuantizedFusedConv2DMaxpoolOpSnippet",
            "GatherOpSnippet",
            "CreateTensorRamSnippet", "Uint8Q7OriginSnippet"]
+
+#TODO Put this in the correct location
+def mhash(mstr):
+    """
+    Simple java string hash
+    """
+    v = int(7)
+    for c in mstr:
+        v = (v*31 + ord(c)) & 0xffffffff
+    return v
+
 
 # TODO: Better abstraction, i.e a better backend for code generation
 class CreateTensorIdxSnippet(Snippet):
@@ -666,21 +677,23 @@ class FusedConv2DOpMaxpoolSnippet(Snippet):
     self.template_vars["to_eval"] = to_eval
 
 class QuantizedFusedConv2DMaxpoolOpSnippet(Snippet):
-  __template_name__ = "snippets/fused_conv2d_maxpool_op.cpp"
+  __template_name__ = "snippets/quantized_fused_conv2d_maxpool_op.cpp"
   __headers__ = set(['"uTensor/ops/MatrixOps.hpp"'])
 
-  def __init__(self, inputs, output, strides, ksize, padding,
-               in_dtype, filter_dtype, out_dtype,
+  def __init__(self, inputs, outputs, strides, ksize, padding,
+               in_dtype, filter_dtype, out_dtypes,
                ref_count=0,
                to_eval=False):
     Snippet.__init__(self)
     if ref_count:
       self.template_vars["ref_count"] = ref_count
+    print(outputs)
+    print(out_dtypes)
     self.template_vars["inputs"] = inputs
-    self.template_vars["output"] = output
+    self.template_vars["outputs"] = outputs
     self.template_vars["in_dtype"] = NP_TYPES_MAP[in_dtype].tensor_type_str
     self.template_vars["filter_dtype"] = NP_TYPES_MAP[filter_dtype].tensor_type_str
-    self.template_vars["out_dtype"] = NP_TYPES_MAP[out_dtype].tensor_type_str
+    self.template_vars["out_dtypes"] = [NP_TYPES_MAP[out_dtype].tensor_type_str for out_dtype in out_dtypes]
     self.template_vars["strides"] = strides
     self.template_vars["ksize"] = ksize
     self.template_vars["padding"] = padding
@@ -766,9 +779,37 @@ class ContextHeaderSnippet(Snippet):
     self.template_vars["graph_name"] = graph_name
     self.template_vars["placeholders"] = placeholders
 
+class TensorStringReferenceSnippet(Snippet):
+  __template_name__ = "snippets/tensor_string_reference.hpp"
+  __headers__ = set([])
+  __references__ = set([])
+
+  @classmethod
+  def add_reference(cls, sref_name):
+      cls.__references__.add(sref_name)
+
+  @classmethod
+  def have_reference(cls, sref_name):
+    return sref_name not in cls.__references__
+
+  def __init__(self, sref_name):
+    Snippet.__init__(self)
+    self.template_vars['sref_name'] = sref_name
+    self.template_vars['string_id'] = mhash(sref_name)
+    # Dont render duplicates
+    self.renderable = self.have_reference(sref_name)
+    self.add_reference(sref_name)
+  
+  def render(self):
+    if self.renderable:
+      return Snippet.render(self)
+    else:
+        return ''
+
 class WeightSnippet(Snippet):
   __template_name__ = "snippets/weight_snippet.hpp"
   __headers__ = set([])
+
 
   def __init__(self, inline_name, type, shape, value):
       Snippet.__init__(self)
