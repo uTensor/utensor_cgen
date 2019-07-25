@@ -151,6 +151,10 @@ Dropout Layer Removal
    -  Middle: matched dropout layers
    -  Right: graph with dropout layers removed |cnn-dropout|
 
+We use mainly ``Tensorflow`` for declaring the pattern graph for matcher now.
+
+High-level graph builder is on its way, see `Future Works <#future-works>`_ for detail.
+
 Examples
 ========
 
@@ -193,9 +197,12 @@ Testing
 Future Works
 ============
 
--  High-level api for graph pattern declaration.
-   Currently ``utensor_cgen`` uses ``TensorFlow``
-   api for building IR graph, ``uTensorGraph``.
+1.  High-level graph builder api for building `uTensorGraph`.
+
+    - Currently ``utensor_cgen`` uses ``TensorFlow`` api for building IR graph, ``uTensorGraph``.
+    - With high-level graph builder, users can build their ``uTensorGraph`` easily and do not need
+      to take care of the integrity of the graph.
+      The builder will take care of it automatically.
 
 
 .. TODOs
