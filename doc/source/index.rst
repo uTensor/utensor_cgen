@@ -4,20 +4,20 @@
 Version: v\ |version|
 
 .. toctree::
-   :maxdepth: 2
-   :caption: Contents:
+    :maxdepth: 2
+    :caption: Contents:
 
 .. include:: ../../README.rst
 
-.. Intermediate Representation (IR)
-.. ================================
 
-.. .. automodule:: utensor_cgen.ir.base
-..     :members:
+Indices and tables
+==================
 
+.. toctree::
+    :maxdepth: 1
 
-.. Indices and tables
-.. ==================
+    ir
+
 
 ----
 
