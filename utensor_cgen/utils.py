@@ -70,10 +70,21 @@ def save_graph(graph, graph_name="graph", out_dir="."):
 
 def prepare_meta_graph(meta_graph_path, output_nodes, chkp_path=None):
   """
-  Cleanup and freeze the graph from meta graph
+  Cleanup and freeze the graph, given the path to meta graph data
 
-  1. remove training nodes
-  2. convert variable to constants
+  :param meta_graph_path: the path to the meta graph data (`.meta`)
+  :type meta_graph_path: str
+  :param output_nodes: a list of output node names in the graph
+  :type output_nodes: List[str]
+  :param chkp_path: the path of checkpoint directory
+  :type chkp_path: str
+
+  :rtype: tensorflow.GraphDef
+
+  Basically, this function import the :class:`GraphDef` then:
+
+    1. remove training nodes
+    2. convert variable to constants
   """
   graph = tf.Graph()
   saver = tf.train.import_meta_graph(meta_graph_path,
@@ -232,21 +243,34 @@ def topologic_order_graph(ugraph):
   """
   topological sort a given ugraph *in place*
 
-  - https://en.wikipedia.org/wiki/Topological_sorting
+  :param ugraph: the graph to be sorted
+  :type ugraph: :class:`.uTensorGraph`
+
+  - `Topological Sorting (wiki) <https://en.wikipedia.org/wiki/Topological_sorting>`_
   """
   ugraph.topo_order = get_topologic_order(ugraph, ugraph.output_nodes)[::-1]
 
 
-def get_topologic_order(ugraph, init_nodes):
+def get_topologic_order(ugraph, init_nodes=None):
   """
   return list of op names in topological order
 
-  - https://en.wikipedia.org/wiki/Topological_sorting
+  :param ugraph: the graph to be sorted
+  :type ugraph: :class:`.uTensorGraph`
+  :param init_nodes: the initial nodes to start
+    sorting with
+  :type init_nodes: List[str]
+
+  :rtype: List[str]
+
+  - `Topological Sorting (wiki) <https://en.wikipedia.org/wiki/Topological_sorting>`_
   """
   if ugraph.backend != "tensorflow":
     raise ValueError(
       "topologic_order_graph works only on tensorflow graph"
     )
+  if init_nodes is None:
+    init_nodes = ugraph.output_nodes
   queue = deepcopy(init_nodes)
   visited = set()    # temporary mark
   perm_visit = set()  # Permanent mark

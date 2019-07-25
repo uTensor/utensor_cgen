@@ -1,26 +1,26 @@
-``utensor_cgen``: C/C++ code generator for ``uTensor``
-======================================================
+:mod:`utensor_cgen`: C/C++ code generator for ``uTensor``
+^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
 
-Version: v\ |version|
+**Version:** v\ |version|
 
-.. toctree::
-    :maxdepth: 2
-    :caption: Contents:
+**Documentation update:** |today|
+
+:ref:`utensor_api`
 
 .. include:: ../../README.rst
 
 
-Indices and tables
-==================
-
 .. toctree::
     :maxdepth: 1
 
-    ir
+    ir/base
+    ir/converter
+    utils
 
 
 ----
 
 * :ref:`genindex`
 * :ref:`search`
+
 .. * :ref:`modindex`

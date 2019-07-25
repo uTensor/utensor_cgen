@@ -34,9 +34,9 @@ For Developers:
 
     # spawn a subshell and activate virtualenv
     $ pipenv shell
-    
+
     # get help message of `utensor-cli`
-    (utenosr_cgen)$ utensor-cli -h
+    $ utensor-cli -h
 
 Troubleshooting with ``pipenv``
 ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
@@ -188,7 +188,7 @@ Following steps are a general guild for user how to porting a
 Testing
 =======
 
-1. follow the steps in `setup <#setup-with-pipenv>`_ section
+1. follow the steps in `installation <#installation-python-2--3>`_ section
 2. run ``make tests``
 
    -  Or you can use ``pipenv run pytest tests`` instead

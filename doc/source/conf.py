@@ -48,7 +48,14 @@ exclude_patterns = []
 # The theme to use for HTML and HTML Help pages.  See the documentation for
 # a list of builtin themes.
 #
-html_theme = 'alabaster'
+html_theme = 'alabaster' # 'nature'
+add_function_parentheses = False
+
+# autodoc config
+autodoc_default_options = {
+    'member-order': 'bysource',
+    'no-undoc-members': True
+}
 
 # Add any paths that contain custom static files (such as style sheets) here,
 # relative to this directory. They are copied after the builtin static files,
