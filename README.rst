@@ -130,8 +130,8 @@ documentation
    -  Right: replace the matched layer with specialized
       ``QuantizedFusedConv2DMaxpool`` node
 
-.. image:: .images/conv_pool_fuse.png
-   :alt: conv-pool-fuce
+\ |conv-pool-fuse|
+
 
 Dropout Layer Removal
 ~~~~~~~~~~~~~~~~~~~~~
@@ -149,7 +149,10 @@ Dropout Layer Removal
 
    -  Left: original graph with dropout Layers
    -  Middle: matched dropout layers
-   -  Right: graph with dropout layers removed |cnn-dropout|
+   -  Right: graph with dropout layers removed
+
+\ |cnn-dropout|
+
 
 We use mainly ``Tensorflow`` for declaring the pattern graph for matcher now.
 
@@ -228,3 +231,5 @@ Future Works
 ..    -  or ?
 
 .. |cnn-dropout| image:: ./images/cnn_dropout.png
+.. |conv-pool-fuse| image:: images/conv_pool_fuse.png
+   :alt: conv-pool-fuse
