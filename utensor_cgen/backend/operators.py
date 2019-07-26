@@ -1,14 +1,17 @@
 # -*- coding:utf8 -*-
 import os
 
-import idx2numpy as idx2np
 import numpy as np
 
+import idx2numpy as idx2np
 from utensor_cgen.logger import logger
+from utensor_cgen.matcher import OpEqualityDelegate, _morphism
 from utensor_cgen.transformer.optimizer import RefCntOptimizer
 from utensor_cgen.utils import NamescopedKWArgsParser
 
 from .snippets import *  # pylint: disable=W0401,W0614
+
+__all__ = ['OperatorFactory']
 
 
 class OperatorFactory():
@@ -18,7 +21,7 @@ class OperatorFactory():
   def createOperatorSnippet(self, op_info, **kwargs):
     op_type = op_info.op_type
     if op_type not in self._operators:
-      err_msg = "unsupported op type in uTensor: {}".format(op_type)
+      err_msg = "unsupported op type in uTensor: {op.name}, {op.op_type}".format(op=op_info)
       raise ValueError(err_msg)
 
     op = self._operators[op_type](op_info, **kwargs)  # Create desired object
@@ -30,9 +33,15 @@ class OperatorFactory():
 
   @classmethod
   def support_op_types(cls):
-    """Return the list of all supported ops
+    """Return the set of all supported ops
     """
-    return list(cls._operators.keys())
+    return set(cls._operators.keys())
+  
+  @classmethod
+  def is_supported(cls, op_type):
+    if op_type != 'Placeholder' and op_type not in cls._operators:
+      return False
+    return True
 
 
 class _Operator(object):
@@ -46,6 +55,9 @@ class _Operator(object):
 
 
 @OperatorFactory.register
+@OpEqualityDelegate.is_associative(
+  permutations=((0, 1), (1, 0))
+)
 class _AddOperator(_Operator):
 
   op_type = "Add" # tf op type
@@ -117,6 +129,7 @@ class _MaxOperator(_Operator):
     ref_count = parser.get('ref_counts', [0])[0]
     to_eval = parser.get('to_eval', False)
     self._snippet = MaxOpSnippet(inputs, output, out_dtype, out_shape, ref_count, to_eval)
+
 
 @OperatorFactory.register
 class _MaxPool(_Operator):
@@ -221,6 +234,7 @@ class _MatMulOperator(_Operator):
     self._snippet = MatMulOpSnippet(inputs, output,
                                     x_dtype, w_dtype, out_dtype,
                                     ref_count, to_eval)
+
 
 @OperatorFactory.register
 class _QuantizedMatMulOperator(_Operator):
@@ -425,6 +439,7 @@ class _CMSIS_NN_FCOperator(_Operator):
                                               out_dtype=out_dtype,
                                               to_eval=to_eval)
 
+
 @OperatorFactory.register
 class _Conv2DOperator(_Operator):
 
@@ -446,6 +461,8 @@ class _Conv2DOperator(_Operator):
     self._snippet = Conv2DOpSnippet(inputs, output, strides, padding,
                                      in_dtype=in_dtype, filter_dtype=filter_dtype, out_dtype=out_dtype,
                                      ref_count=ref_count, to_eval=to_eval)
+
+
 @OperatorFactory.register
 class _FusedConv2DMaxpoolOperator(_Operator):
 
@@ -469,6 +486,7 @@ class _FusedConv2DMaxpoolOperator(_Operator):
                                      in_dtype=in_dtype, filter_dtype=filter_dtype, out_dtype=out_dtype,
                                      ref_count=ref_count, to_eval=to_eval)
 
+
 @OperatorFactory.register
 class _QuantizedFusedConv2DMaxpoolOperator(_Operator):
 
@@ -477,20 +495,23 @@ class _QuantizedFusedConv2DMaxpoolOperator(_Operator):
   def __init__(self, op_info, **kwargs):
     _Operator.__init__(self)
     inputs = [tensor_info.name for tensor_info in op_info.input_tensors]
-    output = op_info.output_tensors[0].name
+    outputs = [tensor_info.name for tensor_info in op_info.output_tensors]
     in_dtype, filter_dtype = (op_info.input_tensors[0].dtype,
                               op_info.input_tensors[1].dtype)
-    out_dtype = op_info.output_tensors[0].dtype
-    strides = op_info.op_attr["strides"].value.ints_value
-    ksize = op_info.op_attr["ksize"].value.ints_value
-    padding = op_info.op_attr["padding"].value.decode('utf8')
+    out_dtypes = [tensor_info.dtype for tensor_info in op_info.output_tensors]
+    strides = op_info.op_attr['_utensor_conv']["strides"].value.ints_value
+    ksize = op_info.op_attr['_utensor_pool']["ksize"].value.ints_value
+    padding = op_info.op_attr['_utensor_conv']["padding"].value.decode('utf8')
     parser = NamescopedKWArgsParser(RefCntOptimizer.KWARGS_NAMESCOPE,
                                     op_info.op_attr)
-    ref_count = parser.get('ref_counts', [0])[0]
+    ref_counts = parser.get('ref_counts', None)
     to_eval = parser.get('to_eval', False)
-    self._snippet = QuantizedFusedConv2DMaxpoolOpSnippet(inputs, output, strides, ksize, padding,
-                                     in_dtype=in_dtype, filter_dtype=filter_dtype, out_dtype=out_dtype,
-                                     ref_count=ref_count, to_eval=to_eval)
+    self._snippet = QuantizedFusedConv2DMaxpoolOpSnippet(
+      inputs, outputs, strides, ksize, padding,
+      in_dtype=in_dtype, filter_dtype=filter_dtype, out_dtypes=out_dtypes,
+      ref_counts=ref_counts, to_eval=to_eval
+    )
+
 
 @OperatorFactory.register
 class _Conv2DQuantOperator(_Operator):
@@ -513,6 +534,8 @@ class _Conv2DQuantOperator(_Operator):
     self._snippet = Conv2DQuantOpSnippet(inputs, outputs, strides, padding,
                                      in_dtype=in_dtype, filter_dtype=filter_dtype, out_dtypes=out_dtypes,
                                      ref_counts=ref_counts, to_eval=to_eval)
+
+
 @OperatorFactory.register
 class _Uint8Q7OriginOperator(_Operator):
 
@@ -527,6 +550,7 @@ class _Uint8Q7OriginOperator(_Operator):
     ref_count = parser.get('ref_counts', [0])[0]
     to_eval = parser.get('to_eval', False)
     self._snippet = Uint8Q7OriginSnippet(inputs, output, ref_count, to_eval)
+
 
 #hard coding to uint8_t uint8_t int32_t for now
 @OperatorFactory.register
@@ -549,10 +573,12 @@ class _QuantRangeForMultiplication_u8_u8_int32_Operator(_Operator):
     to_eval = parser.get('to_eval', False)
     self._snippet = QuantRangeForMultiplicationSnippet(inputs, outputs, output_type, ref_counts, to_eval)
 
+
 @OperatorFactory.register
+@OpEqualityDelegate.is_compatible_with("Const", _morphism.Inline2ConstMorphism)
 class _InlineOperator(_Operator):
 
-  op_type="Inline"
+  op_type = "Inline"
   
   def __init__(self, op_info, **kwargs):
     out_tensor_info = op_info.output_tensors[0]
@@ -587,7 +613,9 @@ class _InlineOperator(_Operator):
     preapred = "inline_{}".format(inline)
     return preapred
 
+
 @OperatorFactory.register
+@OpEqualityDelegate.is_compatible_with("Inline", _morphism.Const2InlineMorphism)
 class _ConstOperator(_Operator):
 
   op_type = "Const"
@@ -626,6 +654,7 @@ class _ConstOperator(_Operator):
       idx2np.convert_to_file(fid, np_array)
     logger.info("saving %s", path)
 
+
 @OperatorFactory.register
 class _RamOperator(_Operator):
 
@@ -646,9 +675,11 @@ class _RamOperator(_Operator):
                                          tf_dtype=out_dtype,
                                          sptr_name=pre_tname,
                                          ref_count=ref_count)
+
   def _prepare_tensor_name(self, tensor_name):
     prepared = tensor_name.replace(":", "_").replace("/", "_")
     return prepared
+
 
 @OperatorFactory.register
 class _ShapeOperator(_Operator):
@@ -690,6 +721,7 @@ class _StridedSliceOperator(_Operator):
                                               new_axis_mask, shrink_axis_mask,
                                               ref_count, to_eval)
 
+
 @OperatorFactory.register
 class _PackOperator(_Operator):
     op_type = "Pack"
@@ -708,6 +740,7 @@ class _PackOperator(_Operator):
         axis = op_info.op_attr['axis'].value
         self._snippet = PackOpSnippet(inputs, output, dtype, out_dtype, N, axis, ref_count, to_eval)
 
+
 @OperatorFactory.register
 class _SoftmaxOperator(_Operator):
     op_type = "Softmax"
@@ -722,6 +755,7 @@ class _SoftmaxOperator(_Operator):
         to_eval = parser.get('to_eval', True)
         out_dtype = op_info.output_tensors[0].dtype
         self._snippet = SoftmaxOpSnippet(inputs, output, out_dtype, ref_count, to_eval)
+
 
 @OperatorFactory.register
 class _GatherOperator(_Operator):

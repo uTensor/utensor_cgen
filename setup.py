@@ -5,7 +5,7 @@ import os
 from setuptools import find_packages, setup
 
 root_dir = os.path.abspath(os.path.dirname(__file__))
-with open(os.path.join(root_dir, "README.md")) as rf:
+with open(os.path.join(root_dir, "README.rst")) as rf:
     long_desc = rf.read()
 with open(os.path.join(root_dir, "LICENSE")) as rf:
     license = rf.read()
@@ -29,7 +29,7 @@ setup(
         ]},
     install_requires=[
         'Jinja2',
-        'tensorflow',
+        'tensorflow==1.13.1',
         'idx2numpy',
         'attrs',
         'click',

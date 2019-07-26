@@ -2,7 +2,10 @@
 import os
 import re
 from ast import literal_eval
+from collections import deque
 from copy import deepcopy
+from random import choices
+from string import ascii_letters, digits
 
 import numpy as np
 from click.types import ParamType
@@ -117,6 +120,8 @@ def parse_tensor_name(tname):
 
 
 class NamescopedKWArgsParser:
+  """FIXME: this parser is badly designed, replace it with sth else
+  """
 
   def __init__(self, name_space, kwargs):
     ns_pattern = re.compile(r'^{}__([^\d\W][\w\d_]*)'.format(name_space))
@@ -224,8 +229,25 @@ MUST_OVERWRITEN = _MustOverwrite()
 
 
 def topologic_order_graph(ugraph):
-  # https://en.wikipedia.org/wiki/Topological_sorting
-  queue = deepcopy(ugraph.output_nodes)
+  """
+  topological sort a given ugraph *in place*
+
+  - https://en.wikipedia.org/wiki/Topological_sorting
+  """
+  ugraph.topo_order = get_topologic_order(ugraph, ugraph.output_nodes)[::-1]
+
+
+def get_topologic_order(ugraph, init_nodes):
+  """
+  return list of op names in topological order
+
+  - https://en.wikipedia.org/wiki/Topological_sorting
+  """
+  if ugraph.backend != "tensorflow":
+    raise ValueError(
+      "topologic_order_graph works only on tensorflow graph"
+    )
+  queue = deepcopy(init_nodes)
   visited = set()    # temporary mark
   perm_visit = set()  # Permanent mark
   ops_torder = []  # L
@@ -235,12 +257,16 @@ def topologic_order_graph(ugraph):
       return
     if node_name in visited:
       raise ValueError("Input graph is not a DAG")
-
     visited.add(node_name)
-    op_info = ugraph.ops_info[node_name]
+    op_info = ugraph.ops_info.get(node_name, None)
+    if not op_info:
+      return
 
     for t_info in op_info.input_tensors:
-      op_name = parse_tensor_name(t_info.name)[0]
+      # NT: we should not rely on tensor-name conventions for back-tracing
+      # op_name = parse_tensor_name(t_info.name)[0]
+      # It would be nice to rely on something similar to get_tensor_node_names(), but based on ops_info instead of topo_order
+      op_name = t_info.op_name
       visit(op_name)
 
     perm_visit.add(node_name)
@@ -249,4 +275,72 @@ def topologic_order_graph(ugraph):
   while queue:
     node_name = queue.pop(0)
     visit(node_name)
-  ugraph.topo_order = ops_torder[::-1]
+  return ops_torder
+
+
+def ops_bfs_queue(ugraph, init_nodes=None):
+  if init_nodes is None:
+    init_nodes = [
+      ugraph.ops_info[name] for name in ugraph.output_nodes
+    ]
+  queue = deque(init_nodes)
+  visited = set()
+  bfs_deck = deque([])
+
+  while queue:
+    op = queue.popleft()
+    if op is None or op.name in visited:
+      # op is None => traversal via a null tensor
+      # or been visited before
+      continue
+    visited.add(op.name)
+    queue.extend(op.input_nodes)
+    bfs_deck.append(op)
+  return bfs_deck
+
+
+def prune_graph(ugraph):
+  """Remove nodes that is no longer needed
+  """
+  new_ugraph = deepcopy(ugraph)
+  # BFS to find all ops you need
+  ops_in_need = set(ugraph.output_nodes)
+  queue = [name for name in ugraph.output_nodes]
+  visited = set([])
+  while queue:
+    op_name = queue.pop(0)
+    #FIXME: names are framework and graph dependent
+    #       temporary fix is included aftert the commented code
+    #op_info = new_ugraph.ops_info[op_name]
+    # in_ops = [parse_tensor_name(t_info.name)[0] 
+    #           for t_info in op_info.input_tensors]
+
+    #TODO: move the code below to a standalone function. Consider using a more extensive data structure:
+    #      Or, use this: in_ops = [node.name for node in ugraph.ops_info[op_name].input_nodes]
+    tensors_in = set([t.name for t in ugraph.ops_info[op_name].input_tensors])
+    in_ops = set()
+    for it_node in ugraph.ops_info:
+      if it_node == op_name:
+        continue
+      it_tensors_out = [t.name for t in ugraph.ops_info[it_node].output_tensors]
+      if not tensors_in.isdisjoint(it_tensors_out):
+        in_ops.add(it_node)
+
+    queue.extend([name for name in in_ops if name not in visited])
+    visited.update(in_ops)
+    ops_in_need.update(in_ops)
+    #END
+
+  ops_to_remove = set([])
+  for op_name in new_ugraph.ops_info.keys():
+    if op_name not in ops_in_need:
+      # remove ops not needed from ops_info
+      ops_to_remove.add(op_name)
+  for op_name in ops_to_remove:
+    new_ugraph.ops_info.pop(op_name)
+  return new_ugraph
+
+
+def random_str(length=8):
+  chars = choices(ascii_letters+digits, k=length)
+  return ''.join(chars)

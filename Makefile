@@ -2,7 +2,7 @@
 
 tests:
 	rm -f tests_log.txt
-	make test_utils test_ir test_transformer test_frontend
+	make test_utils test_ir test_transformer test_frontend test_matcher
 
 test_%:
 	@if [ -d .venv ]; then \
@@ -12,4 +12,4 @@ test_%:
 	 fi;
 
 clean:
-	rm -f tests_log.txt
+	rm -f tests_log.txt *.pdf

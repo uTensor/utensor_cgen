@@ -20,7 +20,7 @@ __all__ = ["Snippet", "SnippetContainerBase",
            "QuantizedMulOpSnippet",
            "CreateTensorBinarySnippet", "WeightSnippet",
            "ContextGlobalArrayContainer", "QuantRangeForMultiplicationSnippet",
-           "FusedConv2DOpMaxpoolSnippet", "QuantizedFusedConv2DOpMaxpoolSnippet",
+           "FusedConv2DMaxpoolOpSnippet", "QuantizedFusedConv2DMaxpoolOpSnippet",
            "GatherOpSnippet",
            "CreateTensorRamSnippet", "Uint8Q7OriginSnippet"]
 
@@ -644,7 +644,7 @@ class Conv2DOpSnippet(Snippet):
     self.template_vars["padding"] = padding
     self.template_vars["to_eval"] = to_eval
 
-class FusedConv2DOpMaxpoolSnippet(Snippet):
+class FusedConv2DMaxpoolOpSnippet(Snippet):
   __template_name__ = "snippets/fused_conv2d_maxpool_op.cpp"
   __headers__ = set(['"uTensor/ops/MatrixOps.hpp"'])
 
@@ -665,22 +665,26 @@ class FusedConv2DOpMaxpoolSnippet(Snippet):
     self.template_vars["padding"] = padding
     self.template_vars["to_eval"] = to_eval
 
-class QuantizedFusedConv2DOpMaxpoolSnippet(Snippet):
+class QuantizedFusedConv2DMaxpoolOpSnippet(Snippet):
   __template_name__ = "snippets/quantized_fused_conv2d_maxpool_op.cpp"
   __headers__ = set(['"uTensor/ops/MatrixOps.hpp"'])
 
-  def __init__(self, inputs, output, strides, ksize, padding,
-               in_dtype, filter_dtype, out_dtype,
-               ref_count=0,
+  def __init__(self, inputs, outputs, strides, ksize, padding,
+               in_dtype, filter_dtype, out_dtypes,
+               ref_counts=None,
                to_eval=False):
+    # import pdb; pdb.set_trace()
     Snippet.__init__(self)
-    if ref_count:
-      self.template_vars["ref_count"] = ref_count
+    if ref_counts:
+      self.template_vars["ref_counts"] = ref_counts
     self.template_vars["inputs"] = inputs
-    self.template_vars["output"] = output
+    self.template_vars["outputs"] = outputs
     self.template_vars["in_dtype"] = NP_TYPES_MAP[in_dtype].tensor_type_str
     self.template_vars["filter_dtype"] = NP_TYPES_MAP[filter_dtype].tensor_type_str
-    self.template_vars["out_dtype"] = NP_TYPES_MAP[out_dtype].tensor_type_str
+    self.template_vars["out_dtypes"] = [
+      NP_TYPES_MAP[dtype].tensor_type_str
+      for dtype in out_dtypes
+    ]
     self.template_vars["strides"] = strides
     self.template_vars["ksize"] = ksize
     self.template_vars["padding"] = padding
