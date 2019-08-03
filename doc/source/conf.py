@@ -13,6 +13,8 @@
 import os
 import sys
 
+from better_setuptools_git_version import get_version
+
 # from utensor_cgen.cli import _version as version
 
 sys.path.insert(0, os.path.abspath('../../'))
@@ -23,7 +25,7 @@ sys.path.insert(0, os.path.abspath('../../'))
 project = 'utensor_cgen'
 copyright = '2019, uTensor Team'
 author = 'dboyliao, Neil Tan, kazami, Michael Bartling'
-version = '0.3.5'
+version = get_version()
 master_doc = 'index'
 
 # -- General configuration ---------------------------------------------------
