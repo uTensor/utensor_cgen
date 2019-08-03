@@ -48,5 +48,5 @@ the state of a graph, op or tensor
 Module members
 --------------
 
-.. automodule:: utensor_cgen.ir.base
+.. autoapimodule:: utensor_cgen.ir.base
     :members:

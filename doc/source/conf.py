@@ -13,9 +13,9 @@
 import os
 import sys
 
-from utensor_cgen.cli import _version as version
+# from utensor_cgen.cli import _version as version
 
-sys.path.insert(0, os.path.abspath('../../utensor_cgen'))
+sys.path.insert(0, os.path.abspath('../../'))
 
 
 # -- Project information -----------------------------------------------------
@@ -23,6 +23,8 @@ sys.path.insert(0, os.path.abspath('../../utensor_cgen'))
 project = 'utensor_cgen'
 copyright = '2019, uTensor Team'
 author = 'dboyliao, Neil Tan, kazami, Michael Bartling'
+version = '0.3.5'
+master_doc = 'index'
 
 # -- General configuration ---------------------------------------------------
 
@@ -31,8 +33,11 @@ author = 'dboyliao, Neil Tan, kazami, Michael Bartling'
 # ones.
 extensions = [
     'sphinx.ext.autodoc',
+    'autoapi.extension'
 ]
 autodoc_typehints = 'none'
+autoapi_dirs = ['../../utensor_cgen']
+autoapi_generate_api_docs = False
 
 # Add any paths that contain templates here, relative to this directory.
 templates_path = ['_templates']
@@ -56,6 +61,15 @@ autodoc_default_options = {
     'member-order': 'bysource',
     'no-undoc-members': True
 }
+# these will cause readthedoc build process fiail
+# see https://github.com/readthedocs/readthedocs.org/issues/5328 
+autodoc_mock_imports = [
+    'idx2numpy',
+    'tensorflow',
+    'torch',
+    'torchvision',
+    'onnx-tf',
+]
 
 # Add any paths that contain custom static files (such as style sheets) here,
 # relative to this directory. They are copied after the builtin static files,

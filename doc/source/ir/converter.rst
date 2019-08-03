@@ -58,5 +58,5 @@ will convert it to an equivalent value of type :attr:`__utensor_generic_type__`.
 Module Members
 --------------
 
-.. automodule:: utensor_cgen.ir.converter
+.. autoapimodule:: utensor_cgen.ir.converter
     :members: ConverterDispatcher, GenericConverter, TFConverterMixin

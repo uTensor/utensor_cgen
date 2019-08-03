@@ -1,0 +1,5 @@
+attrs==19.1.0
+Jinja2==2.10
+Click==7.0
+numpy==1.16.2
+sphinx-autoapi
