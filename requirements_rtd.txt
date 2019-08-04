@@ -2,5 +2,5 @@ attrs==19.1.0
 Jinja2==2.10
 Click==7.0
 numpy==1.16.2
-sphinx-autoapi
-better-setuptools-git-version
+sphinx-autoapi==1.1.0
+better-setuptools-git-version==1.0.5
