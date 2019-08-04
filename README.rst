@@ -1,4 +1,4 @@
-|docu|_
+readthedocs: https://utensor-cgen.readthedocs.io/en/latest/
 
 .. readme_begin
 
@@ -288,7 +288,6 @@ Future Works
 
 .. readme_end
 
-.. _docu: https://utensor-cgen.readthedocs.io/en/latest/
 .. |cnn-dropout| image:: images/cnn_dropout.png
     :alt: cnn-dropout
 .. |conv-pool-fuse| image:: images/conv_pool_fuse.png
