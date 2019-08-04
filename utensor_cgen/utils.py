@@ -324,7 +324,15 @@ def ops_bfs_queue(ugraph, init_nodes=None):
 
 
 def prune_graph(ugraph):
-  """Remove nodes that is no longer needed
+  """
+  Remove nodes that is no longer needed *in-place*
+
+  this function will trace the output nodes of the
+  given graph by `BFS <https://en.wikipedia.org/wiki/Breadth-first_search>`_
+  and remove all nodes which are not reachable afterward
+
+  :param ugraph: the graph to be pruned
+  :type ugraph: :class:`.uTensorGraph`
   """
   new_ugraph = deepcopy(ugraph)
   # BFS to find all ops you need

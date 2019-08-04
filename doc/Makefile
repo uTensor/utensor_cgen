@@ -18,7 +18,7 @@ html: Makefile
 	@$(SPHINXBUILD) -M $@ "$(SOURCEDIR)" "$(BUILDDIR)" $(SPHINXOPTS) $(O)
 
 clean-html: Makefile
-	@rm -rf $(BUILDDIR)/html/*
+	@rm -rf $(BUILDDIR)/{html,doctrees}/*
 	@make html
 
 # Catch-all target: route all unknown targets to Sphinx using the new

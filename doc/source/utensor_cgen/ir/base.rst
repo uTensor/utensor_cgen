@@ -38,15 +38,26 @@ the state of a graph, op or tensor
       the graph
     - incorrect **op_name** may make the tensor dangling
   - When you try to transfer a tensor from one graph to the other,
-    use `move_into <#utensor_cgen.ir.base.TensorInfo.move_into>`_
-    method instead.
+    use :py:meth:`.TensorInfo.move_into` method.
+  - passing a :class:`.uTensorGraph` as an argument to the constructor
+    means this tensor is owned by the given graph.
 - About :class:`.OperationInfo`:
 
-  - hello
+  - make sure the **name** is consistant with the **op_name**
+    of tensors in **output_tensors**
+  - Just like :class:`.TensorInfo`, the ownership is established by passing
+    a :class:`.uTensorGraph` as an argument to its constructor
+  - make sure you update **n_inputs** and **n_outputs** when you make changes
+    to **input_tensors** and **output_tensors**
+  - When you try to transfer a op from one graph to the other,
+    use :py:meth:`.OperationInfo.move_into`.
+- About :class:`.uTensorGraph`:
+  - please read the note list in :class:`.uTensorGraph`
 
 
 Module members
 --------------
 
 .. autoapimodule:: utensor_cgen.ir.base
-    :members:
+  :members:
+  :exclude-members: topologic_order_graph, random_str, ConverterDispatcher, AttrValueConverter

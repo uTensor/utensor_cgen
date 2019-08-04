@@ -15,3 +15,4 @@ Member Functions
 .. autofunction:: prepare_meta_graph
 .. autofunction:: topologic_order_graph
 .. autofunction:: get_topologic_order
+.. autofunction:: prune_graph
