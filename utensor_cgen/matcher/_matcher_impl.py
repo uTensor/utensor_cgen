@@ -308,7 +308,7 @@ class uTensorGraphMatch(object):
     )
     new_ugraph = deepcopy(self.subject_ugraph)
     # make replace_ugraph be a subgraph in the new_ugraph
-    replace_ugraph.merge_into(new_ugraph)
+    replace_ugraph.unsafe_merge_into(new_ugraph)
     for tensor in input_map.values():
       tensor.move_into(new_ugraph)
     for tensor in output_map.values():
