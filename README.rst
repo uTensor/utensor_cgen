@@ -292,7 +292,7 @@ Future Works
     :alt: cnn-dropout
 .. |conv-pool-fuse| image:: images/conv_pool_fuse.png
     :alt: conv-pool-fuse
-.. |convert-expample| image:: images/convert_example.png
+.. |convert-example| image:: images/convert_example.png
     :alt: convert-example
 
 
