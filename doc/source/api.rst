@@ -4,8 +4,8 @@ Full API Documentation
 ^^^^^^^^^^^^^^^^^^^^^^
 
 .. toctree::
-    :maxdepth: 2
+  :maxdepth: 2
 
-    ir/base
-    ir/converter
-    utils
+  utensor_cgen/ir/base
+  utensor_cgen/ir/converter
+  utensor_cgen/utils

@@ -10,8 +10,8 @@
 :ref:`utensor_api`
 
 .. include:: ../../README.rst
-    :start-after: readme_begin
-    :end-before: readme_end
+  :start-after: readme_begin
+  :end-before: readme_end
 
 .. include:: images.rst
 
@@ -20,12 +20,12 @@ Modules
 ^^^^^^^
 
 .. toctree::
-    :maxdepth: 1
+  :maxdepth: 1
 
-    ir/base
-    ir/converter
-    utils
-    api
+  utensor_cgen/ir/base
+  utensor_cgen/ir/converter
+  utensor_cgen/utils
+  api
 
 ----
 
