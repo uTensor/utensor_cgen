@@ -1,7 +1,7 @@
 .. _utils:
 
-:mod:`utils`
-^^^^^^^^^^^^
+:mod:`utils`: Utilities
+^^^^^^^^^^^^^^^^^^^^^^^
 
 Utility class/functions for `utensor_cgen </>`_
 

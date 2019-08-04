@@ -1,3 +1,7 @@
+.. readme_begin
+
+.. _readme:
+
 Installation (Python 2 & 3)
 ===========================
 
@@ -10,7 +14,7 @@ For Users
 
     $ python setup.py install
 
--  with `pip <https://pip.pypa.io/en/stable/>`_
+-  with pip_
 
 .. code:: console
 
@@ -19,13 +23,13 @@ For Users
 For Developers:
 ---------------
 
--  with `pip <https://pip.pypa.io/en/stable/>`_
+-  with pip_
 
 .. code:: console
 
     $ pip install -e .[dev]
 
--  with `pipenv <https://github.com/pypa/pipenv>`_
+-  with pipenv_
 
 .. code:: console
 
@@ -38,13 +42,16 @@ For Developers:
     # get help message of `utensor-cli`
     $ utensor-cli -h
 
-Troubleshooting with ``pipenv``
-~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
+Troubleshooting with pipenv_
+~~~~~~~~~~~~~~~~~~~~~~~~~~~~
 
--  If you have troubles with installation using ``pipenv``, try
-   ``PIPENV_VENV_IN_PROJECT=1 pipenv install -d --skip-lock``
--  there is known issue of ``pip`` and ``pipenv``, plz refer to this
-   `issue <https://github.com/pypa/pipenv/issues/2924>`__ for detail
+- If you have troubles with installation using pipenv_, try
+
+  .. code:: console
+
+    $ PIPENV_VENV_IN_PROJECT=1 pipenv install -d --skip-lock
+- there is known issue of pip_ and pipenv_, plz refer to this
+  `issue <https://github.com/pypa/pipenv/issues/2924>`_ for detail
 
    -  short answer: downgrade to ``pip==18.0`` may help :)
 
@@ -108,7 +115,7 @@ Run ``utensor-cli convert --help`` for detailed information.
 Subgraph Isomorphic Matcher and Nodes Fusion
 --------------------------------------------
 
-With ``uTensorGraphMatcher``, performing common subgraph tasks such as
+With :class:`.uTensorGraphMatcher`, performing common subgraph tasks such as
 isomorphic matching along with replacing or manipulating the matched
 subgraph(s) takes just a few line of code!
 
@@ -207,6 +214,15 @@ Future Works
       to take care of the integrity of the graph.
       The builder will take care of it automatically.
 
+.. _pip: https://pip.pypa.io/en/stable/
+.. _pipenv: <https://github.com/pypa/pipenv>
+
+.. readme_end
+
+.. |cnn-dropout| image:: ./images/cnn_dropout.png
+.. |conv-pool-fuse| image:: images/conv_pool_fuse.png
+   :alt: conv-pool-fuse
+
 
 .. TODOs
 .. =====
@@ -229,7 +245,3 @@ Future Works
 ..    -  json
 ..    -  yaml
 ..    -  or ?
-
-.. |cnn-dropout| image:: ./images/cnn_dropout.png
-.. |conv-pool-fuse| image:: images/conv_pool_fuse.png
-   :alt: conv-pool-fuse

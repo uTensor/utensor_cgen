@@ -16,7 +16,6 @@ help:
 
 html: Makefile
 	@$(SPHINXBUILD) -M $@ "$(SOURCEDIR)" "$(BUILDDIR)" $(SPHINXOPTS) $(O)
-	@mkdir -p "$(BUILDDIR)/$@/images" && cp ../images/* "$(BUILDDIR)/$@/images"
 
 clean-html: Makefile
 	@rm -rf $(BUILDDIR)/html/*
