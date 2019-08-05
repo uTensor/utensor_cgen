@@ -38,7 +38,9 @@ extensions = [
     'sphinx.ext.autodoc',
     'autoapi.extension'
 ]
+# http://www.sphinx-doc.org/en/master/usage/extensions/autodoc.html
 autodoc_typehints = 'none'
+autodoc_inherit_docstrings = False
 autoapi_dirs = ['../../utensor_cgen']
 autoapi_generate_api_docs = False
 
