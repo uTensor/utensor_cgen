@@ -5,15 +5,17 @@ import os
 from setuptools import find_packages, setup
 
 root_dir = os.path.abspath(os.path.dirname(__file__))
-with open(os.path.join(root_dir, "README.md")) as rf:
+with open(os.path.join(root_dir, "README.rst")) as rf:
     long_desc = rf.read()
 with open(os.path.join(root_dir, "LICENSE")) as rf:
     license = rf.read()
 
 setup(
     name='utensor_cgen',
-    version_format='{tag}.dev{commitcount}+{gitsha}',
-    setup_requires=['setuptools-git-version'],
+    version_config={
+        "starting_version": "0.0.0"
+    },
+    setup_requires=['better-setuptools-git-version'],
     description="C code generation program for uTensor",
     long_description=long_desc,
     url="https://github.com/dboyliao/utensor_cgen",
@@ -29,7 +31,7 @@ setup(
         ]},
     install_requires=[
         'Jinja2',
-        'tensorflow',
+        'tensorflow==1.13.1',
         'idx2numpy',
         'attrs',
         'click',

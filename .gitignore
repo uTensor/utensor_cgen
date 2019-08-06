@@ -15,3 +15,6 @@ tests/*/cpp
 */*/models
 tests/deep_mlp/data 
 .vscode
+# docs
+doc/build
+doc/source/_*
