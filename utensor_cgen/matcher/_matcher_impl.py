@@ -111,6 +111,14 @@ class OpEqualityDelegate(object):
 
 @attr.s
 class uTensorGraphMatcher(object):
+  """
+  Isomorphic Subgraph Matcher
+
+  Perform isomorphic subgraph match against given graph
+
+  :param pattern_ugraph: a graph serve as pattern to look for
+  :type pattern_ugraph: :py:class:`.uTensorGraph`
+  """
 
   pattern_ugraph = attr.ib(validator=instance_of(uTensorGraph))
 
@@ -157,6 +165,17 @@ class uTensorGraphMatcher(object):
             states.append(state)
 
   def match(self, other_ugraph, n=1):
+    """
+    Match the pattern against the graph
+
+    :param other_ugraph: the graph where to search the pattern
+    :type other_ugraph: :py:class:`.uTensorGraph`
+    
+    :param n: the maximum matches to return
+    :type n: int
+
+    :rtype: List[:py:class:`.uTensorGraphMatch`]
+    """
     match_gen = self._match(other_ugraph)
     matches = []
     try:
@@ -225,6 +244,23 @@ class uTensorGraphMatcher(object):
 
 @attr.s(repr=False)
 class uTensorGraphMatch(object):
+  """
+  A isomorphic subgraph match
+  
+  :param pattern_ugraph: the parttern graph
+  :type pattern_ugraph: :py:class:`.uTensorGraph`
+
+  :param subject_ugraph: the subjective graph
+  :type subject_ugraph: :py:class:`.uTensorGraph`
+
+  :param patrn2subj_op_map: a dict with key as op name in the :py:attr:`pattern_ugraph`
+    and value as the matched op in the :py:attr:`subject_ugraph`
+  :type patrn2subj_op_map: dict
+
+  :param subj2patrn_op_map: a dict with key as op name in the :py:attr:`subject_ugraph`
+    and value as the matched op in the :py:attr:`pattern_ugraph`
+  :type subj2patrn_op_map: dict
+  """
 
   pattern_ugraph = attr.ib(type=uTensorGraph)
   subject_ugraph = attr.ib(type=uTensorGraph)
@@ -245,8 +281,9 @@ class uTensorGraphMatch(object):
       self.subj2patrn_tensor_map[target_tensor.name] = pattern_tensor
   
   @property
-  def is_valid(self):
+  def _is_valid(self):
     """Check if the match is valid
+
     1. only input/output ops of the subgraph view are allowed to have external linkage
     2. input ops have only external linkage for its inputs
     3. output ops have only external linkage for its outputs
@@ -345,7 +382,7 @@ class uTensorGraphMatch(object):
     """
     replacible = True
     reasons = []
-    if not self.is_valid:
+    if not self._is_valid:
       replaceible = False
       reasons.append('the match is not valid')
     subj_graph_view = self.subject_graph_view

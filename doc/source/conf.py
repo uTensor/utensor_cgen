@@ -15,11 +15,7 @@ import sys
 
 from better_setuptools_git_version import get_version
 
-# from utensor_cgen.cli import _version as version
-
 sys.path.insert(0, os.path.abspath('../../'))
-
-
 # -- Project information -----------------------------------------------------
 
 project = 'utensor_cgen'
@@ -79,4 +75,4 @@ autodoc_mock_imports = [
 # Add any paths that contain custom static files (such as style sheets) here,
 # relative to this directory. They are copied after the builtin static files,
 # so a file named "default.css" will overwrite the builtin "default.css".
-html_static_path = ['_static', '../../images']
+html_static_path = ['_static']

@@ -17,4 +17,4 @@ tests/deep_mlp/data
 .vscode
 # docs
 doc/build
-doc/source/_*
+doc/source/_build

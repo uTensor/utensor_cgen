@@ -49,7 +49,7 @@ class ConverterDispatcher(object):
     .. code-block:: python
     
       @ConverterDispatcher.register
-      class MyConverter(GenericConverter, TFConverterMixin):
+      class MyConverter(GenericConverterMixin, TFConverterMixin):
         __utensor_generic_type__ = <a generic type>
         __tfproto_type__ = <a tensorflow protobuf type>
 
@@ -61,10 +61,10 @@ class ConverterDispatcher(object):
         def get_tf_value(cls, generic):
           # implement the convertion
     """
-    if not issubclass(converter_cls, GenericConverter) or \
+    if not issubclass(converter_cls, GenericConverterMixin) or \
       not issubclass(converter_cls, TFConverterMixin):
       raise ValueError(
-        ('converter has to be subclass of both GenericConverter and TFConverterMixin'
+        ('converter has to be subclass of both GenericConverterMixin and TFConverterMixin'
          ': %s' % converter_cls)
       )
     if converter_cls.__utensor_generic_type__ is None:
@@ -119,11 +119,23 @@ class ConverterDispatcher(object):
     return type_map
 
 
-class GenericConverter(object):
-  """Abstract class for generic data type converter
+class GenericConverterMixin(object):
+  """
+  Abstract class for generic data type converter
 
   a generic data type converter will convert a given value
-  to a generic data type used by `utensor_cgen </>`_
+  to a generic data type which is all internal data types
+  defined in `utensor_cgen </>`_
+
+  All subclass of :py:class:`.GenericConverterMixin` should
+
+  1. overwrite ``__utensor_generic_type__``
+  
+    - this is the data type the converter converting to
+  2. overwrite classmethod :py:meth:`.get_generic_value`
+
+    - should be a classmethod which takes a value and
+      reutrn a new value of type ``__utensor_generic_type__``
   """
   __metaclass__ = ABCMeta
   __utensor_generic_type__ = None
@@ -144,8 +156,11 @@ class TFConverterMixin(object):
   Abstract class for :mod:`tensorflow` protobuf data converter
 
   a tensorflow protobuf data type converter will convert a given
-  value generic to `utensor_cgen </>`_ to a tensorflow protobuf
-  data type
+  generic value in `utensor_cgen </>`_ to a tensorflow protobuf
+  data type, defined with ``.proto`` files at |tf_proto|_
+
+  .. |tf_proto| replace:: tensorflow repo
+  .. _`tf_proto`: https://github.com/tensorflow/tensorflow/tree/master/tensorflow/core/framework
   """
   __metaclass__ = ABCMeta
   __tfproto_type__ = None
@@ -161,7 +176,7 @@ class TFConverterMixin(object):
     raise NotImplementedError('')
 
 
-class GenericTensorConverterMixin(GenericConverter):
+class GenericTensorConverterMixin(GenericConverterMixin):
   @attr.s
   class GenericType(object):
     np_array = attr.ib(validator=validators.instance_of(np.ndarray))
@@ -173,11 +188,11 @@ class GenericTensorConverterMixin(GenericConverter):
   __utensor_generic_type__ = GenericType
 
 
-class GenericDataTypeConverterMixin(GenericConverter):
+class GenericDataTypeConverterMixin(GenericConverterMixin):
   __utensor_generic_type__ = np.dtype
 
 
-class GenericTensorShapeMixin(GenericConverter):
+class GenericTensorShapeMixin(GenericConverterMixin):
   @attr.s
   class GenericType(object):
     list_view = attr.ib()
@@ -219,7 +234,7 @@ def _check_generic_type(conv_func):
 
 
 # converters
-class BuiltinConverter(GenericConverter, TFConverterMixin):
+class BuiltinConverter(GenericConverterMixin, TFConverterMixin):
   """Identity converter for buildin types
   """
   __tfproto_type__ = (bytes, int, long, bool, float, str, unicode)
@@ -321,7 +336,7 @@ class TensorShapeConverter(GenericTensorShapeMixin, TFConverterMixin):
 
 
 @ConverterDispatcher.register
-class AttrValueConverter(GenericConverter, TFConverterMixin):
+class AttrValueConverter(GenericConverterMixin, TFConverterMixin):
   __tfproto_type__ = _AttrValue
 
   @attr.s
@@ -359,7 +374,7 @@ class AttrValueConverter(GenericConverter, TFConverterMixin):
 
 
 @ConverterDispatcher.register
-class NameAttrListConverter(GenericConverter, TFConverterMixin):
+class NameAttrListConverter(GenericConverterMixin, TFConverterMixin):
   __tfproto_type__ = _NameAttrList
 
   @attr.s
@@ -402,7 +417,7 @@ class NameAttrListConverter(GenericConverter, TFConverterMixin):
 
 
 @ConverterDispatcher.register
-class AttrListValueConverter(GenericConverter, TFConverterMixin):
+class AttrListValueConverter(GenericConverterMixin, TFConverterMixin):
   __tfproto_type__ = _AttrValue.ListValue
 
   @attr.s
