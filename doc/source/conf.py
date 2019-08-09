@@ -21,7 +21,7 @@ sys.path.insert(0, os.path.abspath('../../'))
 project = 'utensor_cgen'
 copyright = '2019, uTensor Team'
 author = 'dboyliao, Neil Tan, kazami, Michael Bartling'
-version = get_version()
+version = get_version(template="{tag}.dev{sha:.7s}")
 master_doc = 'index'
 
 # -- General configuration ---------------------------------------------------

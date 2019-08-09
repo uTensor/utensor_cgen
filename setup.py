@@ -13,7 +13,8 @@ with open(os.path.join(root_dir, "LICENSE")) as rf:
 setup(
     name='utensor_cgen',
     version_config={
-        "starting_version": "0.0.0"
+        "starting_version": "0.0.0",
+        "version_format": "{tag}.dev{sha:.7s}"
     },
     setup_requires=['better-setuptools-git-version'],
     description="C code generation program for uTensor",
