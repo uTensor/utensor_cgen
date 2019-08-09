@@ -13,7 +13,7 @@ from utensor_cgen.matcher._morphism import Morphism
 from utensor_cgen.utils import (ops_bfs_queue, prune_graph, random_str,
                                 topologic_order_graph)
 
-__all__ = ["uTensorGraphMatcher"]
+__all__ = ["uTensorGraphMatcher", "uTensorGraphMatch"]
 
 @attr.s(frozen=True, slots=True)
 class OpEqualityDelegate(object):
@@ -115,6 +115,35 @@ class uTensorGraphMatcher(object):
   Isomorphic Subgraph Matcher
 
   Perform isomorphic subgraph match against given graph
+
+  A minimal example
+
+  .. code-block:: python
+
+    # Example: match and replace
+    patrn_ugraph = ... # load the pattern uTensorGraph
+    
+    # create a matcher
+    matcher = uTensorGraphMatcher(pattern_ugraph=patrn_ugraph)
+
+    # define a callback
+    def callback(match):
+      # inspect the match object
+      ....
+      # return the replacing graph, input and output map
+      return repl_ugraph, input_map, output_map
+    
+    # load the subject uTensorGraph
+    subj_ugraph = ...
+
+    # search for 1 match
+    matches = matcher.match(subj_ugraph, n=1) # return a list of uTensorGraphMatch objects
+
+    if matches:
+      match = matches[0]
+      match.replace_with(callback)
+
+  See also :py:class:`.uTensorGraphMatch`
 
   :param pattern_ugraph: a graph serve as pattern to look for
   :type pattern_ugraph: :py:class:`.uTensorGraph`
@@ -246,6 +275,8 @@ class uTensorGraphMatcher(object):
 class uTensorGraphMatch(object):
   """
   A isomorphic subgraph match
+
+  See also :py:class:`.uTensorGraphMatcher`
   
   :param pattern_ugraph: the parttern graph
   :type pattern_ugraph: :py:class:`.uTensorGraph`
@@ -260,6 +291,14 @@ class uTensorGraphMatch(object):
   :param subj2patrn_op_map: a dict with key as op name in the :py:attr:`subject_ugraph`
     and value as the matched op in the :py:attr:`pattern_ugraph`
   :type subj2patrn_op_map: dict
+
+  :param patrn2subj_tensor_map: a dict with key as the tensor object in the :py:attr:`pattern_ugraph`
+    and value as the tensor object in the :py:attr:`subject_ugraph`
+  :type patrn2subj_tensor_map: dict
+
+  :param subj2patrn_tensor_map: a dict with key as the tensor object in the :py:attr:`subject_ugraph`
+    and value as the tensor object in the :py:attr:`pattern_ugraph`
+  :type subj2patrn_tensor_map: dict
   """
 
   pattern_ugraph = attr.ib(type=uTensorGraph)
@@ -318,16 +357,20 @@ class uTensorGraphMatch(object):
     
   def replace_with(self, callback, suffix=None):
     """
-    Replace matched subgraph with a given ugraph given by the callback, *not in place*
+    Replace matched subgraph with a given ugraph given by the callback, **not** in-place
 
-    Arguments
-    ---------
-    callback : callable
+    :param callback: a callable object which takes a :py:class:`.uTensorGraphMatch` and
+      reutrn three values -- a :py:class:`.uTensorGraph` object to replaced the matched
+      subgraph with (the ``replacing graph``), an ``input_map`` (dict) maps input tensors 
+      in pattern graph to the input tensors in replacing graph and an ``output_map`` (dict)
+      which maps the output tensors
+    :type callback: callable
 
-    Return
-    ------
-    new_ugraph : uTensorGraph
-      a *new* graph with matched subgraph replaced with the graph given by the callback
+    :param suffix: (optional) the suffix to add to the name of ops/tensors in the replacing
+      graph returned by ``callback``. If not given, it will be a random string
+    :type suffix: str
+
+    :rtype: :py:class:`.uTensorGraph`, a **new** graph with matched subgraph replaced
     """
     # build a matched subgraph and pass it to callback
     # input/output_map (dict): 

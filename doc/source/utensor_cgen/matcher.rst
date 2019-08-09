@@ -11,7 +11,7 @@ Module members
 --------------
 
 .. autoapimodule:: utensor_cgen.matcher
-  :members:
+  :members: uTensorGraphMatcher, uTensorGraphMatch
 
 .. include:: ../images.rst
 
