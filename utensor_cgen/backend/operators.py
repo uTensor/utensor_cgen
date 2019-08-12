@@ -4,6 +4,8 @@ import os
 import numpy as np
 
 import idx2numpy as idx2np
+from utensor_cgen.ir import OperationInfo, TensorInfo
+from utensor_cgen.ir.converter import GenericTensorConverterMixin
 from utensor_cgen.logger import logger
 from utensor_cgen.matcher import OpEqualityDelegate, _morphism
 from utensor_cgen.transformer.optimizer import RefCntOptimizer
@@ -26,10 +28,22 @@ class OperatorFactory():
 
     op = self._operators[op_type](op_info, **kwargs)  # Create desired object
     return op.snippet  # Ops know how to create their snippets
+  
+  @classmethod
+  def build_op_info(cls, ugraph, op_type, *args, is_output=False, **kwargs):
+    op_cls = cls._operators.get(op_type, None)
+    if op_cls is None:
+      err_msg = "unsupported op type in uTensor: {}".format(op_type)
+      raise ValueError(err_msg)
+    op_info = op_cls.build_op_info(ugraph, *args, **kwargs)
+    if is_output:
+      ugraph.output_nodes.append(op_info.name)
+    return op_info
 
   @classmethod
   def register(cls, op_cls):
     cls._operators[op_cls.op_type] = op_cls
+    return op_cls
 
   @classmethod
   def support_op_types(cls):
@@ -52,6 +66,10 @@ class _Operator(object):
   @property
   def snippet(self):
     return self._snippet
+
+  @classmethod
+  def build_op_info(cls, ugraph, *args, **kwargs):
+    raise NotImplementedError('%s does not have build_op_info method' % cls)
 
 
 @OperatorFactory.register
@@ -639,6 +657,31 @@ class _ConstOperator(_Operator):
     idx_path = os.path.join(idx_dir, idx_fname)
     value = op_info.op_attr['value'].value
     self._tf_save_data(idx_path, value)
+  
+  @classmethod
+  def build_op_info(cls, ugraph, value, name, **kwargs):
+    generic_type = GenericTensorConverterMixin.__utensor_generic_type__
+    generic_value = generic_type(np_array=value)
+    op_attr = {
+      'value': generic_value
+    }
+    return OperationInfo(
+      name=name,
+      input_tensors=[],
+      output_tensors=[
+        TensorInfo(
+          name='{}:0'.format(name),
+          op_name=name,
+          dtype=value.dtype,
+          shape=list(value.shape),
+          ugraph=ugraph
+        )
+      ],
+      op_type=cls.op_type,
+      op_attr=op_attr,
+      ugraph=ugraph,
+      backend=kwargs.get('backend', '')
+    )
 
   def _tf_prepare_tensor_name(self, tensor_name):
     """Replace all ':' and '/' with '_' in a given tensor name

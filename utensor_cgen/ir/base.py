@@ -18,6 +18,7 @@ from tensorflow.core.framework.types_pb2 import DataType as _DataType
 from utensor_cgen.utils import random_str, topologic_order_graph
 
 from .converter import AttrValueConverter, ConverterDispatcher
+from .graph_builder import uTensorGraphBuilderMixin
 
 __all__ = [
   'TensorInfo', 'OperationInfo',
@@ -195,12 +196,6 @@ class OperationInfo(IRBase, _NoShallowCopyMixin):
 
   :param output_tensors: the output tensors of the node
   :type output_tensors: List[:class:`TensorInfo`]
-
-  :param input_nodes: the nodes which generate the tensors in ``input_tensors``
-  :type input_nodes: Set[:class:`OperationInfo`]
-
-  :param output_nodes: the nodes which consume the ``output_tensors`` in the graph
-  :type output_nodes: Set[:class:`OperationInfo`]
 
   :param op_type: the type of the node (ex: ``Add``)
   :type op_type: str
@@ -411,7 +406,7 @@ class OperationInfo(IRBase, _NoShallowCopyMixin):
 
 
 @attr.s(cmp=False)
-class uTensorGraph(IRBase, _NoShallowCopyMixin):
+class uTensorGraph(IRBase, _NoShallowCopyMixin, uTensorGraphBuilderMixin):
   """
   :param output_nodes: a list of names of ops which are the output nodes
     in the graph
@@ -596,20 +591,20 @@ class uTensorGraph(IRBase, _NoShallowCopyMixin):
       topologic_order_graph(self)
     return [self.ops_info[name] for name in self.topo_order]
 
-  def add_op(self, op, sort=True):
-    # experimental, don't use
-    if not isinstance(op, OperationInfo):
-      raise ValueError('expecting OperationInfo, get {}'.format(type(op)))
-    if op.name in self.ops_info:
-      raise ValueError('duplicate op detected, {}'.format(op.name))
-    op._ugraph = self
+  # def add_op(self, op, sort=True):
+  #   # experimental, don't use
+  #   if not isinstance(op, OperationInfo):
+  #     raise ValueError('expecting OperationInfo, get {}'.format(type(op)))
+  #   if op.name in self.ops_info:
+  #     raise ValueError('duplicate op detected, {}'.format(op.name))
+  #   op._ugraph = self
 
-    self.ops_info[op.name] = op
+  #   self.ops_info[op.name] = op
 
-    # FIXME: forcing a topo-order here prevent us from dynamic-graph-construction
-    # The temporary fix is to disable this as an option
-    if sort:
-      topologic_order_graph(self)
+  #   # FIXME: forcing a topo-order here prevent us from dynamic-graph-construction
+  #   # The temporary fix is to disable this as an option
+  #   if sort:
+  #     topologic_order_graph(self)
 
   def unsafe_merge_into(self, other_ugraph):
     """
