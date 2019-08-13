@@ -116,6 +116,7 @@ class _AddOperator(_Operator):
       backend=kwargs.get('backend', 'tensorflow')
     )
 
+
 @OperatorFactory.register
 class _ArgMaxOperator(_Operator):
 
