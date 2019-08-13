@@ -443,7 +443,7 @@ class uTensorGraph(IRBase, _NoShallowCopyMixin, uTensorGraphBuilderMixin):
   KWPARSER_PATTERN = re.compile(r'^([^\d\W][\w\d_]*)__([^\d\W][\w\d_]*)')
 
   output_nodes = attr.ib(type=list)
-  _backend = attr.ib(default='', type=six.string_types)
+  _backend = attr.ib(default='tensorflow', type=six.string_types)
   ops_info = attr.ib(factory=dict)
   # non-init
   topo_order = attr.ib(factory=list, init=False)
@@ -560,6 +560,8 @@ class uTensorGraph(IRBase, _NoShallowCopyMixin, uTensorGraphBuilderMixin):
     
     :rtype: :class:`tensorflow.GraphDef`
     """
+    if self.output_nodes and not self.topo_order:
+      raise RuntimeError('the graph is not topological sorted')
     assert self._backend == 'tensorflow', \
       'Convert a uTensorGraph to tf.GraphDef from a non-tf backend'
     graph_def = tf.GraphDef()
@@ -590,21 +592,6 @@ class uTensorGraph(IRBase, _NoShallowCopyMixin, uTensorGraphBuilderMixin):
     if not self.topo_order:
       topologic_order_graph(self)
     return [self.ops_info[name] for name in self.topo_order]
-
-  # def add_op(self, op, sort=True):
-  #   # experimental, don't use
-  #   if not isinstance(op, OperationInfo):
-  #     raise ValueError('expecting OperationInfo, get {}'.format(type(op)))
-  #   if op.name in self.ops_info:
-  #     raise ValueError('duplicate op detected, {}'.format(op.name))
-  #   op._ugraph = self
-
-  #   self.ops_info[op.name] = op
-
-  #   # FIXME: forcing a topo-order here prevent us from dynamic-graph-construction
-  #   # The temporary fix is to disable this as an option
-  #   if sort:
-  #     topologic_order_graph(self)
 
   def unsafe_merge_into(self, other_ugraph):
     """

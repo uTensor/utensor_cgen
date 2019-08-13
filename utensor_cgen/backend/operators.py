@@ -5,7 +5,8 @@ import numpy as np
 
 import idx2numpy as idx2np
 from utensor_cgen.ir import OperationInfo, TensorInfo
-from utensor_cgen.ir.converter import GenericTensorConverterMixin
+from utensor_cgen.ir.converter import (AttrValueConverter,
+                                       GenericTensorConverterMixin)
 from utensor_cgen.logger import logger
 from utensor_cgen.matcher import OpEqualityDelegate, _morphism
 from utensor_cgen.transformer.optimizer import RefCntOptimizer
@@ -30,12 +31,12 @@ class OperatorFactory():
     return op.snippet  # Ops know how to create their snippets
   
   @classmethod
-  def build_op_info(cls, ugraph, op_type, *args, is_output=False, **kwargs):
+  def build_op_info(cls, ugraph, op_type, name, *args, is_output=False, **kwargs):
     op_cls = cls._operators.get(op_type, None)
     if op_cls is None:
       err_msg = "unsupported op type in uTensor: {}".format(op_type)
       raise ValueError(err_msg)
-    op_info = op_cls.build_op_info(ugraph, *args, **kwargs)
+    op_info = op_cls.build_op_info(ugraph, name, *args, **kwargs)
     if is_output:
       ugraph.output_nodes.append(op_info.name)
     return op_info
@@ -91,6 +92,29 @@ class _AddOperator(_Operator):
     to_eval = parser.get('to_eval', False)
     self._snippet = AddOpSnippet(inputs, output, tf_dtype, ref_count, to_eval)
 
+  @classmethod
+  def build_op_info(cls, ugraph, name, *input_tensors, **kwargs):
+    if len(input_tensors) != 2:
+      raise ValueError(
+        'expecting two inputs for %s op' % cls.op_type
+      )
+    return OperationInfo(
+      name=name,
+      input_tensors=list(input_tensors),
+      output_tensors=[
+        TensorInfo(
+          name='{}:0'.format(name),
+          op_name=name,
+          dtype=input_tensors[0].dtype,
+          shape=input_tensors[0].shape,
+          ugraph=ugraph
+        )
+      ],
+      op_type=cls.op_type,
+      op_attr={},
+      ugraph=ugraph,
+      backend=kwargs.get('backend', 'tensorflow')
+    )
 
 @OperatorFactory.register
 class _ArgMaxOperator(_Operator):
@@ -659,11 +683,13 @@ class _ConstOperator(_Operator):
     self._tf_save_data(idx_path, value)
   
   @classmethod
-  def build_op_info(cls, ugraph, value, name, **kwargs):
+  def build_op_info(cls, ugraph, name, value, **kwargs):
     generic_type = GenericTensorConverterMixin.__utensor_generic_type__
     generic_value = generic_type(np_array=value)
     op_attr = {
-      'value': generic_value
+      'value': AttrValueConverter.__utensor_generic_type__(
+        value_name='tensor', value=generic_value
+      )
     }
     return OperationInfo(
       name=name,
@@ -680,7 +706,7 @@ class _ConstOperator(_Operator):
       op_type=cls.op_type,
       op_attr=op_attr,
       ugraph=ugraph,
-      backend=kwargs.get('backend', '')
+      backend=kwargs.get('backend', 'tensorflow')
     )
 
   def _tf_prepare_tensor_name(self, tensor_name):
