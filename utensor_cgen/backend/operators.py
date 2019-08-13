@@ -10,7 +10,7 @@ from utensor_cgen.ir.converter import (AttrValueConverter,
 from utensor_cgen.logger import logger
 from utensor_cgen.matcher import OpEqualityDelegate, _morphism
 from utensor_cgen.transformer.optimizer import RefCntOptimizer
-from utensor_cgen.utils import NamescopedKWArgsParser
+from utensor_cgen.utils import NamescopedKWArgsParser, as_proto_dtype
 
 from .snippets import *  # pylint: disable=W0401,W0614
 
@@ -111,7 +111,12 @@ class _AddOperator(_Operator):
         )
       ],
       op_type=cls.op_type,
-      op_attr={},
+      op_attr={
+        'T': AttrValueConverter.__utensor_generic_type__(
+          value_name='type',
+          value=as_proto_dtype(input_tensors[0].dtype)
+        )
+      },
       ugraph=ugraph,
       backend=kwargs.get('backend', 'tensorflow')
     )
@@ -690,6 +695,9 @@ class _ConstOperator(_Operator):
     op_attr = {
       'value': AttrValueConverter.__utensor_generic_type__(
         value_name='tensor', value=generic_value
+      ),
+      'dtype': AttrValueConverter.__utensor_generic_type__(
+        value_name='type', value=as_proto_dtype(value.dtype)
       )
     }
     return OperationInfo(
