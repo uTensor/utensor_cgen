@@ -72,7 +72,6 @@ class _Operator(object):
   def build_op_info(cls, ugraph, *args, **kwargs):
     raise NotImplementedError('%s does not have build_op_info method' % cls)
 
-
 @OperatorFactory.register
 @OpEqualityDelegate.is_associative(
   permutations=((0, 1), (1, 0))
@@ -138,6 +137,40 @@ class _ArgMaxOperator(_Operator):
     ref_count = parser.get('ref_counts', [0])[0]
     to_eval = parser.get('to_eval', False)
     self._snippet = ArgMaxOpSnippet(inputs, output, in_dtype, out_dtype, ref_count, to_eval)
+  
+  def build_op_info(cls, ugraph, name, input_tensor, dtype=np.int64, axis=-1):
+    shape = input_tensor.shape[:]
+    shape[axis] = 1
+    return OperationInfo(
+      name=name,
+      ugraph=ugraph,
+      backend=kwargs.get('backend', 'tensorflow'),
+      op_type=cls.op_type,
+      input_tensors=[input_tensor],
+      output_tensors=[
+        TensorInfo(
+          name='{}:0'.format(name),
+          op_name=name,
+          dtype=dtype,
+          shape=shape,
+          ugraph=ugraph
+        )
+      ],
+      op_attr={
+        'T': AttrValueConverter.__utensor_generic_type__(
+          value_name='type',
+          value=as_proto_dtype(input_tensor.dtype)
+        ),
+        'output_type': AttrValueConverter.__utensor_generic_type__(
+          value_name='type',
+          value=as_proto_dtype(dtype),
+        ),
+        'Tidx': AttrValueConverter.__utensor_generic_type__(
+          value_name='type',
+          value=as_proto_dtype(np.array([axis]).dtype)
+        )
+      }
+    )
 
 
 @OperatorFactory.register
