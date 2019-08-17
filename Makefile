@@ -2,7 +2,8 @@
 
 tests:
 	rm -f tests_log.txt
-	make test_utils test_ir test_transformer test_frontend test_matcher
+	make test_utils test_ir test_transformer test_frontend \
+		test_matcher test_graph_constructor
 
 test_%:
 	@if [ -d .venv ]; then \
@@ -12,4 +13,4 @@ test_%:
 	 fi;
 
 clean:
-	rm -f tests_log.txt *.pdf
+	rm -rf tests_log.txt *.pdf .pytest_cache
