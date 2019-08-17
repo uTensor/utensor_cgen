@@ -1,21 +1,22 @@
 # -*- coding:utf8 -*-
 import os
 
+import idx2numpy as idx2np
 import numpy as np
 
-import idx2numpy as idx2np
 from utensor_cgen.ir import OperationInfo, TensorInfo
 from utensor_cgen.ir.converter import (AttrValueConverter, DataTypeConverter,
                                        GenericTensorConverterMixin)
 from utensor_cgen.logger import logger
 from utensor_cgen.matcher import OpEqualityDelegate, _morphism
 from utensor_cgen.transformer.optimizer import RefCntOptimizer
-from utensor_cgen.utils import NamescopedKWArgsParsers
+from utensor_cgen.utils import NamescopedKWArgsParser
 
 from .snippets import *  # pylint: disable=W0401,W0614
 
-__all__ = ['OperatorFactory']
+__all__ = ['OperatorFactory', 'OpNotSupportedError']
 
+class OpNotSupportedError(Exception): pass
 
 class OperatorFactory():
   # Can easily do something smarter
@@ -29,17 +30,23 @@ class OperatorFactory():
 
     op = self._operators[op_type](op_info, **kwargs)  # Create desired object
     return op.snippet  # Ops know how to create their snippets
-  
+
   @classmethod
-  def build_op_info(cls, ugraph, op_type, name, *args, is_output=False, **kwargs):
+  def get_opertor(cls, op_type):
+    op_cls = cls._operators.get(op_type)
+    if op_cls is None:
+      raise OpNotSupportedError(
+        '{} not supported in utensor_cgen'.format(op_type)
+      )
+    return op_cls
+
+  @classmethod
+  def build_op_info(cls, *args, ugraph, op_type, name, **kwargs):
     op_cls = cls._operators.get(op_type, None)
     if op_cls is None:
       err_msg = "unsupported op type in uTensor: {}".format(op_type)
-      raise ValueError(err_msg)
-    op_info = op_cls.build_op_info(ugraph, name, *args, **kwargs)
-    if is_output:
-      ugraph.output_nodes.append(op_info.name)
-    return op_info
+      raise OpNotSupportedError(err_msg)
+    return op_cls.build_op_info(ugraph, name, *args, **kwargs)
 
   @classmethod
   def register(cls, op_cls):
@@ -51,7 +58,7 @@ class OperatorFactory():
     """Return the set of all supported ops
     """
     return set(cls._operators.keys())
-  
+
   @classmethod
   def is_supported(cls, op_type):
     if op_type != 'Placeholder' and op_type not in cls._operators:
@@ -72,6 +79,78 @@ class _Operator(object):
   def build_op_info(cls, ugraph, name, *args, **kwargs):
     raise NotImplementedError('%s does not have build_op_info method' % cls)
 
+
+@OperatorFactory.register
+@OpEqualityDelegate.is_compatible_with("Inline", _morphism.Const2InlineMorphism)
+class _ConstOperator(_Operator):
+
+  op_type = "Const"
+
+  def __init__(self, op_info, **kwargs):
+    out_tensor_info = op_info.output_tensors[0]
+    out_tname, out_dtype = (out_tensor_info.name,
+                            out_tensor_info.dtype)
+    parser = NamescopedKWArgsParser(RefCntOptimizer.KWARGS_NAMESCOPE,
+                                    op_info.op_attr)
+    ref_count = parser.get('ref_counts', [0])[0]
+    pre_tname = self._tf_prepare_tensor_name(out_tname)
+    idx_fname = "{}.idx".format(pre_tname)
+    idx_dir = kwargs['idx_dir']
+    embed_data_dir = kwargs.get('embed_data_dir',
+                                os.path.join("/fs", idx_dir))
+    self._snippet = CreateTensorIdxSnippet(embed_data_dir, out_tname,
+                                           idx_fname=idx_fname,
+                                           np_dtype=out_dtype,
+                                           ref_count=ref_count)
+    idx_path = os.path.join(idx_dir, idx_fname)
+    value = op_info.op_attr['value'].value
+    self._tf_save_data(idx_path, value)
+
+  @classmethod
+  def build_op_info(cls, ugraph, name, value, **kwargs):
+    generic_value = GenericTensorConverterMixin.__utensor_generic_type__(
+      np_array=value
+    )
+    return OperationInfo(
+      name=name,
+      input_tensors=[],
+      output_tensors=[
+        TensorInfo(
+          name='{}:0'.format(name),
+          op_name=name,
+          dtype=value.dtype,
+          shape=list(value.shape),
+          ugraph=ugraph
+        )
+      ],
+      op_type=cls.op_type,
+      op_attr={
+        'value': AttrValueConverter.__utensor_generic_type__(
+          value_name='tensor', value=generic_value
+        ),
+        'dtype': AttrValueConverter.__utensor_generic_type__(
+          value_name='type', value=DataTypeConverter.get_tf_value(value.dtype)
+        )
+      },
+      ugraph=ugraph,
+      backend=kwargs.get('backend', 'tensorflow')
+    )
+
+  def _tf_prepare_tensor_name(self, tensor_name):
+    """Replace all ':' and '/' with '_' in a given tensor name
+    """
+    prepared = tensor_name.replace(":", "_").replace("/", "_")
+    return prepared
+
+  def _tf_save_data(self, path, value):
+    np_array = value.np_array
+    if np_array.shape == ():
+      np_array = np.array([np_array])
+    with open(path, "wb") as fid:
+      idx2np.convert_to_file(fid, np_array)
+    logger.info("saving %s", path)
+
+
 @OperatorFactory.register
 @OpEqualityDelegate.is_associative(
   permutations=((0, 1), (1, 0))
@@ -85,7 +164,7 @@ class _AddOperator(_Operator):
     inputs = [tensor_info.name for tensor_info in op_info.input_tensors]
     output = op_info.output_tensors[0].name
     tf_dtype = op_info.input_tensors[0].dtype
-    parser = NamescopedKWArgsParser(RefCntOptimizer.KWARGS_NAMESCOPE, 
+    parser = NamescopedKWArgsParser(RefCntOptimizer.KWARGS_NAMESCOPE,
                                     op_info.op_attr)
     ref_count = parser.get('ref_counts', [0])[0]
     to_eval = parser.get('to_eval', False)
@@ -321,7 +400,7 @@ class _MatMulOperator(_Operator):
     dtype_x = tensor_x.dtype
     dtype_w = tensor_w.dtype
     out_dtype = np.promote_types(dtype_x, dtype_w)
-    if tensor_x.shape[-1] != tensor_w.shpae[0]:
+    if tensor_x.shape[-1] != tensor_w.shape[0]:
       raise ValueError(
         'dimension mismatch: {},{}'.format(tensor_x.shape, tensor_w.shape)
       )
@@ -342,15 +421,15 @@ class _MatMulOperator(_Operator):
       op_type=cls.op_type,
       op_attr={
         'T': AttrValueConverter.__utensor_generic_type__(
-          name='type',
+          value_name='type',
           value=DataTypeConverter.get_tf_value(out_dtype)
         ),
         'transpose_a': AttrValueConverter.__utensor_generic_type__(
-          name='b',
+          value_name='b',
           value=kwargs.get('transpose_x', False)
         ),
         'transpose_b': AttrValueConverter.__utensor_generic_type__(
-          name='b',
+          value_name='b',
           value=kwargs.get('tranpose_w', False)
         )
       },
@@ -759,77 +838,6 @@ class _InlineOperator(_Operator):
     inline = tensor_name.replace(":", "_").replace("/", "_")
     preapred = "inline_{}".format(inline)
     return preapred
-
-
-@OperatorFactory.register
-@OpEqualityDelegate.is_compatible_with("Inline", _morphism.Const2InlineMorphism)
-class _ConstOperator(_Operator):
-
-  op_type = "Const"
-
-  def __init__(self, op_info, **kwargs):
-    out_tensor_info = op_info.output_tensors[0]
-    out_tname, out_dtype = (out_tensor_info.name,
-                            out_tensor_info.dtype)
-    parser = NamescopedKWArgsParser(RefCntOptimizer.KWARGS_NAMESCOPE,
-                                    op_info.op_attr)
-    ref_count = parser.get('ref_counts', [0])[0]
-    pre_tname = self._tf_prepare_tensor_name(out_tname)
-    idx_fname = "{}.idx".format(pre_tname)
-    idx_dir = kwargs['idx_dir']
-    embed_data_dir = kwargs.get('embed_data_dir',
-                                os.path.join("/fs", idx_dir))
-    self._snippet = CreateTensorIdxSnippet(embed_data_dir, out_tname,
-                                           idx_fname=idx_fname,
-                                           np_dtype=out_dtype,
-                                           ref_count=ref_count)
-    idx_path = os.path.join(idx_dir, idx_fname)
-    value = op_info.op_attr['value'].value
-    self._tf_save_data(idx_path, value)
-  
-  @classmethod
-  def build_op_info(cls, ugraph, name, value, **kwargs):
-    generic_type = GenericTensorConverterMixin.__utensor_generic_type__
-    generic_value = generic_type(np_array=value)
-    op_attr = {
-      'value': AttrValueConverter.__utensor_generic_type__(
-        value_name='tensor', value=generic_value
-      ),
-      'dtype': AttrValueConverter.__utensor_generic_type__(
-        value_name='type', value=DataTypeConverter.get_tf_value(value.dtype)
-      )
-    }
-    return OperationInfo(
-      name=name,
-      input_tensors=[],
-      output_tensors=[
-        TensorInfo(
-          name='{}:0'.format(name),
-          op_name=name,
-          dtype=value.dtype,
-          shape=value.shape[:],
-          ugraph=ugraph
-        )
-      ],
-      op_type=cls.op_type,
-      op_attr=op_attr,
-      ugraph=ugraph,
-      backend=kwargs.get('backend', 'tensorflow')
-    )
-
-  def _tf_prepare_tensor_name(self, tensor_name):
-    """Replace all ':' and '/' with '_' in a given tensor name
-    """
-    prepared = tensor_name.replace(":", "_").replace("/", "_")
-    return prepared
-  
-  def _tf_save_data(self, path, value):
-    np_array = value.np_array
-    if np_array.shape == ():
-      np_array = np.array([np_array])
-    with open(path, "wb") as fid:
-      idx2np.convert_to_file(fid, np_array)
-    logger.info("saving %s", path)
 
 
 @OperatorFactory.register

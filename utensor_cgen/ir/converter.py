@@ -7,7 +7,6 @@ from functools import wraps
 import attr
 import numpy as np
 from attr import validators
-
 from tensorflow import DType as _DType
 from tensorflow import as_dtype as _tf_as_dtype
 from tensorflow import make_ndarray, make_tensor_proto
@@ -47,7 +46,7 @@ class ConverterDispatcher(object):
     **Example**
 
     .. code-block:: python
-    
+
       @ConverterDispatcher.register
       class MyConverter(GenericConverterMixin, TFConverterMixin):
         __utensor_generic_type__ = <a generic type>
@@ -56,7 +55,7 @@ class ConverterDispatcher(object):
         @classmethod
         def get_generic_value(cls, tf_value):
           # implement the convertion
-        
+
         @classmethod
         def get_tf_value(cls, generic):
           # implement the convertion
@@ -85,7 +84,7 @@ class ConverterDispatcher(object):
     if not cvt:
       raise ValueError('Unknown tf value type: %s' % value_type)
     return cvt.get_generic_value(tf_value)
-  
+
   @classmethod
   def get_tf_value(cls, generic):
     value_type = type(generic)
@@ -96,11 +95,11 @@ class ConverterDispatcher(object):
     if not cvt:
       raise ValueError('Unknown generic type: %s' % value_type)
     return cvt.get_tf_value(generic)
-  
+
   @classmethod
   def all_supported_tf_types(cls):
     return cls._TF2GENERIC_MAP.keys()
-  
+
   @classmethod
   def all_generic_types(cls):
     """
@@ -130,7 +129,7 @@ class GenericConverterMixin(object):
   All subclass of :py:class:`.GenericConverterMixin` should
 
   1. overwrite ``__utensor_generic_type__``
-  
+
     - this is the data type the converter converting to
   2. overwrite classmethod :py:meth:`.get_generic_value`
 
@@ -181,7 +180,7 @@ class GenericTensorConverterMixin(GenericConverterMixin):
   class GenericType(object):
     np_array = attr.ib(validator=validators.instance_of(np.ndarray))
     dtype = attr.ib(default=None)
-    
+
     def __attrs_post_init__(self):
       if self.dtype is None:
         self.dtype = self.np_array.dtype
@@ -196,7 +195,7 @@ class GenericTensorShapeMixin(GenericConverterMixin):
   @attr.s
   class GenericType(object):
     list_view = attr.ib()
-    
+
     @list_view.validator
     def check(self, attrib, a_list):
       if a_list is None:

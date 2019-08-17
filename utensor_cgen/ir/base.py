@@ -5,9 +5,8 @@ from copy import deepcopy
 import attr
 import numpy as np
 import six
-from attr.validators import instance_of
-
 import tensorflow as tf
+from attr.validators import instance_of
 from tensorflow.core.framework.attr_value_pb2 import AttrValue as _AttrValue
 from tensorflow.core.framework.attr_value_pb2 import \
     NameAttrList as _NameAttrList
@@ -15,6 +14,7 @@ from tensorflow.core.framework.tensor_pb2 import TensorProto as _TensorProto
 from tensorflow.core.framework.tensor_shape_pb2 import \
     TensorShapeProto as _TensorShapeProto
 from tensorflow.core.framework.types_pb2 import DataType as _DataType
+
 from utensor_cgen.utils import random_str, topologic_order_graph
 
 from .converter import AttrValueConverter, ConverterDispatcher
@@ -442,7 +442,7 @@ class uTensorGraph(IRBase, _NoShallowCopyMixin, uTensorGraphBuilderMixin):
   """
   KWPARSER_PATTERN = re.compile(r'^([^\d\W][\w\d_]*)__([^\d\W][\w\d_]*)')
 
-  output_nodes = attr.ib(type=list)
+  output_nodes = attr.ib(factory=list)
   _backend = attr.ib(default='tensorflow', type=six.string_types)
   ops_info = attr.ib(factory=dict)
   # non-init

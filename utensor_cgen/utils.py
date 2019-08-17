@@ -7,13 +7,13 @@ from copy import deepcopy
 from random import choices
 from string import ascii_letters, digits
 
-import numpy as np
-from click.types import ParamType
-
 import idx2numpy as idx2np
+import numpy as np
 import tensorflow as tf
+from click.types import ParamType
 from tensorflow.python.framework import graph_util
 from tensorflow.tools.graph_transforms import TransformGraph
+
 from utensor_cgen.logger import logger
 
 __all__ = ["save_idx", "save_consts", "save_graph", "log_graph",
@@ -168,7 +168,7 @@ class NamescopedKWArgsParser:
           self._private_kwargs[argname] = value
       else:
         self._shared_kwargs[key] = value
-  
+
   def get(self, argname, default=None):
     """
     Get value of given name in the namespace
@@ -179,7 +179,7 @@ class NamescopedKWArgsParser:
 
     :param argname: the name of the value
     :type argname: str
-    
+
     :param default: the default value to return for missing value
 
     .. code-block:: python
@@ -216,8 +216,8 @@ class NamescopedKWArgsParser:
   def __repr__(self):
     d = dict(('%s__%s' % (self._namespace, k), v)
               for k, v in self._private_kwargs.items())
-    repr_str = ('KWArgsParser(' + 
-                '%s, ' % self._namespace + 
+    repr_str = ('KWArgsParser(' +
+                '%s, ' % self._namespace +
                 '%s)' % d)
     return repr_str
 
@@ -237,8 +237,8 @@ class NArgsParam(ParamType):
   :type sep: str
 
   See also |click_param|_
-  
-  .. |click_param| replace:: `Click: Implementing Custom Types` 
+
+  .. |click_param| replace:: `Click: Implementing Custom Types`
   .. _click_param: https://click.palletsprojects.com/en/7.x/parameters/#implementing-custom-types
   """
 
