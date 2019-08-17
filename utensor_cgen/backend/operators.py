@@ -5,12 +5,12 @@ import numpy as np
 
 import idx2numpy as idx2np
 from utensor_cgen.ir import OperationInfo, TensorInfo
-from utensor_cgen.ir.converter import (AttrValueConverter,
+from utensor_cgen.ir.converter import (AttrValueConverter, DataTypeConverter,
                                        GenericTensorConverterMixin)
 from utensor_cgen.logger import logger
 from utensor_cgen.matcher import OpEqualityDelegate, _morphism
 from utensor_cgen.transformer.optimizer import RefCntOptimizer
-from utensor_cgen.utils import NamescopedKWArgsParser, as_proto_dtype
+from utensor_cgen.utils import NamescopedKWArgsParsers
 
 from .snippets import *  # pylint: disable=W0401,W0614
 
@@ -69,7 +69,7 @@ class _Operator(object):
     return self._snippet
 
   @classmethod
-  def build_op_info(cls, ugraph, *args, **kwargs):
+  def build_op_info(cls, ugraph, name, *args, **kwargs):
     raise NotImplementedError('%s does not have build_op_info method' % cls)
 
 @OperatorFactory.register
@@ -105,7 +105,7 @@ class _AddOperator(_Operator):
           name='{}:0'.format(name),
           op_name=name,
           dtype=input_tensors[0].dtype,
-          shape=input_tensors[0].shape,
+          shape=input_tensors[0].shape[:],
           ugraph=ugraph
         )
       ],
@@ -113,7 +113,7 @@ class _AddOperator(_Operator):
       op_attr={
         'T': AttrValueConverter.__utensor_generic_type__(
           value_name='type',
-          value=as_proto_dtype(input_tensors[0].dtype)
+          value=DataTypeConverter.get_tf_value(input_tensors[0].dtype)
         )
       },
       ugraph=ugraph,
@@ -138,13 +138,11 @@ class _ArgMaxOperator(_Operator):
     to_eval = parser.get('to_eval', False)
     self._snippet = ArgMaxOpSnippet(inputs, output, in_dtype, out_dtype, ref_count, to_eval)
   
-  def build_op_info(cls, ugraph, name, input_tensor, dtype=np.int64, axis=-1):
+  def build_op_info(cls, ugraph, name, input_tensor, dtype=np.int64, axis=-1, **kwargs):
     shape = input_tensor.shape[:]
     shape[axis] = 1
     return OperationInfo(
       name=name,
-      ugraph=ugraph,
-      backend=kwargs.get('backend', 'tensorflow'),
       op_type=cls.op_type,
       input_tensors=[input_tensor],
       output_tensors=[
@@ -159,17 +157,19 @@ class _ArgMaxOperator(_Operator):
       op_attr={
         'T': AttrValueConverter.__utensor_generic_type__(
           value_name='type',
-          value=as_proto_dtype(input_tensor.dtype)
+          value=DataTypeConverter.get_tf_value(input_tensor.dtype)
         ),
         'output_type': AttrValueConverter.__utensor_generic_type__(
           value_name='type',
-          value=as_proto_dtype(dtype),
+          value=DataTypeConverter.get_tf_values(dtype),
         ),
         'Tidx': AttrValueConverter.__utensor_generic_type__(
           value_name='type',
-          value=as_proto_dtype(np.array([axis]).dtype)
+          value=DataTypeConverter.get_tf_value(np.array([axis]).dtype)
         )
-      }
+      },
+      ugraph=ugraph,
+      backend=kwargs.get('backend', 'tensorflow')
     )
 
 
@@ -316,6 +316,48 @@ class _MatMulOperator(_Operator):
                                     x_dtype, w_dtype, out_dtype,
                                     ref_count, to_eval)
 
+  @classmethod
+  def build_op_info(cls, ugraph, name, tensor_x, tensor_w, **kwargs):
+    dtype_x = tensor_x.dtype
+    dtype_w = tensor_w.dtype
+    out_dtype = np.promote_types(dtype_x, dtype_w)
+    if tensor_x.shape[-1] != tensor_w.shpae[0]:
+      raise ValueError(
+        'dimension mismatch: {},{}'.format(tensor_x.shape, tensor_w.shape)
+      )
+    return OperationInfo(
+      name=name,
+      input_tensors=[
+        tensor_x, tensor_w
+      ],
+      output_tensors=[
+        TensorInfo(
+          name='{}:0'.format(name),
+          op_name=name,
+          dtype=out_dtype,
+          shape=tensor_x.shape[:-1]+tensor_w.shape[1:],
+          ugraph=ugraph
+        )
+      ],
+      op_type=cls.op_type,
+      op_attr={
+        'T': AttrValueConverter.__utensor_generic_type__(
+          name='type',
+          value=DataTypeConverter.get_tf_value(out_dtype)
+        ),
+        'transpose_a': AttrValueConverter.__utensor_generic_type__(
+          name='b',
+          value=kwargs.get('transpose_x', False)
+        ),
+        'transpose_b': AttrValueConverter.__utensor_generic_type__(
+          name='b',
+          value=kwargs.get('tranpose_w', False)
+        )
+      },
+      ugraph=ugraph,
+      backend=kwargs.get('backend', 'tensorflow')
+    )
+
 
 @OperatorFactory.register
 class _QuantizedMatMulOperator(_Operator):
@@ -357,7 +399,31 @@ class _ReluOperator(_Operator):
     self._snippet = ReluOpSnippet(inputs, output, in_dtype,
                                            out_dtype,
                                            ref_count, to_eval)
-
+  
+  @classmethod
+  def build_op_info(cls, ugraph, name, tensor, **kwargs):
+    return OperationInfo(
+      name=name,
+      input_tensors=[tensor],
+      output_tensors=[
+        TensorInfo(
+          name='{}:0'.format(name),
+          op_name=name,
+          dtype=tensor.dtype,
+          shape=tensor.shape[:],
+          ugraph=ugraph
+        )
+      ],
+      op_type=cls.op_type,
+      op_attr={
+        'T': AttrValueConverter.__utensor_generic_type__(
+          name='type',
+          value=DataTypeConverter.get_tf_value(tensor.dtype)
+        )
+      },
+      ugraph=ugraph,
+      backend=kwargs.get('backend', 'tensorflow')
+    )
 
 @OperatorFactory.register
 class _QuantizedReluOperator(_Operator):
@@ -730,7 +796,7 @@ class _ConstOperator(_Operator):
         value_name='tensor', value=generic_value
       ),
       'dtype': AttrValueConverter.__utensor_generic_type__(
-        value_name='type', value=as_proto_dtype(value.dtype)
+        value_name='type', value=DataTypeConverter.get_tf_value(value.dtype)
       )
     }
     return OperationInfo(
@@ -741,7 +807,7 @@ class _ConstOperator(_Operator):
           name='{}:0'.format(name),
           op_name=name,
           dtype=value.dtype,
-          shape=list(value.shape),
+          shape=value.shape[:],
           ugraph=ugraph
         )
       ],

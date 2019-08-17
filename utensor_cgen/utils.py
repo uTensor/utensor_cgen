@@ -435,7 +435,3 @@ def prune_graph(ugraph):
 def random_str(length=8):
   chars = choices(ascii_letters+digits, k=length)
   return ''.join(chars)
-
-def as_proto_dtype(dtype):
-  from tensorflow.python.framework.dtypes import as_dtype
-  return as_dtype(dtype).as_datatype_enum
