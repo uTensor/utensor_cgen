@@ -1,5 +1,8 @@
 import inspect
+from contextlib import contextmanager
 
+
+class GraphFinalizedError(Exception): pass
 
 class uTensorGraphBuilderMixin(object):
 
@@ -7,7 +10,7 @@ class uTensorGraphBuilderMixin(object):
     # FIXME: cyclic imports... OMG
     from utensor_cgen.backend.operators import OperatorFactory
     if self.is_finalized:
-      raise RuntimeError(
+      raise GraphFinalizedError(
         'Can not add op to finalized graph'
       )
     if name in self.ops_info:
@@ -43,3 +46,10 @@ class uTensorGraphBuilderMixin(object):
   def list_all_ops():
     from utensor_cgen.backend.operators import OperatorFactory
     return list(OperatorFactory._operators.keys())
+
+  @contextmanager
+  def begin_construction(self):
+    if self.is_finalized:
+      raise GraphFinalizedError('this graph is finalized, no construction allowed')
+    yield
+    self.finalize()
