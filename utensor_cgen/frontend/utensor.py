@@ -18,4 +18,5 @@ class PickleParser(Parser):
     if output_nodes is not None:
       ugraph.output_nodes = output_nodes
       topologic_order_graph(ugraph)
+    ugraph.finalize()
     return ugraph

@@ -3,6 +3,7 @@ import os
 
 import idx2numpy as idx2np
 import numpy as np
+import tensorflow as tf
 
 from utensor_cgen.ir import OperationInfo, TensorInfo
 from utensor_cgen.ir.converter import (AttrValueConverter, DataTypeConverter,
@@ -171,20 +172,21 @@ class _AddOperator(_Operator):
     self._snippet = AddOpSnippet(inputs, output, tf_dtype, ref_count, to_eval)
 
   @classmethod
-  def build_op_info(cls, ugraph, name, *input_tensors, **kwargs):
-    if len(input_tensors) != 2:
-      raise ValueError(
-        'expecting two inputs for %s op' % cls.op_type
-      )
+  def build_op_info(cls, ugraph, name, tensor_x, tensor_y, **kwargs):
+    # broadcast the shape and promote types
+    dummy_x = np.empty(tensor_x.shape)
+    dummy_y = np.empty(tensor_y.shape)
+    output_shape = np.broadcast(dummy_x, dummy_y).shape
+    output_dtype = np.promote_types(tensor_x.dtype, tensor_y.dtype)
     return OperationInfo(
       name=name,
-      input_tensors=list(input_tensors),
+      input_tensors=[tensor_x, tensor_y],
       output_tensors=[
         TensorInfo(
           name='{}:0'.format(name),
           op_name=name,
-          dtype=input_tensors[0].dtype,
-          shape=input_tensors[0].shape[:],
+          dtype=output_dtype,
+          shape=list(output_shape),
           ugraph=ugraph
         )
       ],
@@ -192,7 +194,7 @@ class _AddOperator(_Operator):
       op_attr={
         'T': AttrValueConverter.__utensor_generic_type__(
           value_name='type',
-          value=DataTypeConverter.get_tf_value(input_tensors[0].dtype)
+          value=DataTypeConverter.get_tf_value(output_dtype)
         )
       },
       ugraph=ugraph,
@@ -217,7 +219,7 @@ class _ArgMaxOperator(_Operator):
     to_eval = parser.get('to_eval', False)
     self._snippet = ArgMaxOpSnippet(inputs, output, in_dtype, out_dtype, ref_count, to_eval)
   
-  def build_op_info(cls, ugraph, name, input_tensor, dtype=np.int64, axis=-1, **kwargs):
+  def build_op_info(cls, ugraph, name, input_tensor, dtype=np.dtype('int64'), axis=-1, **kwargs):
     shape = input_tensor.shape[:]
     shape[axis] = 1
     return OperationInfo(
@@ -496,7 +498,7 @@ class _ReluOperator(_Operator):
       op_type=cls.op_type,
       op_attr={
         'T': AttrValueConverter.__utensor_generic_type__(
-          name='type',
+          value_name='type',
           value=DataTypeConverter.get_tf_value(tensor.dtype)
         )
       },
@@ -688,6 +690,45 @@ class _Conv2DOperator(_Operator):
                                      in_dtype=in_dtype, filter_dtype=filter_dtype, out_dtype=out_dtype,
                                      ref_count=ref_count, to_eval=to_eval)
 
+  @classmethod
+  def build_op_info(cls, ugraph, name, tensor_x, tensor_w, stride_height, stride_width, padding='SAME', **kwargs):
+    # dboy: I'm too lazy to implement the padding algorithm again
+    # simply call tf to find out the output shape
+    dummy_x = np.empty(tensor_x.shape, dtype=tensor_x.dtype)
+    dummy_w = np.empty(tensor_w.shape, dtype=tensor_w.dtype)
+    graph = tf.Graph()
+    with graph.as_default():
+      dummy_out = tf.nn.conv2d(
+        dummy_x,
+        dummy_w,
+        strides=[1, stride_height, stride_width, 1],
+        padding=padding,
+        name='dummy'
+      )
+    node_def = [node for node in graph.as_graph_def().node if node.name == 'dummy'][0]
+    output_shape = dummy_out.shape.as_list()
+    output_dtype = np.promote_types(tensor_x.dtype, tensor_w.dtype)
+    op_attr = {
+      k: AttrValueConverter.get_generic_value(v)
+      for k, v in node_def.attr.items()
+    }
+    return OperationInfo(
+      name=name,
+      input_tensors=[tensor_x, tensor_w],
+      output_tensors=[
+        TensorInfo(
+          name='{}:0'.format(name),
+          op_name=name,
+          dtype=output_dtype,
+          shape=output_shape,
+          ugraph=ugraph,
+        )
+      ],
+      op_type=cls.op_type,
+      op_attr=op_attr,
+      ugraph=ugraph,
+      backend=kwargs.get('backend', 'tensorflow'),
+    )
 
 @OperatorFactory.register
 class _FusedConv2DMaxpoolOperator(_Operator):
