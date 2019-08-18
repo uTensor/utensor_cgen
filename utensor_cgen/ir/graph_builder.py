@@ -4,6 +4,7 @@ from contextlib import contextmanager
 
 class GraphFinalizedError(Exception): pass
 
+
 class uTensorGraphBuilderMixin(object):
 
   def add_op(self, *args, op_type, name, is_output=False, **kwargs):

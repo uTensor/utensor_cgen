@@ -204,6 +204,9 @@ class OperationInfo(IRBase, _NoShallowCopyMixin):
     {'tensorflow', 'pytorch'}
   :type backend: str
 
+  :param ugraph: the graph which owns this op
+  :type ugraph: :py:class:`.uTensorGraph`
+
   :param op_attr: a dict containing extra information of this op
   :type op_attr: dict
 

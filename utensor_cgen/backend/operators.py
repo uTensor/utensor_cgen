@@ -1,10 +1,13 @@
 # -*- coding:utf8 -*-
+r'''
+TODO: remove all tensorflow graph construction in `build_op_info`
+'''
 import os
 
-import idx2numpy as idx2np
 import numpy as np
-import tensorflow as tf
 
+import idx2numpy as idx2np
+import tensorflow as tf
 from utensor_cgen.ir import OperationInfo, TensorInfo
 from utensor_cgen.ir.converter import (AttrValueConverter, DataTypeConverter,
                                        GenericTensorConverterMixin)
@@ -18,6 +21,7 @@ from .snippets import *  # pylint: disable=W0401,W0614
 __all__ = ['OperatorFactory', 'OpNotSupportedError']
 
 class OpNotSupportedError(Exception): pass
+
 
 class OperatorFactory():
   # Can easily do something smarter
@@ -213,42 +217,49 @@ class _ArgMaxOperator(_Operator):
     out_tensor_info = op_info.output_tensors[0]
     output, out_dtype = out_tensor_info.name, out_tensor_info.dtype
     in_dtype = op_info.input_tensors[0].dtype
-    parser = NamescopedKWArgsParser(RefCntOptimizer.KWARGS_NAMESCOPE, 
+    parser = NamescopedKWArgsParser(RefCntOptimizer.KWARGS_NAMESCOPE,
                                     op_info.op_attr)
     ref_count = parser.get('ref_counts', [0])[0]
     to_eval = parser.get('to_eval', False)
     self._snippet = ArgMaxOpSnippet(inputs, output, in_dtype, out_dtype, ref_count, to_eval)
   
-  def build_op_info(cls, ugraph, name, input_tensor, dtype=np.dtype('int64'), axis=-1, **kwargs):
-    shape = input_tensor.shape[:]
-    shape[axis] = 1
+  @classmethod
+  def build_op_info(cls, ugraph, name, input_tensor, dtype=np.dtype('int64'), axis=0, **kwargs):
+    if isinstance(axis, int):
+      axis, = ugraph.add_op(
+        np.array(axis, dtype=np.dtype('int32')),
+        op_type='Const',
+        name='{}/axis'.format(name)
+      )
+    dummy_in = np.empty(input_tensor.shape, dtype=input_tensor.dtype)
+    graph = tf.Graph()
+    with graph.as_default():
+      dummy_out = tf.math.argmax(
+        dummy_in,
+        axis=axis.op.op_attr['value'].value.np_array,
+        name='dummy',
+        output_type=tf.as_dtype(dtype)
+      )
+    node_def = [node for node in graph.as_graph_def().node if node.name=='dummy'][0]
+    output_shape = dummy_out.shape.as_list()
+    op_attr = {
+      k: AttrValueConverter.get_generic_value(v)
+      for k, v in node_def.attr.items()
+    }
     return OperationInfo(
       name=name,
       op_type=cls.op_type,
-      input_tensors=[input_tensor],
+      input_tensors=[input_tensor, axis],
       output_tensors=[
         TensorInfo(
           name='{}:0'.format(name),
           op_name=name,
           dtype=dtype,
-          shape=shape,
+          shape=output_shape,
           ugraph=ugraph
         )
       ],
-      op_attr={
-        'T': AttrValueConverter.__utensor_generic_type__(
-          value_name='type',
-          value=DataTypeConverter.get_tf_value(input_tensor.dtype)
-        ),
-        'output_type': AttrValueConverter.__utensor_generic_type__(
-          value_name='type',
-          value=DataTypeConverter.get_tf_values(dtype),
-        ),
-        'Tidx': AttrValueConverter.__utensor_generic_type__(
-          value_name='type',
-          value=DataTypeConverter.get_tf_value(np.array([axis]).dtype)
-        )
-      },
+      op_attr=op_attr,
       ugraph=ugraph,
       backend=kwargs.get('backend', 'tensorflow')
     )
@@ -291,6 +302,107 @@ class _MaxOperator(_Operator):
     ref_count = parser.get('ref_counts', [0])[0]
     to_eval = parser.get('to_eval', False)
     self._snippet = MaxOpSnippet(inputs, output, out_dtype, out_shape, ref_count, to_eval)
+  
+  @classmethod
+  def build_op_info(cls, ugraph, name, tensor, axis=-1, keepdims=False, **kwargs):
+    if isinstance(axis, int):
+      axis, = ugraph.add_op(
+        np.array(axis, dtype=np.dtype('int32')),
+        op_type='Const',
+        name='{}/axis'.format(name)
+      )
+    dummy_in = np.empty(tensor.shape, dtype=tensor.dtype)
+    graph = tf.Graph()
+    with graph.as_default():
+      dummy_out = tf.reduce_max(
+        dummy_in,
+        axis=axis.op.op_attr['value'].value.np_array,
+        keepdims=keepdims,
+        name='dummy'
+      )
+    node_def = [node for node in graph.as_graph_def().node if node.name == 'dummy'][0]
+    return OperationInfo(
+      name=name,
+      input_tensors=[tensor, axis],
+      output_tensors=[
+        TensorInfo(
+          name='{}:0'.format(name),
+          op_name=name,
+          dtype=tensor.dtype,
+          shape=dummy_out.shape.as_list(),
+          ugraph=ugraph
+        )
+      ],
+      op_type=cls.op_type,
+      op_attr={
+        k: AttrValueConverter.get_generic_value(v)
+        for k, v in node_def.attr.items()
+      },
+      backend=kwargs.get('backend', 'tensorflow'),
+      ugraph=ugraph
+    )
+
+
+@OperatorFactory.register
+class _MinOperator(_Operator):
+
+  op_type = "Min"
+
+  def __init__(self, op_info, **kwargs):
+    _Operator.__init__(self)
+    inputs = [tensor_info.name for tensor_info in op_info.input_tensors]
+    out_info = op_info.output_tensors[0]
+    output, out_dtype, out_shape = (out_info.name,
+                                    out_info.dtype,
+                                    out_info.shape)
+    # FIXME: automatic alloc for uTensor fail
+    if not out_shape:
+      out_shape = [1]
+    parser = NamescopedKWArgsParser(RefCntOptimizer.KWARGS_NAMESCOPE,
+                                    op_info.op_attr)
+    ref_count = parser.get('ref_counts', [0])[0]
+    to_eval = parser.get('to_eval', False)
+    self._snippet = MinOpSnippet(inputs, output, out_dtype, out_shape, ref_count, to_eval)
+  
+  @classmethod
+  def build_op_info(cls, ugraph, name, tensor, axis=-1, keepdims=False, **kwargs):
+    if isinstance(axis, int):
+      axis, = ugraph.add_op(
+        np.array(axis, dtype=np.dtype('int32')),
+        op_type='Const',
+        name='{}/axis'.format(name)
+      )
+    dummy_in = np.empty(tensor.shape, dtype=tensor.dtype)
+    graph = tf.Graph()
+    with graph.as_default():
+      dummy_out = tf.reduce_min(
+        dummy_in,
+        axis=axis.op.op_attr['value'].value.np_array,
+        keepdims=keepdims,
+        name='dummy'
+      )
+    node_def = [node for node in graph.as_graph_def().node if node.name == 'dummy'][0]
+    output_shape = dummy_out.shape.as_list()
+    return OperationInfo(
+      name=name,
+      input_tensors=[tensor, axis],
+      output_tensors=[
+        TensorInfo(
+          name='{}:0'.format(name),
+          op_name=name,
+          dtype=tensor.dtype,
+          shape=output_shape,
+          ugraph=ugraph,
+        )
+      ],
+      op_type=cls.op_type,
+      backend=kwargs.get('backend', 'tensorflow'),
+      ugraph=ugraph,
+      op_attr={
+        k: AttrValueConverter.get_generic_value(v)
+        for k, v in node_def.attr.items()
+      }
+    )
 
 
 @OperatorFactory.register
@@ -314,6 +426,53 @@ class _MaxPool(_Operator):
                                             ksize, strides, padding,
                                             ref_count, to_eval)
 
+  @classmethod
+  def build_op_info(
+    cls,
+    ugraph,
+    name,
+    tensor,
+    ksize_height,
+    ksize_width,
+    stride_height,
+    stride_width,
+    padding='SAME',
+    **kwargs
+  ):
+    dummy_arr = np.empty(tensor.shape, dtype=tensor.dtype)
+    graph = tf.Graph()
+    with graph.as_default():
+      tf_tensor = tf.nn.max_pool(
+        dummy_arr,
+        ksize=[1, ksize_height, ksize_width, 1],
+        strides=[1, stride_height, stride_width, 1],
+        padding=padding,
+        name='dummy'
+      )
+    output_shape = tf_tensor.shape.as_list()
+    graph_def = graph.as_graph_def()
+    node_def = [node for node in graph_def.node if node.name == 'dummy'][0]
+    return OperationInfo(
+      name=name,
+      input_tensors=[tensor],
+      output_tensors=[
+        TensorInfo(
+          name='{}:0'.format(name),
+          op_name=name,
+          dtype=tensor.dtype,
+          shape=output_shape,
+          ugraph=ugraph
+        )
+      ],
+      op_type=cls.op_type,
+      backend=kwargs.get('backend', 'tensorflow'),
+      ugraph=ugraph,
+      op_attr={
+        k: AttrValueConverter.get_generic_value(v)
+        for k, v in node_def.attr.items()
+      }
+    )
+
 
 @OperatorFactory.register
 class _QuantizedMaxPool(_Operator):
@@ -335,28 +494,6 @@ class _QuantizedMaxPool(_Operator):
     self._snippet = QuantizedMaxPoolSnippet(inputs, outputs, dtype,
                                             ksize, strides, padding,
                                             ref_counts, to_eval)
-
-
-@OperatorFactory.register
-class _MinOperator(_Operator):
-
-  op_type = "Min"
-
-  def __init__(self, op_info, **kwargs):
-    _Operator.__init__(self)
-    inputs = [tensor_info.name for tensor_info in op_info.input_tensors]
-    out_info = op_info.output_tensors[0]
-    output, out_dtype, out_shape = (out_info.name,
-                                    out_info.dtype,
-                                    out_info.shape)
-    # FIXME: automatic alloc for uTensor fail
-    if not out_shape:
-      out_shape = [1]
-    parser = NamescopedKWArgsParser(RefCntOptimizer.KWARGS_NAMESCOPE,
-                                    op_info.op_attr)
-    ref_count = parser.get('ref_counts', [0])[0]
-    to_eval = parser.get('to_eval', False)
-    self._snippet = MinOpSnippet(inputs, output, out_dtype, out_shape, ref_count, to_eval)
 
 
 @OperatorFactory.register
@@ -461,6 +598,7 @@ class _QuantizedMatMulOperator(_Operator):
                                              x_dtype, w_dtype, out_dtype, 
                                              ref_counts, to_eval)
 
+
 @OperatorFactory.register
 class _ReluOperator(_Operator):
 
@@ -505,6 +643,7 @@ class _ReluOperator(_Operator):
       ugraph=ugraph,
       backend=kwargs.get('backend', 'tensorflow')
     )
+
 
 @OperatorFactory.register
 class _QuantizedReluOperator(_Operator):
@@ -641,6 +780,7 @@ class _QuantizedReshapeOperator(_Operator):
                                               outputs=outputs,
                                               ref_counts=ref_counts,
                                               to_eval=to_eval)
+
 
 @OperatorFactory.register
 class _CMSIS_NN_FCOperator(_Operator):
@@ -969,9 +1109,13 @@ class _PackOperator(_Operator):
 
 @OperatorFactory.register
 class _SoftmaxOperator(_Operator):
-    op_type = "Softmax"
+  # NOTE: softmax in tf is a composite op, no trivial way
+  #       to construct the op_info if we want to support
+  #       tf quantization for softmax op. We simply just 
+  #       support uTensor softmax only.
+  op_type = "Softmax"
 
-    def __init__(self, op_info, **kwargs):
+  def __init__(self, op_info, **kwargs):
         _Operator.__init__(self)
         inputs = [tensor_info.name for tensor_info in op_info.input_tensors]
         output = op_info.output_tensors[0].name
@@ -981,7 +1125,6 @@ class _SoftmaxOperator(_Operator):
         to_eval = parser.get('to_eval', True)
         out_dtype = op_info.output_tensors[0].dtype
         self._snippet = SoftmaxOpSnippet(inputs, output, out_dtype, ref_count, to_eval)
-
 
 @OperatorFactory.register
 class _GatherOperator(_Operator):
