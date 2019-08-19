@@ -73,11 +73,15 @@ class _ArgMaxOperator(_Operator):
     out_tensor_info = op_info.output_tensors[0]
     output, out_dtype = out_tensor_info.name, out_tensor_info.dtype
     in_dtype = op_info.input_tensors[0].dtype
+    data_manager = kwargs['data_manager']
     parser = NamescopedKWArgsParser(RefCntOptimizer.KWARGS_NAMESCOPE, 
-                                    op_info.op_attr)
+                                    op_info.op_attr,
+                                    data_manager,
+                                    op_info)
     ref_count = parser.get('ref_counts', [0])[0]
     to_eval = parser.get('to_eval', False)
-    self._snippet = ArgMaxOpSnippet(inputs, output, in_dtype, out_dtype, ref_count, to_eval)
+    address = parser.get('address', [])
+    self._snippet = ArgMaxOpSnippet(inputs, output, in_dtype, out_dtype, ref_count, to_eval, address)
 
 
 @OperatorFactory.register
@@ -89,12 +93,16 @@ class _DequantizeOperator(_Operator):
     _Operator.__init__(self)
     inputs = [tensor_info.name for tensor_info in op_info.input_tensors]
     out_tensor_info = op_info.output_tensors[0]
+    data_manager = kwargs['data_manager']
     output, out_dtype = out_tensor_info.name, out_tensor_info.dtype
     parser = NamescopedKWArgsParser(RefCntOptimizer.KWARGS_NAMESCOPE, 
-                                    op_info.op_attr)
+                                    op_info.op_attr,
+                                    data_manager,
+                                    op_info)
     ref_count = parser.get('ref_counts', [0])[0]
     to_eval = parser.get('to_eval', False)
-    self._snippet = DequantizeOpSnippet(inputs, output, out_dtype, ref_count, to_eval)
+    address = parser.get('address', [])
+    self._snippet = DequantizeOpSnippet(inputs, output, out_dtype, ref_count, to_eval, address)
 
 
 @OperatorFactory.register
@@ -106,6 +114,7 @@ class _MaxOperator(_Operator):
     _Operator.__init__(self)
     inputs = [tensor_info.name for tensor_info in op_info.input_tensors]
     out_tensor_info = op_info.output_tensors[0]
+    data_manager = kwargs['data_manager']
     output, out_dtype, out_shape = (out_tensor_info.name,
                                     out_tensor_info.dtype,
                                     out_tensor_info.shape)
@@ -113,10 +122,13 @@ class _MaxOperator(_Operator):
     if not out_shape:
       out_shape = [1]
     parser = NamescopedKWArgsParser(RefCntOptimizer.KWARGS_NAMESCOPE, 
-                                    op_info.op_attr)
+                                    op_info.op_attr,
+                                    data_manager,
+                                    op_info)
     ref_count = parser.get('ref_counts', [0])[0]
     to_eval = parser.get('to_eval', False)
-    self._snippet = MaxOpSnippet(inputs, output, out_dtype, out_shape, ref_count, to_eval)
+    address = parser.get('address', [])
+    self._snippet = MaxOpSnippet(inputs, output, out_dtype, out_shape, ref_count, to_eval, address)
 
 @OperatorFactory.register
 class _MaxPool(_Operator):
@@ -171,6 +183,7 @@ class _MinOperator(_Operator):
     _Operator.__init__(self)
     inputs = [tensor_info.name for tensor_info in op_info.input_tensors]
     out_info = op_info.output_tensors[0]
+    data_manager = kwargs['data_manager']
     output, out_dtype, out_shape = (out_info.name,
                                     out_info.dtype,
                                     out_info.shape)
@@ -178,10 +191,13 @@ class _MinOperator(_Operator):
     if not out_shape:
       out_shape = [1]
     parser = NamescopedKWArgsParser(RefCntOptimizer.KWARGS_NAMESCOPE,
-                                    op_info.op_attr)
+                                    op_info.op_attr,
+                                    data_manager,
+                                    op_info)
     ref_count = parser.get('ref_counts', [0])[0]
     to_eval = parser.get('to_eval', False)
-    self._snippet = MinOpSnippet(inputs, output, out_dtype, out_shape, ref_count, to_eval)
+    address = parser.get('address', [])
+    self._snippet = MinOpSnippet(inputs, output, out_dtype, out_shape, ref_count, to_eval, address)
 
 
 @OperatorFactory.register
@@ -201,8 +217,8 @@ class _QuantizeV2Operator(_Operator):
                                     op_info)
     ref_counts = parser.get('ref_counts', [])
     to_eval = parser.get('to_eval', False)
-    address = parser.get('address', 0)
-    self._snippet = QuantizeV2OpSnippet(inputs, outputs, out_dtype, ref_counts, to_eval)
+    address = parser.get('address', [])
+    self._snippet = QuantizeV2OpSnippet(inputs, outputs, out_dtype, ref_counts, to_eval, address)
 
 
 @OperatorFactory.register
@@ -239,13 +255,17 @@ class _QuantizedMatMulOperator(_Operator):
     x_dtype, w_dtype, out_dtype = (op_info.input_tensors[0].dtype,
                                    op_info.input_tensors[1].dtype,
                                    op_info.output_tensors[0].dtype)
+    data_manager = kwargs['data_manager']
     parser = NamescopedKWArgsParser(RefCntOptimizer.KWARGS_NAMESCOPE,
-                                    op_info.op_attr)
+                                    op_info.op_attr,
+                                    data_manager,
+                                    op_info)
     ref_counts = parser.get('ref_counts', [])
     to_eval = parser.get('to_eval', False)
+    address = parser.get('address', [])
     self._snippet = QuantizedMatMulOpSnippet(inputs, outputs,
                                              x_dtype, w_dtype, out_dtype, 
-                                             ref_counts, to_eval)
+                                             ref_counts, to_eval, address)
 
 @OperatorFactory.register
 class _ReluOperator(_Operator):
@@ -280,14 +300,18 @@ class _QuantizedReluOperator(_Operator):
     in_dtype, qout_dtype = (op_info.input_tensors[0].dtype,
                             op_info.output_tensors[0].dtype)  #NT: why separate this out?
                                                               #DB: I don't know, it's in the uTensor C code
+    data_manager = kwargs['data_manager']
     out_dtypes = [tensor_info.dtype for tensor_info in op_info.output_tensors[1:]]
     parser = NamescopedKWArgsParser(RefCntOptimizer.KWARGS_NAMESCOPE,
-                                    op_info.op_attr)
+                                    op_info.op_attr,
+                                    data_manager,
+                                    op_info)
     ref_counts = parser.get('ref_counts', [])
     to_eval = parser.get('to_eval', False)
+    address = parser.get('address', [])
     self._snippet = QuantizedReluOpSnippet(inputs, outputs, in_dtype,
                                            out_dtypes, qout_dtype, 
-                                           ref_counts, to_eval)
+                                           ref_counts, to_eval, address)
 
 
 @OperatorFactory.register
@@ -302,13 +326,17 @@ class _QuantizedAddOperator(_Operator):
     x_dtype, w_dtype, out_dtype = (op_info.input_tensors[0].dtype,
                                    op_info.input_tensors[1].dtype,
                                    op_info.output_tensors[0].dtype)
+    data_manager =  kwargs['data_manager']                          
     parser = NamescopedKWArgsParser(RefCntOptimizer.KWARGS_NAMESCOPE,
-                                    op_info.op_attr)
+                                    op_info.op_attr,
+                                    data_manager,
+                                    op_info)
     ref_counts = parser.get('ref_counts', [])
     to_eval = parser.get('to_eval', False)
+    address = parser.get('address', [])
     self._snippet = QuantizedAddOpSnippet(inputs, outputs, 
                                           x_dtype, w_dtype, out_dtype, 
-                                          ref_counts, to_eval)
+                                          ref_counts, to_eval, address)
 
     
 @OperatorFactory.register
@@ -342,12 +370,16 @@ class _RequantizationRangeOperator(_Operator):
     inputs = [tensor_info.name for tensor_info in op_info.input_tensors]
     outputs = [tensor_info.name for tensor_info in op_info.output_tensors]
     out_dtype = op_info.output_tensors[0].dtype
+    data_manager = kwargs['data_manager']
     parser = NamescopedKWArgsParser(RefCntOptimizer.KWARGS_NAMESCOPE,
-                                    op_info.op_attr)
+                                    op_info.op_attr,
+                                    data_manager,
+                                    op_info)
     ref_counts = parser.get('ref_counts', [])
     to_eval = parser.get('to_eval', False)
+    address = parser.get('address', [])
     self._snippet = RequantizationRangeOpSnippet(inputs, outputs, out_dtype, 
-                                                 ref_counts, to_eval)
+                                                 ref_counts, to_eval, address)
 
 
 @OperatorFactory.register
@@ -360,13 +392,17 @@ class _RequantizeOperator(_Operator):
     outputs = [tensor_info.name for tensor_info in op_info.output_tensors]
     qout_dtype = op_info.output_tensors[0].dtype
     range_dtype = op_info.output_tensors[1].dtype
+    data_manager = kwargs['data_manager']
     parser = NamescopedKWArgsParser(RefCntOptimizer.KWARGS_NAMESCOPE,
-                                    op_info.op_attr)
+                                    op_info.op_attr,
+                                    data_manager,
+                                    op_info)
     ref_counts = parser.get('ref_counts', [])
     to_eval = parser.get('to_eval', False)
+    address = parser.get('address', [])
     self._snippet = RequantizeOpSnippet(inputs, outputs,
                                         qout_dtype, range_dtype,
-                                        ref_counts, to_eval)
+                                        ref_counts, to_eval, address)
 
 
 @OperatorFactory.register
@@ -378,12 +414,16 @@ class _ReshapeOperator(_Operator):
     _Operator.__init__(self)
     inputs = [tensor_info.name for tensor_info in op_info.input_tensors]
     output = op_info.output_tensors[0].name
+    data_manager = kwargs['data_manager']
     parser = NamescopedKWArgsParser(RefCntOptimizer.KWARGS_NAMESCOPE,
-                                    op_info.op_attr)
+                                    op_info.op_attr,
+                                    data_manager,
+                                    op_info)
     ref_count = parser.get('ref_counts', [0])[0]
     to_eval = parser.get('to_eval', False)
+    address = parser.get('address', [])
     dtype = op_info.input_tensors[0].dtype
-    self._snippet = ReshapeOpSnippet(inputs, output, dtype, ref_count, to_eval)
+    self._snippet = ReshapeOpSnippet(inputs, output, dtype, ref_count, to_eval, address)
 
 
 @OperatorFactory.register

@@ -6,7 +6,7 @@ from copy import deepcopy
 
 import numpy as np
 from click.types import ParamType
-
+import pdb
 import idx2numpy as idx2np
 import tensorflow as tf
 from tensorflow.python.framework import graph_util
@@ -134,7 +134,7 @@ class NamescopedKWArgsParser:
       outputs = [tensor_info.name for tensor_info in op_info.output_tensors]
       for tensor in outputs:
         values = data_manager.group(tensor)
-        for key, value in values():
+        for key, value in values.items():
           if key not in self._private_kwargs:
             self._private_kwargs[key] = []
             self._private_kwargs[key].append(value)

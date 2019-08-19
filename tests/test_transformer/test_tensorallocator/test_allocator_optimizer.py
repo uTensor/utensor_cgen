@@ -15,7 +15,6 @@ def test_create_resource_table(refgraph_tuple):
         'w:0' : [4, 5],
         'k:0' : [5, 5]
     }
-    print(table)
     for t in table:
         assert table[t]['start'] == resource_ans[t][0]
         assert table[t]['end'] == resource_ans[t][1]
@@ -90,6 +89,34 @@ def test_query_result(refgraph_tuple):
     s = transformer._query_result(allocate_table, y, 3, 4, 1, 2)
     assert s[0].name == 'y:0'
 
+def test_allocate_tensor(refgraph_tuple):
+    (graph_def, output_nodes) = refgraph_tuple
+    ugraph = GraphDefParser.parse(graph_def, output_nodes=output_nodes)
+    transformer = TensorLifeProbe()
+    tensors = []
+    table = transformer._create_resource_table(ugraph)
+    allocate_table = dict()
+    l = ugraph.topo_order[3]
+    g = ugraph.ops_info[l]
+    x = g.output_tensors[0]
+    tensors.append(x)
+    unit_size = 4
+    buffer_size = 30000 #1k bytes
+    result = transformer.allocate_tensor(tensors, 0, allocate_table, table, buffer_size, unit_size)
+
+    assert result == True
+    
+def test_allocate_graph(refgraph_tuple):
+  (graph_def, output_nodes) = refgraph_tuple
+  ugraph = GraphDefParser.parse(graph_def, output_nodes=output_nodes)
+  transformer = TensorLifeProbe()
+  use_def_table = transformer._create_resource_table(ugraph)
+  unit_size = 4
+  buffer_size = 3000 #1k bytes
+  allocate_table = dict()
+  result = transformer.allocate_graph(ugraph, allocate_table, use_def_table, buffer_size, unit_size)
+  assert result == True
+
 
 def test_query_check(refgraph_tuple):
     (graph_def, output_nodes)= refgraph_tuple
@@ -108,6 +135,7 @@ def test_query_check(refgraph_tuple):
     assert valid == False
 
 def test_memory_allocation(refgraph_tuple):
+    #print("traditional way")
     (graph_def, output_nodes)= refgraph_tuple
     ugraph = GraphDefParser.parse(graph_def, output_nodes=output_nodes)
     transformer = TensorLifeProbe()
@@ -126,5 +154,6 @@ def test_memory_allocation(refgraph_tuple):
       for out_o in out_t_infos:
         print(out_o.name)
       print("next step")
-        
+    
+    
 
