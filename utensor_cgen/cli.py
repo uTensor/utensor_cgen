@@ -32,7 +32,7 @@ def cli():
               help="output source file name, header file will be named accordingly. (defaults to protobuf name, e.g.: my_model.cpp)")
 @click.option('-d', '--data-dir',
               metavar='DIR',
-              help="ouptut directory for tensor data idx files",
+              help="output directory for tensor data idx files",
               show_default=True)
 @click.option('-D', '--embed-data-dir',
               metavar='EMBED_DIR',
@@ -60,7 +60,7 @@ def cli():
 @click.option("-m", "--model-dir",
               metavar="DIR",
               default="models",
-              help="ouptut directory for tensor data idx files",
+              help="output directory for tensor data idx files",
               show_default=True)
 @click.option("--save-graph",
               is_flag=True,
