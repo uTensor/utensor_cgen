@@ -2,6 +2,8 @@
 import os
 
 import idx2numpy as idx2np
+import numpy as np
+
 from utensor_cgen.logger import logger
 from utensor_cgen.matcher import OpEqualityDelegate, _morphism
 from utensor_cgen.transformer.optimizer import RefCntOptimizer
