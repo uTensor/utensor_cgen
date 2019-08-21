@@ -566,15 +566,19 @@ class SoftmaxOpSnippet(Snippet):
   __template_name__ = "snippets/softmax_op.cpp"
   __headers__ = set(['"uTensor/ops/NnOps.hpp"'])
 
-  def __init__(self, inputs, output, out_dtype,
+  def __init__(self, input_tname, output_tname,
+               in_dtype,
+               out_dtype,
                ref_count=0,
-               to_eval=False):
+               to_eval=False
+  ):
     Snippet.__init__(self)
     if ref_count:
       self.template_vars["ref_count"] = ref_count
     self.template_vars["out_dtype"] = NP_TYPES_MAP[out_dtype].tensor_type_str
-    self.template_vars["inputs"] = inputs
-    self.template_vars["output"] = output
+    self.template_vars["in_dtype"] = NP_TYPES_MAP[in_dtype].tensor_type_str
+    self.template_vars["input"] = input_tname
+    self.template_vars["output"] = output_tname
     self.template_vars["to_eval"] = to_eval
 
 

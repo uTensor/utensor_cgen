@@ -1,8 +1,6 @@
 # -*- coding:utf8 -*-
 import os
 
-import numpy as np
-
 import idx2numpy as idx2np
 from utensor_cgen.logger import logger
 from utensor_cgen.matcher import OpEqualityDelegate, _morphism
@@ -683,78 +681,86 @@ class _RamOperator(_Operator):
 
 @OperatorFactory.register
 class _ShapeOperator(_Operator):
-    op_type = "Shape"
+  op_type = "Shape"
 
-    def __init__(self, op_info, **kwargs):
-        _Operator.__init__(self)
-        inputs = [tensor_info.name for tensor_info in op_info.input_tensors]
-        output = op_info.output_tensors[0].name
-        parser = NamescopedKWArgsParser(RefCntOptimizer.KWARGS_NAMESCOPE,
-                                        op_info.op_attr)
-        ref_count = parser.get('ref_counts', [0])[0]
-        to_eval = parser.get('to_eval', True)
-        out_dtype = op_info.output_tensors[0].dtype
-        self._snippet = ShapeOpSnippet(inputs, output, out_dtype, ref_count, to_eval)
+  def __init__(self, op_info, **kwargs):
+    _Operator.__init__(self)
+    inputs = [tensor_info.name for tensor_info in op_info.input_tensors]
+    output = op_info.output_tensors[0].name
+    parser = NamescopedKWArgsParser(RefCntOptimizer.KWARGS_NAMESCOPE,
+                                    op_info.op_attr)
+    ref_count = parser.get('ref_counts', [0])[0]
+    to_eval = parser.get('to_eval', True)
+    out_dtype = op_info.output_tensors[0].dtype
+    self._snippet = ShapeOpSnippet(inputs, output, out_dtype, ref_count, to_eval)
 
 
 @OperatorFactory.register
 class _StridedSliceOperator(_Operator):
-    op_type = "StridedSlice"
+  op_type = "StridedSlice"
 
-    def __init__(self, op_info, **kwargs):
-        _Operator.__init__(self)
-        inputs = [tensor_info.name for tensor_info in op_info.input_tensors]
-        output = op_info.output_tensors[0].name
-        parser = NamescopedKWArgsParser(RefCntOptimizer.KWARGS_NAMESCOPE,
-                                        op_info.op_attr)
-        ref_count = parser.get('ref_counts', [0])[0]
-        to_eval = parser.get('to_eval', True)
-        dtype = op_info.input_tensors[0].dtype
-        out_dtype = op_info.output_tensors[0].dtype
-        begin_mask = op_info.op_attr['begin_mask'].value
-        ellipsis_mask = op_info.op_attr['ellipsis_mask'].value
-        end_mask = op_info.op_attr['end_mask'].value
-        new_axis_mask = op_info.op_attr['begin_mask'].value
-        shrink_axis_mask = op_info.op_attr['shrink_axis_mask'].value
-        self._snippet = StridedSliceOpSnippet(inputs, output, dtype, out_dtype,
-                                              begin_mask, ellipsis_mask, end_mask,
-                                              new_axis_mask, shrink_axis_mask,
-                                              ref_count, to_eval)
+  def __init__(self, op_info, **kwargs):
+    _Operator.__init__(self)
+    inputs = [tensor_info.name for tensor_info in op_info.input_tensors]
+    output = op_info.output_tensors[0].name
+    parser = NamescopedKWArgsParser(RefCntOptimizer.KWARGS_NAMESCOPE,
+                                    op_info.op_attr)
+    ref_count = parser.get('ref_counts', [0])[0]
+    to_eval = parser.get('to_eval', True)
+    dtype = op_info.input_tensors[0].dtype
+    out_dtype = op_info.output_tensors[0].dtype
+    begin_mask = op_info.op_attr['begin_mask'].value
+    ellipsis_mask = op_info.op_attr['ellipsis_mask'].value
+    end_mask = op_info.op_attr['end_mask'].value
+    new_axis_mask = op_info.op_attr['begin_mask'].value
+    shrink_axis_mask = op_info.op_attr['shrink_axis_mask'].value
+    self._snippet = StridedSliceOpSnippet(inputs, output, dtype, out_dtype,
+                                          begin_mask, ellipsis_mask, end_mask,
+                                          new_axis_mask, shrink_axis_mask,
+                                          ref_count, to_eval)
 
 
 @OperatorFactory.register
 class _PackOperator(_Operator):
-    op_type = "Pack"
+  op_type = "Pack"
 
-    def __init__(self, op_info, **kwargs):
-        _Operator.__init__(self)
-        inputs = [tensor_info.name for tensor_info in op_info.input_tensors]
-        output = op_info.output_tensors[0].name
-        parser = NamescopedKWArgsParser(RefCntOptimizer.KWARGS_NAMESCOPE,
-                                        op_info.op_attr)
-        ref_count = parser.get('ref_counts', [0])[0]
-        to_eval = parser.get('to_eval', True)
-        dtype = op_info.input_tensors[0].dtype
-        out_dtype = op_info.output_tensors[0].dtype
-        N = op_info.op_attr['N'].value
-        axis = op_info.op_attr['axis'].value
-        self._snippet = PackOpSnippet(inputs, output, dtype, out_dtype, N, axis, ref_count, to_eval)
+  def __init__(self, op_info, **kwargs):
+    _Operator.__init__(self)
+    inputs = [tensor_info.name for tensor_info in op_info.input_tensors]
+    output = op_info.output_tensors[0].name
+    parser = NamescopedKWArgsParser(RefCntOptimizer.KWARGS_NAMESCOPE,
+                                    op_info.op_attr)
+    ref_count = parser.get('ref_counts', [0])[0]
+    to_eval = parser.get('to_eval', True)
+    dtype = op_info.input_tensors[0].dtype
+    out_dtype = op_info.output_tensors[0].dtype
+    N = op_info.op_attr['N'].value
+    axis = op_info.op_attr['axis'].value
+    self._snippet = PackOpSnippet(inputs, output, dtype, out_dtype, N, axis, ref_count, to_eval)
 
 
 @OperatorFactory.register
 class _SoftmaxOperator(_Operator):
-    op_type = "Softmax"
+  op_type = "Softmax"
 
-    def __init__(self, op_info, **kwargs):
-        _Operator.__init__(self)
-        inputs = [tensor_info.name for tensor_info in op_info.input_tensors]
-        output = op_info.output_tensors[0].name
-        parser = NamescopedKWArgsParser(RefCntOptimizer.KWARGS_NAMESCOPE,
-                                        op_info.op_attr)
-        ref_count = parser.get('ref_counts', [0])[0]
-        to_eval = parser.get('to_eval', True)
-        out_dtype = op_info.output_tensors[0].dtype
-        self._snippet = SoftmaxOpSnippet(inputs, output, out_dtype, ref_count, to_eval)
+  def __init__(self, op_info, **kwargs):
+    _Operator.__init__(self)
+    input_tname = op_info.input_tensors[0].name
+    output_tname = op_info.output_tensors[0].name
+    parser = NamescopedKWArgsParser(RefCntOptimizer.KWARGS_NAMESCOPE,
+                                    op_info.op_attr)
+    ref_count = parser.get('ref_counts', [0])[0]
+    to_eval = parser.get('to_eval', True)
+    out_dtype = op_info.output_tensors[0].dtype
+    in_dtype = op_info.input_tensors[0].dtype
+    self._snippet = SoftmaxOpSnippet(
+      input_tname,
+      output_tname,
+      in_dtype,
+      out_dtype,
+      ref_count,
+      to_eval
+    )
 
 
 @OperatorFactory.register
