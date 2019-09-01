@@ -135,25 +135,11 @@ def test_query_check(refgraph_tuple):
     assert valid == False
 
 def test_memory_allocation(refgraph_tuple):
-    #print("traditional way")
     (graph_def, output_nodes)= refgraph_tuple
     ugraph = GraphDefParser.parse(graph_def, output_nodes=output_nodes)
     transformer = TensorLifeProbe()
     ugraph = transformer.transform(ugraph)
-    for k, v in ugraph.data_manager.address.__dict__.items():
-        print(k)
-        print(v)
-    for node_name in ugraph.topo_order:
-      print("node {}".format(node_name))
-      in_t_infos = ugraph.ops_info[node_name].input_tensors
-      print("inputs")
-      for in_o in in_t_infos:
-        print(in_o.name)
-      out_t_infos = ugraph.ops_info[node_name].output_tensors
-      print("outputs")
-      for out_o in out_t_infos:
-        print(out_o.name)
-      print("next step")
+
     
     
 
