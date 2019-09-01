@@ -4,7 +4,7 @@ S_TENSOR {{sptr_name}};
 {   
     RamTensor<{{out_dtype}}>* out_tensor;
     {%if out_shape %}
-    out_tensor = new RamTensor<{{out_dtype}}>({ {%for dim in out_shape[:-1]%}{{dim}}, {%endfor%}{{out_shape[-1]}} });
+    out_tensor = new RamTensor<{{out_dtype}}>({ {%for dim in out_shape[:-1]%}{{dim}}, {%endfor%}{{out_shape[-1]}} }, {{address[0]}});
     {%else%}
     out_tensor = new RamTensor<{{out_dtype}}>();
     {%endif%}

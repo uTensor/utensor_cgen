@@ -15,7 +15,6 @@ def test_create_resource_table(refgraph_tuple):
         'w:0' : [4, 5],
         'k:0' : [5, 5]
     }
-    print(table)
     for t in table:
         assert table[t]['start'] == resource_ans[t][0]
         assert table[t]['end'] == resource_ans[t][1]
@@ -90,6 +89,34 @@ def test_query_result(refgraph_tuple):
     s = transformer._query_result(allocate_table, y, 3, 4, 1, 2)
     assert s[0].name == 'y:0'
 
+def test_allocate_tensor(refgraph_tuple):
+    (graph_def, output_nodes) = refgraph_tuple
+    ugraph = GraphDefParser.parse(graph_def, output_nodes=output_nodes)
+    transformer = TensorLifeProbe()
+    tensors = []
+    table = transformer._create_resource_table(ugraph)
+    allocate_table = dict()
+    l = ugraph.topo_order[3]
+    g = ugraph.ops_info[l]
+    x = g.output_tensors[0]
+    tensors.append(x)
+    unit_size = 4
+    buffer_size = 30000 #1k bytes
+    result = transformer.allocate_tensor(tensors, 0, allocate_table, table, buffer_size, unit_size)
+
+    assert result == True
+    
+def test_allocate_graph(refgraph_tuple):
+  (graph_def, output_nodes) = refgraph_tuple
+  ugraph = GraphDefParser.parse(graph_def, output_nodes=output_nodes)
+  transformer = TensorLifeProbe()
+  use_def_table = transformer._create_resource_table(ugraph)
+  unit_size = 4
+  buffer_size = 3000 #1k bytes
+  allocate_table = dict()
+  result = transformer.allocate_graph(ugraph, allocate_table, use_def_table, buffer_size, unit_size)
+  assert result == True
+
 
 def test_query_check(refgraph_tuple):
     (graph_def, output_nodes)= refgraph_tuple
@@ -104,24 +131,29 @@ def test_query_check(refgraph_tuple):
     l = ugraph.topo_order[1]
     g = ugraph.ops_info[l]
     y = g.output_tensors[0]
-    valid = transformer._check(ugraph, result, table, y, 4, 10)
+    valid = transformer._check(result, table, y, 4, 10)
     assert valid == False
 
 def test_memory_allocation(refgraph_tuple):
+    #print("traditional way")
     (graph_def, output_nodes)= refgraph_tuple
     ugraph = GraphDefParser.parse(graph_def, output_nodes=output_nodes)
     transformer = TensorLifeProbe()
     ugraph = transformer.transform(ugraph)
+    for k, v in ugraph.data_manager.address.__dict__.items():
+        print(k)
+        print(v)
     for node_name in ugraph.topo_order:
+      print("node {}".format(node_name))
       in_t_infos = ugraph.ops_info[node_name].input_tensors
+      print("inputs")
       for in_o in in_t_infos:
         print(in_o.name)
-        print(in_o.alloc_address[0])
-        print(in_o.alloc_address[1])
       out_t_infos = ugraph.ops_info[node_name].output_tensors
+      print("outputs")
       for out_o in out_t_infos:
         print(out_o.name)
-        print(out_o.alloc_address[0])
-        print(out_o.alloc_address[1])
+      print("next step")
+    
     
 

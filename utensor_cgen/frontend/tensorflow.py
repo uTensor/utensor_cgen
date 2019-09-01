@@ -1,4 +1,6 @@
+from __future__ import absolute_import
 import os
+import six
 
 import tensorflow as tf
 import numpy as np
@@ -34,14 +36,14 @@ class GraphDefParser(Parser):
                                op_name=tensor.op.name,
                                dtype=np.dtype(tensor.dtype.as_numpy_dtype),
                                shape=cls._tf_parse_tshape(tensor.shape),
-                               alloc_address=[0, 0])
+                               )
                     for tensor in op.inputs]
       out_tensors = [TensorInfo(name=tensor.name,
                                 ugraph=ugraph,
                                 op_name=op.name,
                                 dtype=np.dtype(tensor.dtype.as_numpy_dtype),
                                 shape=cls._tf_parse_tshape(tensor.shape),
-                                alloc_address=[0, 0])
+                                )
                      for tensor in op.outputs]
       op_type = node.op
       op_attr = node.attr
@@ -61,12 +63,12 @@ class GraphDefParser(Parser):
   def _load_graph_def(pb_file):
     if isinstance(pb_file, tf.GraphDef):
       return pb_file
-    assert isinstance(pb_file, str)
+    assert isinstance(pb_file, six.string_types)
     graph_def = tf.GraphDef()
     if pb_file[-3:] == ".pb":
       with open(pb_file, 'rb') as fid:
         graph_def.ParseFromString(fid.read())
-    elif pb_file[-3:] == ".pbtxt":
+    elif pb_file[-6:] == ".pbtxt":
       with open(pb_file, 'r') as fid:
         text_format.Parse(fid.read(), graph_def)
     else:
