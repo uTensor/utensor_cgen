@@ -2,6 +2,7 @@
 import re
 from collections import defaultdict
 from copy import deepcopy
+from functools import reduce
 
 import attr
 import numpy as np
@@ -16,8 +17,9 @@ from tensorflow.core.framework.tensor_pb2 import TensorProto as _TensorProto
 from tensorflow.core.framework.tensor_shape_pb2 import \
     TensorShapeProto as _TensorShapeProto
 from tensorflow.core.framework.types_pb2 import DataType as _DataType
-from utensor_cgen.utils import topologic_order_graph
 from utensor_cgen.ir.instr import DataManager
+from utensor_cgen.utils import topologic_order_graph
+
 from .converter import AttrValueConverter, ConverterFactory
 
 __all__ = ['TensorInfo', 'OperationInfo', 'uTensorGraph']
@@ -70,6 +72,10 @@ class TensorInfo(IRBase, _NoShallowCopyMixin):
     if not op:
       return True
     return op.is_dangling
+
+  @property
+  def size(self):
+    return reduce(lambda i, j: i*j, self.shape, 1)
 
   def __deepcopy__(self, memo):
     new_tensor = TensorInfo(name=self.name,

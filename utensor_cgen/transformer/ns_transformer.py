@@ -9,9 +9,10 @@ from collections import defaultdict
 from copy import deepcopy
 
 from utensor_cgen.ir import OperationInfo, uTensorGraph
-from utensor_cgen.utils import parse_tensor_name 
+from utensor_cgen.utils import parse_tensor_name
+
 from .base import Transformer
-import pdb
+
 __all__ = ["DropoutTransformer", "BatchNormTransformer", "InlineTransformer", "TensorLifeProbe"]
 
 class TensorLifeProbe(Transformer):
@@ -19,16 +20,20 @@ class TensorLifeProbe(Transformer):
   KWARGS_NAMESCOPE = '_utensor_utlife'
   DATA_NAME = 'address'
 
+  def __init__(
+    self,
+    buff_size=100000, #1k bytes
+    unit_size=4
+  ):
+    self.buff_size = buff_size
+    self.unit_size = unit_size
 
   def transform(self, ugraph):
     ugraph.create_data({self.DATA_NAME: " "})
     use_def_table = self._create_resource_table(ugraph)
-    unit_size = 4
-    buffer_size = 100000 #1k bytes
     allocate_table = dict()
-    allocate_success = self.allocate_graph(ugraph, allocate_table, use_def_table, buffer_size, unit_size)
-  
-    
+    allocate_success = self.allocate_graph(ugraph, allocate_table, use_def_table, self.buff_size, self.unit_size)
+
     for node_name in ugraph.topo_order:
       in_t_infos = ugraph.ops_info[node_name].input_tensors
       for in_o in in_t_infos:
@@ -39,7 +44,6 @@ class TensorLifeProbe(Transformer):
         if out_o.name in allocate_table:
           ugraph.data_manager.address = (out_o.name, allocate_table[out_o.name]['offsetstart'])
     return ugraph
-
 
   def _query_offset_fromallocate_table(self, allocate_table, start, end):
     new_start = start
@@ -78,8 +82,7 @@ class TensorLifeProbe(Transformer):
           time_end = max(end, time_end)
     return time_start, time_end
 
-  def _query_result(self, allocate_table, op, offset, length, timestart,
-  timeend):
+  def _query_result(self, allocate_table, op, offset, length, timestart, timeend):
     ret = list()
     for key in allocate_table:
       if (allocate_table[key]['offsetstart'] >= offset and allocate_table[key]['offsetstart'] <= offset + length) or (allocate_table[key]['offsetstart'] <= offset and allocate_table[key]['offsetend'] >= offset):
@@ -88,25 +91,22 @@ class TensorLifeProbe(Transformer):
 
     return ret
   
-
   def allocate_tensor(self, tensors, tensor_index, allocate_table, use_def_table, buffer_size, unit_size):
-    success = False
     if tensor_index == len(tensors):
       return True
     if tensors[tensor_index].name in allocate_table or tensors[tensor_index].op.op_type == 'Inline':
       return self.allocate_tensor(tensors, tensor_index + 1, allocate_table, use_def_table, buffer_size, unit_size)
+    
+    success = False
     tensor = tensors[tensor_index]
     candidates = self._get_candidates(allocate_table, use_def_table, buffer_size, unit_size, tensor)
-    
-
     if len(candidates) == 0:
       return success
-    
-    tensor_size = self._getSize(tensor)
+
     for candidate in candidates:
-      self._create_allocate_table(allocate_table, use_def_table, tensor, candidate, candidate + tensor_size)
+      self._create_allocate_table(allocate_table, use_def_table, tensor, candidate, candidate + tensor.size)
       success = self.allocate_tensor(tensors, tensor_index + 1, allocate_table, use_def_table, buffer_size, unit_size)
-      if success == True:
+      if success:
         break
       else:
         self._remove_allocate_table(allocate_table, tensor)
@@ -114,9 +114,9 @@ class TensorLifeProbe(Transformer):
 
   def allocate_graph(self, ugraph, allocate_table, use_def_table, buffer_size, unit_size):
     tensors = []
-  
+
     for node_name in ugraph.topo_order:
-      in_t_infos = ugraph.ops_info[node_name].input_tensors 
+      in_t_infos = ugraph.ops_info[node_name].input_tensors
       out_t_infos = ugraph.ops_info[node_name].output_tensors
       tensors.extend(in_t_infos)
       tensors.extend(out_t_infos)
@@ -132,19 +132,24 @@ class TensorLifeProbe(Transformer):
     timestart, timeend = self._query_time_fromallocate_table(allocate_table, timestart, timeend)
     a = self._query_result(allocate_table, tensor, offset, length, timestart, timeend)
     if len(a) == 0:
-      return True
+      valid = True
     return valid
 
   def _get_candidates(self, allocate_table, use_def_table, buffer_size, unit_size, in_o):
     ret = []
     for i in range(0, buffer_size, unit_size):
-            tensor_size = self._getSize(in_o)
-            if self._check(allocate_table, use_def_table, in_o, i, i + tensor_size):
-              ret.append(i)
+      if self._check(allocate_table, use_def_table, in_o, i, i + in_o.size):
+        ret.append(i)
     return ret
   
-  def _create_allocate_table(self, allocate_table, use_def_table, tensor,
-  offset_start, offset_end):   
+  def _create_allocate_table(
+    self,
+    allocate_table,
+    use_def_table,
+    tensor,
+    offset_start,
+    offset_end
+  ):   
     time_start = use_def_table[tensor.name]['start']
     time_end = use_def_table[tensor.name]['end']
     attribute = dict()
@@ -160,7 +165,10 @@ class TensorLifeProbe(Transformer):
 
   def _create_resource_table(self, ugraph):
     resource_table = dict()
-    len_map = self._create_topo_list(ugraph)
+    len_map = {
+      op_name: idx
+      for idx, op_name in enumerate(ugraph.topo_order)
+    }
     for node_name in ugraph.topo_order:
       for tensor_info in ugraph.ops_info[node_name].input_tensors:
         if tensor_info.name not in resource_table:
@@ -178,18 +186,6 @@ class TensorLifeProbe(Transformer):
           resource_table[outtensor.name] = lifetime
 
     return resource_table
-  
-  def _create_topo_list(self, ugraph):
-    my_map = {name: node_idx for (node_idx, name) in enumerate(ugraph.topo_order)}
-    return my_map
-  
-  #should consider different type
-  def _getSize(self, tensor):
-    ret = 1   
-    for i in tensor.shape:
-      if i is not None:
-        ret = ret * i
-    return ret
 
 
 class BiasAddTransformer(Transformer):
@@ -225,6 +221,7 @@ class InlineTransformer(Transformer):
         op_info.op_type = 'Inline'
     
     return ugraph
+
 
 class DropoutTransformer(Transformer):
   """Remove Dropout Op
