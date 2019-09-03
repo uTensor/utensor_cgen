@@ -2,9 +2,9 @@ from __future__ import absolute_import
 
 import numpy as np
 import six
+
 import tensorflow as tf
 from google.protobuf import text_format
-
 from utensor_cgen.frontend import FrontendSelector
 from utensor_cgen.frontend.base import Parser
 from utensor_cgen.ir.base import OperationInfo, TensorInfo, uTensorGraph
@@ -56,7 +56,6 @@ class GraphDefParser(Parser):
       op_info.op_attr['tensorflow__device'] = node.device
       ugraph.ops_info[node.name] = op_info
     topologic_order_graph(ugraph)
-    ugraph.finalize()
     return ugraph
 
   @staticmethod
