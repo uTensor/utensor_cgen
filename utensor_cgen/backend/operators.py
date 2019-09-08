@@ -4,6 +4,8 @@ TODO: remove all tensorflow graph construction in `build_op_info`
 '''
 import os
 
+import numpy as np
+
 import idx2numpy as idx2np
 import tensorflow as tf
 from utensor_cgen.ir import OperationInfo, TensorInfo
