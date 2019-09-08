@@ -8,7 +8,7 @@
     ctx.add(new RamTensor<{{out_dtypes[1]}}>({1}), "{{outputs[1]}}");
     ctx.add(new RamTensor<{{out_dtypes[2]}}>({1}), "{{outputs[2]}}");
     {% endif %}
-    ctx.push(new QuantizedFusedConvMaxpoolOp<{{in_dtype}}, {{filter_dtype}}, {{out_dtype}}>({ {% for s in strides[:-1]%}{{s}}, {%endfor%}{{strides[-1]}} }, { {% for s in ksize[:-1]%}{{s}}, {%endfor%}{{ksize[-1]}} },{{padding}}),
+    ctx.push(new QuantizedFusedConvMaxpoolOp<{{in_dtype}}, {{filter_dtype}}, {{out_dtypes[0]}}>({ {% for s in strides[:-1]%}{{s}}, {%endfor%}{{strides[-1]}} }, { {% for s in ksize[:-1]%}{{s}}, {%endfor%}{{ksize[-1]}} },{{padding}}),
              { {% for tname in inputs[:-1]%}"{{tname}}", {%endfor%}"{{inputs[-1]}}" },
              { {% for tname in outputs[:-1]%}"{{tname}}", {%endfor%}"{{outputs[-1]}}" });
     {% if to_eval %}
