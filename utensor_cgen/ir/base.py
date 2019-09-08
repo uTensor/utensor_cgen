@@ -660,7 +660,9 @@ class uTensorGraph(IRBase, _NoShallowCopyMixin, uTensorGraphBuilderMixin):
       k: deepcopy(v, memo)
       for k, v in self.ops_info.items()
     }
-    new_graph.data_manager = deepcopy(self.data_manager)
+    if self.data_manager:
+      new_graph.data_manager = DataManager({})
+      new_graph.data_manager.StorageCenter = deepcopy(self.data_manager.StorageCenter)
     new_graph._backend = self._backend
     topologic_order_graph(new_graph)
     return new_graph
