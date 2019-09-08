@@ -7,8 +7,8 @@ S_TENSOR {{sptr_name}};
     {% else %}
     ctx.add(new RamTensor<{{out_dtype}}>(), "{{output}}");
     {% endif %}
-    ctx.push(new SoftmaxOp(),
-             { {% for tname in inputs[:-1]%}"{{tname}}", {%endfor%}"{{inputs[-1]}}" },
+    ctx.push(new SoftmaxOp<{{in_dtype}}, {{out_dtype}}>(),
+             { "{{input}}" },
              { "{{output}}" });
     {% if create_sptr %}
     {{sptr_name}} = ctx.get("{{output}}");

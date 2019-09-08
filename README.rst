@@ -135,8 +135,10 @@ Run ``utensor-cli convert --help`` for detailed information.
 :mod:`utensor_cgen` as Library
 ==============================
 
-Subgraph Isomorphic Matcher and Nodes Fusion
---------------------------------------------
+.. subgraph-match-begine
+
+Subgraph Isomorphic Matcher
+---------------------------
 
 With :class:`.uTensorGraphMatcher`, performing isomorphic subgraph matching
 along with replacing or manipulating the matched subgraph(s) takes just a
@@ -199,6 +201,7 @@ Use Case: Dropout Layer Removal
 
 \ |cnn-dropout|
 
+.. subgraph-match-end
 
 We use mainly `Tensorflow`_ for declaring the pattern graph for matcher now.
 
@@ -288,11 +291,11 @@ Future Works
 
 .. readme_end
 
-.. |cnn-dropout| image:: images/cnn_dropout.png
+.. |cnn-dropout| image:: doc/source/_images/cnn_dropout.png
     :alt: cnn-dropout
-.. |conv-pool-fuse| image:: images/conv_pool_fuse.png
+.. |conv-pool-fuse| image:: doc/source/_images/conv_pool_fuse.png
     :alt: conv-pool-fuse
-.. |convert-example| image:: images/convert_example.png
+.. |convert-example| image:: doc/source/_images/convert_example.png
     :alt: convert-example
 
 

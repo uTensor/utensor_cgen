@@ -12,3 +12,5 @@ Documentation Source Layout
         file in **source/utensor_cgen/utils.rst**
   - any other auxiliary/master rst files will be directly under
     **source** directory
+
+    - ex: **index.rst**, **api.rst**, ...etc

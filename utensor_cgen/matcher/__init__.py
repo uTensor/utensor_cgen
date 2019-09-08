@@ -1,1 +1,2 @@
-from ._matcher_impl import uTensorGraphMatcher, OpEqualityDelegate
+from ._matcher_impl import (OpEqualityDelegate, uTensorGraphMatch,
+                            uTensorGraphMatcher)

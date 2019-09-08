@@ -1,7 +1,7 @@
 .. _converter:
 
-:mod:`converter`
-^^^^^^^^^^^^^^^^
+:py:mod:`converter`
+^^^^^^^^^^^^^^^^^^^
 
 Concepts
 --------
@@ -59,4 +59,4 @@ Module Members
 --------------
 
 .. autoapimodule:: utensor_cgen.ir.converter
-    :members: ConverterDispatcher, GenericConverter, TFConverterMixin
+    :members: ConverterDispatcher, GenericConverterMixin, TFConverterMixin
