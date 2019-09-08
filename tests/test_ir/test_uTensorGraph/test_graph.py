@@ -1,11 +1,11 @@
 from copy import deepcopy
 
 import numpy as np
-import tensorflow as tf
 
+import tensorflow as tf
+from utensor_cgen.frontend.tensorflow import GraphDefParser
 from utensor_cgen.ir import OperationInfo, uTensorGraph
 from utensor_cgen.ir.converter import TensorProtoConverter
-from utensor_cgen.frontend.tensorflow import GraphDefParser
 
 
 def test_ugraph_topo_order(graph_tuple):
@@ -32,7 +32,9 @@ def test_op_info():
     ugraph = uTensorGraph(output_nodes=['dummy'])
     op_info = OperationInfo(name='testing_op',
                             input_tensors=[],
+                            n_inputs=0,
                             output_tensors=[],
+                            n_outputs=0,
                             op_type='no_op',
                             backend='tensorflow',
                             op_attr={

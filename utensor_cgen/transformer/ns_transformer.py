@@ -8,10 +8,18 @@ import re
 from collections import defaultdict
 from copy import deepcopy
 
+import numpy as np
+
+import tensorflow as tf
+from utensor_cgen.frontend.tensorflow import GraphDefParser
 from utensor_cgen.ir import OperationInfo, uTensorGraph
-from utensor_cgen.utils import parse_tensor_name 
+from utensor_cgen.logger import logger
+from utensor_cgen.matcher import uTensorGraphMatcher
+from utensor_cgen.utils import (parse_tensor_name, prune_graph,
+                                topologic_order_graph)
+
 from .base import Transformer
-import pdb
+
 __all__ = ["DropoutTransformer", "BatchNormTransformer", "InlineTransformer", "TensorLifeProbe"]
 
 class TensorLifeProbe(Transformer):
@@ -19,16 +27,20 @@ class TensorLifeProbe(Transformer):
   KWARGS_NAMESCOPE = '_utensor_utlife'
   DATA_NAME = 'address'
 
+  def __init__(
+    self,
+    buff_size=100000, #1k bytes
+    unit_size=4
+  ):
+    self.buff_size = buff_size
+    self.unit_size = unit_size
 
   def transform(self, ugraph):
     ugraph.create_data({self.DATA_NAME: " "})
     use_def_table = self._create_resource_table(ugraph)
-    unit_size = 4
-    buffer_size = 100000 #1k bytes
     allocate_table = dict()
-    allocate_success = self.allocate_graph(ugraph, allocate_table, use_def_table, buffer_size, unit_size)
-  
-    
+    allocate_success = self.allocate_graph(ugraph, allocate_table, use_def_table, self.buff_size, self.unit_size)
+
     for node_name in ugraph.topo_order:
       in_t_infos = ugraph.ops_info[node_name].input_tensors
       for in_o in in_t_infos:
@@ -39,7 +51,6 @@ class TensorLifeProbe(Transformer):
         if out_o.name in allocate_table:
           ugraph.data_manager.address = (out_o.name, allocate_table[out_o.name]['offsetstart'])
     return ugraph
-
 
   def _query_offset_fromallocate_table(self, allocate_table, start, end):
     new_start = start
@@ -78,8 +89,7 @@ class TensorLifeProbe(Transformer):
           time_end = max(end, time_end)
     return time_start, time_end
 
-  def _query_result(self, allocate_table, op, offset, length, timestart,
-  timeend):
+  def _query_result(self, allocate_table, op, offset, length, timestart, timeend):
     ret = list()
     for key in allocate_table:
       if (allocate_table[key]['offsetstart'] >= offset and allocate_table[key]['offsetstart'] <= offset + length) or (allocate_table[key]['offsetstart'] <= offset and allocate_table[key]['offsetend'] >= offset):
@@ -88,25 +98,22 @@ class TensorLifeProbe(Transformer):
 
     return ret
   
-
   def allocate_tensor(self, tensors, tensor_index, allocate_table, use_def_table, buffer_size, unit_size):
-    success = False
     if tensor_index == len(tensors):
       return True
     if tensors[tensor_index].name in allocate_table or tensors[tensor_index].op.op_type == 'Inline':
       return self.allocate_tensor(tensors, tensor_index + 1, allocate_table, use_def_table, buffer_size, unit_size)
+    
+    success = False
     tensor = tensors[tensor_index]
     candidates = self._get_candidates(allocate_table, use_def_table, buffer_size, unit_size, tensor)
-    
-
     if len(candidates) == 0:
       return success
-    
-    tensor_size = self._getSize(tensor)
+
     for candidate in candidates:
-      self._create_allocate_table(allocate_table, use_def_table, tensor, candidate, candidate + tensor_size)
+      self._create_allocate_table(allocate_table, use_def_table, tensor, candidate, candidate + tensor.size)
       success = self.allocate_tensor(tensors, tensor_index + 1, allocate_table, use_def_table, buffer_size, unit_size)
-      if success == True:
+      if success:
         break
       else:
         self._remove_allocate_table(allocate_table, tensor)
@@ -114,9 +121,9 @@ class TensorLifeProbe(Transformer):
 
   def allocate_graph(self, ugraph, allocate_table, use_def_table, buffer_size, unit_size):
     tensors = []
-  
+
     for node_name in ugraph.topo_order:
-      in_t_infos = ugraph.ops_info[node_name].input_tensors 
+      in_t_infos = ugraph.ops_info[node_name].input_tensors
       out_t_infos = ugraph.ops_info[node_name].output_tensors
       tensors.extend(in_t_infos)
       tensors.extend(out_t_infos)
@@ -132,19 +139,24 @@ class TensorLifeProbe(Transformer):
     timestart, timeend = self._query_time_fromallocate_table(allocate_table, timestart, timeend)
     a = self._query_result(allocate_table, tensor, offset, length, timestart, timeend)
     if len(a) == 0:
-      return True
+      valid = True
     return valid
 
   def _get_candidates(self, allocate_table, use_def_table, buffer_size, unit_size, in_o):
     ret = []
     for i in range(0, buffer_size, unit_size):
-            tensor_size = self._getSize(in_o)
-            if self._check(allocate_table, use_def_table, in_o, i, i + tensor_size):
-              ret.append(i)
+      if self._check(allocate_table, use_def_table, in_o, i, i + in_o.size):
+        ret.append(i)
     return ret
   
-  def _create_allocate_table(self, allocate_table, use_def_table, tensor,
-  offset_start, offset_end):   
+  def _create_allocate_table(
+    self,
+    allocate_table,
+    use_def_table,
+    tensor,
+    offset_start,
+    offset_end
+  ):   
     time_start = use_def_table[tensor.name]['start']
     time_end = use_def_table[tensor.name]['end']
     attribute = dict()
@@ -160,7 +172,10 @@ class TensorLifeProbe(Transformer):
 
   def _create_resource_table(self, ugraph):
     resource_table = dict()
-    len_map = self._create_topo_list(ugraph)
+    len_map = {
+      op_name: idx
+      for idx, op_name in enumerate(ugraph.topo_order)
+    }
     for node_name in ugraph.topo_order:
       for tensor_info in ugraph.ops_info[node_name].input_tensors:
         if tensor_info.name not in resource_table:
@@ -178,24 +193,11 @@ class TensorLifeProbe(Transformer):
           resource_table[outtensor.name] = lifetime
 
     return resource_table
-  
-  def _create_topo_list(self, ugraph):
-    my_map = {name: node_idx for (node_idx, name) in enumerate(ugraph.topo_order)}
-    return my_map
-  
-  #should consider different type
-  def _getSize(self, tensor):
-    ret = 1   
-    for i in tensor.shape:
-      if i is not None:
-        ret = ret * i
-    return ret
 
 
 class BiasAddTransformer(Transformer):
   METHOD_NAME = 'biasAdd'
   KWARGS_NAMESCOPE = '_utensor_biasAdd'
-  TARGET_NODENAME_PATTERN = re.compile(r'(BiasAdd[_\w\d]*)/.*')
 
   def transform(self, ugraph):
     for node_name in ugraph.topo_order:
@@ -206,16 +208,12 @@ class BiasAddTransformer(Transformer):
       elif op_type == 'BiasAdd':
         op_info = ugraph.ops_info[node_name]
         op_info.op_type = 'Add'
-
-
     return ugraph
 
 
 class InlineTransformer(Transformer):
   METHOD_NAME = 'inline'
   KWARGS_NAMESCOPE = '_utensor_inline'
-  TARGET_NODENAME_PATTERN = re.compile(r'(const[_\w\d]*)/.*')
-
 
   def transform(self, ugraph):
     for node_name in ugraph.topo_order:
@@ -226,19 +224,34 @@ class InlineTransformer(Transformer):
     
     return ugraph
 
+
 class DropoutTransformer(Transformer):
-  """Remove Dropout Op
+  """Dropout removal transformer
+
+  Pros
+  ====
+  - Insensitive to the dropout layer pattern so it works across different
+    versions of tensorflow
+
+  Cons
+  ====
+  - naming constrains on the dropout layers, layer name must matched to the
+    given `name_pattern` (default to r'(dropout[_\w\d]*)/.*') and the keep_prob
+    op must be with name starts with 'keep_prop'
   """
   METHOD_NAME = 'dropout'
   KWARGS_NAMESCOPE = '_utensor_dropout'
   TARGET_NODENAME_PATTERN = re.compile(r'(dropout[_\w\d]*)/.*')
 
+  def __init__(self, name_pattern=r'(dropout[_\w\d]*)/.*'):
+    self._op_name_pattern = re.compile(name_pattern)
+
   def transform(self, ugraph):
     new_graph = uTensorGraph(output_nodes=ugraph.output_nodes)
     dropout_input_map = self._find_input(ugraph)
     new_ops_info = {}
-    for node_name in ugraph.topo_order:
-      match = self.TARGET_NODENAME_PATTERN.match(node_name)
+    for node_name in ugraph.ops_info:
+      match = self._op_name_pattern.match(node_name)
       if match:
         # ignore all dropout nodes
         continue
@@ -251,7 +264,7 @@ class DropoutTransformer(Transformer):
       op_attr = deepcopy(op_info.op_attr)
       for i, t_info in enumerate(in_t_infos):
         op_name = parse_tensor_name(t_info.name)[0]
-        match = self.TARGET_NODENAME_PATTERN.match(op_name)
+        match = self._op_name_pattern.match(op_name)
         if match:
           name_scope = match.group(1)
           # assume there should be only on input except keep_prob
@@ -260,7 +273,9 @@ class DropoutTransformer(Transformer):
           in_t_infos.insert(i, dropout_in_tensor)
       new_op_info = OperationInfo(name=op_info.name,
                                   input_tensors=in_t_infos,
+                                  n_inputs=len(in_t_infos),
                                   output_tensors=out_t_infos,
+                                  n_outputs=len(out_t_infos),
                                   op_type=op_info.op_type,
                                   backend=op_info.backend,
                                   op_attr=op_attr,
@@ -273,7 +288,7 @@ class DropoutTransformer(Transformer):
   def _find_dropout_clusters(self, ugraph):
     clusters = defaultdict(lambda: [])
     for node_name in ugraph.topo_order:
-      match = self.TARGET_NODENAME_PATTERN.match(node_name)
+      match = self._op_name_pattern.match(node_name)
       if match:
         name_scope = match.group(1)
         clusters[name_scope].append(node_name)
@@ -289,13 +304,13 @@ class DropoutTransformer(Transformer):
     clusters = self._find_dropout_clusters(ugraph)
     input_map = {}
     for node_name in ugraph.topo_order:
-      match = self.TARGET_NODENAME_PATTERN.match(node_name)
+      match = self._op_name_pattern.match(node_name)
       if match:
         name_scope = match.group(1)
         cluster = clusters[name_scope]
         op_info = ugraph.ops_info[node_name]
         for in_tensor_info in op_info.input_tensors:
-          in_op_name = parse_tensor_name(in_tensor_info.name)[0]
+          in_op_name = in_tensor_info.op.name
           if in_op_name not in cluster and not in_op_name.startswith('keep_prob'):
             input_map[name_scope] = in_tensor_info
             # assuming there is only one input for dropout
@@ -303,13 +318,107 @@ class DropoutTransformer(Transformer):
     return input_map
 
 
+class DropoutTransformerV2(Transformer):
+  """Dropout removal transformer version 2
+
+  Implemented with subgraph matcher
+
+  Pros
+  ====
+  - no naming requirements on the dropout layer and keep prob op
+
+  Cons
+  ====
+  - sensitive to the dropout layer pattern. The pattern of dropout
+    layer may differ across different version of tensorflow so this
+    transformer may fail to match the dropout layer if the given graph
+    is not using the same version
+  """
+  METHOD_NAME = 'dropout_v2'
+  KWARGS_NAMESCOPE = '_utensor_dropout_v2'
+
+  @property
+  def pattern_ugraph(self):
+    graph = tf.Graph()
+    with graph.as_default():
+        dummy_x = tf.constant(np.random.rand(10, 10), dtype=tf.float32, name='dummy_x')
+        dummy_rate = tf.placeholder(dtype=tf.float32, name='dummy_rate')
+        dropout = tf.nn.dropout(dummy_x, rate=dummy_rate, name='dropout')
+    patrn_ugraph = GraphDefParser.parse(graph.as_graph_def(), output_nodes=[dropout.op.name])
+    # replace dummy_x
+    patrn_ugraph['dropout/truediv'].replace_with_null_input_tensor(0)
+    # # replace dummy_rate
+    patrn_ugraph['dropout/sub'].replace_with_null_input_tensor(1)
+    # # replace Shape Op
+    patrn_ugraph['dropout/random_uniform/RandomUniform'].replace_with_null_input_tensor(0)
+    patrn_ugraph = prune_graph(patrn_ugraph)
+    topologic_order_graph(patrn_ugraph)
+    return patrn_ugraph
+  
+  def transform(self, ugraph):
+    new_ugraph = deepcopy(ugraph)
+    if new_ugraph.backend == 'tensorflow':
+      new_ugraph = self._transform_tf(new_ugraph)
+    else:
+      raise ValueError(
+        'only support dropout transformer for tensorflow: get {}'.format(new_ugraph.backend)
+      )
+    return new_ugraph
+  
+  def _transform_tf(self, ugraph):
+    matcher = uTensorGraphMatcher(pattern_ugraph=self.pattern_ugraph)
+    matches = matcher.match(ugraph, n=1)
+    while matches:
+      match = matches[0]
+      ugraph = self._handle_match_tf(match)
+      matches = matcher.match(ugraph)
+    return ugraph
+  
+  def _handle_match_tf(self, match):
+    subj_ugraph = match.subject_ugraph
+    subj_in_tensor = (
+      match.patrn2subj_op_map['dropout/truediv']
+      .input_tensors[0]
+      .op
+      .output_tensors[0]
+    )
+    subj_out_op = match.patrn2subj_op_map['dropout/mul']
+    subj_out_tensor = subj_out_op.output_tensors[0]
+    for op in subj_out_op.output_nodes:
+      for idx, tensor in enumerate(op.input_tensors):
+        if tensor.name == subj_out_tensor.name:
+          op.input_tensors[idx] = subj_in_tensor
+    for idx, op_name in enumerate(subj_ugraph.output_nodes):
+      if op_name == subj_out_op.name:
+        subj_ugraph.output_nodes[idx] = subj_in_tensor.op_name
+    match.subject_ugraph = prune_graph(subj_ugraph)
+    topologic_order_graph(match.subject_ugraph)
+    return match.subject_ugraph
+
+
 class BatchNormTransformer(Transformer):
   """Replace Batch Norm namescope with uTensor Op
   """
   METHOD_NAME = 'batch_norm'
   KWARGS_NAMESCOPE = '_batch_norm'
-  TARGET_NODENAME_PATTERN = re.compile(r'(BatchNorm[_\w\d]*)/.*')
 
   def transform(self, ugraph):
     # TODO: implement this!
-    pass
+    raise RuntimeError('bach norm transformer is not yet implemented')
+
+
+class FakeGatherV2Transformer(Transformer):
+  """Force converting GatherV2 op to Gather op
+  """
+  METHOD_NAME = 'fake_gather_v2'
+  KWARGS_NAMESCOPE = '_fake_gatherv2'
+
+  def transform(self, ugraph):
+    logger.warning(
+      "enabling {} will force replacing GatherV2 with Gather".format(self.METHOD_NAME)
+    )
+    for key, op in ugraph.ops_info.items():
+      if op.op_type == "GatherV2":
+        op.op_type = "Gather"
+        ugraph.ops_info[key] = op
+    return ugraph

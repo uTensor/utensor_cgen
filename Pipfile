@@ -4,7 +4,7 @@ verify_ssl = true
 name = "pypi"
 
 [packages]
-"e1839a8" = {path = ".", editable = true}
+e1839a8 = {path = ".",editable = true}
 
 [dev-packages]
 pylint = "*"
@@ -14,3 +14,5 @@ rope = "*"
 pillow = "*"
 scipy = "*"
 graphviz = "*"
+sphinx = "*"
+sphinx-autoapi = "*"
