@@ -604,7 +604,7 @@ class uTensorGraph(IRBase, _NoShallowCopyMixin, uTensorGraphBuilderMixin):
       topologic_order_graph(self)
     return [self.ops_info[name] for name in self.topo_order]
   
-  def create_data(self, datas):
+  def setup_data_manager(self, datas):
     manager = DataManager(datas)
     self.data_manager = manager
 

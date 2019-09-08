@@ -36,20 +36,24 @@ class TensorLifeProbe(Transformer):
     self.unit_size = unit_size
 
   def transform(self, ugraph):
-    ugraph.create_data({self.DATA_NAME: " "})
-    use_def_table = self._create_resource_table(ugraph)
+    new_ugraph = deepcopy(ugraph)
+    new_ugraph.setup_data_manager({self.DATA_NAME: " "})
+    # use_def_table: dict, tensor_name -> {'start': op_idx, 'end': op_idx}
+    use_def_table = self._create_resource_table(new_ugraph)
     allocate_table = dict()
-    allocate_success = self.allocate_graph(ugraph, allocate_table, use_def_table, self.buff_size, self.unit_size)
+    allocate_success = self.allocate_graph(new_ugraph, allocate_table, use_def_table, self.buff_size, self.unit_size)
 
-    for node_name in ugraph.topo_order:
-      in_t_infos = ugraph.ops_info[node_name].input_tensors
-      for in_o in in_t_infos:
-        if in_o.name in allocate_table:
-          ugraph.data_manager.address = (in_o.name, allocate_table[in_o.name]['offsetstart'])
-      out_t_infos = ugraph.ops_info[node_name].output_tensors
-      for out_o in out_t_infos:
-        if out_o.name in allocate_table:
-          ugraph.data_manager.address = (out_o.name, allocate_table[out_o.name]['offsetstart'])
+    if allocate_success:
+      for node_name in new_ugraph.topo_order:
+        in_t_infos = new_ugraph.ops_info[node_name].input_tensors
+        for in_o in in_t_infos:
+          if in_o.name in allocate_table:
+            new_ugraph.data_manager.address = (in_o.name, allocate_table[in_o.name]['offsetstart'])
+        out_t_infos = new_ugraph.ops_info[node_name].output_tensors
+        for out_o in out_t_infos:
+          if out_o.name in allocate_table:
+            new_ugraph.data_manager.address = (out_o.name, allocate_table[out_o.name]['offsetstart'])
+      return new_ugraph
     return ugraph
 
   def _query_offset_fromallocate_table(self, allocate_table, start, end):
@@ -89,29 +93,34 @@ class TensorLifeProbe(Transformer):
           time_end = max(end, time_end)
     return time_start, time_end
 
-  def _query_result(self, allocate_table, op, offset, length, timestart, timeend):
-    ret = list()
+  def _query_result(self, allocate_table, offset, length, timestart, timeend):
     for key in allocate_table:
-      if (allocate_table[key]['offsetstart'] >= offset and allocate_table[key]['offsetstart'] <= offset + length) or (allocate_table[key]['offsetstart'] <= offset and allocate_table[key]['offsetend'] >= offset):
-        if (allocate_table[key]['start'] >= timestart and allocate_table[key]['start'] <= timeend) or (allocate_table[key]['start'] <= timestart and allocate_table[key]['end'] >= timestart):
-          ret.append(op)
-
-    return ret
+      mem_occupied = (
+        (allocate_table[key]['offsetstart'] >= offset and allocate_table[key]['offsetstart'] <= offset + length) or
+        (allocate_table[key]['offsetstart'] <= offset and allocate_table[key]['offsetend'] >= offset)
+      )
+      life_span_occupied = (
+        (allocate_table[key]['start'] >= timestart and allocate_table[key]['start'] <= timeend) or
+        (allocate_table[key]['start'] <= timestart and allocate_table[key]['end'] >= timestart)
+      )
+      if mem_occupied and life_span_occupied:
+        return True
+    return False
   
   def allocate_tensor(self, tensors, tensor_index, allocate_table, use_def_table, buffer_size, unit_size):
     if tensor_index == len(tensors):
       return True
-    if tensors[tensor_index].name in allocate_table or tensors[tensor_index].op.op_type == 'Inline':
+    if tensors[tensor_index].name in allocate_table:
       return self.allocate_tensor(tensors, tensor_index + 1, allocate_table, use_def_table, buffer_size, unit_size)
-    
-    success = False
+
     tensor = tensors[tensor_index]
     candidates = self._get_candidates(allocate_table, use_def_table, buffer_size, unit_size, tensor)
-    if len(candidates) == 0:
-      return success
-
+    if not candidates:
+      return False
+  
+    success = False
     for candidate in candidates:
-      self._create_allocate_table(allocate_table, use_def_table, tensor, candidate, candidate + tensor.size)
+      self._update_allocation_table(allocate_table, use_def_table, tensor, candidate, candidate + tensor.size)
       success = self.allocate_tensor(tensors, tensor_index + 1, allocate_table, use_def_table, buffer_size, unit_size)
       if success:
         break
@@ -123,8 +132,16 @@ class TensorLifeProbe(Transformer):
     tensors = []
 
     for node_name in ugraph.topo_order:
-      in_t_infos = ugraph.ops_info[node_name].input_tensors
-      out_t_infos = ugraph.ops_info[node_name].output_tensors
+      in_t_infos = [
+        tensor
+        for tensor in ugraph.ops_info[node_name].input_tensors
+        if tensor.op.op_type != 'Inline'
+      ]
+      out_t_infos = [
+        tensor
+        for tensor in ugraph.ops_info[node_name].output_tensors
+        if tensor.op.op_type != 'Inline'
+      ]
       tensors.extend(in_t_infos)
       tensors.extend(out_t_infos)
     
@@ -137,8 +154,8 @@ class TensorLifeProbe(Transformer):
     timeend = use_def_table[tensor.name]['end']
     offset, length = self._query_offset_fromallocate_table(allocate_table, tensor_offset_start, tensor_offset_end)
     timestart, timeend = self._query_time_fromallocate_table(allocate_table, timestart, timeend)
-    a = self._query_result(allocate_table, tensor, offset, length, timestart, timeend)
-    if len(a) == 0:
+    occupied = self._query_result(allocate_table, offset, length, timestart, timeend)
+    if not occupied:
       valid = True
     return valid
 
@@ -149,7 +166,7 @@ class TensorLifeProbe(Transformer):
         ret.append(i)
     return ret
   
-  def _create_allocate_table(
+  def _update_allocation_table(
     self,
     allocate_table,
     use_def_table,
