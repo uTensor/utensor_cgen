@@ -154,7 +154,7 @@ class NamescopedKWArgsParser:
 
   TODO: replace it with a better data manager
   """
-  def __init__(self, namespace, kwargs):
+  def __init__(self, namespace, kwargs, data_manager=None, op_info=None):
     ns_pattern = re.compile(r'^([^\d\W][\w\d_]*)__([^\d\W][\w\d_]*)')
     self._namespace = namespace
     self._private_kwargs = {}
