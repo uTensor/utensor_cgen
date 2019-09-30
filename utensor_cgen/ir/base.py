@@ -173,7 +173,7 @@ class TensorInfo(IRBase, _NoShallowCopyMixin):
 
   @property
   def size(self):
-    return reduce(lambda i, j: i*j, self.shape, 1)
+    return reduce(lambda i, j: i*(j is None and 1 or j), self.shape, 1)
 
   def __deepcopy__(self, memo):
     new_tensor = TensorInfo(name=self.name,

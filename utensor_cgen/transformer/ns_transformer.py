@@ -117,7 +117,6 @@ class TensorLifeProbe(Transformer):
     candidates = self._get_candidates(allocate_table, use_def_table, buffer_size, unit_size, tensor)
     if not candidates:
       return False
-  
     success = False
     for candidate in candidates:
       self._update_allocation_table(allocate_table, use_def_table, tensor, candidate, candidate + tensor.size)
