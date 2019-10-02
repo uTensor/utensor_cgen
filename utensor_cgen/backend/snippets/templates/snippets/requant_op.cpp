@@ -3,13 +3,13 @@ S_TENSOR {%for sptr_name in sptr_names[:-1]%}{{sptr_name}}, {%endfor%} {{sptr_na
 {% endif %}
 {   
     {%if ref_counts%}
-    ctx.add(new RamTensor<{{qout_dtype}}>({{address[0]}}), "{{outputs[0]}}", {{ref_counts[0]}});
-    ctx.add(new RamTensor<{{range_dtype}}>({1}, {{address[1]}}), "{{outputs[1]}}", {{ref_counts[1]}});
-    ctx.add(new RamTensor<{{range_dtype}}>({1}, {{address[2]}}), "{{outputs[2]}}", {{ref_counts[2]}});
+    ctx.add(new RamTensor<{{qout_dtype}}>({%if address %}{{address[0]}}{%endif%}), "{{outputs[0]}}", {{ref_counts[0]}});
+    ctx.add(new RamTensor<{{range_dtype}}>({1}{%if address %}, {{address[1]}}{%endif%}), "{{outputs[1]}}", {{ref_counts[1]}});
+    ctx.add(new RamTensor<{{range_dtype}}>({1}{%if address %}, {{address[2]}}{%endif%}), "{{outputs[2]}}", {{ref_counts[2]}});
     {%else%}
-    ctx.add(new RamTensor<{{qout_dtype}}>({{address[0]}}), "{{outputs[0]}}");
-    ctx.add(new RamTensor<{{range_dtype}}>({1}, {{address[1]}}), "{{outputs[1]}}");
-    ctx.add(new RamTensor<{{range_dtype}}>({1}, {{address[2]}}), "{{outputs[2]}}");
+    ctx.add(new RamTensor<{{qout_dtype}}>({%if address %}{{address[0]}}{%endif%}), "{{outputs[0]}}");
+    ctx.add(new RamTensor<{{range_dtype}}>({1}{%if address %}, {{address[1]}}{%endif%}), "{{outputs[1]}}");
+    ctx.add(new RamTensor<{{range_dtype}}>({1}{%if address %}, {{address[2]}}{%endif%}), "{{outputs[2]}}");
     {%endif%}
     ctx.push(new RequantizeOp(),
              { {% for tname in inputs[:-1]%}"{{tname}}", {% endfor %}"{{inputs[-1]}}" },
