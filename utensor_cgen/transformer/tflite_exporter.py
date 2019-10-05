@@ -54,6 +54,7 @@ class TFLiteExporter(Transformer):
   fbuilder = flatbuffers.Builder(Max_fbuff_size)
   tensor_buffer_index = OrderedDict()  #added to the Model object
   tensor_index = OrderedDict()         #added to the Subgraph object
+  
   op_exec_order = list()
 
   def __init__(self):
@@ -69,7 +70,7 @@ class TFLiteExporter(Transformer):
 
     pass
 
-  def create_tensor_data(self, fbuilder, ugraph):
+  def create_tensor_data(self, ugraph):
     target_ops = ["Inline", "Const"]
     export_tensor_name = True
     for op_name in ugraph.topo_order:
@@ -83,49 +84,49 @@ class TFLiteExporter(Transformer):
         #weight
         value = op_info.op_attr['value'].value.np_array.flatten() #TODO: specify endianness here
         raw_data = value.tobytes()
-        tflite.Buffer.BufferStartDataVector(fbuilder, len(raw_data))
+        tflite.Buffer.BufferStartDataVector(self.fbuilder, len(raw_data))
         for i in raw_data:
-          fbuilder.PrependUint8(i)
-        data_vec = fbuilder.EndVector(len(raw_data))
+          self.fbuilder.PrependUint8(i)
+        data_vec = self.fbuilder.EndVector(len(raw_data))
         self.tensor_buffer_index[out_tname] = data_vec
 
         #shape
-        tflite.Tensor.TensorStartShapeVector(fbuilder, len(tensor_shape))
+        tflite.Tensor.TensorStartShapeVector(self.fbuilder, len(tensor_shape))
         for d in tensor_shape:
-          fbuilder.PrependInt32(d)
-        shape_vec = fbuilder.EndVector(len(tensor_shape))
+          self.fbuilder.PrependInt32(d)
+        shape_vec = self.fbuilder.EndVector(len(tensor_shape))
 
         #name
         if export_tensor_name:
-          tensor_name = fbuilder.CreateString(out_tname) #TODO: legalize
+          tensor_name = self.fbuilder.CreateString(out_tname) #TODO: legalize
 
         #quantization
         (q_min, q_max) = self.quantization_info(op_info)
         ##Min vec
-        tflite.QuantizationParameters.QuantizationParametersStartMinVector(fbuilder, 1)
-        fbuilder.PrependFloat32(q_min)
-        q_min_vec = fbuilder.EndVector(1)
+        tflite.QuantizationParameters.QuantizationParametersStartMinVector(self.fbuilder, 1)
+        self.fbuilder.PrependFloat32(q_min)
+        q_min_vec = self.fbuilder.EndVector(1)
         ##Max Vec
-        tflite.QuantizationParameters.QuantizationParametersStartMaxVector(fbuilder, 1)
-        fbuilder.PrependFloat32(q_max)
-        q_max_vec = fbuilder.EndVector(1)
+        tflite.QuantizationParameters.QuantizationParametersStartMaxVector(self.fbuilder, 1)
+        self.fbuilder.PrependFloat32(q_max)
+        q_max_vec = self.fbuilder.EndVector(1)
 
-        tflite.QuantizationParameters.QuantizationParametersStart(fbuilder)
-        tflite.QuantizationParameters.QuantizationParametersAddMin(fbuilder, q_min_vec)
-        tflite.QuantizationParameters.QuantizationParametersAddMax(fbuilder, q_max_vec)
-        q_param = tflite.QuantizationParameters.QuantizationParametersEnd(fbuilder)
+        tflite.QuantizationParameters.QuantizationParametersStart(self.fbuilder)
+        tflite.QuantizationParameters.QuantizationParametersAddMin(self.fbuilder, q_min_vec)
+        tflite.QuantizationParameters.QuantizationParametersAddMax(self.fbuilder, q_max_vec)
+        q_param = tflite.QuantizationParameters.QuantizationParametersEnd(self.fbuilder)
 
         #tensor object
-        tflite.Tensor.TensorStart(fbuilder)
-        tflite.Tensor.TensorAddShape(fbuilder, shape_vec)
-        tflite.Tensor.TensorAddType(fbuilder, TensorType.INT8) #TODO: a conversion class here
+        tflite.Tensor.TensorStart(self.fbuilder)
+        tflite.Tensor.TensorAddShape(self.fbuilder, shape_vec)
+        tflite.Tensor.TensorAddType(self.fbuilder, TensorType.INT8) #TODO: a conversion class here
         if export_tensor_name:
-          tflite.Tensor.TensorAddName(fbuilder, tensor_name)
-        tflite.Tensor.TensorAddQuantization(fbuilder, q_param)
-        tflite.Tensor.TensorAddIsVariable(fbuilder, False)
+          tflite.Tensor.TensorAddName(self.fbuilder, tensor_name)
+        tflite.Tensor.TensorAddQuantization(self.fbuilder, q_param)
+        tflite.Tensor.TensorAddIsVariable(self.fbuilder, False)
 
-        tflite.Tensor.TensorAddBuffer(fbuilder, 0)
-        new_tensor = tflite.Tensor.TensorEnd(fbuilder)
+        tflite.Tensor.TensorAddBuffer(self.fbuilder, 0)
+        new_tensor = tflite.Tensor.TensorEnd(self.fbuilder)
         self.tensor_index[out_tname] = new_tensor
 
   def output_vector(self, tensor_infos):
@@ -144,6 +145,22 @@ class TFLiteExporter(Transformer):
       self.fbuilder.PrependInt32(tensor_index)
     return self.fbuilder.EndVector(n)
 
+  def create_op_codes(self, ugraph):
+    #scan, translation and register
+    op_codes = list()
+    for op_name in ugraph.topo_order:
+      op_type = ugraph.ops_info[op_name].op_type
+      tflite.OperatorCode.OperatorCodeStart(self.fbuilder)
+      #TODO: op type translation happen here
+      opcode_index = self.op_manager.regsiter_op(op_type)
+      tflite.OperatorCode.OperatorCodeAddBuiltinCode(self.fbuilder, opcode_index)
+      op_codes.append(tflite.OperatorCode.OperatorCodeEnd(self.fbuilder))
+
+    tflite.Model.ModelStartOperatorCodesVector(self.fbuilder, len(op_codes))
+    for it_op_code in op_codes:
+        self.fbuilder.PrependUOffsetTRelative(it_op_code)
+    op_code_vec = self.fbuilder.EndVector(len(op_codes))
+    return op_code_vec #needs to be added into the Model
 
   def add_FullyConnectedOp(self, inputs, outputs):
     op_inputs = self.input_vector(inputs)
@@ -160,5 +177,3 @@ class TFLiteExporter(Transformer):
     values = op_info.op_attr['value'].value.np_array.flatten()
     return (values.min(), values.max())
 
-  
-  #TODO: op code
