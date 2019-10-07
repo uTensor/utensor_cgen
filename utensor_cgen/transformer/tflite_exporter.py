@@ -52,8 +52,10 @@ class TFLiteExporter(Transformer):
   Max_fbuff_size = 1024 * 10
   op_manager = FlatbufferOpManager()
   fbuilder = flatbuffers.Builder(Max_fbuff_size)
-  tensor_buffer_index = OrderedDict()  #added to the Model object
-  tensor_index = OrderedDict()         #added to the Subgraph object
+  tensor_buffer_index = OrderedDict()   # out_name : data buff vec
+                                        # added to the Model object
+  tensor_index = OrderedDict()          # out_name : ref tensor object
+                                        #added to the Subgraph object
   
   op_exec_order = list()
 
@@ -61,22 +63,67 @@ class TFLiteExporter(Transformer):
     self.prune_graph = False #what is this?
 
   def transform(self, ugraph):
-    #visitor pattern here
+    #create tensor data buffer
+    #create const tensors
+    #update tensor_index
+    self.create_static_tensor(ugraph)
+
+    #create intermediate tensors
+    #update tensor_index
+    self.create_variable_tensors(ugraph)
+
+    #interacts with FlatbufferOpManager
+    op_codes_vec = self.create_op_codes(ugraph) #to be added into the Model
+
+    #create subgraph
+    #first, create the tensor vector
+    tflite.SubGraph.SubGraphStartTensorsVector(self.fbuilder, len(self.tensor_index))
+    for t_name, f_obj in self.tensor_index.items():
+      self.fbuilder.PrependUOffsetTRelative(f_obj)
+    tensors_vec = self.fbuilder.EndVector(len(self.tensor_index))
+
+    ## TODO: traverse the graph and produce
+    ops_vec = None
+    ## here
+
+    tflite.SubGraph.SubGraphStart(self.fbuilder)
+    tflite.SubGraph.SubGraphAddTensors(self.fbuilder, tensors_vec)
+    tflite.SubGraph.SubGraphAddOperators(self.fbuilder, ops_vec)
+    subgraph = tflite.SubGraph.SubGraphEnd(self.fbuilder)
+
+    tflite.Model.ModelStartSubgraphsVector(self.fbuilder, 1) #TFLM runtime only support 1 subgraph
+    self.fbuilder.PrependUOffsetTRelative(subgraph)
+    subgraph_vec = self.fbuilder.EndVector(1)
+
+    #model
+    # first, add tensor buffer here
+    tflite.Model.ModelStartBuffersVector(self.fbuilder, len(self.tensor_buffer_index))
+    for t_name, f_obj in self.tensor_buffer_index.items():
+      self.fbuilder.PrependUOffsetTRelative(f_obj)
+    buff_vec = self.fbuilder.EndVector(len(self.tensor_buffer_index))
+
+    tflite.Model.ModelStart(self.fbuilder)
+    tflite.Model.ModelAddVersion(self.fbuilder, 100) #TODO: change this
+    tflite.Model.ModelAddOperatorCodes(self.fbuilder, op_codes_vec)
+    tflite.Model.ModelAddSubgraphs(self.fbuilder, subgraph_vec)
+    tflite.Model.ModelAddBuffers(self.fbuilder, buff_vec)
+
+    model = tflite.Model.ModelEnd(self.fbuilder)
+
+    self.fbuilder.Finish(model)
+
+    output = self.fbuilder.Output() #do something with the output here
+    print(output)
+
     return ugraph
 
-  def build_buffer(self, ugraph):
-
-    #tensor data buffers
-
-    pass
-
-  def create_tensor_data(self, ugraph):
+  def create_static_tensor(self, ugraph):
     target_ops = ["Inline", "Const"]
     export_tensor_name = True
     for op_name in ugraph.topo_order:
       op_info = ugraph.ops_info[op_name]
       op_type = op_info.op_type
-      if op_type in target_ops:
+      if op_type in target_ops:  #TODO: check if op data is empty
         out_tensor_info = op_info.output_tensors[0]
         out_tname, out_dtype, tensor_shape = (out_tensor_info.name,
                         out_tensor_info.dtype,
@@ -98,28 +145,16 @@ class TFLiteExporter(Transformer):
 
         #name
         if export_tensor_name:
-          tensor_name = self.fbuilder.CreateString(out_tname) #TODO: legalize
+          tensor_name = self.fbuilder.CreateString(self.legalize_name(out_tname))
 
         #quantization
         (q_min, q_max) = self.quantization_info(op_info)
-        ##Min vec
-        tflite.QuantizationParameters.QuantizationParametersStartMinVector(self.fbuilder, 1)
-        self.fbuilder.PrependFloat32(q_min)
-        q_min_vec = self.fbuilder.EndVector(1)
-        ##Max Vec
-        tflite.QuantizationParameters.QuantizationParametersStartMaxVector(self.fbuilder, 1)
-        self.fbuilder.PrependFloat32(q_max)
-        q_max_vec = self.fbuilder.EndVector(1)
-
-        tflite.QuantizationParameters.QuantizationParametersStart(self.fbuilder)
-        tflite.QuantizationParameters.QuantizationParametersAddMin(self.fbuilder, q_min_vec)
-        tflite.QuantizationParameters.QuantizationParametersAddMax(self.fbuilder, q_max_vec)
-        q_param = tflite.QuantizationParameters.QuantizationParametersEnd(self.fbuilder)
+        q_param = self.create_quantization_param([q_min], [q_max])
 
         #tensor object
         tflite.Tensor.TensorStart(self.fbuilder)
         tflite.Tensor.TensorAddShape(self.fbuilder, shape_vec)
-        tflite.Tensor.TensorAddType(self.fbuilder, TensorType.INT8) #TODO: a conversion class here
+        tflite.Tensor.TensorAddType(self.fbuilder, TensorType.INT8) #TODO: a conversion class here, out_dtype
         if export_tensor_name:
           tflite.Tensor.TensorAddName(self.fbuilder, tensor_name)
         tflite.Tensor.TensorAddQuantization(self.fbuilder, q_param)
@@ -177,3 +212,53 @@ class TFLiteExporter(Transformer):
     values = op_info.op_attr['value'].value.np_array.flatten()
     return (values.min(), values.max())
 
+  def create_quantization_param(self, mins, maxs):
+    assert len(mins) != len(maxs), "mins and maxs length mismatch"
+    
+
+    tflite.QuantizationParameters.QuantizationParametersStartMinVector(self.fbuilder, len(mins))
+    for _min in mins:
+      self.fbuilder.PrependFloat32(_min)
+    q_min_vec = self.fbuilder.EndVector(len(mins))
+
+    tflite.QuantizationParameters.QuantizationParametersStartMaxVector(self.fbuilder, len(maxs))
+    for _max in maxs:
+      self.fbuilder.PrependFloat32(_max)
+    q_max_vec = self.fbuilder.EndVector(len(maxs))
+  
+    tflite.QuantizationParameters.QuantizationParametersStart(self.fbuilder)
+    tflite.QuantizationParameters.QuantizationParametersAddMin(self.fbuilder, q_min_vec)
+    tflite.QuantizationParameters.QuantizationParametersAddMax(self.fbuilder, q_max_vec)
+    q_param = tflite.QuantizationParameters.QuantizationParametersEnd(self.fbuilder)
+
+    return q_param
+
+  def create_variable_tensors(self, ugraph):
+    tensor_infos = set()
+    for op_name in ugraph.topo_order:
+      tensor_infos.update(ugraph.ops_info[op_name].inputs)
+      tensor_infos.update(ugraph.ops_info[op_name].outputs)
+    for tensor_info in tensor_infos:
+      tflite.Tensor.TensorStartShapeVector(self.fbuilder, len(tensor_info.shape))
+      for d in tensor_info.shape:
+        self.fbuilder.PrependInt32(d)
+      shape_vec = self.fbuilder.EndVector(len(tensor_info.shape))
+
+      tensor_name = self.fbuilder.CreateString(self.legalize_name(tensor_info.name))
+
+      q_param = self.create_quantization_param([-20],[200]) #TODO: workout how to treat the quantization here
+
+      tflite.Tensor.TensorStart(self.fbuilder)
+      tflite.Tensor.TensorAddShape(self.fbuilder, shape_vec)
+      tflite.Tensor.TensorAddType(self.fbuilder, TensorType.INT8) #TODO: tensor type conversion here
+      tflite.Tensor.TensorAddName(self.fbuilder, tensor_name)
+      tflite.Tensor.TensorAddQuantization(self.fbuilder, q_param)
+      tflite.Tensor.TensorAddIsVariable(self.fbuilder, True)
+
+      self.tensor_index[tensor_info.name] = tflite.Tensor.TensorEnd(self.fbuilder)
+
+  def legalize_name(self, str):
+    #TODO: legalize the name
+    return str
+
+# How to construct the quantization parameter for intermediate tensors?
