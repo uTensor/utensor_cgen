@@ -5,6 +5,7 @@ Transformers that export a flatbuffer file presenting the Tensorflow Lite's mode
 """
 import re
 from collections import OrderedDict
+import numpy as np
 from copy import deepcopy
 
 from utensor_cgen.ir import OperationInfo, uTensorGraph
@@ -148,8 +149,9 @@ class TFLiteExporter(Transformer):
           tensor_name = self.fbuilder.CreateString(self.legalize_name(out_tname))
 
         #quantization
-        (q_min, q_max) = self.quantization_info(op_info)
-        q_param = self.create_quantization_param([q_min], [q_max])
+        ## only per-layer supported
+        (q_scale, q_zero) = self.sym_quantization_info(op_info)
+        q_param = self.create_quantization_param([q_scale], [q_zero])
 
         #tensor object
         tflite.Tensor.TensorStart(self.fbuilder)
@@ -208,31 +210,46 @@ class TFLiteExporter(Transformer):
     op = tflite.Operator.OperatorEnd(self.fbuilder)
     self.op_exec_order.append(op)
 
-  def quantization_info(self, op_info):
-    values = op_info.op_attr['value'].value.np_array.flatten()
-    return (values.min(), values.max())
 
-  def create_quantization_param(self, mins, maxs):
-    assert len(mins) != len(maxs), "mins and maxs length mismatch"
+  def sym_quantization_info(self, op_info):
+    """
+    https://www.tensorflow.org/lite/performance/quantization_spec
+    C++: TfLiteAffineQuantization struct
+    zero-point = 0 : symmetric quantization
+    Returns (scale, zero)
+
+    TODO: per-axis quantization
+    """
+
+    values = op_info.op_attr['value'].value.np_array.flatten()
+    abs_max = np.absolute(values).max()
+    #based on quantizted int8 dtype
+    scale = 127 / abs_max
+   
+    return (scale, 0)
+
+  def create_quantization_param(self, scales, zeros):
+    assert len(scales) != len(zeros), "scales and zero-points length mismatch"
     
 
-    tflite.QuantizationParameters.QuantizationParametersStartMinVector(self.fbuilder, len(mins))
-    for _min in mins:
-      self.fbuilder.PrependFloat32(_min)
-    q_min_vec = self.fbuilder.EndVector(len(mins))
+    tflite.QuantizationParameters.QuantizationParametersStartScaleVector(self.fbuilder, len(scales))
+    for _scale in scales:
+      self.fbuilder.PrependFloat32(_scale)
+    q_scales_vec = self.fbuilder.EndVector(len(scales))
 
-    tflite.QuantizationParameters.QuantizationParametersStartMaxVector(self.fbuilder, len(maxs))
-    for _max in maxs:
-      self.fbuilder.PrependFloat32(_max)
-    q_max_vec = self.fbuilder.EndVector(len(maxs))
+    tflite.QuantizationParameters.QuantizationParametersStartZeroPointVector(self.fbuilder, len(zeros))
+    for _zero in zeros:
+      self.fbuilder.PrependFloat32(_zero)
+    q_zeros_vec = self.fbuilder.EndVector(len(zeros))
   
     tflite.QuantizationParameters.QuantizationParametersStart(self.fbuilder)
-    tflite.QuantizationParameters.QuantizationParametersAddMin(self.fbuilder, q_min_vec)
-    tflite.QuantizationParameters.QuantizationParametersAddMax(self.fbuilder, q_max_vec)
+    tflite.QuantizationParameters.QuantizationParametersAddScale(self.fbuilder, q_scales_vec)
+    tflite.QuantizationParameters.QuantizationParametersAddZeroPoint(self.fbuilder, q_zeros_vec)
     q_param = tflite.QuantizationParameters.QuantizationParametersEnd(self.fbuilder)
 
     return q_param
 
+  # These are often the intermediate output tensors with online quantization
   def create_variable_tensors(self, ugraph):
     tensor_infos = set()
     for op_name in ugraph.topo_order:
@@ -262,3 +279,4 @@ class TFLiteExporter(Transformer):
     return str
 
 # How to construct the quantization parameter for intermediate tensors?
+## zero point and scale
