@@ -250,6 +250,7 @@ class TFLiteExporter(Transformer):
     return q_param
 
   # These are often the intermediate output tensors with online quantization
+  # Allocation them as Float32 to use online quantization
   def __create_variable_tensors(self, ugraph):
     tensor_infos = set()
     for op_name in ugraph.topo_order:
@@ -263,13 +264,14 @@ class TFLiteExporter(Transformer):
 
       tensor_name = self.fbuilder.CreateString(self.__legalize_name(tensor_info.name))
 
-      q_param = self.__create_quantization_param([-20],[200]) #TODO: workout how to treat the quantization here
+      #q_param = self.__create_quantization_param([-20],[200]) #TODO: workout how to treat the quantization here
 
       tflite.Tensor.TensorStart(self.fbuilder)
       tflite.Tensor.TensorAddShape(self.fbuilder, shape_vec)
-      tflite.Tensor.TensorAddType(self.fbuilder, TensorType.INT8) #TODO: tensor type conversion here
+      #tflite.Tensor.TensorAddType(self.fbuilder, TensorType.INT8) #TODO: tensor type conversion here
+      tflite.Tensor.TensorAddType(self.fbuilder, TensorType.FLOAT32)
       tflite.Tensor.TensorAddName(self.fbuilder, tensor_name)
-      tflite.Tensor.TensorAddQuantization(self.fbuilder, q_param)
+      #tflite.Tensor.TensorAddQuantization(self.fbuilder, q_param)
       tflite.Tensor.TensorAddIsVariable(self.fbuilder, True)
 
       self.__tensor_index[tensor_info.name] = tflite.Tensor.TensorEnd(self.fbuilder)
