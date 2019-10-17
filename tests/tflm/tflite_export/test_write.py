@@ -37,6 +37,7 @@ def print_tflite_graph(byte_buff):
     print("version: ", model.Version())
     print("subgraph len: ", subgraphs_len)
     print("number of operators: ", n_ops)
+    print("number of t buff: ", model.BuffersLength())
     print("flat buffer length: ", len(byte_buff), " bytes")
     op_codes = []
     for i in range(0, model.OperatorCodesLength()):
@@ -53,10 +54,11 @@ def print_tflite_graph(byte_buff):
         op_type = builtin_ops[builtin_code]
         print(op_type)
         
+        #import pdb;pdb.set_trace()
         input_tensors = [subgraph.Tensors(input_idx) for input_idx in op.InputsAsNumpy()]
         for tensor in input_tensors:
+            print()
             print(tensor.Name(), ", ", tensor.ShapeAsNumpy())
-
             print("variable: ", tensor.IsVariable())
             if tensor.Type() == np.uint8 or tensor.Type() == np.int8:
                 q = tensor.Quantization()
@@ -73,7 +75,7 @@ def print_tflite_graph(byte_buff):
             if not tensor.IsVariable():
                 buffer_index = tensor.Buffer()
                 assert buffer_index >= 0
-                assert model.Buffers(buffer_index).DataLength() <= 0
+                assert model.Buffers(buffer_index).DataLength() >= 0
                 buffer_content = model.Buffers(buffer_index).DataAsNumpy()
                 print("Tensor values: ", buffer_content.astype(tensor_np_type[tensor.Type()]))
             else:
