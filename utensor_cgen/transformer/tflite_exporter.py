@@ -11,6 +11,7 @@ from copy import deepcopy
 from utensor_cgen.ir import OperationInfo, uTensorGraph
 import flatbuffers
 import utensor_cgen.third_party.tflite as tflite
+from utensor_cgen.third_party.tflite import *
 from utensor_cgen.third_party.tflite.BuiltinOperator import BuiltinOperator
 from utensor_cgen.third_party.tflite.BuiltinOptions import BuiltinOptions
 from utensor_cgen.third_party.tflite.TensorType import TensorType
@@ -58,7 +59,7 @@ class TFLiteExporter(Transformer):
   __tensor_index = OrderedDict()          # out_name : ref tensor object
                                           #added to the Subgraph object
   
-  op_exec_order = list()
+  #op_exec_order = list()
 
   def __init__(self):
     self.prune_graph = False #what is this?
@@ -83,9 +84,16 @@ class TFLiteExporter(Transformer):
       self.fbuilder.PrependUOffsetTRelative(f_obj)
     tensors_vec = self.fbuilder.EndVector(len(self.__tensor_index))
 
-    ## TODO: traverse the graph and produce
-    ops_vec = None
-    ## here
+    ##traverse ugraph
+    fb_ops_list = list()
+    for op_name in ugraph.topo_order:
+      op_info = ugraph.ops_info[op_name]
+      fb_ops_list.append(self.add_Op(op_info))
+
+    tflite.SubGraph.SubGraphStartOperatorsVector(self.fbuilder, len(fb_ops_list))
+    for fb_op in fb_ops_list:
+      self.fbuilder.PrependUOffsetTRelative(fb_op)
+    ops_vec = self.fbuilder.EndVector(len(fb_ops_list))
 
     tflite.SubGraph.SubGraphStart(self.fbuilder)
     tflite.SubGraph.SubGraphAddTensors(self.fbuilder, tensors_vec)
@@ -130,7 +138,8 @@ class TFLiteExporter(Transformer):
                         out_tensor_info.dtype,
                         out_tensor_info.shape)
         #weight
-        value = op_info.op_attr['value'].value.np_array.flatten() #TODO: specify endianness here
+        #value = op_info.op_attr['value'].value.np_array.flatten() #TODO: specify endianness here
+        value = op_info.op_attr['value'].flatten() #FIXME: deal with the proper attribute type here 
         raw_data = value.tobytes()
         tflite.Buffer.BufferStartDataVector(self.fbuilder, len(raw_data))
         for i in raw_data:
@@ -170,7 +179,7 @@ class TFLiteExporter(Transformer):
     n = len(tensor_infos)
     tflite.Operator.OperatorStartOutputsVector(self.fbuilder, n)
     for tensor_info in tensor_infos:
-      tensor_index = self.__tensor_index.keys().index(tensor_info.name)
+      tensor_index = list(self.__tensor_index.keys()).index(tensor_info.name)
       self.fbuilder.PrependInt32(tensor_index)
     return self.fbuilder.EndVector(n)
 
@@ -178,7 +187,7 @@ class TFLiteExporter(Transformer):
     n = len(tensor_infos)
     tflite.Operator.OperatorStartInputsVector(self.fbuilder, n)
     for tensor_info in tensor_infos:
-      tensor_index = self.__tensor_index.keys().index(tensor_info.name)
+      tensor_index = list(self.__tensor_index.keys()).index(tensor_info.name)
       self.fbuilder.PrependInt32(tensor_index)
     return self.fbuilder.EndVector(n)
 
@@ -199,16 +208,17 @@ class TFLiteExporter(Transformer):
     op_code_vec = self.fbuilder.EndVector(len(op_codes))
     return op_code_vec #needs to be added into the Model
 
-  def add_FullyConnectedOp(self, inputs, outputs):
-    op_inputs = self.__input_vector(inputs)
-    op_outputs = self.__output_vector(outputs)
+  def add_Op(self, op_info):
+    op_inputs = self.__input_vector(op_info.input_tensors)
+    op_outputs = self.__output_vector(op_info.output_tensors)
 
     tflite.Operator.OperatorStart(self.fbuilder)
-    tflite.Operator.OperatorAddOpcodeIndex(self.fbuilder, self.__op_manager.op_index('FULLY_CONNECTED'))
+    tflite.Operator.OperatorAddOpcodeIndex(self.fbuilder, self.__op_manager.op_index(op_info.op_type))
     tflite.Operator.OperatorAddInputs(self.fbuilder, op_inputs)
     tflite.Operator.OperatorAddOutputs(self.fbuilder, op_outputs)
     op = tflite.Operator.OperatorEnd(self.fbuilder)
-    self.op_exec_order.append(op)
+    #self.op_exec_order.append(op)
+    return op #to be added into SubGraphStartOperatorsVector
 
 
   def __sym_quantization_info(self, op_info):
@@ -221,7 +231,8 @@ class TFLiteExporter(Transformer):
     TODO: per-axis quantization
     """
 
-    values = op_info.op_attr['value'].value.np_array.flatten()
+    #values = op_info.op_attr['value'].value.np_array.flatten()
+    values = op_info.op_attr['value'].flatten() #FIXME: deal with the proper attribute type here 
     abs_max = np.absolute(values).max()
     #based on quantizted int8 dtype
     scale = 127 / abs_max
@@ -229,7 +240,7 @@ class TFLiteExporter(Transformer):
     return (scale, 0)
 
   def __create_quantization_param(self, scales, zeros):
-    assert len(scales) != len(zeros), "scales and zero-points length mismatch"
+    assert len(scales) == len(zeros), "scales and zero-points length mismatch"
     
 
     tflite.QuantizationParameters.QuantizationParametersStartScaleVector(self.fbuilder, len(scales))
@@ -254,8 +265,8 @@ class TFLiteExporter(Transformer):
   def __create_variable_tensors(self, ugraph):
     tensor_infos = set()
     for op_name in ugraph.topo_order:
-      tensor_infos.update(ugraph.ops_info[op_name].inputs)
-      tensor_infos.update(ugraph.ops_info[op_name].outputs)
+      tensor_infos.update(ugraph.ops_info[op_name].input_tensors)
+      tensor_infos.update(ugraph.ops_info[op_name].output_tensors)
     for tensor_info in tensor_infos:
       tflite.Tensor.TensorStartShapeVector(self.fbuilder, len(tensor_info.shape))
       for d in tensor_info.shape:
@@ -279,6 +290,9 @@ class TFLiteExporter(Transformer):
   def __legalize_name(self, str):
     #TODO: legalize the name
     return str
+
+  def output(self):
+    return self.fbuilder.Output()
 
 # How to construct the quantization parameter for intermediate tensors?
 ## zero point and scale

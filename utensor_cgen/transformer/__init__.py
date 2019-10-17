@@ -7,3 +7,4 @@ from .ns_transformer import *
 from .optimizer import *
 from .pipeline import TransformerPipeline
 from .quantize import *
+from .tflite_exporter import *
