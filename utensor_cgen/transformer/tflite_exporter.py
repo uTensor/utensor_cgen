@@ -121,8 +121,7 @@ class TFLiteExporter(Transformer):
 
     self.fbuilder.Finish(model)
 
-    output = self.fbuilder.Output() #do something with the output here
-    print(output)
+    #output = self.fbuilder.Output() #do something with the output here
 
     return ugraph
 
@@ -130,6 +129,7 @@ class TFLiteExporter(Transformer):
     target_ops = ["Inline", "Const"]
     export_tensor_name = True
     for op_name in ugraph.topo_order:
+      import pdb; pdb.set_trace()
       op_info = ugraph.ops_info[op_name]
       op_type = op_info.op_type
       if op_type in target_ops:  #TODO: check if op data is empty
