@@ -145,7 +145,12 @@ class TFLiteExporter(Transformer):
         for i in raw_data:
           self.fbuilder.PrependUint8(i)
         data_vec = self.fbuilder.EndVector(len(raw_data))
-        self.tensor_buffer_index[out_tname] = data_vec
+
+        tflite.Buffer.BufferStart(self.fbuilder)
+        tflite.Buffer.BufferAddData(self.fbuilder, data_vec)
+        tensor_buff = tflite.Buffer.BufferEnd(self.fbuilder)
+
+        self.tensor_buffer_index[out_tname] = tensor_buff
 
         #shape
         tflite.Tensor.TensorStartShapeVector(self.fbuilder, len(tensor_shape))
@@ -171,7 +176,7 @@ class TFLiteExporter(Transformer):
         tflite.Tensor.TensorAddQuantization(self.fbuilder, q_param)
         tflite.Tensor.TensorAddIsVariable(self.fbuilder, False)
 
-        tflite.Tensor.TensorAddBuffer(self.fbuilder, 0)
+        tflite.Tensor.TensorAddBuffer(self.fbuilder, list(self.tensor_buffer_index.keys()).index(out_tname))
         new_tensor = tflite.Tensor.TensorEnd(self.fbuilder)
         self.tensor_index[out_tname] = new_tensor
 
