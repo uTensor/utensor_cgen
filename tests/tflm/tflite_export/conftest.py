@@ -19,7 +19,7 @@ def simple_tflm_graph():
         output_tensors = []
     )
     weight_op.op_attr["value"] = np.array([1,2,3,4], dtype=np.int8)
-    weight_op.op_attr["shape"] = [1,4]
+    weight_op.op_attr["shape"] = [4,1]
 
     weight = TensorInfo(
         name = "weight",
@@ -40,7 +40,7 @@ def simple_tflm_graph():
         output_tensors = []
     )
     mock_input_op.op_attr["value"] = np.array([[1],[2],[3],[4]], dtype=np.int8)
-    mock_input_op.op_attr["shape"] = [4,1]
+    mock_input_op.op_attr["shape"] = [1,4]
 
     input1 = TensorInfo(
         name = "input",

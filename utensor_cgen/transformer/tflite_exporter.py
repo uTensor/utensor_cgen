@@ -31,7 +31,7 @@ class FlatbufferOpManager:
             assert("invalid op str")
         if op_type_str not in self.op_list:
             self.op_list.append(op_type_str)
-        return self.op_index(op_type_str)
+        return self.op_code(op_type_str)
     
     def op_index(self, op_type_str):
         return self.op_list.index(op_type_str)
@@ -179,6 +179,7 @@ class TFLiteExporter(Transformer):
         tflite.Tensor.TensorAddBuffer(self.fbuilder, list(self.tensor_buffer_index.keys()).index(out_tname))
         new_tensor = tflite.Tensor.TensorEnd(self.fbuilder)
         self.tensor_index[out_tname] = new_tensor
+        
 
   def __output_vector(self, tensor_infos):
     n = len(tensor_infos)
