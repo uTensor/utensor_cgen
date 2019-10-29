@@ -52,7 +52,7 @@ def cli():
               default=(
                 'dropout(name_pattern=r"(dropout[_\w\d]*)/.*")|>linear_reorder'
                 '|>quantize|>conv_pool|>inline|>biasAdd|>remove_id_op'
-                '|>fake_gather_v2|>refcnt'
+                '|>fake_gather_v2|>refcnt|>tensorlife'
               ),
               help='optimization pipeline',
               metavar='METHOD[|>METHOD|>...]',

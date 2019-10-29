@@ -15,17 +15,13 @@ import sys
 
 from better_setuptools_git_version import get_version
 
-# from utensor_cgen.cli import _version as version
-
 sys.path.insert(0, os.path.abspath('../../'))
-
-
 # -- Project information -----------------------------------------------------
 
 project = 'utensor_cgen'
 copyright = '2019, uTensor Team'
 author = 'dboyliao, Neil Tan, kazami, Michael Bartling'
-version = get_version()
+version = get_version(template="{tag}.dev{sha:.7s}")
 master_doc = 'index'
 
 # -- General configuration ---------------------------------------------------
@@ -34,10 +30,13 @@ master_doc = 'index'
 # extensions coming with Sphinx (named 'sphinx.ext.*') or your custom
 # ones.
 extensions = [
+    'sphinx.ext.napoleon',
     'sphinx.ext.autodoc',
     'autoapi.extension'
 ]
+# http://www.sphinx-doc.org/en/master/usage/extensions/autodoc.html
 autodoc_typehints = 'none'
+autodoc_inherit_docstrings = False
 autoapi_dirs = ['../../utensor_cgen']
 autoapi_generate_api_docs = False
 
@@ -76,4 +75,4 @@ autodoc_mock_imports = [
 # Add any paths that contain custom static files (such as style sheets) here,
 # relative to this directory. They are copied after the builtin static files,
 # so a file named "default.css" will overwrite the builtin "default.css".
-html_static_path = ['_static', '../../images']
+html_static_path = ['_static']

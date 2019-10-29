@@ -1,8 +1,9 @@
 import onnx
 from onnx_tf.backend import prepare
 
-from utensor_cgen.frontend.base import Parser
 from utensor_cgen.frontend import FrontendSelector
+from utensor_cgen.frontend.base import Parser
+
 from .tensorflow import GraphDefParser
 
 

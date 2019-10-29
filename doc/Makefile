@@ -14,14 +14,11 @@ help:
 
 .PHONY: help Makefile
 
-html: Makefile
-	@$(SPHINXBUILD) -M $@ "$(SOURCEDIR)" "$(BUILDDIR)" $(SPHINXOPTS) $(O)
-
 clean-html: Makefile
-	@rm -rf $(BUILDDIR)/html/*
+	@rm -rf $(BUILDDIR)/{html,doctrees}/*
 	@make html
 
 # Catch-all target: route all unknown targets to Sphinx using the new
 # "make mode" option.  $(O) is meant as a shortcut for $(SPHINXOPTS).
 %: Makefile
-	@$(SPHINXBUILD) -M $@ "$(SOURCEDIR)" "$(BUILDDIR)" $(SPHINXOPTS) $(O)
+	@SPHINX_TARGET=$@ SPHINX_BUILDDIR=$(BUILDDIR) $(SPHINXBUILD) -M $@ "$(SOURCEDIR)" "$(BUILDDIR)" $(SPHINXOPTS) $(O)

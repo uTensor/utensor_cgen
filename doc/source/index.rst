@@ -20,11 +20,12 @@ Modules
 ^^^^^^^
 
 .. toctree::
-  :maxdepth: 1
+  :maxdepth: 2
 
   utensor_cgen/ir/base
   utensor_cgen/ir/converter
   utensor_cgen/utils
+  utensor_cgen/matcher
   api
 
 ----

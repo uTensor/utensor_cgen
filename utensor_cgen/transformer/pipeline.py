@@ -4,7 +4,8 @@ from .graph_viz import GraphVizTransformer
 from .linear_reoder import LinearReorderTransformerV2
 from .ns_transformer import (BatchNormTransformer, BiasAddTransformer,
                              DropoutTransformer, DropoutTransformerV2,
-                             FakeGatherV2Transformer, InlineTransformer)
+                             FakeGatherV2Transformer, InlineTransformer,
+                             TensorLifeProbe)
 from .optimizer import IdOpRemoveOptimizer, RefCntOptimizer
 from .quantize import QuantizeTransformer
 
@@ -23,7 +24,8 @@ class TransformerPipeline(object):
     GraphVizTransformer.METHOD_NAME: GraphVizTransformer,
     FakeGatherV2Transformer.METHOD_NAME: FakeGatherV2Transformer,
     ConvPoolTransformer.METHOD_NAME: ConvPoolTransformer,
-    LinearReorderTransformerV2.METHOD_NAME: LinearReorderTransformerV2
+    LinearReorderTransformerV2.METHOD_NAME: LinearReorderTransformerV2,
+    TensorLifeProbe.METHOD_NAME: TensorLifeProbe,
   }
 
   def __init__(self, methods):
