@@ -7,13 +7,13 @@ from copy import deepcopy
 from random import choices
 from string import ascii_letters, digits
 
-import idx2numpy as idx2np
 import numpy as np
-import tensorflow as tf
 from click.types import ParamType
+
+import idx2numpy as idx2np
+import tensorflow as tf
 from tensorflow.python.framework import graph_util
 from tensorflow.tools.graph_transforms import TransformGraph
-
 from utensor_cgen.logger import logger
 
 __all__ = ["save_idx", "save_consts", "save_graph", "log_graph",
@@ -154,7 +154,7 @@ class NamescopedKWArgsParser:
 
   TODO: replace it with a better data manager
   """
-  def __init__(self, namespace, kwargs):
+  def __init__(self, namespace, kwargs, data_manager=None, op_info=None):
     ns_pattern = re.compile(r'^([^\d\W][\w\d_]*)__([^\d\W][\w\d_]*)')
     self._namespace = namespace
     self._private_kwargs = {}
@@ -168,7 +168,17 @@ class NamescopedKWArgsParser:
           self._private_kwargs[argname] = value
       else:
         self._shared_kwargs[key] = value
-
+    if op_info is not None and data_manager is not None:
+      outputs = [tensor_info.name for tensor_info in op_info.output_tensors]
+      for tensor in outputs:
+        values = data_manager.group(tensor)
+        for key, value in values.items():
+          if key not in self._private_kwargs:
+            self._private_kwargs[key] = []
+            self._private_kwargs[key].append(value)
+          else:
+            self._private_kwargs[key].append(value)
+  
   def get(self, argname, default=None):
     """
     Get value of given name in the namespace

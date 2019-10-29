@@ -1,12 +1,14 @@
 # -*- coding: utf8 -*-
 import re
 from copy import deepcopy
+from functools import reduce
 
 import attr
 import numpy as np
 import six
-import tensorflow as tf
 from attr.validators import instance_of
+
+import tensorflow as tf
 from tensorflow.core.framework.attr_value_pb2 import AttrValue as _AttrValue
 from tensorflow.core.framework.attr_value_pb2 import \
     NameAttrList as _NameAttrList
@@ -14,7 +16,7 @@ from tensorflow.core.framework.tensor_pb2 import TensorProto as _TensorProto
 from tensorflow.core.framework.tensor_shape_pb2 import \
     TensorShapeProto as _TensorShapeProto
 from tensorflow.core.framework.types_pb2 import DataType as _DataType
-
+from utensor_cgen.ir.instr import DataManager
 from utensor_cgen.utils import random_str, topologic_order_graph
 
 from .converter import AttrValueConverter, ConverterDispatcher
@@ -67,6 +69,7 @@ class TensorInfo(IRBase, _NoShallowCopyMixin):
   dtype = attr.ib(validator=instance_of(np.dtype))
 
   shape = attr.ib(validator=instance_of((list, type(None))))
+  
   @shape.validator
   def check(self, attrib, shape_values):
     if shape_values is not None:
@@ -167,6 +170,10 @@ class TensorInfo(IRBase, _NoShallowCopyMixin):
     :rtype: bool
     """
     return self.op_name.startswith(self._NULL_PREFIX)
+
+  @property
+  def size(self):
+    return reduce(lambda i, j: i*(j is None and 1 or j), self.shape, 1)
 
   def __deepcopy__(self, memo):
     new_tensor = TensorInfo(name=self.name,
@@ -450,6 +457,7 @@ class uTensorGraph(IRBase, _NoShallowCopyMixin, uTensorGraphBuilderMixin):
   ops_info = attr.ib(factory=dict)
   # non-init
   topo_order = attr.ib(factory=list, init=False)
+  data_manager = attr.ib(default=None, init=False)
   _type_to_op_map = attr.ib(factory=dict, init=False, repr=False)
 
   def __attrs_post_init__(self):
@@ -595,6 +603,10 @@ class uTensorGraph(IRBase, _NoShallowCopyMixin, uTensorGraphBuilderMixin):
     if not self.topo_order:
       topologic_order_graph(self)
     return [self.ops_info[name] for name in self.topo_order]
+  
+  def setup_data_manager(self, datas):
+    manager = DataManager(datas)
+    self.data_manager = manager
 
   def unsafe_merge_into(self, other_ugraph):
     """
@@ -644,11 +656,14 @@ class uTensorGraph(IRBase, _NoShallowCopyMixin, uTensorGraphBuilderMixin):
       backend=self._backend
     )
     memo['ugraph'] = new_graph
-
     new_graph.ops_info = {
       k: deepcopy(v, memo)
       for k, v in self.ops_info.items()
     }
+    if self.data_manager:
+      new_graph.data_manager = DataManager({})
+      new_graph.data_manager.StorageCenter = deepcopy(self.data_manager.StorageCenter)
+    new_graph._backend = self._backend
     topologic_order_graph(new_graph)
     return new_graph
 
@@ -656,13 +671,6 @@ class uTensorGraph(IRBase, _NoShallowCopyMixin, uTensorGraphBuilderMixin):
     if op_name not in self.ops_info:
       raise KeyError('{} not found in the graph'.format(op_name))
     return self.ops_info[op_name]
-
-  # def drop_op(self, op_name):
-  #   # DON'T USE
-  #   if op_name not in self.ops_info:
-  #     raise ValueError('op not found in the graph: {}'.format(op_name))
-  #   del self.ops_info[op_name]
-  #   self.topo_order.remove(op_name)
 
 
 @attr.s(cmp=False)
