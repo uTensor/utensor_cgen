@@ -227,6 +227,47 @@ class _ArgMaxOperator(_Operator):
     address = parser.get('address', [])
     self._snippet = ArgMaxOpSnippet(inputs, output, in_dtype, out_dtype, ref_count, to_eval, address)
 
+  @classmethod
+  def build_op_info(cls, ugraph, name, input_tensor, dtype=np.dtype('int64'), axis=0, **kwargs):
+    if isinstance(axis, int):
+      axis, = ugraph.add_op(
+        np.array(axis, dtype=np.dtype('int32')),
+        op_type='Const',
+        name='{}/axis'.format(name)
+      )
+    dummy_in = np.empty(input_tensor.shape, dtype=input_tensor.dtype)
+    graph = tf.Graph()
+    with graph.as_default():
+      dummy_out = tf.math.argmax(
+        dummy_in,
+        axis=axis.op.op_attr['value'].value.np_array,
+        name='dummy',
+        output_type=tf.as_dtype(dtype)
+      )
+    node_def = [node for node in graph.as_graph_def().node if node.name=='dummy'][0]
+    output_shape = dummy_out.shape.as_list()
+    op_attr = {
+      k: AttrValueConverter.get_generic_value(v)
+      for k, v in node_def.attr.items()
+    }
+    return OperationInfo(
+      name=name,
+      op_type=cls.op_type,
+      input_tensors=[input_tensor, axis],
+      output_tensors=[
+        TensorInfo(
+          name='{}:0'.format(name),
+          op_name=name,
+          dtype=dtype,
+          shape=output_shape,
+          ugraph=ugraph
+        )
+      ],
+      op_attr=op_attr,
+      ugraph=ugraph,
+      backend=kwargs.get('backend', 'tensorflow')
+    )
+
 
 @OperatorFactory.register
 class _DequantizeOperator(_Operator):
@@ -334,6 +375,47 @@ class _MinOperator(_Operator):
     ref_count = parser.get('ref_counts', [0])[0]
     to_eval = parser.get('to_eval', False)
     self._snippet = MinOpSnippet(inputs, output, out_dtype, out_shape, ref_count, to_eval)
+  
+  @classmethod
+  def build_op_info(cls, ugraph, name, tensor, axis=-1, keepdims=False, **kwargs):
+    if isinstance(axis, int):
+      axis, = ugraph.add_op(
+        np.array(axis, dtype=np.dtype('int32')),
+        op_type='Const',
+        name='{}/axis'.format(name)
+      )
+    dummy_in = np.empty(tensor.shape, dtype=tensor.dtype)
+    graph = tf.Graph()
+    with graph.as_default():
+      dummy_out = tf.reduce_min(
+        dummy_in,
+        axis=axis.op.op_attr['value'].value.np_array,
+        keepdims=keepdims,
+        name='dummy'
+      )
+    node_def = [node for node in graph.as_graph_def().node if node.name == 'dummy'][0]
+    output_shape = dummy_out.shape.as_list()
+    return OperationInfo(
+      name=name,
+      input_tensors=[tensor, axis],
+      output_tensors=[
+        TensorInfo(
+          name='{}:0'.format(name),
+          op_name=name,
+          dtype=tensor.dtype,
+          shape=output_shape,
+          ugraph=ugraph,
+        )
+      ],
+      op_type=cls.op_type,
+      backend=kwargs.get('backend', 'tensorflow'),
+      ugraph=ugraph,
+      op_attr={
+        k: AttrValueConverter.get_generic_value(v)
+        for k, v in node_def.attr.items()
+      }
+    )
+
 
 @OperatorFactory.register
 class _MaxPool(_Operator):
@@ -450,45 +532,45 @@ class _MinOperator(_Operator):
     address = parser.get('address', [])
     self._snippet = MinOpSnippet(inputs, output, out_dtype, out_shape, ref_count, to_eval, address)
 
-    @classmethod
-    def build_op_info(cls, ugraph, name, tensor, axis=-1, keepdims=False, **kwargs):
-      if isinstance(axis, int):
-        axis, = ugraph.add_op(
-          np.array(axis, dtype=np.dtype('int32')),
-          op_type='Const',
-          name='{}/axis'.format(name)
-        )
-      dummy_in = np.empty(tensor.shape, dtype=tensor.dtype)
-      graph = tf.Graph()
-      with graph.as_default():
-        dummy_out = tf.reduce_min(
-          dummy_in,
-          axis=axis.op.op_attr['value'].value.np_array,
-          keepdims=keepdims,
-          name='dummy'
-        )
-      node_def = [node for node in graph.as_graph_def().node if node.name == 'dummy'][0]
-      output_shape = dummy_out.shape.as_list()
-      return OperationInfo(
-        name=name,
-        input_tensors=[tensor, axis],
-        output_tensors=[
-          TensorInfo(
-            name='{}:0'.format(name),
-            op_name=name,
-            dtype=tensor.dtype,
-            shape=output_shape,
-            ugraph=ugraph,
-          )
-        ],
-        op_type=cls.op_type,
-        backend=kwargs.get('backend', 'tensorflow'),
-        ugraph=ugraph,
-        op_attr={
-          k: AttrValueConverter.get_generic_value(v)
-          for k, v in node_def.attr.items()
-        }
+  @classmethod
+  def build_op_info(cls, ugraph, name, tensor, axis=-1, keepdims=False, **kwargs):
+    if isinstance(axis, int):
+      axis, = ugraph.add_op(
+        np.array(axis, dtype=np.dtype('int32')),
+        op_type='Const',
+        name='{}/axis'.format(name)
       )
+    dummy_in = np.empty(tensor.shape, dtype=tensor.dtype)
+    graph = tf.Graph()
+    with graph.as_default():
+      dummy_out = tf.reduce_min(
+        dummy_in,
+        axis=axis.op.op_attr['value'].value.np_array,
+        keepdims=keepdims,
+        name='dummy'
+      )
+    node_def = [node for node in graph.as_graph_def().node if node.name == 'dummy'][0]
+    output_shape = dummy_out.shape.as_list()
+    return OperationInfo(
+      name=name,
+      input_tensors=[tensor, axis],
+      output_tensors=[
+        TensorInfo(
+          name='{}:0'.format(name),
+          op_name=name,
+          dtype=tensor.dtype,
+          shape=output_shape,
+          ugraph=ugraph,
+        )
+      ],
+      op_type=cls.op_type,
+      backend=kwargs.get('backend', 'tensorflow'),
+      ugraph=ugraph,
+      op_attr={
+        k: AttrValueConverter.get_generic_value(v)
+        for k, v in node_def.attr.items()
+      }
+    )
 
 
 @OperatorFactory.register

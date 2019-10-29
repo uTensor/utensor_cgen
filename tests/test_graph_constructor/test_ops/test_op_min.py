@@ -11,7 +11,7 @@ def test_op_min(ugraph, quant_trans):
         tensor_out1, = ugraph.add_op(
             tensor_x,
             op_type='Min',
-            name='max',
+            name='min',
             axis=0,
             keepdims=True,
             is_output=True,
@@ -19,7 +19,7 @@ def test_op_min(ugraph, quant_trans):
         tensor_out2, = ugraph.add_op(
             tensor_x,
             op_type='Min',
-            name='max2',
+            name='min2',
             axis=1,
             keepdims=True,
             is_output=True,
@@ -27,7 +27,7 @@ def test_op_min(ugraph, quant_trans):
         tensor_out3, = ugraph.add_op(
             tensor_x,
             op_type='Min',
-            name='max3',
+            name='min3',
             axis=-1,
             keepdims=False,
             is_output=True,
