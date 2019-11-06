@@ -1,12 +1,12 @@
 from tensorflow.tools.graph_transforms import TransformGraph
-
-from utensor_cgen.ir.base import uTensorGraph
 from utensor_cgen.frontend.tensorflow import GraphDefParser
 
 from .base import Transformer
+from .pipeline import TransformerPipeline
 
 __all__ = ['QuantizeTransformer']
 
+@TransformerPipeline.register_transformer
 class QuantizeTransformer(Transformer):
 
   METHOD_NAME = 'quantize'

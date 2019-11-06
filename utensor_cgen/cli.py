@@ -1,6 +1,7 @@
 #-*- coding:utf8 -*-
 import os
 import sys
+from pathlib import Path
 
 import click
 import pkg_resources
@@ -17,12 +18,33 @@ _version = (
 def _get_pb_model_name(path):
   return os.path.basename(os.path.splitext(path)[0])
 
+def _load_transformer(path):
+  # FIXME: better way to activate user plugins other than exec
+  from utensor_cgen.transformer import TransformerPipeline, Transformer
+
+  _globals = {}
+  transform_plugin = Path(path).absolute()
+  with transform_plugin.open('r') as fid:
+    exec(fid.read(), _globals)
+  for obj in _globals.values():
+    if obj is Transformer:
+      continue
+    if isinstance(obj, type) and issubclass(obj, Transformer):
+      TransformerPipeline.register_transformer(obj)
+
+
 @click.group(name='utensor-cli')
 @click.help_option('-h', '--help')
 @click.version_option(_version,
                        '-V', '--version')
-def cli():
-  pass
+@click.option("--transform-plugin",
+              default=None,
+              help="path of the python file which user-defined transformers live",
+              metavar="MODULE.py",
+)
+def cli(transform_plugin):
+  if transform_plugin is not None:
+    _load_transformer(transform_plugin)
 
 @cli.command(name='convert', help='convert graph to cpp/hpp files')
 @click.help_option('-h', '--help')
@@ -52,7 +74,7 @@ def cli():
               default=(
                 'dropout(name_pattern=r"(dropout[_\w\d]*)/.*")|>linear_reorder'
                 '|>quantize|>conv_pool|>inline|>biasAdd|>remove_id_op'
-                '|>fake_gather_v2|>refcnt|>tensorlife'
+                '|>fake_gather_v2|>refcnt'
               ),
               help='optimization pipeline',
               metavar='METHOD[|>METHOD|>...]',

@@ -1,12 +1,13 @@
-from abc import ABCMeta, abstractmethod
 from collections import defaultdict
 from copy import deepcopy
 
 from .base import Transformer
+from .pipeline import TransformerPipeline
 
 __all__ = ['RefCntOptimizer']
 
 
+@TransformerPipeline.register_transformer
 class RefCntOptimizer(Transformer):
   
   METHOD_NAME = 'refcnt'
@@ -42,6 +43,8 @@ class RefCntOptimizer(Transformer):
         tensor_ref_count[tname] += 1
     return tensor_ref_count
 
+
+@TransformerPipeline.register_transformer
 class IdOpRemoveOptimizer(Transformer):
 
   METHOD_NAME = 'remove_id_op'

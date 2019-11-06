@@ -19,9 +19,12 @@ from utensor_cgen.utils import (parse_tensor_name, prune_graph,
                                 topologic_order_graph)
 
 from .base import Transformer
+from .pipeline import TransformerPipeline
 
 __all__ = ["DropoutTransformer", "BatchNormTransformer", "InlineTransformer", "TensorLifeProbe"]
 
+
+@TransformerPipeline.register_transformer
 class TensorLifeProbe(Transformer):
   METHOD_NAME = 'tensorlife'
   KWARGS_NAMESCOPE = '_utensor_utlife'
@@ -211,6 +214,7 @@ class TensorLifeProbe(Transformer):
     return resource_table
 
 
+@TransformerPipeline.register_transformer
 class BiasAddTransformer(Transformer):
   METHOD_NAME = 'biasAdd'
   KWARGS_NAMESCOPE = '_utensor_biasAdd'
@@ -227,6 +231,7 @@ class BiasAddTransformer(Transformer):
     return ugraph
 
 
+@TransformerPipeline.register_transformer
 class InlineTransformer(Transformer):
   METHOD_NAME = 'inline'
   KWARGS_NAMESCOPE = '_utensor_inline'
@@ -241,6 +246,7 @@ class InlineTransformer(Transformer):
     return ugraph
 
 
+@TransformerPipeline.register_transformer
 class DropoutTransformer(Transformer):
   """Dropout removal transformer
 
@@ -334,6 +340,7 @@ class DropoutTransformer(Transformer):
     return input_map
 
 
+@TransformerPipeline.register_transformer
 class DropoutTransformerV2(Transformer):
   """Dropout removal transformer version 2
 
@@ -412,6 +419,7 @@ class DropoutTransformerV2(Transformer):
     return match.subject_ugraph
 
 
+@TransformerPipeline.register_transformer
 class BatchNormTransformer(Transformer):
   """Replace Batch Norm namescope with uTensor Op
   """
@@ -423,6 +431,7 @@ class BatchNormTransformer(Transformer):
     raise RuntimeError('bach norm transformer is not yet implemented')
 
 
+@TransformerPipeline.register_transformer
 class FakeGatherV2Transformer(Transformer):
   """Force converting GatherV2 op to Gather op
   """
