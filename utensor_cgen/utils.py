@@ -1,6 +1,8 @@
 # -*- coding: utf8 -*-
+import importlib
 import os
 import re
+import types
 from ast import literal_eval
 from collections import deque
 from copy import deepcopy
@@ -446,3 +448,22 @@ def random_str(length=8):
   letters = ascii_letters+digits
   chars = [choice(letters) for _ in range(length)]
   return ''.join(chars)
+
+
+class LazyLoader(types.ModuleType):
+
+    def __init__(self, submod_name):
+        self._submod_name = submod_name
+        self._submod = None
+        super(LazyLoader, self).__init__(submod_name)
+
+    def _load(self):
+        if self._submod is None:
+            self._submod = importlib.import_module(f'utensor_cgen.{self._submod_name}')
+        return self._submod
+
+    def __getattr__(self, attrb):
+        return getattr(self._load(), attrb)
+
+    def __dir__(self):
+        return dir(self._load())

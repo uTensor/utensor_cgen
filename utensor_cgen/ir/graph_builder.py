@@ -1,6 +1,10 @@
 import inspect
 from contextlib import contextmanager
 
+from utensor_cgen.utils import LazyLoader
+
+operators = LazyLoader('backend.operators')
+
 
 class GraphFinalizedError(Exception): pass
 
@@ -9,7 +13,7 @@ class uTensorGraphBuilderMixin(object):
 
   def add_op(self, *args, op_type, name, is_output=False, **kwargs):
     # FIXME: cyclic imports... OMG
-    from utensor_cgen.backend.operators import OperatorFactory
+    OperatorFactory = operators.OperatorFactory
     if self.is_finalized:
       raise GraphFinalizedError(
         'Can not add op to finalized graph'
