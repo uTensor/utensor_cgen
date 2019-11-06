@@ -18,7 +18,7 @@ setup(
     },
     setup_requires=['better-setuptools-git-version'],
     description="C code generation program for uTensor",
-    long_description=long_desc,
+    long_description="please go to [doc](https://utensor-cgen.readthedocs.io/en/latest/) page for more information",
     url="https://github.com/dboyliao/utensor_cgen",
     author="Dboy Liao",
     author_email="qmalliao@gmail.com",
