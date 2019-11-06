@@ -452,18 +452,18 @@ def random_str(length=8):
 
 class LazyLoader(types.ModuleType):
 
-    def __init__(self, submod_name):
-        self._submod_name = submod_name
-        self._submod = None
-        super(LazyLoader, self).__init__(submod_name)
+  def __init__(self, submod_name):
+    self._submod_name = submod_name
+    self._submod = None
+    super(LazyLoader, self).__init__(submod_name)
 
-    def _load(self):
-        if self._submod is None:
-            self._submod = importlib.import_module(f'utensor_cgen.{self._submod_name}')
-        return self._submod
+  def _load(self):
+    if self._submod is None:
+      self._submod = importlib.import_module('utensor_cgen.{}'.format(self._submod_name))
+    return self._submod
 
-    def __getattr__(self, attrb):
-        return getattr(self._load(), attrb)
+  def __getattr__(self, attrb):
+    return getattr(self._load(), attrb)
 
-    def __dir__(self):
-        return dir(self._load())
+  def __dir__(self):
+    return dir(self._load())
