@@ -4,7 +4,7 @@ import re
 from ast import literal_eval
 from collections import deque
 from copy import deepcopy
-from random import choices
+from random import choice
 from string import ascii_letters, digits
 
 import numpy as np
@@ -443,5 +443,6 @@ def prune_graph(ugraph):
 
 
 def random_str(length=8):
-  chars = choices(ascii_letters+digits, k=length)
+  letters = ascii_letters+digits
+  chars = [choice(letters) for _ in range(length)]
   return ''.join(chars)
