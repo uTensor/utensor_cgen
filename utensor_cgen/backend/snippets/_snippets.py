@@ -13,12 +13,15 @@ __all__ = ["Snippet", "SnippetContainerBase",
            "ReluOpSnippet", "QuantizedReluOpSnippet", "ShapeOpSnippet",
            "StridedSliceOpSnippet", "PackOpSnippet", "SoftmaxOpSnippet",
            "ReshapeOpSnippet", "QuantizedReshapeOpSnippet",
-           "Conv2DOpSnippent", "Conv2DQuantOpSnippent", "CMSISNNFCOpSnippet",
+           "Conv2DOpSnippet", "Conv2DQuantOpSnippet", "CMSISNNFCOpSnippet",
            "RequantizationRangeOpSnippet", "RequantizeOpSnippet",
            "CommentSnippet", "ContextHeaderSnippet",
            "ContextSnippetsContainer", "QuantizedAddOpSnippet",
+           "QuantizedMulOpSnippet",
            "CreateTensorBinarySnippet", "WeightSnippet",
            "ContextGlobalArrayContainer", "QuantRangeForMultiplicationSnippet",
+           "FusedConv2DMaxpoolOpSnippet", "QuantizedFusedConv2DMaxpoolOpSnippet",
+           "GatherOpSnippet",
            "CreateTensorRamSnippet", "Uint8Q7OriginSnippet"]
 
 # TODO: Better abstraction, i.e a better backend for code generation
@@ -190,7 +193,8 @@ class MinOpSnippet(Snippet):
   def __init__(self, inputs, output, out_dtype,
                out_shape=None,
                ref_count=0,
-               to_eval=False):
+               to_eval=False,
+               address=None):
     Snippet.__init__(self)
     if ref_count:
       self.template_vars["ref_count"] = ref_count
@@ -199,6 +203,7 @@ class MinOpSnippet(Snippet):
     self.template_vars["out_dtype"] = NP_TYPES_MAP[out_dtype].tensor_type_str
     self.template_vars["out_shape"] = out_shape
     self.template_vars["to_eval"] = to_eval
+    self.template_vars["address"] = address
 
 
 class MaxOpSnippet(Snippet):
@@ -208,7 +213,8 @@ class MaxOpSnippet(Snippet):
   def __init__(self, inputs, output, out_dtype,
                out_shape=None,
                ref_count=0,
-               to_eval=False):
+               to_eval=False,
+               address=None):
     Snippet.__init__(self)
     if ref_count:
       self.template_vars["ref_count"] = ref_count
@@ -217,6 +223,7 @@ class MaxOpSnippet(Snippet):
     self.template_vars["out_dtype"] = NP_TYPES_MAP[out_dtype].tensor_type_str
     self.template_vars["out_shape"] = out_shape
     self.template_vars["to_eval"] = to_eval
+    self.template_vars["address"] = address
 
 class MaxPoolSnippet(Snippet):
   __template_name__ = "snippets/max_pool_op.cpp"
@@ -277,7 +284,8 @@ class ArgMaxOpSnippet(Snippet):
 
   def __init__(self, inputs, output, in_dtype, out_dtype,
                ref_count=0,
-               to_eval=False):
+               to_eval=False,
+               address=None):
     Snippet.__init__(self)
     if ref_count:
       self.template_vars["ref_count"] = ref_count
@@ -286,6 +294,7 @@ class ArgMaxOpSnippet(Snippet):
     self.template_vars["in_dtype"] = NP_TYPES_MAP[in_dtype].tensor_type_str
     self.template_vars["out_dtype"] = NP_TYPES_MAP[out_dtype].tensor_type_str
     self.template_vars["to_eval"] = to_eval
+    self.template_vars["address"] = address
 
 
 class DequantizeOpSnippet(Snippet):
@@ -294,7 +303,8 @@ class DequantizeOpSnippet(Snippet):
 
   def __init__(self, inputs, output, out_dtype,
                ref_count=0,
-               to_eval=False):
+               to_eval=False,
+               address=None):
     Snippet.__init__(self)
     if ref_count:
       self.template_vars["ref_count"] = ref_count
@@ -302,6 +312,7 @@ class DequantizeOpSnippet(Snippet):
     self.template_vars["output"] = output
     self.template_vars["out_dtype"] = NP_TYPES_MAP[out_dtype].tensor_type_str
     self.template_vars["to_eval"] = to_eval
+    self.template_vars["address"] = address
 
 class MatMulOpSnippet(Snippet):
   __template_name__ = "snippets/matmul_op.cpp"
@@ -327,7 +338,8 @@ class QuantizedMatMulOpSnippet(Snippet):
 
   def __init__(self, inputs, outputs, x_dtype, w_dtype, out_dtype,
                ref_counts=None,
-               to_eval=False):
+               to_eval=False,
+               address=None):
     Snippet.__init__(self)
     if ref_counts is None:
       ref_counts = []
@@ -344,10 +356,39 @@ class QuantizedMatMulOpSnippet(Snippet):
     self.template_vars["w_dtype"] = NP_TYPES_MAP[w_dtype].tensor_type_str
     self.template_vars["out_dtype"] = NP_TYPES_MAP[out_dtype].tensor_type_str
     self.template_vars["to_eval"] = to_eval
+    self.template_vars["address"] = address
+
 
 
 class QuantizedAddOpSnippet(Snippet):
   __template_name__ = "snippets/qadd_op.cpp"
+  __headers__ = set(['"uTensor/ops/MathOps.hpp"'])
+
+  def __init__(self, inputs, outputs, x_dtype, w_dtype, out_dtype,
+               ref_counts=None,
+               to_eval=False,
+               address=None):
+    Snippet.__init__(self)
+    if ref_counts is None:
+      ref_counts = []
+    # hack on different arguments order between tensorflow and uTensor
+    inputs = _permute_args(inputs, [0, 2, 3, 1, 4, 5])
+    if ref_counts:
+      err_msg = ("incorrect number of ref_counts and outputs: {}, {}"
+                 .format(ref_counts, outputs))
+      assert len(ref_counts) == len(outputs), err_msg
+      self.template_vars['ref_counts'] = ref_counts
+
+    self.template_vars["inputs"] = inputs
+    self.template_vars["outputs"] = outputs
+    self.template_vars["x_dtype"] = NP_TYPES_MAP[x_dtype].tensor_type_str
+    self.template_vars["w_dtype"] = NP_TYPES_MAP[w_dtype].tensor_type_str
+    self.template_vars["out_dtype"] = NP_TYPES_MAP[out_dtype].tensor_type_str
+    self.template_vars["to_eval"] = to_eval
+    self.template_vars['address'] = address
+
+class QuantizedMulOpSnippet(Snippet):
+  __template_name__ = "snippets/qmul_op.cpp"
   __headers__ = set(['"uTensor/ops/MathOps.hpp"'])
 
   def __init__(self, inputs, outputs, x_dtype, w_dtype, out_dtype,
@@ -378,7 +419,8 @@ class QuantizeV2OpSnippet(Snippet):
 
   def __init__(self, inputs, outputs, out_dtype,
                ref_counts=None,
-               to_eval=False):
+               to_eval=False,
+              address=None):
     Snippet.__init__(self)
     if ref_counts is None:
       ref_counts = []
@@ -391,6 +433,7 @@ class QuantizeV2OpSnippet(Snippet):
     self.template_vars["outputs"] = outputs
     self.template_vars["out_dtype"] = NP_TYPES_MAP[out_dtype].tensor_type_str
     self.template_vars["to_eval"] = to_eval
+    self.template_vars["address"] = address
 
 
 class ReluOpSnippet(Snippet):
@@ -415,7 +458,8 @@ class QuantizedReluOpSnippet(Snippet):
 
   def __init__(self, inputs, outputs, in_dtype, out_dtypes, qout_dtype,
                ref_counts=None,
-               to_eval=False):
+               to_eval=False,
+               address=None):
     Snippet.__init__(self)
     if ref_counts is None:
       ref_counts = []
@@ -430,7 +474,7 @@ class QuantizedReluOpSnippet(Snippet):
     self.template_vars["qout_dtype"] = NP_TYPES_MAP[qout_dtype].tensor_type_str
     self.template_vars["ref_counts"] = ref_counts
     self.template_vars["to_eval"] = to_eval
-
+    self.template_vars["address"] = address
 
 class RequantizationRangeOpSnippet(Snippet):
   __template_name__ = "snippets/requant_range_op.cpp"
@@ -438,7 +482,8 @@ class RequantizationRangeOpSnippet(Snippet):
 
   def __init__(self, inputs, outputs, out_dtype,
                ref_counts=None,
-               to_eval=False):
+               to_eval=False,
+               address=None):
     Snippet.__init__(self)
     if ref_counts is None:
       ref_counts = []
@@ -451,6 +496,7 @@ class RequantizationRangeOpSnippet(Snippet):
     self.template_vars["out_dtype"] = NP_TYPES_MAP[out_dtype].tensor_type_str
     self.template_vars["ref_counts"] = ref_counts
     self.template_vars["to_eval"] = to_eval
+    self.template_vars["address"] = address
 
 
 class RequantizeOpSnippet(Snippet):
@@ -459,7 +505,8 @@ class RequantizeOpSnippet(Snippet):
 
   def __init__(self, inputs, outputs, qout_dtype, range_dtype,
                ref_counts=None,
-               to_eval=False):
+               to_eval=False,
+               address=None):
     """qout_dtype: Tout
     range_dtype: T2
     input_dtype: T1
@@ -477,6 +524,7 @@ class RequantizeOpSnippet(Snippet):
     self.template_vars["range_dtype"] = NP_TYPES_MAP[range_dtype].tensor_type_str
     self.template_vars["ref_counts"] = ref_counts
     self.template_vars["to_eval"] = to_eval
+    self.template_vars["address"] = address
 
 
 class StridedSliceOpSnippet(Snippet):
@@ -538,15 +586,19 @@ class SoftmaxOpSnippet(Snippet):
   __template_name__ = "snippets/softmax_op.cpp"
   __headers__ = set(['"uTensor/ops/NnOps.hpp"'])
 
-  def __init__(self, inputs, output, out_dtype,
+  def __init__(self, input_tname, output_tname,
+               in_dtype,
+               out_dtype,
                ref_count=0,
-               to_eval=False):
+               to_eval=False
+  ):
     Snippet.__init__(self)
     if ref_count:
       self.template_vars["ref_count"] = ref_count
     self.template_vars["out_dtype"] = NP_TYPES_MAP[out_dtype].tensor_type_str
-    self.template_vars["inputs"] = inputs
-    self.template_vars["output"] = output
+    self.template_vars["in_dtype"] = NP_TYPES_MAP[in_dtype].tensor_type_str
+    self.template_vars["input"] = input_tname
+    self.template_vars["output"] = output_tname
     self.template_vars["to_eval"] = to_eval
 
 
@@ -556,7 +608,8 @@ class ReshapeOpSnippet(Snippet):
 
   def __init__(self, inputs, output, dtype,
                ref_count=0,
-               to_eval=False):
+               to_eval=False,
+               address=None):
     Snippet.__init__(self)
     if ref_count:
       self.template_vars["ref_count"] = ref_count
@@ -564,6 +617,7 @@ class ReshapeOpSnippet(Snippet):
     self.template_vars["inputs"] = inputs
     self.template_vars["output"] = output
     self.template_vars["to_eval"] = to_eval
+    self.template_vars["address"] = address
 
 
 class QuantizedReshapeOpSnippet(Snippet):
@@ -596,7 +650,7 @@ class CMSISNNFCOpSnippet(Snippet):
     self.template_vars["out_dtype"] = NP_TYPES_MAP[out_dtype].tensor_type_str
     self.template_vars["to_eval"] = to_eval
 
-class Conv2DOpSnippent(Snippet):
+class Conv2DOpSnippet(Snippet):
   __template_name__ = "snippets/conv2d_op.cpp"
   __headers__ = set(['"uTensor/ops/MatrixOps.hpp"'])
 
@@ -616,7 +670,7 @@ class Conv2DOpSnippent(Snippet):
     self.template_vars["padding"] = padding
     self.template_vars["to_eval"] = to_eval
 
-class FusedConv2DOpMaxpoolSnippet(Snippet):
+class FusedConv2DMaxpoolOpSnippet(Snippet):
   __template_name__ = "snippets/fused_conv2d_maxpool_op.cpp"
   __headers__ = set(['"uTensor/ops/MatrixOps.hpp"'])
 
@@ -637,7 +691,32 @@ class FusedConv2DOpMaxpoolSnippet(Snippet):
     self.template_vars["padding"] = padding
     self.template_vars["to_eval"] = to_eval
 
-class Conv2DQuantOpSnippent(Snippet):
+class QuantizedFusedConv2DMaxpoolOpSnippet(Snippet):
+  __template_name__ = "snippets/quantized_fused_conv2d_maxpool_op.cpp"
+  __headers__ = set(['"uTensor/ops/MatrixOps.hpp"'])
+
+  def __init__(self, inputs, outputs, strides, ksize, padding,
+               in_dtype, filter_dtype, out_dtypes,
+               ref_counts=None,
+               to_eval=False):
+    # import pdb; pdb.set_trace()
+    Snippet.__init__(self)
+    if ref_counts:
+      self.template_vars["ref_counts"] = ref_counts
+    self.template_vars["inputs"] = inputs
+    self.template_vars["outputs"] = outputs
+    self.template_vars["in_dtype"] = NP_TYPES_MAP[in_dtype].tensor_type_str
+    self.template_vars["filter_dtype"] = NP_TYPES_MAP[filter_dtype].tensor_type_str
+    self.template_vars["out_dtypes"] = [
+      NP_TYPES_MAP[dtype].tensor_type_str
+      for dtype in out_dtypes
+    ]
+    self.template_vars["strides"] = strides
+    self.template_vars["ksize"] = ksize
+    self.template_vars["padding"] = padding
+    self.template_vars["to_eval"] = to_eval
+
+class Conv2DQuantOpSnippet(Snippet):
   __template_name__ = "snippets/qconv2d_op.cpp"
   __headers__ = set(['"uTensor/ops/MatrixOps.hpp"'])
 

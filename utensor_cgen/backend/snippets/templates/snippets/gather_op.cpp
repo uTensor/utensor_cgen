@@ -7,7 +7,7 @@ S_TENSOR {{sptr_name}};
     {% else %}
     ctx.add(new RamTensor<{{out_dtype}}>(), "{{output}}");
     {% endif %}
-    ctx.push(new GatherOp<{{in_dtype}}, {{out_dtype}}>(),
+    ctx.push(new GatherOp<{{in_dtype}}>(),
              { {% for tname in inputs[:-1]%}"{{tname}}", {%endfor%}"{{inputs[-1]}}" }, 
              { "{{output}}" });
     {% if to_eval %}
