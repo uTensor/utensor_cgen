@@ -1,0 +1,24 @@
+version: 2
+jobs:
+  build:
+    docker:
+      - image: mbartling/utensor_cgen_ci
+    steps:
+      - checkout
+      - run: mkdir -p /tmp/coverage && mkdir -p /tmp/test_results
+      - run: pip3 install -e .[dev]
+      - run: 
+          name: Test
+          command: pytest -vv tests
+          #- run: genhtml main_coverage.info --output-directory /tmp/coverage
+          #- store_test_results:
+          #    path: /tmp/test_results
+          #- store_artifacts:
+          #    path: /tmp/coverage
+          #    prefix: coverage
+        
+workflows:
+    version: 2
+    run_ci:
+        jobs:
+            - build

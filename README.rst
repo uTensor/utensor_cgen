@@ -73,12 +73,12 @@ Overall Architecture
 ::
 
       ============       +-----------------+       ===================
-    || model file || --> | frontend Parser | --> || uTensorGraph (IR) || 
+    || model file || --> | frontend Parser | --> || uTensorGraph (IR) ||
       ============       +-----------------+       ===================
                                                                |
                      +-------------------------------+         |
                      |       graph transformer       |         |
-                     | (legalization & optimization) | <------‘ 
+                     | (legalization & optimization) | <------/
                      +-------------------------------+
                                     |
                                     v
@@ -88,7 +88,7 @@ Overall Architecture
                          ===========================
                                        |
     +--------------------------+       |
-    | backend (code generator) | <----‘  
+    | backend (code generator) | <----/
     +--------------------------+
          |
          `---> (target files, ex: model.cpp, model.hpp, weights.idx)
