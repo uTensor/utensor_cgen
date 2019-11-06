@@ -37,9 +37,10 @@ setup(
         'torch',
         'torchvision',
         'onnx-tf',
+        'graphviz',
     ],
     extras_require={
-        'dev': ['pytest', 'graphviz']
+        'dev': ['pytest']
     },
     zip_safe=False,
     classifiers=[
