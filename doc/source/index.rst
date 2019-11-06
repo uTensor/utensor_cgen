@@ -38,3 +38,8 @@ Modules
 .. _uTensor: https://github.com/uTensor/uTensor
 .. |github page| replace:: GitHub
 .. _`github page`: https://github.com/uTensor/utensor_cgen
+
+.. http://docutils.sourceforge.net/docs/user/rst/quickref.html#hyperlink-targets
+.. https://buildmedia.readthedocs.org/media/pdf/brandons-sphinx-tutorial/latest/brandons-sphinx-tutorial.pdf
+.. http://docutils.sourceforge.net/FAQ.html#is-nested-inline-markup-possible
+.. http://www.xavierdupre.fr/blog/2015-06-07_nojs.html
