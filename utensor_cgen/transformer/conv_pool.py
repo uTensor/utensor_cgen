@@ -13,11 +13,13 @@ from utensor_cgen.matcher import uTensorGraphMatcher
 from utensor_cgen.utils import prune_graph, topologic_order_graph
 
 from .base import Transformer
+from .pipeline import TransformerPipeline
 from .quantize import QuantizeTransformer
 
 __all__ = ["ConvPoolTransformer"]
 
 
+@TransformerPipeline.register_transformer
 class ConvPoolTransformer(Transformer):
   METHOD_NAME = 'conv_pool'
   KWARGS_NAMESCOPE = '_conv_pool'

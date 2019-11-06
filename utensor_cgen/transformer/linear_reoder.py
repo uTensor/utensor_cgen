@@ -10,10 +10,12 @@ from utensor_cgen.matcher import uTensorGraphMatcher
 from utensor_cgen.utils import prune_graph, topologic_order_graph
 
 from .base import Transformer
+from .pipeline import TransformerPipeline
 
 __all__ = ["LinearReorderTransformerV2"]
 
 
+@TransformerPipeline.register_transformer
 class LinearReorderTransformerV2(Transformer):
   METHOD_NAME = 'linear_reorder'
   KWARGS_NAMESCOPE = '_linear_reorder'
