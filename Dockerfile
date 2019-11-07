@@ -10,12 +10,12 @@ RUN apt-get update && \
     apt-get install -y \
     cmake \
     python3-pip \
-    git && \
-    cd /root && \
+    git
+RUN cd /root && \
     git clone https://github.com/uTensor/utensor_cgen.git && \
     cd utensor_cgen && \
     git checkout ${UTENSOR_CGEN_BRANCH} && \
-    pip3 install -e .[dev]
+    pip3 --no-cache-dir install -e .[dev]
 
 WORKDIR /root
 
