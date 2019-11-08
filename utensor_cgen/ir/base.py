@@ -38,7 +38,7 @@ class _NoShallowCopyMixin(object):
 class IRBase(object):
 
   @property
-  def all_supported_backends(self):
+  def all_supported_libs(self):
     return ['tensorflow']
 
 
@@ -153,14 +153,14 @@ class TensorInfo(IRBase, _NoShallowCopyMixin):
     return op
 
   @property
-  def backend(self):
+  def lib_name(self):
     """
-    the name of backend library/framework used for training
+    the name of training library/framework
     the graph
 
     :rtype: six.string_types
     """
-    return self._ugraph.backend
+    return self._ugraph._lib_name
   
   @property
   def is_null_tensor(self):
@@ -207,9 +207,8 @@ class OperationInfo(IRBase, _NoShallowCopyMixin):
   :param op_type: the type of the node (ex: ``Add``)
   :type op_type: str
 
-  :param backend: the name of the backend, the library/framework for the training phase
-    {'tensorflow', 'pytorch'}
-  :type backend: str
+  :param lib_name: the name of the training library/framework, {'tensorflow', 'pytorch'}
+  :type lib_name: str
 
   :param ugraph: the graph which owns this op
   :type ugraph: :py:class:`.uTensorGraph`
@@ -226,7 +225,7 @@ class OperationInfo(IRBase, _NoShallowCopyMixin):
     - The values of such keys will be saved **as-is** without any type conversion.
   """
   name = attr.ib(type=str)
-  _backend = attr.ib(type=str)
+  _lib_name = attr.ib(type=str)
   _ugraph = attr.ib(repr=False)
   @_ugraph.validator
   def check(self, attrib, value):
@@ -295,13 +294,13 @@ class OperationInfo(IRBase, _NoShallowCopyMixin):
     return self._ugraph
   
   @property
-  def backend(self):
+  def lib_name(self):
     """
-    The name of backend library/framework
+    The name of training library/framework
 
     :rtype: six.strings_type
     """
-    return self._backend
+    return self._lib_name
 
   @property
   def input_nodes(self):
@@ -390,7 +389,7 @@ class OperationInfo(IRBase, _NoShallowCopyMixin):
                             output_tensors=deepcopy(self.output_tensors, memo),
                             n_outputs=self.n_outputs,
                             op_type=self.op_type,
-                            backend=self.backend,
+                            lib_name=self.lib_name,
                             op_attr=deepcopy(self.op_attr, memo),
                             ugraph=memo['ugraph'])
     return op_info
@@ -424,10 +423,9 @@ class uTensorGraph(IRBase, _NoShallowCopyMixin, uTensorGraphBuilderMixin):
   :param ops_info: a dict with key as string, the op's name,
     and value as an instance of :class:`.OperationInfo`
   :type ops_info: dict
-  :param backend: the name of backend library/framework
-    the graph trained with. Can only be ``'tensorflow'``
-    or ``'pytorch'`` (future work)
-  :type backend: str
+  :param lib_name: the name of library/framework training the graph. 
+  Can only be ``'tensorflow'`` or ``'pytorch'`` (future work)
+  :type lib_name: str
 
   ..
 
@@ -441,7 +439,7 @@ class uTensorGraph(IRBase, _NoShallowCopyMixin, uTensorGraphBuilderMixin):
       1. create a empty graph
 
         - give a list of names of output nodes (required)
-        - (optional) give backend string
+        - (optional) give `lib_name` string
         - leave **ops_info** empty
       2. setup the **ops_info**
 
@@ -452,8 +450,9 @@ class uTensorGraph(IRBase, _NoShallowCopyMixin, uTensorGraphBuilderMixin):
   """
   KWPARSER_PATTERN = re.compile(r'^([^\d\W][\w\d_]*)__([^\d\W][\w\d_]*)')
 
+  name = attr.ib(default='model_graph')
   output_nodes = attr.ib(factory=list)
-  _backend = attr.ib(default='tensorflow', type=six.string_types)
+  _lib_name = attr.ib(default='tensorflow', type=six.string_types)
   ops_info = attr.ib(factory=dict)
   # non-init
   topo_order = attr.ib(factory=list, init=False)
@@ -468,6 +467,7 @@ class uTensorGraph(IRBase, _NoShallowCopyMixin, uTensorGraphBuilderMixin):
       raise ValueError(
         'output_nodes should be list of str: {}'.format(self.output_nodes)
       )
+    self.name = self.name.replace('/', '_')
   
   def get_ops_by_type(self, given_op_type):
     """
@@ -556,13 +556,13 @@ class uTensorGraph(IRBase, _NoShallowCopyMixin, uTensorGraphBuilderMixin):
     return in_tensors
   
   @property
-  def backend(self):
+  def lib_name(self):
     """
-    the name of backend library/framework
+    the name of training library/framework
 
     :rtype: six.strings_type
     """
-    return self._backend
+    return self._lib_name
 
   @property
   def graph_def(self):
@@ -573,8 +573,8 @@ class uTensorGraph(IRBase, _NoShallowCopyMixin, uTensorGraphBuilderMixin):
     """
     if self.output_nodes and not self.topo_order:
       raise RuntimeError('the graph is not topological sorted')
-    assert self._backend == 'tensorflow', \
-      'Convert a uTensorGraph to tf.GraphDef from a non-tf backend'
+    assert self._lib_name == 'tensorflow', \
+      'Can not convert a uTensorGraph to tf.GraphDef from a non-tf graph'
     graph_def = tf.GraphDef()
     for node_name in self.topo_order:
       op_info = self.ops_info[node_name]
@@ -652,8 +652,9 @@ class uTensorGraph(IRBase, _NoShallowCopyMixin, uTensorGraphBuilderMixin):
 
   def __deepcopy__(self, memo):
     new_graph = uTensorGraph(
+      name=self.name,
       output_nodes=self.output_nodes,
-      backend=self._backend
+      lib_name=self._lib_name
     )
     memo['ugraph'] = new_graph
     new_graph.ops_info = {
@@ -663,7 +664,7 @@ class uTensorGraph(IRBase, _NoShallowCopyMixin, uTensorGraphBuilderMixin):
     if self.data_manager:
       new_graph.data_manager = DataManager({})
       new_graph.data_manager.StorageCenter = deepcopy(self.data_manager.StorageCenter)
-    new_graph._backend = self._backend
+    new_graph._lib_name = self._lib_name
     topologic_order_graph(new_graph)
     return new_graph
 
@@ -686,8 +687,8 @@ class uTensorGraphView(IRBase, _NoShallowCopyMixin):
       self.ops_info[name] = self._ugraph.ops_info[name]
   
   @property
-  def backend(self):
-    return self._ugraph.backend
+  def lib_name(self):
+    return self._ugraph._lib_name
 
   @property
   def input_ops(self):

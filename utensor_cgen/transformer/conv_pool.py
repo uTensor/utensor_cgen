@@ -58,8 +58,9 @@ class ConvPoolTransformer(Transformer):
   def __call__(self, match):
     op_name = 'quant_conv_pool'
     repl_ugraph = uTensorGraph(
+      name='{}_repl_graph'.format(op_name),
       output_nodes=[op_name],
-      backend=match.subject_ugraph.backend
+      lib_name=match.subject_ugraph.lib_name
     )
     subj_conv_op = match.patrn2subj_op_map['conv/eightbit']
     subj_pool_op = match.patrn2subj_op_map['maxpool/eightbit']
@@ -84,7 +85,7 @@ class ConvPoolTransformer(Transformer):
       output_tensors=output_tensors,
       n_outputs=len(output_tensors),
       op_type='QuantizedFusedConv2DMaxpool',
-      backend=subj_conv_op.backend,
+      lib_name=subj_conv_op.lib_name,
       op_attr={
         '_utensor_conv': subj_conv_op.op_attr,
         '_utensor_pool': subj_pool_op.op_attr,

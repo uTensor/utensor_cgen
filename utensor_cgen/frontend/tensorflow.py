@@ -1,5 +1,7 @@
 from __future__ import absolute_import
 
+import os
+
 import numpy as np
 import six
 
@@ -8,7 +10,7 @@ from google.protobuf import text_format
 from utensor_cgen.frontend import FrontendSelector
 from utensor_cgen.frontend.base import Parser
 from utensor_cgen.ir.base import OperationInfo, TensorInfo, uTensorGraph
-from utensor_cgen.utils import topologic_order_graph
+from utensor_cgen.utils import random_str, topologic_order_graph
 
 
 @FrontendSelector.register(target_exts=['.pb', '.pbtxt'])
@@ -16,7 +18,7 @@ class GraphDefParser(Parser):
 
   @classmethod
   def parse(cls, pb_file, output_nodes=None):
-    graph_def = cls._load_graph_def(pb_file)
+    graph_def, graph_name = cls._load_graph_def(pb_file)
     if not cls._tf_is_freeze_graph(graph_def):
       raise ValueError('Given graph_def is not freezed')
     if output_nodes is None:
@@ -25,9 +27,11 @@ class GraphDefParser(Parser):
     graph = tf.Graph()
     with graph.as_default():
       tf.import_graph_def(graph_def, name='')
-
-    ugraph = uTensorGraph(output_nodes=output_nodes,
-                          backend="tensorflow")
+    ugraph = uTensorGraph(
+      name=graph_name,
+      output_nodes=output_nodes,
+      lib_name="tensorflow",
+    )
     for node in graph_def.node:
       op = graph.get_operation_by_name(node.name)
       in_tensors = [TensorInfo(name=tensor.name,
@@ -52,7 +56,7 @@ class GraphDefParser(Parser):
                               output_tensors=out_tensors,
                               n_outputs=len(out_tensors),
                               op_type=op_type,
-                              backend='tensorflow',
+                              lib_name='tensorflow',
                               op_attr=op_attr,
                               ugraph=ugraph)
       op_info.op_attr['tensorflow__device'] = node.device
@@ -63,8 +67,9 @@ class GraphDefParser(Parser):
   @staticmethod
   def _load_graph_def(pb_file):
     if isinstance(pb_file, tf.GraphDef):
-      return pb_file
+      return pb_file, 'tf_graph_{}'.format(random_str(6))
     assert isinstance(pb_file, six.string_types)
+    graph_name, _ = os.path.splitext(os.path.basename(pb_file))
     graph_def = tf.GraphDef()
     if pb_file[-3:] == ".pb":
       with open(pb_file, 'rb') as fid:
@@ -74,7 +79,7 @@ class GraphDefParser(Parser):
         text_format.Parse(fid.read(), graph_def)
     else:
       raise ValueError('unknown file format: %s' % pb_file)
-    return graph_def
+    return graph_def, graph_name
 
 
   @staticmethod

@@ -1,0 +1,5 @@
+# https://github.com/toml-lang/toml
+# <target_name>.<component>.<part>
+[utensor.backend.code_generator]
+model_dir = "my_models"
+save_graph = false

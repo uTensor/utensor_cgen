@@ -91,7 +91,7 @@ class OpEqualityDelegate(object):
         equivalent_ops.append(
           OperationInfo(
             name=sub_op.name,
-            backend=sub_op.backend,
+            lib_name=sub_op.lib_name,
             ugraph=sub_op.ugraph,
             input_tensors=[sub_op.input_tensors[j] for j in perm],
             n_inputs=sub_op.n_inputs,

@@ -38,6 +38,7 @@ setup(
         'torchvision',
         'onnx-tf',
         'graphviz',
+        'toml',
     ],
     extras_require={
         'dev': ['pytest']

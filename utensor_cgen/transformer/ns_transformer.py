@@ -269,7 +269,7 @@ class DropoutTransformer(Transformer):
     self._op_name_pattern = re.compile(name_pattern)
 
   def transform(self, ugraph):
-    new_graph = uTensorGraph(output_nodes=ugraph.output_nodes)
+    new_graph = uTensorGraph(name=ugraph.name, output_nodes=ugraph.output_nodes)
     dropout_input_map = self._find_input(ugraph)
     new_ops_info = {}
     for node_name in ugraph.ops_info:
@@ -299,12 +299,12 @@ class DropoutTransformer(Transformer):
                                   output_tensors=out_t_infos,
                                   n_outputs=len(out_t_infos),
                                   op_type=op_info.op_type,
-                                  backend=op_info.backend,
+                                  lib_name=op_info.lib_name,
                                   op_attr=op_attr,
                                   ugraph=new_graph)
       new_ops_info[node_name] = new_op_info
     new_graph.ops_info = new_ops_info
-    new_graph._backend = ugraph._backend
+    new_graph._lib_name = ugraph._lib_name
     return new_graph
 
   def _find_dropout_clusters(self, ugraph):
@@ -380,11 +380,11 @@ class DropoutTransformerV2(Transformer):
   
   def transform(self, ugraph):
     new_ugraph = deepcopy(ugraph)
-    if new_ugraph.backend == 'tensorflow':
+    if new_ugraph.lib_name == 'tensorflow':
       new_ugraph = self._transform_tf(new_ugraph)
     else:
       raise ValueError(
-        'only support dropout transformer for tensorflow: get {}'.format(new_ugraph.backend)
+        'dropout transformer only support tensorflow graph, get {}'.format(new_ugraph.lib_name)
       )
     return new_ugraph
   
