@@ -28,10 +28,13 @@ class FlatbufferOpManager:
     
     def regsiter_op(self, op_type_str):
         if op_type_str not in BuiltinOperator.__dict__:
-            assert("invalid op str")
-        if op_type_str not in self.op_list:
-            self.op_list.append(op_type_str)
+          assert("invalid op str")
+        assert "op already been registered", not self.is_registered(op_type_str)
+        self.op_list.append(op_type_str)
         return self.op_code(op_type_str)
+
+    def is_registered(self, op_type_str):
+      return op_type_str in self.op_list
     
     def op_index(self, op_type_str):
         return self.op_list.index(op_type_str)
@@ -65,37 +68,41 @@ class TFLiteExporter(Transformer):
 
 
   def transform(self, ugraph):
-    #create tensor data buffer
-    #create const tensors
-    #update tensor_index
+    # create tensor data buffer
+    # create const tensors
+    # update tensor_index
     self.__create_static_tensor(ugraph)
 
-    #create intermediate tensors
-    #update tensor_index
+    # create intermediate tensors
+    # update tensor_index
     self.__create_variable_tensors(ugraph)
 
-    #interacts with FlatbufferOpManager
-    op_codes_vec = self.__create_op_codes(ugraph) #to be added into the Model
+    # interacts with FlatbufferOpManager
+    op_codes_vec = self.__create_op_codes(ugraph) # to be added into the Model
 
-    #create subgraph
-    #first, create the tensor vector
+    # create subgraph
+    # first, create the tensor vector
     tflite.SubGraph.SubGraphStartTensorsVector(self.fbuilder, len(self.tensor_index))
-    for t_name, f_obj in self.tensor_index.items():
+    #reverse the order for prepend, so flatbuffer's indexi aggree with self.tensor_index's
+    for t_name, f_obj in reversed(self.tensor_index.items()):
       self.fbuilder.PrependUOffsetTRelative(f_obj)
     tensors_vec = self.fbuilder.EndVector(len(self.tensor_index))
 
-    ##traverse ugraph
+    # traverse ugraph
+    # compile a list of static ops : fb_ops_list
     fb_ops_list = list()
     for op_name in ugraph.topo_order:
       op_info = ugraph.ops_info[op_name]
       if not op_info.op_type in self.static_op_types:
         fb_ops_list.append(self.add_Op(op_info))
 
+    # buile the operators vector
     tflite.SubGraph.SubGraphStartOperatorsVector(self.fbuilder, len(fb_ops_list))
-    for fb_op in fb_ops_list:
+    for fb_op in reversed(fb_ops_list):
       self.fbuilder.PrependUOffsetTRelative(fb_op)
     ops_vec = self.fbuilder.EndVector(len(fb_ops_list))
 
+    # construct the subgraph
     tflite.SubGraph.SubGraphStart(self.fbuilder)
     tflite.SubGraph.SubGraphAddTensors(self.fbuilder, tensors_vec)
     tflite.SubGraph.SubGraphAddOperators(self.fbuilder, ops_vec)
@@ -108,7 +115,7 @@ class TFLiteExporter(Transformer):
     #model
     # first, add tensor buffer here
     tflite.Model.ModelStartBuffersVector(self.fbuilder, len(self.tensor_buffer_index))
-    for t_name, f_obj in self.tensor_buffer_index.items():
+    for t_name, f_obj in reversed(self.tensor_buffer_index.items()):
       self.fbuilder.PrependUOffsetTRelative(f_obj)
     buff_vec = self.fbuilder.EndVector(len(self.tensor_buffer_index))
 
@@ -142,7 +149,7 @@ class TFLiteExporter(Transformer):
         value = op_info.op_attr['value'].flatten() #FIXME: deal with the proper attribute type here 
         raw_data = value.tobytes()
         tflite.Buffer.BufferStartDataVector(self.fbuilder, len(raw_data))
-        for i in raw_data:
+        for i in reversed(raw_data):
           self.fbuilder.PrependUint8(i)
         data_vec = self.fbuilder.EndVector(len(raw_data))
 
@@ -154,7 +161,7 @@ class TFLiteExporter(Transformer):
 
         #shape
         tflite.Tensor.TensorStartShapeVector(self.fbuilder, len(tensor_shape))
-        for d in tensor_shape:
+        for d in reversed(tensor_shape):
           self.fbuilder.PrependInt32(d)
         shape_vec = self.fbuilder.EndVector(len(tensor_shape))
 
@@ -184,7 +191,7 @@ class TFLiteExporter(Transformer):
   def __output_vector(self, tensor_infos):
     n = len(tensor_infos)
     tflite.Operator.OperatorStartOutputsVector(self.fbuilder, n)
-    for tensor_info in tensor_infos:
+    for tensor_info in reversed(tensor_infos):
       tensor_index = list(self.tensor_index.keys()).index(tensor_info.name)
       self.fbuilder.PrependInt32(tensor_index)
     return self.fbuilder.EndVector(n)
@@ -192,7 +199,7 @@ class TFLiteExporter(Transformer):
   def __input_vector(self, tensor_infos):
     n = len(tensor_infos)
     tflite.Operator.OperatorStartInputsVector(self.fbuilder, n)
-    for tensor_info in tensor_infos:
+    for tensor_info in reversed(tensor_infos):
       tensor_index = list(self.tensor_index.keys()).index(tensor_info.name)
       self.fbuilder.PrependInt32(tensor_index)
     return self.fbuilder.EndVector(n)
@@ -206,13 +213,16 @@ class TFLiteExporter(Transformer):
         continue
 
       tflite.OperatorCode.OperatorCodeStart(self.fbuilder)
-      #TODO: op type translation happen here
+
+      if self.op_manager.is_registered(op_type):
+        continue
+      
       opcode_index = self.op_manager.regsiter_op(op_type)
       tflite.OperatorCode.OperatorCodeAddBuiltinCode(self.fbuilder, opcode_index)
       op_codes.append(tflite.OperatorCode.OperatorCodeEnd(self.fbuilder))
 
     tflite.Model.ModelStartOperatorCodesVector(self.fbuilder, len(op_codes))
-    for it_op_code in op_codes:
+    for it_op_code in reversed(op_codes):
         self.fbuilder.PrependUOffsetTRelative(it_op_code)
     op_code_vec = self.fbuilder.EndVector(len(op_codes))
     return op_code_vec #needs to be added into the Model
@@ -253,12 +263,12 @@ class TFLiteExporter(Transformer):
     
 
     tflite.QuantizationParameters.QuantizationParametersStartScaleVector(self.fbuilder, len(scales))
-    for _scale in scales:
+    for _scale in reversed(scales):
       self.fbuilder.PrependFloat32(_scale)
     q_scales_vec = self.fbuilder.EndVector(len(scales))
 
     tflite.QuantizationParameters.QuantizationParametersStartZeroPointVector(self.fbuilder, len(zeros))
-    for _zero in zeros:
+    for _zero in reversed(zeros):
       self.fbuilder.PrependFloat32(_zero)
     q_zeros_vec = self.fbuilder.EndVector(len(zeros))
   
@@ -280,7 +290,7 @@ class TFLiteExporter(Transformer):
       if ugraph.ops_info[tensor_info.op_name].op_type in self.static_op_types:
         continue
       tflite.Tensor.TensorStartShapeVector(self.fbuilder, len(tensor_info.shape))
-      for d in tensor_info.shape:
+      for d in reversed(tensor_info.shape):
         self.fbuilder.PrependInt32(d)
       shape_vec = self.fbuilder.EndVector(len(tensor_info.shape))
 

@@ -54,7 +54,6 @@ def print_tflite_graph(byte_buff):
         op_type = builtin_ops[builtin_code]
         print(op_type)
         
-        #import pdb;pdb.set_trace()
         input_tensors = [subgraph.Tensors(input_idx) for input_idx in op.InputsAsNumpy()]
         for tensor in input_tensors:
             print()
