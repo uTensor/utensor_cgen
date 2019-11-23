@@ -81,12 +81,8 @@ class TFLiteExporter(Transformer):
     op_codes_vec = self.__create_op_codes(ugraph) # to be added into the Model
 
     # create subgraph
-    # first, create the tensor vector
-    tflite.SubGraph.SubGraphStartTensorsVector(self.fbuilder, len(self.tensor_index))
-    #reverse the order for prepend, so flatbuffer's indexi aggree with self.tensor_index's
-    for t_name, f_obj in reversed(self.tensor_index.items()):
-      self.fbuilder.PrependUOffsetTRelative(f_obj)
-    tensors_vec = self.fbuilder.EndVector(len(self.tensor_index))
+    tensors_vec = self.__fb_vector(tflite.SubGraph.SubGraphStartTensorsVector,
+                   [f_obj for t_name, f_obj in self.tensor_index.items()])
 
     # traverse ugraph
     # compile a list of static ops : fb_ops_list
@@ -96,11 +92,8 @@ class TFLiteExporter(Transformer):
       if not op_info.op_type in self.static_op_types:
         fb_ops_list.append(self.add_Op(op_info))
 
-    # buile the operators vector
-    tflite.SubGraph.SubGraphStartOperatorsVector(self.fbuilder, len(fb_ops_list))
-    for fb_op in reversed(fb_ops_list):
-      self.fbuilder.PrependUOffsetTRelative(fb_op)
-    ops_vec = self.fbuilder.EndVector(len(fb_ops_list))
+    # build the operators vector
+    ops_vec = self.__fb_vector(tflite.SubGraph.SubGraphStartOperatorsVector, fb_ops_list)
 
     # construct the subgraph
     tflite.SubGraph.SubGraphStart(self.fbuilder)
@@ -108,16 +101,11 @@ class TFLiteExporter(Transformer):
     tflite.SubGraph.SubGraphAddOperators(self.fbuilder, ops_vec)
     subgraph = tflite.SubGraph.SubGraphEnd(self.fbuilder)
 
-    tflite.Model.ModelStartSubgraphsVector(self.fbuilder, 1) #TFLM runtime only support 1 subgraph
-    self.fbuilder.PrependUOffsetTRelative(subgraph)
-    subgraph_vec = self.fbuilder.EndVector(1)
+    #TFLM runtime only support 1 subgraph
+    subgraph_vec = self.__fb_vector(tflite.Model.ModelStartSubgraphsVector, [subgraph])
 
     #model
-    # first, add tensor buffer here
-    tflite.Model.ModelStartBuffersVector(self.fbuilder, len(self.tensor_buffer_index))
-    for t_name, f_obj in reversed(self.tensor_buffer_index.items()):
-      self.fbuilder.PrependUOffsetTRelative(f_obj)
-    buff_vec = self.fbuilder.EndVector(len(self.tensor_buffer_index))
+    buff_vec = self.__fb_vector(tflite.Model.ModelStartBuffersVector, [f_obj for t_name, f_obj in self.tensor_buffer_index.items()])
 
     tflite.Model.ModelStart(self.fbuilder)
     tflite.Model.ModelAddVersion(self.fbuilder, 100) #TODO: change this
@@ -148,10 +136,8 @@ class TFLiteExporter(Transformer):
         #value = op_info.op_attr['value'].value.np_array.flatten() #TODO: specify endianness here
         value = op_info.op_attr['value'].flatten() #FIXME: deal with the proper attribute type here 
         raw_data = value.tobytes()
-        tflite.Buffer.BufferStartDataVector(self.fbuilder, len(raw_data))
-        for i in reversed(raw_data):
-          self.fbuilder.PrependUint8(i)
-        data_vec = self.fbuilder.EndVector(len(raw_data))
+        data_vec = self.__fb_vector(tflite.Buffer.BufferStartDataVector, raw_data)
+        
 
         tflite.Buffer.BufferStart(self.fbuilder)
         tflite.Buffer.BufferAddData(self.fbuilder, data_vec)
@@ -160,10 +146,7 @@ class TFLiteExporter(Transformer):
         self.tensor_buffer_index[out_tname] = tensor_buff
 
         #shape
-        tflite.Tensor.TensorStartShapeVector(self.fbuilder, len(tensor_shape))
-        for d in reversed(tensor_shape):
-          self.fbuilder.PrependInt32(d)
-        shape_vec = self.fbuilder.EndVector(len(tensor_shape))
+        shape_vec = self.__fb_vector(tflite.Tensor.TensorStartShapeVector, tensor_shape)
 
         #name
         if export_tensor_name:
@@ -188,13 +171,14 @@ class TFLiteExporter(Transformer):
         self.tensor_index[out_tname] = new_tensor
         
 
-  def __output_vector(self, tensor_infos):
+  def __output_vector(self, tensor_infos):    ##TODO    left it here
     n = len(tensor_infos)
     tflite.Operator.OperatorStartOutputsVector(self.fbuilder, n)
     for tensor_info in reversed(tensor_infos):
       tensor_index = list(self.tensor_index.keys()).index(tensor_info.name)
       self.fbuilder.PrependInt32(tensor_index)
     return self.fbuilder.EndVector(n)
+    
 
   def __input_vector(self, tensor_infos):
     n = len(tensor_infos)
@@ -314,6 +298,32 @@ class TFLiteExporter(Transformer):
 
   def output(self):
     return self.fbuilder.Output()
+
+  def __fb_vector(self, vector_constructor, arr_list):
+    prepend_method_table = dict()
+    prepend_method_table[tflite.SubGraph.SubGraphStartTensorsVector] = self.fbuilder.PrependUOffsetTRelative
+    prepend_method_table[tflite.SubGraph.SubGraphStartOperatorsVector] = self.fbuilder.PrependUOffsetTRelative
+    prepend_method_table[tflite.Model.ModelStartSubgraphsVector] = self.fbuilder.PrependUOffsetTRelative
+    prepend_method_table[tflite.Model.ModelStartBuffersVector] = self.fbuilder.PrependUOffsetTRelative
+    prepend_method_table[tflite.Model.ModelStartOperatorCodesVector] = self.fbuilder.PrependUOffsetTRelative
+    prepend_method_table[tflite.Buffer.BufferStartDataVector] = self.fbuilder.PrependUint8
+    prepend_method_table[tflite.Tensor.TensorStartShapeVector] = self.fbuilder.PrependInt32
+    prepend_method_table[tflite.Operator.OperatorStartOutputsVector] = self.fbuilder.PrependInt32
+    prepend_method_table[tflite.Operator.OperatorStartInputsVector] = self.fbuilder.PrependInt32
+    prepend_method_table[tflite.QuantizationParameters.QuantizationParametersStartScaleVector] = self.fbuilder.PrependFloat32
+    prepend_method_table[tflite.QuantizationParameters.QuantizationParametersStartZeroPointVector] = self.fbuilder.PrependFloat32
+
+    preprend_method = prepend_method_table[vector_constructor]
+
+    num_items = len(arr_list)
+    assert num_items > 0
+
+    vector_constructor(self.fbuilder, num_items)
+    # reversed to handle prepend
+    for it in reversed(arr_list):
+      preprend_method(it)
+    
+    return self.fbuilder.EndVector(num_items)
 
 # How to construct the quantization parameter for intermediate tensors?
 ## zero point and scale
