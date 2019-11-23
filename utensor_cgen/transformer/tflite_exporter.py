@@ -170,23 +170,15 @@ class TFLiteExporter(Transformer):
         new_tensor = tflite.Tensor.TensorEnd(self.fbuilder)
         self.tensor_index[out_tname] = new_tensor
         
+  #construct the output tensor vector for an op
+  def __output_vector(self, tensor_infos):
+    tensor_indexi = [list(self.tensor_index.keys()).index(tensor_info.name) for tensor_info in tensor_infos]
+    return self.__fb_vector(tflite.Operator.OperatorStartOutputsVector, tensor_indexi)
 
-  def __output_vector(self, tensor_infos):    ##TODO    left it here
-    n = len(tensor_infos)
-    tflite.Operator.OperatorStartOutputsVector(self.fbuilder, n)
-    for tensor_info in reversed(tensor_infos):
-      tensor_index = list(self.tensor_index.keys()).index(tensor_info.name)
-      self.fbuilder.PrependInt32(tensor_index)
-    return self.fbuilder.EndVector(n)
-    
-
+  #construct the input tensor vector for an op
   def __input_vector(self, tensor_infos):
-    n = len(tensor_infos)
-    tflite.Operator.OperatorStartInputsVector(self.fbuilder, n)
-    for tensor_info in reversed(tensor_infos):
-      tensor_index = list(self.tensor_index.keys()).index(tensor_info.name)
-      self.fbuilder.PrependInt32(tensor_index)
-    return self.fbuilder.EndVector(n)
+    tensor_indexi = [list(self.tensor_index.keys()).index(tensor_info.name) for tensor_info in tensor_infos]
+    return self.__fb_vector(tflite.Operator.OperatorStartInputsVector, tensor_indexi)
 
   def __create_op_codes(self, ugraph):
     #scan, translation and register
@@ -205,11 +197,8 @@ class TFLiteExporter(Transformer):
       tflite.OperatorCode.OperatorCodeAddBuiltinCode(self.fbuilder, opcode_index)
       op_codes.append(tflite.OperatorCode.OperatorCodeEnd(self.fbuilder))
 
-    tflite.Model.ModelStartOperatorCodesVector(self.fbuilder, len(op_codes))
-    for it_op_code in reversed(op_codes):
-        self.fbuilder.PrependUOffsetTRelative(it_op_code)
-    op_code_vec = self.fbuilder.EndVector(len(op_codes))
-    return op_code_vec #needs to be added into the Model
+    op_code_vec = self.__fb_vector(tflite.Model.ModelStartOperatorCodesVector, op_codes)
+    return op_code_vec
 
   def add_Op(self, op_info):
     op_inputs = self.__input_vector(op_info.input_tensors)
@@ -222,7 +211,6 @@ class TFLiteExporter(Transformer):
     op = tflite.Operator.OperatorEnd(self.fbuilder)
 
     return op #to be added into SubGraphStartOperatorsVector
-
 
   def __sym_quantization_info(self, op_info):
     """
@@ -244,18 +232,10 @@ class TFLiteExporter(Transformer):
 
   def __create_quantization_param(self, scales, zeros):
     assert len(scales) == len(zeros), "scales and zero-points length mismatch"
-    
 
-    tflite.QuantizationParameters.QuantizationParametersStartScaleVector(self.fbuilder, len(scales))
-    for _scale in reversed(scales):
-      self.fbuilder.PrependFloat32(_scale)
-    q_scales_vec = self.fbuilder.EndVector(len(scales))
+    q_scales_vec = self.__fb_vector(tflite.QuantizationParameters.QuantizationParametersStartScaleVector, scales)
+    q_zeros_vec = self.__fb_vector(tflite.QuantizationParameters.QuantizationParametersStartZeroPointVector, zeros)
 
-    tflite.QuantizationParameters.QuantizationParametersStartZeroPointVector(self.fbuilder, len(zeros))
-    for _zero in reversed(zeros):
-      self.fbuilder.PrependFloat32(_zero)
-    q_zeros_vec = self.fbuilder.EndVector(len(zeros))
-  
     tflite.QuantizationParameters.QuantizationParametersStart(self.fbuilder)
     tflite.QuantizationParameters.QuantizationParametersAddScale(self.fbuilder, q_scales_vec)
     tflite.QuantizationParameters.QuantizationParametersAddZeroPoint(self.fbuilder, q_zeros_vec)
@@ -273,10 +253,8 @@ class TFLiteExporter(Transformer):
     for tensor_info in tensor_infos:
       if ugraph.ops_info[tensor_info.op_name].op_type in self.static_op_types:
         continue
-      tflite.Tensor.TensorStartShapeVector(self.fbuilder, len(tensor_info.shape))
-      for d in reversed(tensor_info.shape):
-        self.fbuilder.PrependInt32(d)
-      shape_vec = self.fbuilder.EndVector(len(tensor_info.shape))
+
+      shape_vec = self.__fb_vector(tflite.Tensor.TensorStartShapeVector, tensor_info.shape)
 
       tensor_name = self.fbuilder.CreateString(self.__legalize_name(tensor_info.name))
 
