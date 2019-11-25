@@ -68,7 +68,7 @@ def simple_tflm_graph():
         name = "bias",
         op_name = "bias_const",
         dtype = np.dtype("int8"),
-        shape = weight_op.op_attr["shape"],
+        shape = bias_op.op_attr["shape"],
         ugraph = ugraph
     )
     bias_op.output_tensors = [bias]

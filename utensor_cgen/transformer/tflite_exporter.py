@@ -9,7 +9,8 @@ import numpy as np
 from copy import deepcopy
 
 from utensor_cgen.ir import OperationInfo, uTensorGraph
-import flatbuffers
+#import flatbuffers
+import utensor_cgen.third_party.flatbuffers as flatbuffers
 import utensor_cgen.third_party.tflite as tflite
 from utensor_cgen.third_party.tflite import *
 from utensor_cgen.third_party.tflite.BuiltinOperator import BuiltinOperator
@@ -56,6 +57,8 @@ class TFLiteExporter(Transformer):
   KWARGS_NAMESCOPE = '_tflite_export'
   __Max_fbuff_size = 1024 * 10
   static_op_types = ["Inline", "Const"]
+  schema_version = 3
+  file_ident = "TFL3"
 
   def __init__(self):
     self.prune_graph = False #what is this?
@@ -108,14 +111,14 @@ class TFLiteExporter(Transformer):
     buff_vec = self.__fb_vector(tflite.Model.ModelStartBuffersVector, [f_obj for t_name, f_obj in self.tensor_buffer_index.items()])
 
     tflite.Model.ModelStart(self.fbuilder)
-    tflite.Model.ModelAddVersion(self.fbuilder, 100) #TODO: change this
+    tflite.Model.ModelAddVersion(self.fbuilder, self.schema_version)
     tflite.Model.ModelAddOperatorCodes(self.fbuilder, op_codes_vec)
     tflite.Model.ModelAddSubgraphs(self.fbuilder, subgraph_vec)
     tflite.Model.ModelAddBuffers(self.fbuilder, buff_vec)
 
     model = tflite.Model.ModelEnd(self.fbuilder)
 
-    self.fbuilder.Finish(model)
+    self.fbuilder.Finish(model, file_identifier=bytearray(self.file_ident, 'utf-8'))
 
     #output = self.fbuilder.Output() #do something with the output here
 

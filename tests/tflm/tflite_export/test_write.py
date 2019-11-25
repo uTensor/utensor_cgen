@@ -74,7 +74,7 @@ def print_tflite_graph(byte_buff):
             if not tensor.IsVariable():
                 buffer_index = tensor.Buffer()
                 assert buffer_index >= 0
-                assert model.Buffers(buffer_index).DataLength() >= 0
+                assert model.Buffers(buffer_index).DataLength() > 0
                 buffer_content = model.Buffers(buffer_index).DataAsNumpy()
                 print("Tensor values: ", buffer_content.astype(tensor_np_type[tensor.Type()]))
             else:
@@ -83,9 +83,15 @@ def print_tflite_graph(byte_buff):
 def test_tflite_fb_write(sample_ugraph):
     exporter = TFLiteExporter()
     ugraph = exporter.transform(sample_ugraph)
-    exporter.output()
-    #print(exporter.output())
-    print_tflite_graph(exporter.output())
+    model_content = exporter.output()
+
+    print_tflite_graph(model_content)
+    
+    # referece_model_content = open('/Users/neitan01/Documents/tflm/sinExample/sine_model.tflite', "rb").read()
+    # print_tflite_graph(referece_model_content)
+
+    open("tflm_test_model.tflite", "wb").write(model_content)
+    test_model = tf.lite.Interpreter('tflm_test_model.tflite')
 
     test_pass = True
     assert test_pass, 'error message here'
