@@ -36,8 +36,8 @@ setup(
         'click',
         'torch',
         'torchvision',
-        'onnx-tf',
-        'graphviz',
+        'onnx-tf==1.2.1',
+        'graphviz'
     ],
     extras_require={
         'dev': ['pytest']
