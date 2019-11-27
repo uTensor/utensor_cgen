@@ -80,8 +80,9 @@ def print_tflite_graph(byte_buff):
             else:
                 print("None")
 
-def test_tflite_fb_write(sample_ugraph):
-    exporter = TFLiteExporter()
+def test_tflite_fb_write(hybrid_quant_output):
+    [sample_ugraph, input_tensors, output_tensors] = hybrid_quant_output
+    exporter = TFLiteExporter(input_tensors=input_tensors, output_tensors=output_tensors)
     ugraph = exporter.transform(sample_ugraph)
     model_content = exporter.output()
 
@@ -92,6 +93,12 @@ def test_tflite_fb_write(sample_ugraph):
 
     open("tflm_test_model.tflite", "wb").write(model_content)
     test_model = tf.lite.Interpreter('tflm_test_model.tflite')
+    test_model.allocate_tensors()
+    test_model_output_index = test_model.tensor(test_model.get_output_details()[0]["index"])
+    test_model.invoke()
+    output_content = test_model.get_tensor(test_model_output_index)[0]
+
+    print(output_content)
 
     test_pass = True
     assert test_pass, 'error message here'

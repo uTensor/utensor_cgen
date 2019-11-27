@@ -60,7 +60,12 @@ class TFLiteExporter(Transformer):
   schema_version = 3
   file_ident = "TFL3"
 
-  def __init__(self):
+  def __init__(self, input_tensors, output_tensors):
+    """
+    input_tensors: a list of input tensor names
+    output_tensors: alist of output tensor names
+    """
+
     self.prune_graph = False #what is this?
     self.op_manager = FlatbufferOpManager()
     self.fbuilder = flatbuffers.Builder(self.__Max_fbuff_size)
@@ -68,6 +73,8 @@ class TFLiteExporter(Transformer):
                                           # added to the Model object
     self.tensor_index = OrderedDict()          # out_name : ref tensor object
                                           #added to the Subgraph object
+    self.input_tensors = input_tensors
+    self.output_tensors = output_tensors
 
 
   def transform(self, ugraph):
@@ -87,6 +94,12 @@ class TFLiteExporter(Transformer):
     tensors_vec = self.__fb_vector(tflite.SubGraph.SubGraphStartTensorsVector,
                    [f_obj for t_name, f_obj in self.tensor_index.items()])
 
+    subgraph_input_t_names = [list(self.tensor_index.keys()).index(t_name) for t_name in self.input_tensors]
+    subgraph_input_vec = self.__fb_vector(tflite.SubGraph.SubGraphStartInputsVector, subgraph_input_t_names)
+
+    subgraph_output_t_names = [list(self.tensor_index.keys()).index(t_name) for t_name in self.output_tensors]
+    subgraph_output_vec = self.__fb_vector(tflite.SubGraph.SubGraphStartOutputsVector, subgraph_output_t_names)
+
     # traverse ugraph
     # compile a list of static ops : fb_ops_list
     fb_ops_list = list()
@@ -102,6 +115,8 @@ class TFLiteExporter(Transformer):
     tflite.SubGraph.SubGraphStart(self.fbuilder)
     tflite.SubGraph.SubGraphAddTensors(self.fbuilder, tensors_vec)
     tflite.SubGraph.SubGraphAddOperators(self.fbuilder, ops_vec)
+    tflite.SubGraph.SubGraphAddInputs(self.fbuilder, subgraph_input_vec)
+    tflite.SubGraph.SubGraphAddOutputs(self.fbuilder, subgraph_output_vec)
     subgraph = tflite.SubGraph.SubGraphEnd(self.fbuilder)
 
     #TFLM runtime only support 1 subgraph
@@ -207,6 +222,8 @@ class TFLiteExporter(Transformer):
     op_inputs = self.__input_vector(op_info.input_tensors)
     op_outputs = self.__output_vector(op_info.output_tensors)
 
+    ##TODO: add op factory to deal with op options
+
     tflite.Operator.OperatorStart(self.fbuilder)
     tflite.Operator.OperatorAddOpcodeIndex(self.fbuilder, self.op_manager.op_index(op_info.op_type))
     tflite.Operator.OperatorAddInputs(self.fbuilder, op_inputs)
@@ -293,11 +310,13 @@ class TFLiteExporter(Transformer):
     prepend_method_table[tflite.Operator.OperatorStartInputsVector] = self.fbuilder.PrependInt32
     prepend_method_table[tflite.QuantizationParameters.QuantizationParametersStartScaleVector] = self.fbuilder.PrependFloat32
     prepend_method_table[tflite.QuantizationParameters.QuantizationParametersStartZeroPointVector] = self.fbuilder.PrependFloat32
+    prepend_method_table[tflite.SubGraph.SubGraphStartOutputsVector] = self.fbuilder.PrependInt32
+    prepend_method_table[tflite.SubGraph.SubGraphStartInputsVector] = self.fbuilder.PrependInt32
 
     preprend_method = prepend_method_table[vector_constructor]
 
     num_items = len(arr_list)
-    assert num_items > 0
+    #assert num_items > 0
 
     vector_constructor(self.fbuilder, num_items)
     # reversed to handle prepend

@@ -5,7 +5,7 @@ import tensorflow as tf
 from utensor_cgen.ir import TensorInfo, OperationInfo, uTensorGraph
 from utensor_cgen.utils import prune_graph, topologic_order_graph
 
-@fixture(name='sample_ugraph')
+@fixture(name='hybrid_quant_output')
 def simple_tflm_graph():
     ugraph = uTensorGraph()
 
@@ -39,13 +39,13 @@ def simple_tflm_graph():
         input_tensors = [],
         output_tensors = []
     )
-    mock_input_op.op_attr["value"] = np.array([[1],[2],[3],[4]], dtype=np.int8)
+    mock_input_op.op_attr["value"] = np.array([[1.0],[2.0],[3.0],[4.0]], dtype=np.float32)
     mock_input_op.op_attr["shape"] = [1,4]
 
     input1 = TensorInfo(
         name = "input",
         op_name = "mock_input_const",
-        dtype = np.dtype("float"),
+        dtype = mock_input_op.op_attr["value"].dtype,
         shape = [1, 4],
         ugraph = ugraph
     )
@@ -102,4 +102,5 @@ def simple_tflm_graph():
     topologic_order_graph(ugraph)
     #ugraph = prune_graph(ugraph)
 
-    return ugraph
+    #return: ugraph, input tensors, output tensors
+    return [ugraph, [], ["output"]]
