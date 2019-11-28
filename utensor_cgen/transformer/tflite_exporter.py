@@ -15,6 +15,7 @@ import utensor_cgen.third_party.tflite as tflite
 from utensor_cgen.third_party.tflite import *
 from utensor_cgen.third_party.tflite.BuiltinOperator import BuiltinOperator
 from utensor_cgen.third_party.tflite.BuiltinOptions import BuiltinOptions
+from utensor_cgen.third_party.tflite.ActivationFunctionType import ActivationFunctionType
 from utensor_cgen.third_party.tflite.TensorType import TensorType
 from utensor_cgen.logger import logger
 from utensor_cgen.utils import parse_tensor_name
@@ -22,6 +23,20 @@ from utensor_cgen.utils import parse_tensor_name
 from .base import Transformer
 
 __all__ = ["TFLiteExporter"]
+
+def get_fullyconnected_builtin_option(fbuilder, op_info):
+
+  weight_format = tflite.FullyConnectedOptionsWeightsFormat.FullyConnectedOptionsWeightsFormat.DEFAULT
+
+  tflite.FullyConnectedOptions.FullyConnectedOptionsStart(fbuilder)
+  #FIXME: node fusion and select an activation function here
+  tflite.FullyConnectedOptions.FullyConnectedOptionsAddFusedActivationFunction(fbuilder, ActivationFunctionType.NONE)
+  tflite.FullyConnectedOptions.FullyConnectedOptionsAddWeightsFormat(fbuilder, weight_format)
+  #FIXME: check the parameter here
+  tflite.FullyConnectedOptions.FullyConnectedOptionsAddKeepNumDims(fbuilder, False)
+  obj = tflite.FullyConnectedOptions.FullyConnectedOptionsEnd(fbuilder)
+
+  return obj, BuiltinOptions.FullyConnectedOptions
 
 class FlatbufferOpManager:
     op_list = list()
@@ -223,11 +238,19 @@ class TFLiteExporter(Transformer):
     op_outputs = self.__output_vector(op_info.output_tensors)
 
     ##TODO: add op factory to deal with op options
+    op_option_factory = dict()
+    op_option_factory["FULLY_CONNECTED"] = get_fullyconnected_builtin_option
+
+    builtin_opt_func = op_option_factory[op_info.op_type]
+
+    builtin_opt, builtin_opt_type = builtin_opt_func(self.fbuilder, op_info)
 
     tflite.Operator.OperatorStart(self.fbuilder)
     tflite.Operator.OperatorAddOpcodeIndex(self.fbuilder, self.op_manager.op_index(op_info.op_type))
     tflite.Operator.OperatorAddInputs(self.fbuilder, op_inputs)
     tflite.Operator.OperatorAddOutputs(self.fbuilder, op_outputs)
+    tflite.Operator.OperatorAddBuiltinOptionsType(self.fbuilder, builtin_opt_type)
+    #tflite.Operator.OperatorAddBuiltinOptions(self.fbuilder, builtin_opt)
     op = tflite.Operator.OperatorEnd(self.fbuilder)
 
     return op #to be added into SubGraphStartOperatorsVector
