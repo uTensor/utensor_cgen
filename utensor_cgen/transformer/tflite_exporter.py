@@ -38,6 +38,15 @@ def get_fullyconnected_builtin_option(fbuilder, op_info):
 
   return obj, BuiltinOptions.FullyConnectedOptions
 
+def get_add_builtin_option(fbuilder, op_info):
+
+  tflite.AddOptions.AddOptionsStart(fbuilder)
+  #FIXME: node fusion and select an activation function here
+  tflite.AddOptions.AddOptionsAddFusedActivationFunction(fbuilder, ActivationFunctionType.NONE)
+  obj = tflite.AddOptions.AddOptionsEnd(fbuilder)
+
+  return obj, BuiltinOptions.AddOptions
+
 def tensor_type_lookup(numpy_dtype):
   TensorType = tflite.TensorType.TensorType
   lookup_map = dict()
@@ -249,6 +258,7 @@ class TFLiteExporter(Transformer):
     ##TODO: add op factory to deal with op options
     op_option_factory = dict()
     op_option_factory["FULLY_CONNECTED"] = get_fullyconnected_builtin_option
+    op_option_factory["ADD"] = get_add_builtin_option
 
     builtin_opt_func = op_option_factory[op_info.op_type]
 
@@ -314,11 +324,11 @@ class TFLiteExporter(Transformer):
 
       tflite.Tensor.TensorStart(self.fbuilder)
       tflite.Tensor.TensorAddShape(self.fbuilder, shape_vec)
-      #tflite.Tensor.TensorAddType(self.fbuilder, TensorType.INT8) #TODO: tensor type conversion here
       tflite.Tensor.TensorAddType(self.fbuilder, tensor_type_lookup(tensor_info.dtype))
       tflite.Tensor.TensorAddName(self.fbuilder, tensor_name)
       #tflite.Tensor.TensorAddQuantization(self.fbuilder, q_param)
       tflite.Tensor.TensorAddIsVariable(self.fbuilder, True)
+      #tflite.Tensor.TensorAddIsVariable(self.fbuilder, False) #FIXME: TOCO outputs False here, no idea why
 
       self.tensor_index[tensor_info.name] = tflite.Tensor.TensorEnd(self.fbuilder)
 

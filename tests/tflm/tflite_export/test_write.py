@@ -86,7 +86,7 @@ def test_tflite_fb_write(hybrid_quant_output):
     ugraph = exporter.transform(sample_ugraph)
     model_content = exporter.output()
 
-    #print_tflite_graph(model_content)
+    print_tflite_graph(model_content)
     
     # referece_model_content = open('/Users/neitan01/Documents/tflm/sinExample/sine_model.tflite', "rb").read()
     # print_tflite_graph(referece_model_content)
@@ -96,11 +96,17 @@ def test_tflite_fb_write(hybrid_quant_output):
     test_model.allocate_tensors()
     test_model.invoke()
 
+    print("0 :", test_model.get_tensor(0))
+    print("1 :", test_model.get_tensor(1))
+    print("2 :", test_model.get_tensor(2))
+    print("3 :", test_model.get_tensor(3))
+
+
     print(test_model.get_tensor_details())
-    print("1 :", test_model.get_tensor(test_model.get_output_details()[0]["index"]))
-    print("2 :", test_model.get_tensor(test_model.get_output_details()[1]["index"]))
-    print("3 :", test_model.get_tensor(test_model.get_output_details()[2]["index"]))
-    print("out :", test_model.get_tensor(test_model.get_output_details()[3]["index"]))
+    print("out0 :", test_model.get_tensor(test_model.get_output_details()[0]["index"]))
+    print("out1 :", test_model.get_tensor(test_model.get_output_details()[1]["index"]))
+    print("out2 :", test_model.get_tensor(test_model.get_output_details()[2]["index"]))
+
 
     test_pass = True
     assert test_pass, 'error message here'
