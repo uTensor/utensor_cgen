@@ -250,7 +250,7 @@ class TFLiteExporter(Transformer):
     tflite.Operator.OperatorAddInputs(self.fbuilder, op_inputs)
     tflite.Operator.OperatorAddOutputs(self.fbuilder, op_outputs)
     tflite.Operator.OperatorAddBuiltinOptionsType(self.fbuilder, builtin_opt_type)
-    #tflite.Operator.OperatorAddBuiltinOptions(self.fbuilder, builtin_opt)
+    tflite.Operator.OperatorAddBuiltinOptions(self.fbuilder, builtin_opt)
     op = tflite.Operator.OperatorEnd(self.fbuilder)
 
     return op #to be added into SubGraphStartOperatorsVector
