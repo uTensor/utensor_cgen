@@ -9,7 +9,6 @@ import numpy as np
 from copy import deepcopy
 
 from utensor_cgen.ir import OperationInfo, uTensorGraph
-#import flatbuffers
 import utensor_cgen.third_party.flatbuffers as flatbuffers
 import utensor_cgen.third_party.tflite as tflite
 from utensor_cgen.third_party.tflite import *

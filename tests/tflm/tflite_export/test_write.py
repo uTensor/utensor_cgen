@@ -5,9 +5,8 @@ from utensor_cgen.frontend.tensorflow import GraphDefParser
 from utensor_cgen.matcher import uTensorGraphMatcher
 from utensor_cgen.utils import prune_graph, topologic_order_graph
 from utensor_cgen.transformer import TFLiteExporter
-import flatbuffers
+import utensor_cgen.third_party.flatbuffers as flatbuffers
 import utensor_cgen.third_party.tflite as tflite
-from utensor_cgen.third_party.tflite import *
 from utensor_cgen.third_party.tflite.BuiltinOperator import BuiltinOperator
 from utensor_cgen.third_party.tflite.Model import Model
 from utensor_cgen.third_party.tflite.BuiltinOptions import BuiltinOptions
