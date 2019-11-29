@@ -94,6 +94,8 @@ def test_tflite_fb_write(hybrid_quant_output):
     open("tflm_test_model.tflite", "wb").write(model_content)
     test_model = tf.lite.Interpreter('tflm_test_model.tflite')
     test_model.allocate_tensors()
+    input_data = np.array(np.ones([4,1]), dtype=np.float32)
+    test_model.set_tensor(test_model.get_input_details()[0]['index'], input_data)
     test_model.invoke()
 
     print("0 :", test_model.get_tensor(0))
