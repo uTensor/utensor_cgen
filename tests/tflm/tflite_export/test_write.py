@@ -110,5 +110,6 @@ def test_tflite_fb_write(hybrid_quant_output):
     print("out2 :", test_model.get_tensor(test_model.get_output_details()[2]["index"]))
 
 
-    test_pass = True
-    assert test_pass, 'error message here'
+    output = test_model.get_tensor(test_model.get_output_details()[2]["index"])
+
+    assert np.abs(output - 707) <= 0.0001, 'error is greater than 0.0001'
