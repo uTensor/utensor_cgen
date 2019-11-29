@@ -86,7 +86,7 @@ def test_tflite_fb_write(hybrid_quant_output):
     ugraph = exporter.transform(sample_ugraph)
     model_content = exporter.output()
 
-    print_tflite_graph(model_content)
+    #print_tflite_graph(model_content)
     
     # referece_model_content = open('/Users/neitan01/Documents/tflm/sinExample/sine_model.tflite', "rb").read()
     # print_tflite_graph(referece_model_content)
@@ -94,11 +94,13 @@ def test_tflite_fb_write(hybrid_quant_output):
     open("tflm_test_model.tflite", "wb").write(model_content)
     test_model = tf.lite.Interpreter('tflm_test_model.tflite')
     test_model.allocate_tensors()
-    test_model_output_index = test_model.tensor(test_model.get_output_details()[0]["index"])
     test_model.invoke()
-    output_content = test_model.get_tensor(test_model_output_index)[0]
 
-    print(output_content)
+    print(test_model.get_tensor_details())
+    print("1 :", test_model.get_tensor(test_model.get_output_details()[0]["index"]))
+    print("2 :", test_model.get_tensor(test_model.get_output_details()[1]["index"]))
+    print("3 :", test_model.get_tensor(test_model.get_output_details()[2]["index"]))
+    print("out :", test_model.get_tensor(test_model.get_output_details()[3]["index"]))
 
     test_pass = True
     assert test_pass, 'error message here'

@@ -18,13 +18,14 @@ def simple_tflm_graph():
         input_tensors = [],
         output_tensors = []
     )
-    weight_op.op_attr["value"] = np.array([1,2,3,4], dtype=np.int8)
-    weight_op.op_attr["shape"] = [4,1]
+    #weight_op.op_attr["value"] = np.array([1,2,3,4], dtype=np.int8)
+    weight_op.op_attr["value"] = np.array([10,20,30,40], dtype=np.float32)
+    weight_op.op_attr["shape"] = [1,4]
 
     weight = TensorInfo(
         name = "weight",
         op_name = "weight_const",
-        dtype = np.dtype("int8"),
+        dtype = np.dtype("float32"),
         shape = weight_op.op_attr["shape"],
         ugraph = ugraph
     )
@@ -39,14 +40,14 @@ def simple_tflm_graph():
         input_tensors = [],
         output_tensors = []
     )
-    mock_input_op.op_attr["value"] = np.array([[1.0],[2.0],[3.0],[4.0]], dtype=np.float32)
-    mock_input_op.op_attr["shape"] = [1,4]
+    mock_input_op.op_attr["value"] = np.array([[2],[4],[6],[8]], dtype=np.float32)
+    mock_input_op.op_attr["shape"] = [4,1]
 
     input1 = TensorInfo(
-        name = "input",
+        name = "input1",
         op_name = "mock_input_const",
         dtype = mock_input_op.op_attr["value"].dtype,
-        shape = [1, 4],
+        shape = mock_input_op.op_attr["shape"],
         ugraph = ugraph
     )
 
@@ -61,13 +62,14 @@ def simple_tflm_graph():
         input_tensors = [],
         output_tensors = []
     )
-    bias_op.op_attr["value"] = np.array([1], dtype=np.int8)
+    #bias_op.op_attr["value"] = np.array([1], dtype=np.int8)
+    bias_op.op_attr["value"] = np.array([7], dtype=np.float32)
     bias_op.op_attr["shape"] = [1]
 
     bias = TensorInfo(
         name = "bias",
         op_name = "bias_const",
-        dtype = np.dtype("int8"),
+        dtype = np.dtype("float32"),
         shape = bias_op.op_attr["shape"],
         ugraph = ugraph
     )
@@ -87,8 +89,8 @@ def simple_tflm_graph():
     output = TensorInfo(
         name = "output",
         op_name = "FC1",
-        dtype = np.dtype("float"),
-        shape = [1, 1],
+        dtype = np.dtype("float32"),
+        shape = [1],
         ugraph = ugraph
     )
 
@@ -103,4 +105,4 @@ def simple_tflm_graph():
     #ugraph = prune_graph(ugraph)
 
     #return: ugraph, input tensors, output tensors
-    return [ugraph, [], ["output"]]
+    return [ugraph, [], ["input1", "weight", "bias", "output"]]

@@ -38,6 +38,15 @@ def get_fullyconnected_builtin_option(fbuilder, op_info):
 
   return obj, BuiltinOptions.FullyConnectedOptions
 
+def tensor_type_lookup(numpy_dtype):
+  TensorType = tflite.TensorType.TensorType
+  lookup_map = dict()
+  lookup_map[np.dtype('float32')] = TensorType.FLOAT32
+  lookup_map[np.dtype('int8')] = TensorType.INT8
+
+  return lookup_map[numpy_dtype]
+
+
 class FlatbufferOpManager:
     op_list = list()
     code_name_lookup = {v: k for k, v in BuiltinOperator.__dict__.items()}
@@ -193,7 +202,7 @@ class TFLiteExporter(Transformer):
         #tensor object
         tflite.Tensor.TensorStart(self.fbuilder)
         tflite.Tensor.TensorAddShape(self.fbuilder, shape_vec)
-        tflite.Tensor.TensorAddType(self.fbuilder, TensorType.INT8) #TODO: a conversion class here, out_dtype
+        tflite.Tensor.TensorAddType(self.fbuilder, tensor_type_lookup(out_dtype))
         if export_tensor_name:
           tflite.Tensor.TensorAddName(self.fbuilder, tensor_name)
         tflite.Tensor.TensorAddQuantization(self.fbuilder, q_param)
@@ -306,7 +315,7 @@ class TFLiteExporter(Transformer):
       tflite.Tensor.TensorStart(self.fbuilder)
       tflite.Tensor.TensorAddShape(self.fbuilder, shape_vec)
       #tflite.Tensor.TensorAddType(self.fbuilder, TensorType.INT8) #TODO: tensor type conversion here
-      tflite.Tensor.TensorAddType(self.fbuilder, TensorType.FLOAT32)
+      tflite.Tensor.TensorAddType(self.fbuilder, tensor_type_lookup(tensor_info.dtype))
       tflite.Tensor.TensorAddName(self.fbuilder, tensor_name)
       #tflite.Tensor.TensorAddQuantization(self.fbuilder, q_param)
       tflite.Tensor.TensorAddIsVariable(self.fbuilder, True)
