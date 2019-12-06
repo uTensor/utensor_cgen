@@ -37,7 +37,8 @@ setup(
         'torch',
         'torchvision',
         'onnx-tf==1.2.1',
-        'graphviz'
+        'graphviz',
+        'flatbuffers'
     ],
     extras_require={
         'dev': ['pytest']
