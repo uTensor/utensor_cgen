@@ -23,6 +23,42 @@ from .base import Transformer
 
 __all__ = ["TFLiteExporter"]
 
+def rename_ugraph_ops_(ugraph, name_old, name_new):
+  op = ugraph.ops_info.pop(name_old)
+  op.name = name_new
+  for out_tensor in op.output_tensors:
+    pass # renaming tensors
+  for out_node in op.output_nodes:
+    for in_tensor in out_node.input_tensors:
+      if in_tensor.op_name == name_old:
+        in_tensor.op_name = name_new
+  ugraph.ops_info[name_new] = op
+  for i, op_name in enumerate(ugraph.topo_order):
+    if op_name == name_old:
+      ugraph.topo_order[i] = name_new
+      break
+  for i, op_name in enumerate(ugraph.output_nodes):
+    if op_name == name_old:
+      ugraph.output_nodes[i] = name_new
+      break
+
+  op.name = name_new
+  for out_tensor in op.output_tensors:
+    pass # renaming tensors
+  for out_node in op.output_nodes:
+    for in_tensor in out_node.input_tensors:
+      if in_tensor.op_name == name_old:
+        in_tensor.op_name = name_new
+  ugraph.ops_info[name_new] = op
+  for i, op_name in enumerate(ugraph.topo_order):
+    if op_name == name_old:
+      ugraph.topo_order[i] = name_new
+      break
+  for i, op_name in enumerate(ugraph.output_nodes):
+    if op_name == name_old:
+      ugraph.output_nodes[i] = name_new
+      break
+
 def get_fullyconnected_builtin_option(fbuilder, op_info):
 
   weight_format = tflite.FullyConnectedOptionsWeightsFormat.FullyConnectedOptionsWeightsFormat.DEFAULT
@@ -110,6 +146,7 @@ class TFLiteExporter(Transformer):
 
 
   def transform(self, ugraph):
+    self.__tflm_graph_legalize_(ugraph)
     # create tensor data buffer
     # create const tensors
     # update tensor_index
@@ -184,7 +221,7 @@ class TFLiteExporter(Transformer):
                         out_tensor_info.shape)
         #weight
         #value = op_info.op_attr['value'].value.np_array.flatten() #TODO: specify endianness here
-        value = op_info.op_attr['value'].flatten() #FIXME: deal with the proper attribute type here 
+        value = op_info.op_attr['value'].value.np_array.flatten() #FIXME: deal with the proper attribute type here 
         raw_data = value.tobytes()
         data_vec = self.__fb_vector(tflite.Buffer.BufferStartDataVector, raw_data)
         
@@ -284,7 +321,7 @@ class TFLiteExporter(Transformer):
     """
 
     #values = op_info.op_attr['value'].value.np_array.flatten()
-    values = op_info.op_attr['value'].flatten() #FIXME: deal with the proper attribute type here 
+    values = op_info.op_attr['value'].value.np_array.flatten() #FIXME: deal with the proper attribute type here 
     abs_max = np.absolute(values).max()
     #based on quantizted int8 dtype
     scale = 127 / abs_max
@@ -366,5 +403,10 @@ class TFLiteExporter(Transformer):
     
     return self.fbuilder.EndVector(num_items)
 
+  def __tflm_graph_legalize_(self, ugraph):
+    for _, op in ugraph.ops_info.items():
+      assert op.op_type.startswith("TFLM_") or op.op_type in self.static_op_types
+      #TODO: strip the leading TFLM_ only
+      op.op_type = op.op_type.replace("TFLM_", '')
 # How to construct the quantization parameter for intermediate tensors?
 ## zero point and scale
