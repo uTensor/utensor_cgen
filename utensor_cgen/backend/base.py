@@ -12,12 +12,12 @@ class _BackendBase(object):
     self._config = config
     return self
 
-  def _validate_config(self, config):
-    assert isinstance(config, dict), \
-      'expecting {}, get {}'.format(dict, type(config))
-
   def apply(self, ugraph):
     raise NotImplementedError('all backend object must overwrite apply method')
+
+  @class_property
+  def default_config(cls):
+    raise RuntimeError('No default configuration for {}'.format(cls))
 
   def __call__(self, *args, **kwargs):
     return self.apply(*args, **kwargs)
@@ -26,9 +26,9 @@ class _BackendBase(object):
   def config(self):
     return self._config
 
-  @class_property
-  def default_config(cls):
-    raise RuntimeError('No default configuration for {}'.format(cls))
+  def _validate_config(self, config):
+    assert isinstance(config, dict), \
+      'expecting {}, get {}'.format(dict, type(config))
 
 
 class Backend(_BackendBase):
