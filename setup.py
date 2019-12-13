@@ -36,7 +36,7 @@ setup(
         'click',
         'torch',
         'torchvision',
-        'onnx-tf',
+        'onnx-tf==1.2.1',
         'graphviz',
         'toml',
     ],
