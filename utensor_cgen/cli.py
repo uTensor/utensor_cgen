@@ -44,8 +44,9 @@ def cli(transform_plugin):
     _load_transformer(transform_plugin)
 
 @cli.command(name='generate-config', help='generate config toml file')
+@click.help_option('-h', '--help')
 @click.option('--target', type=Choice(BackendManager.backends), required=True, help='target framework/platform')
-@click.option('-o', '--output', default='utensor_cli.toml')
+@click.option('-o', '--output', default='utensor_cli.toml', metavar='CONFIG.toml', help='the output config file name')
 def generate_config(target, output):
   backend_cls = BackendManager.get_backend(target)
   config = backend_cls.default_config
@@ -124,7 +125,7 @@ def _show_pb_file(pb_file, output_nodes, **kwargs):
 
 def _show_ugraph(ugraph, oneline=False, ignore_unknown_op=False):
   import textwrap
-  from utensor_cgen.backend.operators import OperatorFactory
+  from utensor_cgen.backend.utensor._operators import OperatorFactory
 
   unknown_ops = set([])
   if oneline:
