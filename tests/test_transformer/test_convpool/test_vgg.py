@@ -4,9 +4,9 @@ from utensor_cgen.transformer.pipeline import TransformerPipeline
 def factory():
     def test(vgg_ugraph):
         trans = TransformerPipeline([
-            ('linear_reorder', {}),
-            ('quantize', {}),
-            ('conv_pool', {})
+            'linear_reorder',
+            'quantize',
+            'conv_pool',
         ])
         new_ugraph = trans.transform(vgg_ugraph)
         num_conv = len(vgg_ugraph.get_ops_by_type('Conv2D'))

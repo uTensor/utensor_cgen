@@ -73,9 +73,7 @@ class OpEqualityDelegate(object):
     equivalent_ops : List[OperationInfo]
       a list of equivalent ops derieved from `sub_op`
     """
-    # to activate all configurations
-    import utensor_cgen.backend.operators as _
-
+    cls._setup()
     is_eq = False
     equivalent_ops = []
     if sub_op is None or patrn_op is None:
@@ -107,7 +105,11 @@ class OpEqualityDelegate(object):
       equivalent_ops = [MetaOperationInfo(op_info=sub_op, morphism=morphism)]
 
     return is_eq, equivalent_ops
-
+  
+  @classmethod
+  def _setup(cls):
+    # to activate all configurations
+    import utensor_cgen.backend.utensor._operators
 
 @attr.s
 class uTensorGraphMatcher(object):
