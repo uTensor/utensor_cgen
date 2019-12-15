@@ -39,7 +39,7 @@ setup(
     cmdclass={'install': _Install, 'develop': _Develop},
     description="C code generation program for uTensor",
     long_description="please go to [doc](https://utensor-cgen.readthedocs.io/en/latest/) page for more information",
-    url="https://github.com/dboyliao/utensor_cgen",
+    url="https://github.com/uTensor/utensor_cgen",
     author="Dboy Liao",
     author_email="qmalliao@gmail.com",
     license=license,

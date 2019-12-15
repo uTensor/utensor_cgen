@@ -50,27 +50,42 @@ def cli(transform_plugin):
 def generate_config(target, output):
   backend_cls = BackendManager.get_backend(target)
   config = backend_cls.default_config
+  click.secho(
+    'generating config file: {}'.format(output),
+    fg='white',
+    bold=True,
+  )
   with open(output, 'w') as fid:
+    fid.write(
+      '# https://github.com/toml-lang/toml\n'
+      '# <target_name>.<component>.<part>\n'
+    )
     fid.write(dumps(config))
 
 @cli.command(name='convert', help='convert graph to cpp/hpp files')
 @click.help_option('-h', '--help')
-@click.argument('model_file',
-                required=True,
-                metavar='MODEL_FILE.{pb,onnx,pkl}',
+@click.argument(
+  'model_file',
+  required=True,
+  metavar='MODEL_FILE.{pb,onnx,pkl}',
 )
-@click.option('--output-nodes',
-              type=NArgsParam(),
-              metavar="NODE_NAME,NODE_NAME,...",
-              required=True,
-              help="list of output nodes")
+@click.option(
+  '--output-nodes',
+  type=NArgsParam(),
+  metavar="NODE_NAME,NODE_NAME,...",
+  required=True,
+  help="list of output nodes"
+)
 @click.option('--config', default='utenosr_cli.toml', show_default=True, metavar='CONFIG.toml')
 @click.option('--target', required=True, type=Choice(BackendManager.backends), help='target framework/platform')
 def convert_graph(model_file, output_nodes, config, target):
   from utensor_cgen.frontend import FrontendSelector
 
-  with open(config) as fid:
-    config = loads(fid.read())
+  if os.path.exists(config):
+    with open(config) as fid:
+      config = loads(fid.read())
+  else:
+    config = {}
   ugraph = FrontendSelector.parse(model_file, output_nodes)
   backend = BackendManager.get_backend(target)(config)
   backend.apply(ugraph)

@@ -3,6 +3,8 @@ from utensor_cgen.utils import MUST_OVERWRITEN, class_property, parse_toml
 
 class _BackendBase(object):
 
+  COMPONENT = 'backend'
+
   def __new__(cls, config, *args, **kwargs):
     self = object.__new__(cls)
     for name in dir(self):
@@ -44,7 +46,7 @@ class Backend(_BackendBase):
 
   @classmethod
   def from_file(cls, file_or_path, *args, **kwargs):
-    config = parse_toml(file_or_path)[cls.TARGET]['backend']
+    config = parse_toml(file_or_path)[cls.TARGET][cls.COMPONENT]
     return cls(config, *args, **kwargs)
 
   @classmethod
@@ -71,8 +73,8 @@ class BackendPart(Backend):
     default_config = cls.default_config
     if cls.TARGET in config:
       config = config[cls.TARGET]
-    if 'backend' in config:
-      config = config['backend']
+    if cls.COMPONENT in config:
+      config = config[cls.COMPONENT]
     if cls.PART in config:
       config = config[cls.PART]
     default_config.update(config)
@@ -80,5 +82,5 @@ class BackendPart(Backend):
 
   @classmethod
   def from_file(cls, file_or_path, *args, **kwargs):
-    config = parse_toml(file_or_path)[cls.TARGET]['backend'][cls.PART]
+    config = parse_toml(file_or_path)[cls.TARGET][cls.COMPONENT][cls.PART]
     return cls(config, *args, **kwargs)

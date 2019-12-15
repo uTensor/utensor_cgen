@@ -14,7 +14,7 @@ class uTensorGraphLower(BackendPart):
         'can not lower ugraph from {} to utensor'.format(ugraph.lib_name)
       )
     return handler(ugraph)
-    
+
   def handle_tensorflow(self, ugraph):
     return ugraph
 
