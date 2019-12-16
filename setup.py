@@ -30,7 +30,7 @@ setup(
         ]},
     install_requires=[
         'Jinja2',
-        'tensorflow==1.13.1',
+        'tensorflow==1.15.0',
         'idx2numpy',
         'attrs',
         'click',
