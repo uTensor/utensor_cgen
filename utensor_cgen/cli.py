@@ -86,7 +86,7 @@ def convert_graph(model_file, output_nodes, config, target):
       config = loads(fid.read())
   else:
     config = {}
-  ugraph = FrontendSelector.parse(model_file, output_nodes)
+  ugraph = FrontendSelector.parse(model_file, output_nodes, config)
   backend = BackendManager.get_backend(target)(config)
   backend.apply(ugraph)
 

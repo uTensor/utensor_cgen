@@ -10,6 +10,7 @@ from google.protobuf import text_format
 from utensor_cgen.frontend import FrontendSelector
 from utensor_cgen.frontend.base import Parser
 from utensor_cgen.ir.base import OperationInfo, TensorInfo, uTensorGraph
+from utensor_cgen.legalizer import Legalizer
 from utensor_cgen.utils import random_str, topologic_order_graph
 
 
@@ -62,6 +63,7 @@ class GraphDefParser(Parser):
       op_info.op_attr['tensorflow__device'] = node.device
       ugraph.ops_info[node.name] = op_info
     topologic_order_graph(ugraph)
+    ugraph = Legalizer.legalize(ugraph, {})
     return ugraph
 
   @staticmethod
@@ -80,7 +82,6 @@ class GraphDefParser(Parser):
     else:
       raise ValueError('unknown file format: %s' % pb_file)
     return graph_def, graph_name
-
 
   @staticmethod
   def _tf_parse_tshape(t_shape):
