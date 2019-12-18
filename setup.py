@@ -33,7 +33,7 @@ setup(
     name='utensor_cgen',
     version_config={
         "starting_version": "0.0.0",
-        "version_format": "{tag}.dev{sha:.7s}"
+        "version_format": "{tag}.{sha:.7s}.dev"
     },
     setup_requires=['better-setuptools-git-version'],
     cmdclass={'install': _Install, 'develop': _Develop},

@@ -12,5 +12,20 @@ test_%:
 	 	 pytest tests/$@ -vv -s | tee -a tests_log.txt; \
 	 fi;
 
+package:
+	rm -rf dist/*
+	.venv/bin/python setup.py bdist_wheel sdist
+	rm -rf build utensor_cgen.egg-info/
+
+upload-test: package
+	.venv/bin/twine upload -r pypitest dist/*
+
+install-test: package
+	pip uninstall -y utensor-cgen
+	pip install dist/*.tar.gz
+
+upload: package
+	.venv/bin/twine -r pypi dist/*
+
 clean:
-	rm -rf tests_log.txt *.pdf .pytest_cache
+	rm -rf tests_log.txt *.pdf .pytest_cache dist/ build/
