@@ -25,7 +25,7 @@ install-test: package
 	pip install dist/*.tar.gz
 
 upload: package
-	.venv/bin/twine -r pypi dist/*
+	.venv/bin/twine upload -r pypi dist/*
 
 clean:
 	rm -rf tests_log.txt *.pdf .pytest_cache dist/ build/
