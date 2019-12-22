@@ -54,10 +54,10 @@ class IdOpRemoveOptimizer(Transformer):
     self.prune_graph = True
 
   def transform(self, ugraph):
-    if ugraph.backend == 'tensorflow':
+    if ugraph.lib_name == 'tensorflow':
       return self._transform_tf(ugraph)
     else:
-      raise RuntimeError('unsupported backend: {}'.format(ugraph.backend))
+      raise RuntimeError('unsupported lib_name: {}'.format(ugraph.lib_name))
 
   def _transform_tf(self, ugraph):
     ops_to_remove = [

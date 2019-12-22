@@ -1,0 +1,12 @@
+# https://github.com/toml-lang/toml
+# <target_name>.<component>.<part>
+[utensor.backend.code_generator]
+src_fname = "None"
+params_dir = "data"
+embed_params_dir = "/fs/data"
+model_dir = "models"
+transform_methods = [ "dropout(name_pattern=r\"(dropout[_\\w\\d]*)/.*\")", "linear_reorder", "quantize", "conv_pool", "inline", "biasAdd", "remove_id_op", "fake_gather_v2", "refcnt",]
+save_graph = false
+debug_cmt = false
+
+[utensor.backend.graph_lower]

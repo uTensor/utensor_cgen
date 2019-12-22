@@ -8,6 +8,8 @@ dev_notes
 !tests/deep_mlp/end_to_end.ipynb
 *.egg*
 worktree/
+build/
+dist/
 # tests
 .pytest_cache
 tests/*/cpp

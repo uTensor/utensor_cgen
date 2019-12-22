@@ -9,8 +9,10 @@ from copy import deepcopy
 from random import choice
 from string import ascii_letters, digits
 
+import attr
 import numpy as np
 from click.types import ParamType
+from toml import loads as _parse
 
 import idx2numpy as idx2np
 import tensorflow as tf
@@ -273,38 +275,6 @@ class NArgsParam(ParamType):
     return final_args
 
 
-class NArgsKwargsParam(NArgsParam):
-
-  _trans_name_patrn = re.compile(r"(\w[\w]*)\(?")
-
-  def convert(self, value, param, ctx):
-    args = super(NArgsKwargsParam, self).convert(value, param, ctx)
-    return [self._parse_kwargs(arg) for arg in args]
-  
-  def _parse_kwargs(self, arg):
-    trans_match = self._trans_name_patrn.match(arg)
-    if not trans_match:
-      raise ValueError("Invalid args detected: {}".format(arg))
-    trans_name = trans_match.group(1)
-    _, end = trans_match.span()
-    if end == len(arg):
-      kwargs = {}
-    else:
-      if not arg.endswith(")"):
-        raise ValueError("parentheses mismatch: {}".format(arg))
-      kwargs = self._get_kwargs(arg[end:-1])
-    return trans_name, kwargs
-  
-  def _get_kwargs(self, kws_str):
-    kw_arg_strs = [s.strip() for s in kws_str.split(',')]
-    kwargs = {}
-    for kw_str in kw_arg_strs:
-      name, v_str = kw_str.split('=')
-      value = literal_eval(v_str)
-      kwargs[name] = value
-    return kwargs
-
-
 class _MustOverwrite(object):
   _obj = None
 
@@ -312,6 +282,7 @@ class _MustOverwrite(object):
     if cls._obj is None:
       cls._obj = object.__new__(cls, *args, **kwargs)
     return cls._obj
+
 
 MUST_OVERWRITEN = _MustOverwrite()
 
@@ -342,7 +313,7 @@ def get_topologic_order(ugraph, init_nodes=None):
 
   - `Topological Sorting (wiki) <https://en.wikipedia.org/wiki/Topological_sorting>`_
   """
-  if ugraph.backend != "tensorflow":
+  if ugraph.lib_name != "tensorflow":
     raise ValueError(
       "topologic_order_graph works only on tensorflow graph"
     )
@@ -467,3 +438,39 @@ class LazyLoader(types.ModuleType):
 
   def __dir__(self):
     return dir(self._load())
+
+
+class class_property(object):
+    
+  def __init__(self, getter):
+    self._getter = getter
+      
+  def __get__(self, obj, objtype=None):
+    if objtype is None:
+      return self._getter(obj)
+    return self._getter(objtype)
+
+
+@attr.s
+class Pipeline(object):
+  _funcs = attr.ib(factory=list)
+
+  def __call__(self, *args, **kwargs):
+    result = None
+    for func in self._funcs:
+      if result is None:
+        result = func(*args, **kwargs)
+      else:
+        result = func(*result)
+    return result
+
+  def __getitem__(self, slice_obj):
+    cls = type(self)
+    return cls(funcs=self._funcs[slice_obj])
+
+def parse_toml(file_or_path):
+  if isinstance(file_or_path, str):
+    fid = open(file_or_path, 'r')
+  doc = _parse(fid.read())
+  fid.close()
+  return doc

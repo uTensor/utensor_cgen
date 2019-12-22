@@ -36,7 +36,7 @@ def test_op_info():
                             output_tensors=[],
                             n_outputs=0,
                             op_type='no_op',
-                            backend='tensorflow',
+                            lib_name='tensorflow',
                             op_attr={
                                 '_utensor_to_skip': [1, 2, 3],
                                 '_utensor_skip_this_too': None,

@@ -4,16 +4,13 @@ import sys
 from pathlib import Path
 
 import click
-import pkg_resources
+from click.types import Choice
+from toml import dumps, loads
 
-from utensor_cgen.backend.operators import OperatorFactory
-from utensor_cgen.utils import NArgsKwargsParam, NArgsParam
+from utensor_cgen import __version__
+from utensor_cgen.backend.api import BackendManager
+from utensor_cgen.utils import NArgsParam
 
-_version = (
-  pkg_resources
-  .get_distribution('utensor_cgen')
-  .version
-)
 
 def _get_pb_model_name(path):
   return os.path.basename(os.path.splitext(path)[0])
@@ -35,7 +32,7 @@ def _load_transformer(path):
 
 @click.group(name='utensor-cli')
 @click.help_option('-h', '--help')
-@click.version_option(_version,
+@click.version_option(__version__,
                        '-V', '--version')
 @click.option("--transform-plugin",
               default=None,
@@ -46,71 +43,52 @@ def cli(transform_plugin):
   if transform_plugin is not None:
     _load_transformer(transform_plugin)
 
+@cli.command(name='generate-config', help='generate config toml file')
+@click.help_option('-h', '--help')
+@click.option('--target', type=Choice(BackendManager.backends), required=True, help='target framework/platform')
+@click.option('-o', '--output', default='utensor_cli.toml', metavar='CONFIG.toml', help='the output config file name')
+def generate_config(target, output):
+  backend_cls = BackendManager.get_backend(target)
+  config = backend_cls.default_config
+  click.secho(
+    'generating config file: {}'.format(output),
+    fg='white',
+    bold=True,
+  )
+  with open(output, 'w') as fid:
+    fid.write(
+      '# https://github.com/toml-lang/toml\n'
+      '# <target_name>.<component>.<part>\n'
+    )
+    fid.write(dumps(config))
+
 @cli.command(name='convert', help='convert graph to cpp/hpp files')
 @click.help_option('-h', '--help')
-@click.argument('pb_file', required=True, metavar='MODEL.pb')
-@click.option('-o', '--output',
-              metavar="FILE.cpp",
-              help="output source file name, header file will be named accordingly. (defaults to protobuf name, e.g.: my_model.cpp)")
-@click.option('-d', '--data-dir',
-              metavar='DIR',
-              help="output directory for tensor data idx files",
-              show_default=True)
-@click.option('-D', '--embed-data-dir',
-              metavar='EMBED_DIR',
-              help=("the data dir on the develop board "
-                    "(default: the value as the value of -d/data-dir flag)"))
-@click.option('--debug-comment',
-              is_flag=True,
-              help="Add debug comments in the output source file",
-              show_default=True)
-@click.option("--output-nodes",
-              type=NArgsParam(),
-              metavar="NODE_NAME,NODE_NAME,...",
-              required=True,
-              help="list of output nodes")
-@click.option("--transform-methods",
-              type=NArgsKwargsParam(sep='|>'),
-              default=(
-                'dropout(name_pattern=r"(dropout[_\w\d]*)/.*")|>linear_reorder'
-                '|>quantize|>conv_pool|>inline|>biasAdd|>remove_id_op'
-                '|>fake_gather_v2|>refcnt'
-              ),
-              help='optimization pipeline',
-              metavar='METHOD[|>METHOD|>...]',
-              show_default=True)
-@click.option("-m", "--model-dir",
-              metavar="DIR",
-              default="models",
-              help="output directory for tensor data idx files",
-              show_default=True)
-@click.option("--save-graph",
-              is_flag=True,
-              help="save transformed graph")
-def convert_graph(pb_file, output, data_dir, embed_data_dir, save_graph,
-                  debug_comment, output_nodes, transform_methods, model_dir):
-  from utensor_cgen.backend import CodeGenerator
+@click.argument(
+  'model_file',
+  required=True,
+  metavar='MODEL_FILE.{pb,onnx,pkl}',
+)
+@click.option(
+  '--output-nodes',
+  type=NArgsParam(),
+  metavar="NODE_NAME,NODE_NAME,...",
+  required=True,
+  help="list of output nodes"
+)
+@click.option('--config', default='utenosr_cli.toml', show_default=True, metavar='CONFIG.toml')
+@click.option('--target', required=True, type=Choice(BackendManager.backends), help='target framework/platform')
+def convert_graph(model_file, output_nodes, config, target):
+  from utensor_cgen.frontend import FrontendSelector
 
-  if pb_file is None:
-    raise ValueError("No pb file given")
-
-  if not os.path.exists(model_dir):
-    os.makedirs(model_dir)
-  # MODEL should default to pb_file
-  if data_dir is None:
-    data_dir = os.path.join("constants", _get_pb_model_name(pb_file))
-
-  if output is None:
-    output =  "{}.cpp".format(_get_pb_model_name(pb_file))
-  model_path = os.path.join(model_dir, output)
-
-  if embed_data_dir is None:
-    embed_data_dir = os.path.join("/fs", data_dir)
-  # TODO: pass transformation kwargs to codegenerator (better argument parser)
-  generator = CodeGenerator(pb_file, data_dir, embed_data_dir,
-                            transform_methods, output_nodes,
-                            save_graph, debug_comment)
-  generator.generate(model_path)
+  if os.path.exists(config):
+    with open(config) as fid:
+      config = loads(fid.read())
+  else:
+    config = {}
+  ugraph = FrontendSelector.parse(model_file, output_nodes, config)
+  backend = BackendManager.get_backend(target)(config)
+  backend.apply(ugraph)
 
 @cli.command(name='list-trans-methods', help='list all available graph transformation')
 @click.help_option('-h', '--help')
@@ -162,6 +140,8 @@ def _show_pb_file(pb_file, output_nodes, **kwargs):
 
 def _show_ugraph(ugraph, oneline=False, ignore_unknown_op=False):
   import textwrap
+  from utensor_cgen.backend.utensor._operators import OperatorFactory
+
   unknown_ops = set([])
   if oneline:
     tmpl = click.style("{op_name} ", fg='yellow', bold=True) + \

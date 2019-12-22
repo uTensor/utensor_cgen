@@ -138,7 +138,7 @@ class _ConstOperator(_Operator):
         )
       },
       ugraph=ugraph,
-      backend=kwargs.get('backend', 'tensorflow')
+      lib_name=kwargs.get('lib_name', 'tensorflow'),
     )
 
   def _tf_prepare_tensor_name(self, tensor_name):
@@ -202,7 +202,7 @@ class _AddOperator(_Operator):
         )
       },
       ugraph=ugraph,
-      backend=kwargs.get('backend', 'tensorflow')
+      lib_name=kwargs.get('lib_name', 'tensorflow'),
     )
 
 
@@ -265,7 +265,7 @@ class _ArgMaxOperator(_Operator):
       ],
       op_attr=op_attr,
       ugraph=ugraph,
-      backend=kwargs.get('backend', 'tensorflow')
+      lib_name=kwargs.get('lib_name', 'tensorflow'),
     )
 
 
@@ -350,7 +350,7 @@ class _MaxOperator(_Operator):
         k: AttrValueConverter.get_generic_value(v)
         for k, v in node_def.attr.items()
       },
-      backend=kwargs.get('backend', 'tensorflow'),
+      lib_name=kwargs.get('lib_name', 'tensorflow'),
       ugraph=ugraph
     )
 
@@ -408,7 +408,7 @@ class _MinOperator(_Operator):
         )
       ],
       op_type=cls.op_type,
-      backend=kwargs.get('backend', 'tensorflow'),
+      lib_name=kwargs.get('lib_name', 'tensorflow'),
       ugraph=ugraph,
       op_attr={
         k: AttrValueConverter.get_generic_value(v)
@@ -477,7 +477,7 @@ class _MaxPool(_Operator):
         )
       ],
       op_type=cls.op_type,
-      backend=kwargs.get('backend', 'tensorflow'),
+      lib_name=kwargs.get('lib_name', 'tensorflow'),
       ugraph=ugraph,
       op_attr={
         k: AttrValueConverter.get_generic_value(v)
@@ -564,7 +564,7 @@ class _MinOperator(_Operator):
         )
       ],
       op_type=cls.op_type,
-      backend=kwargs.get('backend', 'tensorflow'),
+      lib_name=kwargs.get('lib_name', 'tensorflow'),
       ugraph=ugraph,
       op_attr={
         k: AttrValueConverter.get_generic_value(v)
@@ -654,7 +654,7 @@ class _MatMulOperator(_Operator):
         )
       },
       ugraph=ugraph,
-      backend=kwargs.get('backend', 'tensorflow')
+      lib_name=kwargs.get('lib_name', 'tensorflow'),
     )
 
 
@@ -726,7 +726,7 @@ class _ReluOperator(_Operator):
         )
       },
       ugraph=ugraph,
-      backend=kwargs.get('backend', 'tensorflow')
+      lib_name=kwargs.get('lib_name', 'tensorflow'),
     )
 
 
@@ -972,7 +972,7 @@ class _Conv2DOperator(_Operator):
       op_type=cls.op_type,
       op_attr=op_attr,
       ugraph=ugraph,
-      backend=kwargs.get('backend', 'tensorflow'),
+      lib_name=kwargs.get('lib_name', 'tensorflow'),
     )
 
 @OperatorFactory.register

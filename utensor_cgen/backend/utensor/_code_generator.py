@@ -9,87 +9,82 @@ import numpy as np
 import tensorflow as tf
 from tensorflow.core.framework.graph_pb2 import GraphDef
 from tensorflow.tools.graph_transforms import TransformGraph
+from utensor_cgen.backend.base import BackendPart
 from utensor_cgen.frontend import FrontendSelector
 from utensor_cgen.ir import uTensorGraph
 from utensor_cgen.transformer.optimizer import RefCntOptimizer
 from utensor_cgen.transformer.pipeline import TransformerPipeline
-from utensor_cgen.utils import NamescopedKWArgsParser
+from utensor_cgen.utils import (NamescopedKWArgsParser, class_property,
+                                parse_toml)
 
-from .operators import OperatorFactory
+from ._operators import OperatorFactory
 from .snippets import (CommentSnippet, ContextGlobalArrayContainer,
                        ContextHeaderSnippet, ContextSnippetsContainer,
                        CreateTensorBinarySnippet, CreateTensorIdxSnippet)
 from .snippets.composer import Composer
 
-__all__ = ["CodeGenerator"]
+__all__ = ["uTensorCodeGenerator"]
 _logger = logging.getLogger('utensor-cli')
 
-class CodeGenerator(object):
-  def __init__(self, model_file,
-               idx_dir,
-               embed_data_dir,
-               trans_methods, # [(trans_name, kwargs),...]
-               output_nodes,
-               save_graph=False,
-               debug_cmt=False):
-    self.model_file = model_file
-    if not os.path.exists(idx_dir):
-      os.makedirs(idx_dir)
-    self.idx_dir = idx_dir
-    self.embed_data_dir = embed_data_dir.rstrip("/")
-    self.trans_methods = trans_methods
-    self.output_nodes = output_nodes
-    self.save_graph = save_graph
-    self.debug_cmt = debug_cmt
+class uTensorCodeGenerator(BackendPart, object):
 
-  def generate(self, src_fname):
-    _, ext = os.path.splitext(self.model_file)
-    parser_cls = FrontendSelector.select_parser(ext)
-    ugraph = parser_cls.parse(self.model_file, self.output_nodes)
-    self._generate(src_fname, ugraph)
+  TARGET = 'utensor'
+  PART = 'code_generator'
 
-  def _generate(self, src_fname, ugraph):
+  def __init__(
+    self,
+    config
+  ):
+    final_config = type(self).default_config
+    final_config.update(config)
+    self.src_fname = final_config['src_fname']
+    self.params_dir = final_config['params_dir'].rstrip('/')
+    if not os.path.exists(self.params_dir):
+      os.makedirs(self.params_dir)
+    self.embed_data_dir = final_config['embed_params_dir'].rstrip('/')
+    self.model_dir = final_config['model_dir'].rstrip('/')
+    self.trans_methods = final_config['transform_methods']
+    self.save_graph = final_config['save_graph']
+    self.debug_cmt = final_config['debug_cmt']
+
+  @classmethod
+  def from_kwargs(cls, **kwargs):
+    return cls(config=kwargs)
+
+  def apply(self, ugraph):
     """Generate source and header files
     """
-    fname, _ = os.path.splitext(src_fname)
-    graph_name, _ = os.path.splitext(os.path.basename(self.model_file))
-    guard_name = fname.replace('/', '_')
-    weightheader_fname = '{}_weight.hpp'.format(fname)
-    header_snippet = ContextHeaderSnippet(guard_name, graph_name)
+    src_fname = self.src_fname
+    if src_fname == 'None':
+      src_fname = '{}.cpp'.format(ugraph.name)
+    header_snippet = ContextHeaderSnippet(
+      '_MODELS_{}'.format(ugraph.name),
+      ugraph.name
+    )
     weight_container = ContextGlobalArrayContainer()
     composer = Composer()
-    header_fname = '{}.hpp'.format(fname)
-    header_name = os.path.basename(header_fname)
-    weightheader_name = os.path.basename(weightheader_fname)
-    container = ContextSnippetsContainer(graph_name, header_name, weightheader_name)
+    header_fname = '{}.hpp'.format(ugraph.name)
+    weight_header_fname = '{}_weight.hpp'.format(ugraph.name)
+    container = ContextSnippetsContainer(ugraph.name, header_fname, weight_header_fname)
 
     opFactory = OperatorFactory()
 
     self._check_non_quantized(ugraph)
-    _logger.info("Transforming graph: %s", self.model_file)
-    def formatter(name, kwargs):
-      if kwargs:
-        return '{}({})'.format(
-          name,
-          ', '.join(['{}={!r}'.format(k, v) for k, v in kwargs.items()])
-        )
-      else:
-        return name
-    _logger.info("Transform pipeline: %s", ' -> '.join([
-      formatter(name, kwargs) for name, kwargs in self.trans_methods
-      ])
-    )
+    _logger.info("Transforming graph: %s", ugraph.name)
+    _logger.info("Transform pipeline: %s", ' -> '.join(self.trans_methods))
     quant_ugraph = self._transform_graph(ugraph,
                                          self.trans_methods)
     _logger.info('Graph transormation done')
 
     if self.save_graph:
       _logger.info('Saving transformed graph')
-      pkl_fname = "quant_{}.pkl".format(graph_name)
+      pkl_fname = "quant_{}.pkl".format(ugraph.name)
       with open(pkl_fname, 'wb') as fid:
         pickle.dump(quant_ugraph, fid)
       _logger.info('{} saved'.format(pkl_fname))
 
+    if not os.path.exists(os.path.join(self.params_dir, ugraph.name)):
+      os.makedirs(os.path.join(self.params_dir, ugraph.name))
     for op_id, op_name in enumerate(quant_ugraph.topo_order):
       op_info = quant_ugraph.ops_info[op_name]
       op_type = op_info.op_type
@@ -106,7 +101,7 @@ class CodeGenerator(object):
         # TODO: the operator may correspond to multiple snippets (such as InlinTensor)
         # weight_container is passed to function for workaround
         snippet = opFactory.createOperatorSnippet(op_info,
-                                                  idx_dir=self.idx_dir,
+                                                  idx_dir=os.path.join(self.params_dir, ugraph.name),
                                                   embed_data_dir=self.embed_data_dir,
                                                   weight_container=weight_container,
                                                   data_manager=quant_ugraph.data_manager)
@@ -119,22 +114,47 @@ class CodeGenerator(object):
         container.add_snippet(cmt_snippet)
     composer.add_snippet(container)
 
-    if any([method_name == 'inline' for method_name, _ in self.trans_methods]):  
-      _logger.info("Generate weight file: %s", weightheader_fname)
-      with open(weightheader_fname, "w") as wf:
+    # generate cpp/hpp files
+    if not os.path.exists(self.model_dir):
+      os.makedirs(self.model_dir)
+    if any([method == 'inline' for method in self.trans_methods]):  
+      _logger.info("Generate weight file: %s", weight_header_fname)
+      with open(os.path.join(self.model_dir, weight_header_fname), "w") as wf:
         wf.write('// Auto generated by utensor-cli\n\n')
         wf.write(weight_container.render())
     else:
-      container.remove_header('"{}"'.format(weightheader_name))
+      container.remove_header('"{}"'.format(weight_header_fname))
       
     _logger.info("Generate header file: %s", header_fname)
-    with open(header_fname, "w") as wf:
+    with open(os.path.join(self.model_dir, header_fname), "w") as wf:
       wf.write('// Auto generated by utensor-cli\n\n')
       wf.write(header_snippet.render())
     _logger.info("Generate source file: %s", src_fname)
-    with open(src_fname, "w") as wf:
+    with open(os.path.join(self.model_dir, src_fname), "w") as wf:
       wf.write('// Auto generated by utensor-cli\n\n')
       wf.write(composer.compose())
+
+  @class_property
+  def default_config(cls):
+    config = {}
+    config['src_fname'] = 'None'
+    config['params_dir'] = 'data'
+    config['embed_params_dir'] = '/fs/data'
+    config['model_dir'] = 'models'
+    config['transform_methods'] = [
+      'dropout(name_pattern=r"(dropout[_\w\d]*)/.*")',
+      'linear_reorder',
+      'quantize',
+      'conv_pool',
+      'inline',
+      'biasAdd',
+      'remove_id_op',
+      'fake_gather_v2',
+      'refcnt'
+    ]
+    config['save_graph'] = False
+    config['debug_cmt'] = False
+    return config
   
   @classmethod
   def _check_non_quantized(cls, ugraph):

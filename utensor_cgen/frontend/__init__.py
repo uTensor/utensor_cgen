@@ -22,6 +22,14 @@ class FrontendSelector(object):
     return _register
 
   @classmethod
+  def parse(cls, model_file, output_nodes, config=None):
+    if config is None:
+      config = {}
+    _, ext = os.path.splitext(model_file)
+    parser = cls.select_parser(ext)(config)
+    return parser.parse(model_file, output_nodes)
+
+  @classmethod
   def select_parser(cls, file_ext):
     cls._setup()
     parser_cls = cls._parser_map.get(file_ext, None)
