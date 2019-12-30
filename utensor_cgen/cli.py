@@ -33,7 +33,7 @@ def _load_transformer(path):
 @click.group(name='utensor-cli')
 @click.help_option('-h', '--help')
 @click.version_option(__version__,
-                       '-V', '--version')
+                      '-V', '--version')
 @click.option("--transform-plugin",
               default=None,
               help="path of the python file which user-defined transformers live",

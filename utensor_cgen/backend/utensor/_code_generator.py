@@ -6,16 +6,13 @@ from tempfile import NamedTemporaryFile
 
 import numpy as np
 
-import tensorflow as tf
-from tensorflow.core.framework.graph_pb2 import GraphDef
-from tensorflow.tools.graph_transforms import TransformGraph
 from utensor_cgen.backend.base import BackendPart
 from utensor_cgen.frontend import FrontendSelector
 from utensor_cgen.ir import uTensorGraph
 from utensor_cgen.transformer.optimizer import RefCntOptimizer
 from utensor_cgen.transformer.pipeline import TransformerPipeline
 from utensor_cgen.utils import (NamescopedKWArgsParser, class_property,
-                                parse_toml)
+                                parse_toml, LazyLoader)
 
 from ._operators import OperatorFactory
 from .snippets import (CommentSnippet, ContextGlobalArrayContainer,
@@ -25,6 +22,7 @@ from .snippets.composer import Composer
 
 __all__ = ["uTensorCodeGenerator"]
 _logger = logging.getLogger('utensor-cli')
+tf = LazyLoader('tensorflow')
 
 class uTensorCodeGenerator(BackendPart, object):
 
