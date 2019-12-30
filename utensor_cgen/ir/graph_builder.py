@@ -3,7 +3,7 @@ from contextlib import contextmanager
 
 from utensor_cgen.utils import LazyLoader, topologic_order_graph
 
-operators = LazyLoader('backend.utensor._operators')
+operators = LazyLoader(submod_name='backend.utensor._operators')
 
 
 class GraphFinalizedError(Exception): pass

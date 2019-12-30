@@ -7,18 +7,18 @@ import os
 import numpy as np
 
 import idx2numpy as idx2np
-import tensorflow as tf
 from utensor_cgen.ir import OperationInfo, TensorInfo
 from utensor_cgen.ir.converter import (AttrValueConverter, DataTypeConverter,
                                        GenericTensorConverterMixin)
 from utensor_cgen.logger import logger
 from utensor_cgen.matcher import OpEqualityDelegate, _morphism
 from utensor_cgen.transformer.optimizer import RefCntOptimizer
-from utensor_cgen.utils import NamescopedKWArgsParser
+from utensor_cgen.utils import NamescopedKWArgsParser, LazyLoader
 
 from .snippets import *  # pylint: disable=W0401,W0614
 
 __all__ = ['OperatorFactory', 'OpNotSupportedError']
+tf = LazyLoader('tensorflow')
 
 class OpNotSupportedError(Exception): pass
 
@@ -894,7 +894,6 @@ class _CMSIS_NN_FCOperator(_Operator):
   
   def __init__(self, op_info, **kwargs):
     _Operator.__init__(self)
-    #import pdb; pdb.set_trace()
     # Note order of inputs/outputs is preserved
     inputs = [tensor_info.name for tensor_info in op_info.input_tensors]
     output = op_info.output_tensors[0].name

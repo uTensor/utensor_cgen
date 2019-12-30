@@ -15,13 +15,52 @@ from click.types import ParamType
 from toml import loads as _parse
 
 import idx2numpy as idx2np
-import tensorflow as tf
-from tensorflow.python.framework import graph_util
-from tensorflow.tools.graph_transforms import TransformGraph
 from utensor_cgen.logger import logger
 
 __all__ = ["save_idx", "save_consts", "save_graph", "log_graph",
            "NamescopedKWArgsParser", "NArgsParam", "MUST_OVERWRITEN"]
+
+class LazyLoader(types.ModuleType):
+
+  def __init__(self, module_name='utensor_cgen', submod_name=None):
+    self._module_name = '{}{}'.format(
+      module_name,
+      submod_name and '.{}'.format(submod_name) or ''
+    )
+    self._mod = None
+    super(LazyLoader, self).__init__(self._module_name)
+
+  def _load(self):
+    if self._mod is None:
+      self._mod = importlib.import_module(
+        self._module_name
+      )
+    return self._mod
+
+  def __getattr__(self, attrb):
+    return getattr(self._load(), attrb)
+
+  def __dir__(self):
+    return dir(self._load())
+
+tf = LazyLoader('tensorflow')
+tf_python = LazyLoader('tensorflow', 'python.framework')
+
+class LazyAttrib(object):
+
+  def __init__(self, obj, attr_name):
+    self._obj = obj
+    self._attr_name = attr_name
+
+  def __getattr__(self, name):
+    return getattr(self.attrib, name)
+  
+  def __call__(self, *args, **kwargs):
+    return self.attrib(*args, **kwargs)
+
+  @property
+  def attrib(self):
+    return getattr(self._obj, self._attr_name)
 
 
 def log_graph(graph_or_graph_def, logdir):
@@ -98,8 +137,8 @@ def prepare_meta_graph(meta_graph_path, output_nodes, chkp_path=None):
     chkp_path = meta_graph_path.replace(".meta", "")
   with tf.Session(graph=graph) as sess:
     saver.restore(sess, chkp_path)
-    graph_def = graph_util.remove_training_nodes(sess.graph_def)
-    sub_graph_def = graph_util.convert_variables_to_constants(sess=sess,
+    graph_def = tf_python.graph_util.remove_training_nodes(sess.graph_def)
+    sub_graph_def = tf_python.graph_util.convert_variables_to_constants(sess=sess,
                                                               input_graph_def=graph_def,
                                                               output_node_names=output_nodes)
   return sub_graph_def
@@ -419,25 +458,6 @@ def random_str(length=8):
   letters = ascii_letters+digits
   chars = [choice(letters) for _ in range(length)]
   return ''.join(chars)
-
-
-class LazyLoader(types.ModuleType):
-
-  def __init__(self, submod_name):
-    self._submod_name = submod_name
-    self._submod = None
-    super(LazyLoader, self).__init__(submod_name)
-
-  def _load(self):
-    if self._submod is None:
-      self._submod = importlib.import_module('utensor_cgen.{}'.format(self._submod_name))
-    return self._submod
-
-  def __getattr__(self, attrb):
-    return getattr(self._load(), attrb)
-
-  def __dir__(self):
-    return dir(self._load())
 
 
 class class_property(object):
