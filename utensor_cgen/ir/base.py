@@ -189,7 +189,13 @@ class TensorInfo(IRBase, _NoShallowCopyMixin):
   def __eq__(self, other):
     if not isinstance(other, type(self)):
       return False
-    return (self.name == other.name) and (self._ugraph is other._ugraph)
+    return (
+      (self.name == other.name) and
+      (self._ugraph is other._ugraph) and
+      (self.op_name == other.op_name) and
+      (self.dtype == other.dtype) and
+      (self.shape == other.shape)
+    )
 
 
 @attr.s(cmp=False, repr=False)

@@ -2,7 +2,7 @@ import sys
 
 import pkg_resources
 
-from ._extensions import _ExtensionsLoader
+from utensor_cgen._extensions import _ExtensionsLoader
 
 __version__ = (
   pkg_resources
