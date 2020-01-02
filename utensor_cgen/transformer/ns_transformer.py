@@ -48,11 +48,11 @@ class TensorLifeProbe(Transformer):
 
     if allocate_success:
       for node_name in new_ugraph.topo_order:
-        in_t_infos = new_ugraph.ops_info[node_name].input_tensors
+        in_t_infos = new_ugraph.ops_map[node_name].input_tensors
         for in_o in in_t_infos:
           if in_o.name in allocate_table:
             new_ugraph.data_manager.address = (in_o.name, allocate_table[in_o.name]['offsetstart'])
-        out_t_infos = new_ugraph.ops_info[node_name].output_tensors
+        out_t_infos = new_ugraph.ops_map[node_name].output_tensors
         for out_o in out_t_infos:
           if out_o.name in allocate_table:
             new_ugraph.data_manager.address = (out_o.name, allocate_table[out_o.name]['offsetstart'])
@@ -136,12 +136,12 @@ class TensorLifeProbe(Transformer):
     for node_name in ugraph.topo_order:
       in_t_infos = [
         tensor
-        for tensor in ugraph.ops_info[node_name].input_tensors
+        for tensor in ugraph.ops_map[node_name].input_tensors
         if tensor.op.op_type != 'Inline'
       ]
       out_t_infos = [
         tensor
-        for tensor in ugraph.ops_info[node_name].output_tensors
+        for tensor in ugraph.ops_map[node_name].output_tensors
         if tensor.op.op_type != 'Inline'
       ]
       tensors.extend(in_t_infos)
@@ -196,7 +196,7 @@ class TensorLifeProbe(Transformer):
       for idx, op_name in enumerate(ugraph.topo_order)
     }
     for node_name in ugraph.topo_order:
-      for tensor_info in ugraph.ops_info[node_name].input_tensors:
+      for tensor_info in ugraph.ops_map[node_name].input_tensors:
         if tensor_info.name not in resource_table:
           lifetime = dict()
           lifetime['start'] = len_map[node_name]
@@ -204,7 +204,7 @@ class TensorLifeProbe(Transformer):
           resource_table[tensor_info.name] = lifetime   
         resource_table[tensor_info.name]['end']= len_map[node_name] 
       
-      for outtensor in ugraph.ops_info[node_name].output_tensors:
+      for outtensor in ugraph.ops_map[node_name].output_tensors:
         if outtensor.name not in resource_table:
           lifetime = dict()
           lifetime['start'] = len_map[node_name]
@@ -221,12 +221,12 @@ class BiasAddTransformer(Transformer):
 
   def transform(self, ugraph):
     for node_name in ugraph.topo_order:
-      op_type = ugraph.ops_info[node_name].op_type
+      op_type = ugraph.ops_map[node_name].op_type
       if op_type == 'QuantizedBiasAdd':
-        op_info = ugraph.ops_info[node_name]
+        op_info = ugraph.ops_map[node_name]
         op_info.op_type = 'QuantizedAdd'
       elif op_type == 'BiasAdd':
-        op_info = ugraph.ops_info[node_name]
+        op_info = ugraph.ops_map[node_name]
         op_info.op_type = 'Add'
     return ugraph
 
@@ -238,9 +238,9 @@ class InlineTransformer(Transformer):
 
   def transform(self, ugraph):
     for node_name in ugraph.topo_order:
-      op_type = ugraph.ops_info[node_name].op_type
+      op_type = ugraph.ops_map[node_name].op_type
       if op_type == 'Const':
-        op_info = ugraph.ops_info[node_name]
+        op_info = ugraph.ops_map[node_name]
         op_info.op_type = 'Inline'
     
     return ugraph
@@ -271,14 +271,14 @@ class DropoutTransformer(Transformer):
   def transform(self, ugraph):
     new_graph = uTensorGraph(name=ugraph.name, output_nodes=ugraph.output_nodes)
     dropout_input_map = self._find_input(ugraph)
-    new_ops_info = {}
-    for node_name in ugraph.ops_info:
+    new_ops_map = {}
+    for node_name in ugraph.ops_map:
       match = self._op_name_pattern.match(node_name)
       if match:
         # ignore all dropout nodes
         continue
       # replace inputs with dropout inputs
-      op_info = ugraph.ops_info[node_name]
+      op_info = ugraph.ops_map[node_name]
       in_t_infos = [deepcopy(t_info, {'ugraph': new_graph}) 
                     for t_info in op_info.input_tensors]
       out_t_infos = [deepcopy(t_info, {'ugraph': new_graph}) 
@@ -302,8 +302,8 @@ class DropoutTransformer(Transformer):
                                   lib_name=op_info.lib_name,
                                   op_attr=op_attr,
                                   ugraph=new_graph)
-      new_ops_info[node_name] = new_op_info
-    new_graph.ops_info = new_ops_info
+      new_ops_map[node_name] = new_op_info
+    new_graph.ops_map = new_ops_map
     new_graph._lib_name = ugraph._lib_name
     return new_graph
 
@@ -330,7 +330,7 @@ class DropoutTransformer(Transformer):
       if match:
         name_scope = match.group(1)
         cluster = clusters[name_scope]
-        op_info = ugraph.ops_info[node_name]
+        op_info = ugraph.ops_map[node_name]
         for in_tensor_info in op_info.input_tensors:
           in_op_name = in_tensor_info.op.name
           if in_op_name not in cluster and not in_op_name.startswith('keep_prob'):
@@ -442,8 +442,8 @@ class FakeGatherV2Transformer(Transformer):
     logger.warning(
       "enabling {} will force replacing GatherV2 with Gather".format(self.METHOD_NAME)
     )
-    for key, op in ugraph.ops_info.items():
+    for key, op in ugraph.ops_map.items():
       if op.op_type == "GatherV2":
         op.op_type = "Gather"
-        ugraph.ops_info[key] = op
+        ugraph.ops_map[key] = op
     return ugraph

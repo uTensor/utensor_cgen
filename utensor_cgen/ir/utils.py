@@ -20,9 +20,9 @@ def is_list_of(vtype):
 def check_integrity(ugraph):
   """Deprecated
   """
-  for op_name, op_info in ugraph.ops_info.items():
+  for op_name, op_info in ugraph.ops_map.items():
     for input_tensor_info in op_info.input_tensors:
-      assert input_tensor_info.op_name in ugraph.ops_info, \
+      assert input_tensor_info.op_name in ugraph.ops_map, \
         (
           "In %r: input tensor %r points to non-existing op %r" 
           % (op_name, input_tensor_info.name, input_tensor_info.op_name)
@@ -32,4 +32,4 @@ def check_integrity(ugraph):
           "In %r: input tensor %r points to an op (%r) that does not exist in graph.topo_order"
           % (op_name, input_tensor_info.name, input_tensor_info.op_name)
         )
-  assert len(ugraph.ops_info) == len(ugraph.topo_order)
+  assert len(ugraph.ops_map) == len(ugraph.topo_order)

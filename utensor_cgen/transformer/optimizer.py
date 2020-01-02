@@ -23,9 +23,9 @@ class RefCntOptimizer(Transformer):
   
   def _transform(self, ugraph):
     new_ugraph = deepcopy(ugraph)
-    refcnt_table = self._tensor_ref_count(new_ugraph.ops_info)
+    refcnt_table = self._tensor_ref_count(new_ugraph.ops_map)
     for op_name in new_ugraph.topo_order[::-1]:
-      op_info = new_ugraph.ops_info[op_name]
+      op_info = new_ugraph.ops_map[op_name]
       if op_name in ugraph.output_nodes or op_info.op_type in ["Const", "Placeholder"]:
         op_info.op_attr['%s__to_eval' % self.KWARGS_NAMESCOPE] = False
       else:
@@ -35,9 +35,9 @@ class RefCntOptimizer(Transformer):
     return new_ugraph
 
   @staticmethod
-  def _tensor_ref_count(ops_info):
+  def _tensor_ref_count(ops_map):
     tensor_ref_count = defaultdict(lambda: 0)
-    for op_info in ops_info.values():
+    for op_info in ops_map.values():
       for tensor_info in op_info.input_tensors:
         tname = tensor_info.name
         tensor_ref_count[tname] += 1
@@ -62,7 +62,7 @@ class IdOpRemoveOptimizer(Transformer):
   def _transform_tf(self, ugraph):
     ops_to_remove = [
       op
-      for op_name, op in ugraph.ops_info.items()
+      for op_name, op in ugraph.ops_map.items()
       if op.op_type == 'Identity' 
     ]
     for op in ops_to_remove:

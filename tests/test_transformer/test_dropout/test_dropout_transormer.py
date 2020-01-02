@@ -11,9 +11,9 @@ def test_dropout_trans_1_1(droput_graph_tuple):
     ugraph = GraphDefParser.parse(graph_def, output_nodes=output_nodes)
     transformer = DropoutTransformer()
     new_ugraph = transformer.transform(ugraph)
-    for op in new_ugraph.ops_info.values():
+    for op in new_ugraph.ops_map.values():
         assert op.ugraph
-    out_op = new_ugraph.ops_info[output_nodes[0]]
+    out_op = new_ugraph.ops_map[output_nodes[0]]
     assert set([str(op.name) for op in out_op.input_nodes]) == set(['x', 'bias'])
     # all dropout nodes should be gone
     graph_1 = tf.Graph()
@@ -27,8 +27,8 @@ def test_dropout_trans_1_1(droput_graph_tuple):
         dropout_output = graph_1.get_tensor_by_name(dropout_output_name)
         output = graph_1.get_tensor_by_name(output_nodes[0]+":0")
         # test the dropout ops are gone
-        assert keep_prob.op.name not in new_ugraph.ops_info
-        assert dropout_output.op.name not in new_ugraph.ops_info
+        assert keep_prob.op.name not in new_ugraph.ops_map
+        assert dropout_output.op.name not in new_ugraph.ops_map
         output_1 = output.eval({keep_prob:1.0})
     with tf.Session(graph=graph_2):
         output = graph_2.get_tensor_by_name(output_nodes[0]+":0")
@@ -43,9 +43,9 @@ def test_dropout_trans_1_2(droput_graph_tuple):
     ugraph = GraphDefParser.parse(graph_def, output_nodes=output_nodes)
     transformer = DropoutTransformerV2()
     new_ugraph = transformer.transform(ugraph)
-    for op in new_ugraph.ops_info.values():
+    for op in new_ugraph.ops_map.values():
         assert op.ugraph
-    out_op = new_ugraph.ops_info[output_nodes[0]]
+    out_op = new_ugraph.ops_map[output_nodes[0]]
     assert set([str(op.name) for op in out_op.input_nodes]) == set(['x', 'bias'])
     # all dropout nodes should be gone
     graph_1 = tf.Graph()
@@ -59,8 +59,8 @@ def test_dropout_trans_1_2(droput_graph_tuple):
         dropout_output = graph_1.get_tensor_by_name(dropout_output_name)
         output = graph_1.get_tensor_by_name(output_nodes[0]+":0")
         # test the dropout ops are gone
-        assert keep_prob.op.name not in new_ugraph.ops_info
-        assert dropout_output.op.name not in new_ugraph.ops_info
+        assert keep_prob.op.name not in new_ugraph.ops_map
+        assert dropout_output.op.name not in new_ugraph.ops_map
         output_1 = output.eval({keep_prob:1.0})
     with tf.Session(graph=graph_2):
         output = graph_2.get_tensor_by_name(output_nodes[0]+":0")
@@ -73,11 +73,11 @@ def test_dropout_trans_2(dropout_graph_tuple2):
     ugraph = GraphDefParser.parse(graph_def, output_nodes=output_nodes)
     trans = DropoutTransformerV2()
     new_ugraph = trans.transform(ugraph)
-    assert len(new_ugraph.ops_info) == 1
-    assert 'x' in new_ugraph.ops_info
+    assert len(new_ugraph.ops_map) == 1
+    assert 'x' in new_ugraph.ops_map
 
 def test_dropout_vgg(vgg_ugraph):
     trans = DropoutTransformerV2()
     new_ugraph = trans.transform(vgg_ugraph)
-    for op_name in new_ugraph.ops_info:
+    for op_name in new_ugraph.ops_map:
         assert not op_name.startswith('dropout')

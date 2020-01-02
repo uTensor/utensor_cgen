@@ -9,5 +9,5 @@ def test_inline_optimizer(inlinegraph_tuple):
     ugraph = transformer.transform(ugraph)
     for node_name in ugraph.topo_order:
         if node_name in inline_ans:
-            op_type = ugraph.ops_info[node_name].op_type
+            op_type = ugraph.ops_map[node_name].op_type
             assert op_type == 'Inline'

@@ -84,7 +84,7 @@ class uTensorCodeGenerator(BackendPart, object):
     if not os.path.exists(os.path.join(self.params_dir, ugraph.name)):
       os.makedirs(os.path.join(self.params_dir, ugraph.name))
     for op_id, op_name in enumerate(quant_ugraph.topo_order):
-      op_info = quant_ugraph.ops_info[op_name]
+      op_info = quant_ugraph.ops_map[op_name]
       op_type = op_info.op_type
       # TODO: better abstraction for snippet
       if op_type == "Placeholder":
@@ -157,7 +157,7 @@ class uTensorCodeGenerator(BackendPart, object):
   @classmethod
   def _check_non_quantized(cls, ugraph):
     is_quantized = False
-    for op_info in ugraph.ops_info.values():
+    for op_info in ugraph.ops_map.values():
       if op_info.op_type in [
         "Dequantize", "QuantizedMaxPool",
         "QuantizeV2", "QuantizedMatMul",

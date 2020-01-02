@@ -16,7 +16,7 @@ class uTensorGraphBuilderMixin(object):
       raise GraphFinalizedError(
         'Can not add op to finalized graph'
       )
-    if name in self.ops_info:
+    if name in self.ops_map:
       raise ValueError('Duplicate op_name: %s' % name)
     op_info = operators.OperatorFactory.build_op_info(
       *args,

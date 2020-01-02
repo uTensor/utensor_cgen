@@ -337,23 +337,23 @@ class uTensorGraphMatch(object):
     checked_ops = set()
     for in_op in subj_view.input_ops:
       for op in in_op.output_nodes:
-        if op.name not in subj_view.ops_info:
+        if op.name not in subj_view.ops_map:
           valid = False
       checked_ops.add(in_op.name)
     for out_op in subj_view.output_ops:
       for op in out_op.input_nodes:
-        if op.name not in subj_view.ops_info:
+        if op.name not in subj_view.ops_map:
           valid = False
       checked_ops.add(out_op.name)
     
-    for name, op in subj_view.ops_info.items():
+    for name, op in subj_view.ops_map.items():
       if name in checked_ops:
         continue
       for in_op in op.input_nodes:
-        if in_op.name not in subj_view.ops_info:
+        if in_op.name not in subj_view.ops_map:
           valid = False
       for out_op in op.output_nodes:
-        if out_op.name not in subj_view.ops_info:
+        if out_op.name not in subj_view.ops_map:
           valid = Falses
     return valid
     
@@ -414,8 +414,8 @@ class uTensorGraphMatch(object):
         patrn_in_tensor = inv_input_map[repl_in_tensor]
         subj_in_tensor = self.patrn2subj_tensor_map[patrn_in_tensor.name]
         op.input_tensors[i] = subj_in_tensor
-    new_ugraph.ops_info.update(
-      replace_ugraph.ops_info
+    new_ugraph.ops_map.update(
+      replace_ugraph.ops_map
     )
     topologic_order_graph(new_ugraph)
     new_ugraph = prune_graph(new_ugraph)
@@ -468,8 +468,8 @@ class uTensorGraphMatch(object):
       '{}_{}'.format(name, suffix) for name in ugraph.output_nodes
     ]
     new_ugraph.topo_order = ['{}_{}'.format(name, suffix) for name in ugraph.topo_order]
-    new_ops_info = {}
-    for ori_op_name, op in new_ugraph.ops_info.items():
+    new_ops_map = {}
+    for ori_op_name, op in new_ugraph.ops_map.items():
       new_op = deepcopy(op, {'ugraph': new_ugraph})
       new_op_name = '{}_{}'.format(ori_op_name, suffix)
       new_op.name = new_op_name
@@ -482,8 +482,8 @@ class uTensorGraphMatch(object):
         new_in_op_name = '{}_{}'.format(in_op_name, suffix)
         tensor.name = '{}:{}'.format(new_in_op_name, tensor_idx)
         tensor.op_name = new_in_op_name
-      new_ops_info[new_op_name] = new_op
-    new_ugraph.ops_info = new_ops_info
+      new_ops_map[new_op_name] = new_op
+    new_ugraph.ops_map = new_ops_map
     new_input_map = {}
     for k, in_tensor in input_map.items():
       new_in_tensor = deepcopy(in_tensor, {'ugraph': new_ugraph})

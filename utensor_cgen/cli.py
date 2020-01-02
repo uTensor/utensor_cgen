@@ -152,7 +152,7 @@ def _show_ugraph(ugraph, oneline=False, ignore_unknown_op=False):
     tmpl = click.style("{op_name} ", fg='yellow', bold=True) + \
       "op_type: {op_type}, inputs: {inputs}, outputs: {outputs}"
     for op_name in ugraph.topo_order:
-      op_info = ugraph.ops_info[op_name]
+      op_info = ugraph.ops_map[op_name]
       msg = tmpl.format(op_name=op_name, op_type=op_info.op_type,
                         inputs=[tensor.name for tensor in op_info.input_tensors],
                         outputs=[tensor.name for tensor in op_info.output_tensors])
@@ -173,7 +173,7 @@ def _show_ugraph(ugraph, oneline=False, ignore_unknown_op=False):
     tmpl = textwrap.dedent(tmpl)
     paragraphs = []
     for op_name in ugraph.topo_order:
-      op_info = ugraph.ops_info[op_name]
+      op_info = ugraph.ops_map[op_name]
       op_str = tmpl.format(
         op_name=op_name,
         op_type=op_info.op_type,

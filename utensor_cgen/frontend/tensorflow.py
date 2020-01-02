@@ -61,7 +61,7 @@ class GraphDefParser(Parser):
                               op_attr=op_attr,
                               ugraph=ugraph)
       op_info.op_attr['tensorflow__device'] = node.device
-      ugraph.ops_info[node.name] = op_info
+      ugraph.ops_map[node.name] = op_info
     topologic_order_graph(ugraph)
     ugraph = Legalizer.legalize(ugraph, {})
     return ugraph

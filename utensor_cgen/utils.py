@@ -369,14 +369,14 @@ def get_topologic_order(ugraph, init_nodes=None):
     if node_name in visited:
       raise ValueError("Input graph is not a DAG")
     visited.add(node_name)
-    op_info = ugraph.ops_info.get(node_name, None)
+    op_info = ugraph.ops_map.get(node_name, None)
     if not op_info:
       return
 
     for t_info in op_info.input_tensors:
       # NT: we should not rely on tensor-name conventions for back-tracing
       # op_name = parse_tensor_name(t_info.name)[0]
-      # It would be nice to rely on something similar to get_tensor_node_names(), but based on ops_info instead of topo_order
+      # It would be nice to rely on something similar to get_tensor_node_names(), but based on ops_map instead of topo_order
       op_name = t_info.op_name
       visit(op_name)
 
@@ -392,7 +392,7 @@ def get_topologic_order(ugraph, init_nodes=None):
 def ops_bfs_queue(ugraph, init_nodes=None):
   if init_nodes is None:
     init_nodes = [
-      ugraph.ops_info[name] for name in ugraph.output_nodes
+      ugraph.ops_map[name] for name in ugraph.output_nodes
     ]
   queue = deque(init_nodes)
   visited = set()
@@ -430,13 +430,13 @@ def prune_graph(ugraph):
     op_name = queue.pop(0)
     #TODO: move the code below to a standalone function.
     # Maybe using a more extensive data structure
-    # or simply: in_ops = [node.name for node in ugraph.ops_info[op_name].input_nodes]
-    tensors_in = set([t.name for t in ugraph.ops_info[op_name].input_tensors])
+    # or simply: in_ops = [node.name for node in ugraph.ops_map[op_name].input_nodes]
+    tensors_in = set([t.name for t in ugraph.ops_map[op_name].input_tensors])
     in_ops = set()
-    for it_node in ugraph.ops_info:
+    for it_node in ugraph.ops_map:
       if it_node == op_name:
         continue
-      it_tensors_out = [t.name for t in ugraph.ops_info[it_node].output_tensors]
+      it_tensors_out = [t.name for t in ugraph.ops_map[it_node].output_tensors]
       if not tensors_in.isdisjoint(it_tensors_out):
         in_ops.add(it_node)
 
@@ -445,12 +445,12 @@ def prune_graph(ugraph):
     ops_in_need.update(in_ops)
 
   ops_to_remove = set([])
-  for op_name in new_ugraph.ops_info.keys():
+  for op_name in new_ugraph.ops_map.keys():
     if op_name not in ops_in_need:
-      # remove ops not needed from ops_info
+      # remove ops not needed from ops_map
       ops_to_remove.add(op_name)
   for op_name in ops_to_remove:
-    new_ugraph.ops_info.pop(op_name)
+    new_ugraph.ops_map.pop(op_name)
   return new_ugraph
 
 

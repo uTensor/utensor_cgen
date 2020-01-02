@@ -147,7 +147,7 @@ class TensorInfo(IRBase, _NoShallowCopyMixin):
 
     :rtype: :class:`.OperationInfo` or `None`
     """
-    op = self._ugraph.ops_info.get(self.op_name, None)
+    op = self._ugraph.ops_map.get(self.op_name, None)
     if not op and not self.is_null_tensor:
       raise ValueError('Unknown op name: {}'.format(self.op_name))
     return op
@@ -280,7 +280,7 @@ class OperationInfo(IRBase, _NoShallowCopyMixin):
         else:
           op_attr[k] = ConverterDispatcher.get_generic_value(v)
       self.op_attr = op_attr
-    self._ugraph.ops_info[self.name] = self
+    self._ugraph.ops_map[self.name] = self
     if not self.n_inputs == len(self.input_tensors):
       raise ValueError(
         'n_inputs is not equal to the length of input_tensors: {}'.format(self.name)
@@ -322,7 +322,7 @@ class OperationInfo(IRBase, _NoShallowCopyMixin):
         continue
       if tensor.op_name not in in_ops:
         in_ops.append(tensor.op_name)
-    return [self._ugraph.ops_info.get(name, None) for name in in_ops]
+    return [self._ugraph.ops_map.get(name, None) for name in in_ops]
 
   @property
   def output_nodes(self):
@@ -338,7 +338,7 @@ class OperationInfo(IRBase, _NoShallowCopyMixin):
         if in_tensor.op_name == self.name and op.name not in out_ops:
           out_ops.append(op.name)
           break
-    return [self._ugraph.ops_info[name] for name in out_ops]
+    return [self._ugraph.ops_map[name] for name in out_ops]
 
   def add_null_input_tensor(self, idx=-1):
     """
@@ -386,7 +386,7 @@ class OperationInfo(IRBase, _NoShallowCopyMixin):
       tensor.move_into(ugraph)
     for tensor in self.output_tensors:
       tensor.move_into(ugraph)
-    ugraph.ops_info[self.name] = self
+    ugraph.ops_map[self.name] = self
   
   def __deepcopy__(self, memo):
     op_info = OperationInfo(name=self.name,
@@ -426,9 +426,9 @@ class uTensorGraph(IRBase, _NoShallowCopyMixin, uTensorGraphBuilderMixin):
   :param output_nodes: a list of names of ops which are the output nodes
     in the graph
   :type output_nodes: list
-  :param ops_info: a dict with key as string, the op's name,
+  :param ops_map: a dict with key as string, the op's name,
     and value as an instance of :class:`.OperationInfo`
-  :type ops_info: dict
+  :type ops_map: dict
   :param lib_name: the name of library/framework training the graph. 
   Can only be ``'tensorflow'`` or ``'pytorch'`` (future work)
   :type lib_name: str
@@ -438,7 +438,7 @@ class uTensorGraph(IRBase, _NoShallowCopyMixin, uTensorGraphBuilderMixin):
     NOTE:
 
     - **topo_order** is a non-init attribute which is set accordingly by
-      the given **ops_info** and **output_nodes**. It will be a list of op
+      the given **ops_map** and **output_nodes**. It will be a list of op
       names in topological sorting order
     - (IMPORTANT) **How to build a uTensorGraph**
 
@@ -446,10 +446,10 @@ class uTensorGraph(IRBase, _NoShallowCopyMixin, uTensorGraphBuilderMixin):
 
         - give a list of names of output nodes (required)
         - (optional) give `lib_name` string
-        - leave **ops_info** empty
-      2. setup the **ops_info**
+        - leave **ops_map** empty
+      2. setup the **ops_map**
 
-        - when you set the value of ops_info, which is an OperationInfo instance,
+        - when you set the value of ops_map, which is an OperationInfo instance,
           make sure its ugraph attribute is the ugraph you just created at step 1
       3. pass the graph to :py:func:`.utils.topologic_order_graph` to setup the
          order of the ops
@@ -459,7 +459,8 @@ class uTensorGraph(IRBase, _NoShallowCopyMixin, uTensorGraphBuilderMixin):
   name = attr.ib(default='model_graph')
   output_nodes = attr.ib(factory=list)
   _lib_name = attr.ib(default='tensorflow', type=six.string_types)
-  ops_info = attr.ib(factory=dict)
+  ops_map = attr.ib(factory=dict)
+  tensors_map = attr.ib(factory=dict)
   # non-init
   topo_order = attr.ib(factory=list, init=False)
   data_manager = attr.ib(default=None, init=False)
@@ -485,7 +486,7 @@ class uTensorGraph(IRBase, _NoShallowCopyMixin, uTensorGraphBuilderMixin):
     :rtype: List[:class:`.OperationInfo`]
     """
     if not self._type_to_op_map:
-      for op_info in self.ops_info.values():
+      for op_info in self.ops_map.values():
         op_type = op_info.op_type
         ops = self._type_to_op_map.get(
           op_type,
@@ -503,7 +504,7 @@ class uTensorGraph(IRBase, _NoShallowCopyMixin, uTensorGraphBuilderMixin):
 
     :rtype: List[:class:`.OperationInfo`]
     """
-    return [self.ops_info[name] for name in self.output_nodes]
+    return [self.ops_map[name] for name in self.output_nodes]
   
   @property
   def output_tensors(self):
@@ -532,7 +533,7 @@ class uTensorGraph(IRBase, _NoShallowCopyMixin, uTensorGraphBuilderMixin):
     :rtype: List[:class:`.OperationInfo`]
     """
     ops = []
-    for op in self.ops_info.values():
+    for op in self.ops_map.values():
       if (
         not op.input_tensors 
         or any([tensor.is_null_tensor for tensor in op.input_tensors])
@@ -583,7 +584,7 @@ class uTensorGraph(IRBase, _NoShallowCopyMixin, uTensorGraphBuilderMixin):
       'Can not convert a uTensorGraph to tf.GraphDef from a non-tf graph'
     graph_def = tf.GraphDef()
     for node_name in self.topo_order:
-      op_info = self.ops_info[node_name]
+      op_info = self.ops_map[node_name]
       attr = {}
       for key, obj in op_info.op_attr.items():
         if self.KWPARSER_PATTERN.match(key):
@@ -608,7 +609,7 @@ class uTensorGraph(IRBase, _NoShallowCopyMixin, uTensorGraphBuilderMixin):
     """
     if not self.topo_order:
       topologic_order_graph(self)
-    return [self.ops_info[name] for name in self.topo_order]
+    return [self.ops_map[name] for name in self.topo_order]
   
   def setup_data_manager(self, datas):
     manager = DataManager(datas)
@@ -636,12 +637,12 @@ class uTensorGraph(IRBase, _NoShallowCopyMixin, uTensorGraphBuilderMixin):
         - you have to manually merge the **output_nodes** \
           of the two graphs
       - **topo_order**
-      - **ops_info**
+      - **ops_map**
       
       You should fix **output_nodes** first before performing
       any other checks and fixs.
       
-      As for **topo_order** and **ops_info**, you can make
+      As for **topo_order** and **ops_map**, you can make
       use of follwoing functions:
       
       1. :py:func:`.utils.prune_graph`: remove all ops that is not \
@@ -650,7 +651,7 @@ class uTensorGraph(IRBase, _NoShallowCopyMixin, uTensorGraphBuilderMixin):
         attribute of given graph *in-place*, given that **output_nodes** \
         is valid.
     """
-    for op in self.ops_info.values():
+    for op in self.ops_map.values():
       op.move_into(other_ugraph)
       if op.op_type not in self._type_to_op_map:
         self._type_to_op_map[op.op_type] = []
@@ -663,9 +664,9 @@ class uTensorGraph(IRBase, _NoShallowCopyMixin, uTensorGraphBuilderMixin):
       lib_name=self._lib_name
     )
     memo['ugraph'] = new_graph
-    new_graph.ops_info = {
+    new_graph.ops_map = {
       k: deepcopy(v, memo)
-      for k, v in self.ops_info.items()
+      for k, v in self.ops_map.items()
     }
     if self.data_manager:
       new_graph.data_manager = DataManager({})
@@ -675,9 +676,9 @@ class uTensorGraph(IRBase, _NoShallowCopyMixin, uTensorGraphBuilderMixin):
     return new_graph
 
   def __getitem__(self, op_name):
-    if op_name not in self.ops_info:
+    if op_name not in self.ops_map:
       raise KeyError('{} not found in the graph'.format(op_name))
-    return self.ops_info[op_name]
+    return self.ops_map[op_name]
 
 
 @attr.s(cmp=False)
@@ -686,11 +687,11 @@ class uTensorGraphView(IRBase, _NoShallowCopyMixin):
   _ugraph = attr.ib(type=uTensorGraph)
   _op_names = attr.ib(type=list)
   output_nodes = attr.ib(type=list)
-  ops_info = attr.ib(init=False, factory=dict)
+  ops_map = attr.ib(init=False, factory=dict)
 
   def __attrs_post_init__(self):
     for name in self._op_names:
-      self.ops_info[name] = self._ugraph.ops_info[name]
+      self.ops_map[name] = self._ugraph.ops_map[name]
   
   @property
   def lib_name(self):
@@ -699,11 +700,11 @@ class uTensorGraphView(IRBase, _NoShallowCopyMixin):
   @property
   def input_ops(self):
     ops = set([])
-    for name in self.ops_info:
-      op = self.ops_info[name]
+    for name in self.ops_map:
+      op = self.ops_map[name]
       input_tensors = op.input_tensors
       if all([
-        tensor.op.name not in self.ops_info
+        tensor.op.name not in self.ops_map
         for tensor in input_tensors
       ]):
         ops.add(op)
@@ -719,7 +720,7 @@ class uTensorGraphView(IRBase, _NoShallowCopyMixin):
   
   @property
   def output_ops(self):
-    return [self.ops_info[name] for name in self.output_nodes]
+    return [self.ops_map[name] for name in self.output_nodes]
   
   @property
   def output_tensors(self):
@@ -730,9 +731,9 @@ class uTensorGraphView(IRBase, _NoShallowCopyMixin):
     return out_tensors
 
   def __getitem__(self, op_name):
-    if op_name not in self.ops_info:
+    if op_name not in self.ops_map:
       raise KeyError('{} not found in the graph view'.format(op_name))
-    return self.ops_info[op_name]
+    return self.ops_map[op_name]
 
 
 class MetaOperationInfo(OperationInfo):

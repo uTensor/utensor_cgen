@@ -49,23 +49,23 @@ def test_op_info():
     assert isinstance(generic_tensor,
                       TensorProtoConverter.__utensor_generic_type__)
     assert (generic_tensor.np_array == np_array).all()
-    assert op_info.name in ugraph.ops_info
+    assert op_info.name in ugraph.ops_map
 
 def test_in_out_nodes(graph_tuple):
     graph_def, output_nodes = graph_tuple
     ugraph = GraphDefParser.parse(graph_def, output_nodes)
-    x3 = ugraph.ops_info['x3']
+    x3 = ugraph.ops_map['x3']
     assert x3.ugraph is ugraph
     assert len(x3.input_nodes) == len(set([op.name for op in x3.input_nodes]))
     assert all([str(op.name) in ['x2', 'bias2'] for op in x3.input_nodes])
     assert x3.output_nodes == []
 
-    x2 = ugraph.ops_info['x2']
+    x2 = ugraph.ops_map['x2']
     assert [str(op.name) for op in x2.output_nodes] == ['x3']
 
 def test_tensor_ops(graph_tuple):
     graph_def, output_nodes = graph_tuple
     ugraph = GraphDefParser.parse(graph_def, output_nodes)
-    for op in ugraph.ops_info.values():
+    for op in ugraph.ops_map.values():
         for tensor in op.output_tensors:
             assert tensor.op is op

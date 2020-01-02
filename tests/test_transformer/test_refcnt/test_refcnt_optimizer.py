@@ -9,6 +9,6 @@ def test_refcnt_optimizer(refgraph_tuple):
     ugraph = transformer.transform(ugraph)
     for node_name in ugraph.topo_order:
         if node_name in refcnt_ans:
-            op_info = ugraph.ops_info[node_name]
+            op_info = ugraph.ops_map[node_name]
             refcnts = op_info.op_attr["%s__ref_counts" % transformer.KWARGS_NAMESCOPE]
             assert refcnts == refcnt_ans[node_name]

@@ -16,7 +16,7 @@ def fully_connect_pattern1():
         r_prime = tf.nn.relu(a_prime, name='r_prime')
     patrn_ugraph = GraphDefParser.parse(patrn_graph.as_graph_def(), output_nodes=[r_prime.op.name])
     for i in range(2):
-        patrn_ugraph.ops_info['a_prime'].replace_with_null_input_tensor(i)
+        patrn_ugraph.ops_map['a_prime'].replace_with_null_input_tensor(i)
     patrn_ugraph = prune_graph(patrn_ugraph)
     topologic_order_graph(patrn_ugraph)
     return patrn_ugraph

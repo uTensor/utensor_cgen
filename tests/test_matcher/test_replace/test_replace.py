@@ -14,18 +14,18 @@ def test_replace_fc_with_add(subj_graph_1, patrn_fc_1):
             b = tf.placeholder(dtype=tf.float32, name='b')
             out = tf.add(a, b, name='fused_node')
         ugraph = GraphDefParser.parse(graph.as_graph_def(), output_nodes=[out.op.name])
-        ugraph.ops_info['fused_node'].replace_with_null_input_tensor(0)
-        ugraph.ops_info['fused_node'].replace_with_null_input_tensor(1)
+        ugraph.ops_map['fused_node'].replace_with_null_input_tensor(0)
+        ugraph.ops_map['fused_node'].replace_with_null_input_tensor(1)
         topologic_order_graph(ugraph)
         ugraph = prune_graph(ugraph)
         patrn_ugraph = match.pattern_ugraph
         
         input_map = {
-            patrn_ugraph.ops_info['a_prime'].input_tensors[0]: ugraph.ops_info['fused_node'].input_tensors[0],
-            patrn_ugraph.ops_info['a_prime'].input_tensors[1]: ugraph.ops_info['fused_node'].input_tensors[1]
+            patrn_ugraph.ops_map['a_prime'].input_tensors[0]: ugraph.ops_map['fused_node'].input_tensors[0],
+            patrn_ugraph.ops_map['a_prime'].input_tensors[1]: ugraph.ops_map['fused_node'].input_tensors[1]
         }
         output_map = {
-            patrn_ugraph.ops_info['r_prime'].output_tensors[0]: ugraph.ops_info['fused_node'].output_tensors[0]
+            patrn_ugraph.ops_map['r_prime'].output_tensors[0]: ugraph.ops_map['fused_node'].output_tensors[0]
         }
         return ugraph, input_map, output_map
     matcher = uTensorGraphMatcher(patrn_fc_1)
@@ -36,7 +36,7 @@ def test_replace_fc_with_add(subj_graph_1, patrn_fc_1):
     test_pass = True
     missed_op_names = []
     for op_name in match.subj2patrn_op_map:
-        if op_name in new_ugraph.ops_info:
+        if op_name in new_ugraph.ops_map:
             test_pass = False
             missed_op_names.append(op_name)
     assert test_pass, \

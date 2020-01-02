@@ -26,7 +26,7 @@ def test_create_allocate_table(refgraph_tuple):
     table = transformer._create_resource_table(ugraph)
     allocate_table = dict()
     l = ugraph.topo_order[3]
-    g = ugraph.ops_info[l]
+    g = ugraph.ops_map[l]
     x = g.output_tensors[0]
     result = transformer._update_allocation_table(allocate_table, table, x, 0, 5)
     assert result['w/y:0']['offsetstart'] == 0
@@ -41,7 +41,7 @@ def test_query_offset_address(refgraph_tuple):
     table = transformer._create_resource_table(ugraph)
     allocate_table = dict()
     l = ugraph.topo_order[3]
-    g = ugraph.ops_info[l]
+    g = ugraph.ops_map[l]
     x = g.output_tensors[0]
     result = transformer._update_allocation_table(allocate_table, table, x, 0, 5)
     start, end = transformer._query_offset_fromallocate_table(allocate_table, 1, 5)
@@ -55,7 +55,7 @@ def test_query_timeline(refgraph_tuple):
     table = transformer._create_resource_table(ugraph)
     allocate_table = dict()
     l = ugraph.topo_order[3]
-    g = ugraph.ops_info[l]
+    g = ugraph.ops_map[l]
     x = g.output_tensors[0]
     result = transformer._update_allocation_table(allocate_table, table, x, 0, 5)
     start, end = transformer._query_time_fromallocate_table(allocate_table, 1, 5)
@@ -69,11 +69,11 @@ def test_query_result(refgraph_tuple):
     table = transformer._create_resource_table(ugraph)
     allocate_table = dict()
     l = ugraph.topo_order[0]
-    g = ugraph.ops_info[l]
+    g = ugraph.ops_map[l]
     x = g.output_tensors[0]
     result = transformer._update_allocation_table(allocate_table, table, x, 5, 10)
     l = ugraph.topo_order[1]
-    g = ugraph.ops_info[l]
+    g = ugraph.ops_map[l]
     y = g.output_tensors[0]
     #address and time overlap
     s = transformer._query_result(allocate_table, 3, 6, 1, 2)
@@ -97,7 +97,7 @@ def test_allocate_tensor(refgraph_tuple):
     table = transformer._create_resource_table(ugraph)
     allocate_table = dict()
     l = ugraph.topo_order[3]
-    g = ugraph.ops_info[l]
+    g = ugraph.ops_map[l]
     x = g.output_tensors[0]
     tensors.append(x)
     unit_size = 4
@@ -125,11 +125,11 @@ def test_query_check(refgraph_tuple):
     table = transformer._create_resource_table(ugraph)
     allocate_table = dict()
     l = ugraph.topo_order[3]
-    g = ugraph.ops_info[l]
+    g = ugraph.ops_map[l]
     x = g.output_tensors[0]
     result = transformer._update_allocation_table(allocate_table, table, x, 0, 5)
     l = ugraph.topo_order[1]
-    g = ugraph.ops_info[l]
+    g = ugraph.ops_map[l]
     y = g.output_tensors[0]
     valid = transformer._check(result, table, y, 4, 10)
     assert valid == False
