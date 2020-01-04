@@ -1,5 +1,6 @@
 # -*- coding: utf8 -*-
 import re
+import logging
 from copy import deepcopy
 from functools import reduce
 
@@ -27,6 +28,7 @@ __all__ = [
   'MetaOperationInfo', 'uTensorGraph',
   'uTensorGraphView'
 ]
+logger = logging.getLogger(__name__)
 
 
 class _NoShallowCopyMixin(object):
@@ -235,7 +237,7 @@ class OperationInfo(IRBase, _NoShallowCopyMixin):
   _ugraph = attr.ib(repr=False)
   @_ugraph.validator
   def check(self, attrib, value):
-    if not isinstance(value, uTensorGraph):
+    if not isinstance(value, (type(None), uTensorGraph)):
       raise ValueError(
         'Expecting a uTensorGraph, '
         'get {}'.format(type(value))
@@ -270,6 +272,11 @@ class OperationInfo(IRBase, _NoShallowCopyMixin):
     return len(self.output_tensors)
 
   def __attrs_post_init__(self):
+    # if self._ugraph is None, then the op do not belong to any graph
+    # you can either use it just as an op information carrier or use
+    # move_into to assign it to a graph (if no duplication)
+    if self._ugraph is not None:
+      self.move_into(self._ugraph)
     skip_pattern = re.compile(r'_utensor_[^_]*')
     if self.op_attr:
       op_attr = {}
@@ -280,7 +287,6 @@ class OperationInfo(IRBase, _NoShallowCopyMixin):
         else:
           op_attr[k] = ConverterDispatcher.get_generic_value(v)
       self.op_attr = op_attr
-    self._ugraph.ops_map[self.name] = self
     if not self.n_inputs == len(self.input_tensors):
       raise ValueError(
         'n_inputs is not equal to the length of input_tensors: {}'.format(self.name)
@@ -371,7 +377,7 @@ class OperationInfo(IRBase, _NoShallowCopyMixin):
       )
     self.input_tensors[idx] = TensorInfo.make_null_tensor(ugraph=self._ugraph)
 
-  def move_into(self, ugraph):
+  def move_into(self, ugraph, force=False):
     """
     Move semantic of the :class:`.OperationInfo` objects
 
@@ -380,12 +386,18 @@ class OperationInfo(IRBase, _NoShallowCopyMixin):
 
     :param ugraph: the graph to transfer the ownership to
     :type ugraph: :class:`.uTensorGraph`
+    :param force: force overwrite existing op if any.
+    :type force: bool
     """
     self._ugraph = ugraph
     for tensor in self.input_tensors:
       tensor.move_into(ugraph)
     for tensor in self.output_tensors:
       tensor.move_into(ugraph)
+    if not force and self.name in ugraph.ops_map:
+      dup_op = ugraph.ops_map[self.name]
+      if dup_op == self:
+        raise ValueError("overwriting existing op: %s", self.name)
     ugraph.ops_map[self.name] = self
   
   def __deepcopy__(self, memo):
