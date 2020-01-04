@@ -77,7 +77,12 @@ def generate_config(target, output):
   help="list of output nodes"
 )
 @click.option('--config', default='utenosr_cli.toml', show_default=True, metavar='CONFIG.toml')
-@click.option('--target', required=True, type=Choice(BackendManager.backends), help='target framework/platform')
+@click.option('--target',
+              default='utensor',
+              show_default=True, 
+              type=Choice(BackendManager.backends),
+              help='target framework/platform'
+)
 def convert_graph(model_file, output_nodes, config, target):
   from utensor_cgen.frontend import FrontendSelector
 
