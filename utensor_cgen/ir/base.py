@@ -3,6 +3,7 @@ import re
 import logging
 from copy import deepcopy
 from functools import reduce
+from itertools import chain
 
 import attr
 import numpy as np
@@ -95,7 +96,7 @@ class TensorInfo(IRBase, _NoShallowCopyMixin):
     transferring ownership of the tensor from original graph
     to other graph
     """
-    self._ugraph = ugraph
+    ugraph.add_tensor(self)
 
   @classmethod
   def make_null_tensor(
@@ -389,16 +390,7 @@ class OperationInfo(IRBase, _NoShallowCopyMixin):
     :param force: force overwrite existing op if any.
     :type force: bool
     """
-    self._ugraph = ugraph
-    for tensor in self.input_tensors:
-      tensor.move_into(ugraph)
-    for tensor in self.output_tensors:
-      tensor.move_into(ugraph)
-    if not force and self.name in ugraph.ops_map:
-      dup_op = ugraph.ops_map[self.name]
-      if dup_op == self:
-        raise ValueError("overwriting existing op: %s", self.name)
-    ugraph.ops_map[self.name] = self
+    ugraph.add_op(self, force=force)
   
   def __deepcopy__(self, memo):
     op_info = OperationInfo(name=self.name,
@@ -502,13 +494,31 @@ class uTensorGraph(IRBase, _NoShallowCopyMixin, uTensorGraphBuilderMixin):
         op_type = op_info.op_type
         ops = self._type_to_op_map.get(
           op_type,
-          []
-        ) + [op_info]
-        self._type_to_op_map.update(
-          [(op_type, ops),]
+          set([])
         )
-    return self._type_to_op_map.get(given_op_type, [])
-  
+        ops.add(op_info)
+        self._type_to_op_map[op_type] = ops
+    return self._type_to_op_map.get(given_op_type, set([]))
+
+  def add_op(self, op, force=False):
+    for tensor in chain(op.input_tensors, op.output_tensors):
+      self.add_tensor(tensor)
+    if not force and op.name in self.ops_map:
+      dup_op = self.ops_map[op.name]
+      if dup_op == op:
+        raise ValueError(
+          'duplicate op detected: {}'.format(op)
+        )
+    self.ops_map[op.name] = op
+    if op.op_type not in self._type_to_op_map:
+      self._type_to_op_map[op.op_type] = set([])
+    self._type_to_op_map[op.op_type].add(op)
+    op._ugraph = self
+
+  def add_tensor(self, tensor):
+    self.tensors_map[tensor.name] = tensor
+    tensor._ugraph = self
+
   @property
   def output_ops(self):
     """
