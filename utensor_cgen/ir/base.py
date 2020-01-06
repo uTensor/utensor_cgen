@@ -83,12 +83,18 @@ class TensorInfo(IRBase, _NoShallowCopyMixin):
   _ugraph = attr.ib(repr=False)
   @_ugraph.validator
   def check(self, attrib, value):
-    if not isinstance(value, uTensorGraph):
-      raise ValueError('Expecting a uTensorGraph, get {}'.format(type(value)))
+    if not isinstance(value, (uTensorGraph, type(None))):
+      raise ValueError(
+        'Expecting a uTensorGraph, get {}'.format(type(value))
+      )
+  
+  def __attrs_post_init__(self):
+    if self._ugraph is not None:
+      self.move_into(self._ugraph)
 
   _NULL_PREFIX = 'utensor_null'
 
-  def move_into(self, ugraph):
+  def move_into(self, ugraph, force=False):
     """
     Move semantic of the :class:`.TensorInfo` objects
 
@@ -96,7 +102,14 @@ class TensorInfo(IRBase, _NoShallowCopyMixin):
     transferring ownership of the tensor from original graph
     to other graph
     """
-    ugraph.add_tensor(self)
+    if self.name in ugraph.tensors_map:
+      dup_tensor = ugraph.tensors_map[self.name]
+      if not force and not self._eq(dup_tensor):
+        raise RuntimeError(
+          'overwriting existing tensor: {}'.format(self.name)
+        )
+    ugraph.tensors_map[self.name] = self
+    self._ugraph = ugraph
 
   @classmethod
   def make_null_tensor(
@@ -150,10 +163,9 @@ class TensorInfo(IRBase, _NoShallowCopyMixin):
 
     :rtype: :class:`.OperationInfo` or `None`
     """
-    op = self._ugraph.ops_map.get(self.op_name, None)
-    if not op and not self.is_null_tensor:
-      raise ValueError('Unknown op name: {}'.format(self.op_name))
-    return op
+    if self.is_dangling:
+      raise ValueError('dangling tensor: {}'.format(self.name))
+    return self._ugraph.ops_map.get(self.op_name, None)
 
   @property
   def lib_name(self):
@@ -178,23 +190,37 @@ class TensorInfo(IRBase, _NoShallowCopyMixin):
   def size(self):
     return reduce(lambda i, j: i*(j is None and 1 or j), self.shape, 1)
 
+  @property
+  def is_dangling(self):
+    return (
+      (not self.is_null_tensor) and
+      (self.op_name not in self._ugraph.ops_map)
+    )
+
   def __deepcopy__(self, memo):
-    new_tensor = TensorInfo(name=self.name,
-                            ugraph=memo['ugraph'],
-                            op_name=self.op_name,
-                            dtype=self.dtype,
-                            shape=deepcopy(self.shape, memo))
+    new_tensor = TensorInfo(
+      name=self.name,
+      ugraph=memo['ugraph'],
+      op_name=self.op_name,
+      dtype=self.dtype,
+      shape=deepcopy(self.shape, memo)
+    )
     return new_tensor
   
   def __hash__(self):
     return hash(self.name)
   
   def __eq__(self, other):
-    if not isinstance(other, type(self)):
-      return False
+    if self._ugraph is not other._ugraph:
+      raise RuntimeError(
+        'Cannot comapring tensors in different graphs'
+      )
+    return self._eq(other)
+  
+  def _eq(self, other):
     return (
+      isinstance(other, type(self)) and
       (self.name == other.name) and
-      (self._ugraph is other._ugraph) and
       (self.op_name == other.op_name) and
       (self.dtype == other.dtype) and
       (self.shape == other.shape)
@@ -244,19 +270,52 @@ class OperationInfo(IRBase, _NoShallowCopyMixin):
         'get {}'.format(type(value))
       )
 
-  input_tensors = attr.ib(validator=instance_of(list))
-  @input_tensors.validator
+  input_tensor_names = attr.ib(validator=instance_of(list))
+  @input_tensor_names.validator
   def check(self, attribute, value):
     # FIXME: we need a refactor of IR, allowing None here is just temporary
     # especially for graph rewrite
-    if not all([isinstance(v, (TensorInfo, type(None))) for v in value]):
-      raise ValueError('Expecting a list of TensorInfo for input_tensors')
+    if not all([isinstance(v, six.string_types) for v in value]):
+      raise ValueError('Expecting a list of stirng for input_tensors')
+  
+  @property
+  def input_tensors(self):
+    return [
+      self._ugraph.tensors_map[name] for name in self.input_tensor_names
+    ]
+  @input_tensors.setter
+  def input_tensors(self, tensors):
+    tensor_names = []
+    for tensor in tensors:
+      if tensor.ugraph is not self.ugraph:
+        raise RuntimeError(
+          'Cannot assign input tensor of different graph'
+        )
+      tensor_names.append(tensor.name)
+    self.input_tensor_names = tensor_names
 
-  output_tensors = attr.ib(validator=instance_of(list))
-  @output_tensors.validator
+  output_tensor_names = attr.ib(validator=instance_of(list))
+  @output_tensor_names.validator
   def check(self, attribute, value):
-    if not all([isinstance(v, TensorInfo) for v in value]):
-      raise ValueError('Expecting a list of TensorInfo for output_tensors')
+    if not all([isinstance(v, six.string_types) for v in value]):
+      raise ValueError(
+        'Expecting a list of string for output_tensors'
+      )
+  @property
+  def output_tensors(self):
+    return [
+      self._ugraph.tensors_map[name] for name in self.output_tensor_names
+    ]
+  @output_tensors.setter
+  def output_tensors(self, tensors):
+    tensor_names = []
+    for tensor in tensors:
+      if self._ugraph is not tensor.ugraph:
+        raise RuntimeError(
+          'Cannot assign output tensor of different graph'
+        )
+      tensor_names.append(tensor.name)
+    self.output_tensor_names = tensor_names
 
   op_type = attr.ib(type=str)
 
@@ -265,19 +324,17 @@ class OperationInfo(IRBase, _NoShallowCopyMixin):
   n_inputs = attr.ib()
   @n_inputs.default
   def default_n_inputs(self):
-    return len(self.input_tensors)
+    return len(self.input_tensor_names)
 
   n_outputs = attr.ib()
   @n_outputs.default
   def default_n_outputs(self):
-    return len(self.output_tensors)
+    return len(self.output_tensor_names)
 
   def __attrs_post_init__(self):
     # if self._ugraph is None, then the op do not belong to any graph
     # you can either use it just as an op information carrier or use
     # move_into to assign it to a graph (if no duplication)
-    if self._ugraph is not None:
-      self.move_into(self._ugraph)
     skip_pattern = re.compile(r'_utensor_[^_]*')
     if self.op_attr:
       op_attr = {}
@@ -288,14 +345,16 @@ class OperationInfo(IRBase, _NoShallowCopyMixin):
         else:
           op_attr[k] = ConverterDispatcher.get_generic_value(v)
       self.op_attr = op_attr
-    if not self.n_inputs == len(self.input_tensors):
+    if not self.n_inputs == len(self.input_tensor_names):
       raise ValueError(
         'n_inputs is not equal to the length of input_tensors: {}'.format(self.name)
       )
-    if not self.n_outputs == len(self.output_tensors):
+    if not self.n_outputs == len(self.output_tensor_names):
       raise ValueError(
         'n_outputs is not equal to the length of output_tensors: {}'.format(self.name)
       )
+    if self._ugraph is not None:
+      self.move_into(self._ugraph)
 
   @property
   def ugraph(self):
@@ -347,6 +406,18 @@ class OperationInfo(IRBase, _NoShallowCopyMixin):
           break
     return [self._ugraph.ops_map[name] for name in out_ops]
 
+  @property
+  def is_dangling(self):
+    return (
+      any([
+        name not in self._ugraph.tensors_map
+        for name in chain(self.input_tensor_names, self.output_tensor_names)
+      ]) or
+      self.name not in self._ugraph.ops_map or
+      self._ugraph.ops_map[self.name] is not self
+    )
+
+  
   def add_null_input_tensor(self, idx=-1):
     """
     Insert null tensor as input tensor at given index
@@ -390,28 +461,50 @@ class OperationInfo(IRBase, _NoShallowCopyMixin):
     :param force: force overwrite existing op if any.
     :type force: bool
     """
-    ugraph.add_op(self, force=force)
+    if self.name in ugraph.ops_map:
+      dup_op = ugraph.ops_map[self.name]
+      if not force and not self._eq(dup_op):
+        raise RuntimeError(
+          'overwrite existing op: {}'.format(self.name)
+        )
+    for tensor in chain(self.input_tensors, self.output_tensors):
+      tensor.move_into(ugraph, force=force)
+    self._ugraph = ugraph
+    ugraph.ops_map[self.name] = self
   
   def __deepcopy__(self, memo):
-    op_info = OperationInfo(name=self.name,
-                            input_tensors=deepcopy(self.input_tensors, memo),
-                            n_inputs=self.n_inputs,
-                            output_tensors=deepcopy(self.output_tensors, memo),
-                            n_outputs=self.n_outputs,
-                            op_type=self.op_type,
-                            lib_name=self.lib_name,
-                            op_attr=deepcopy(self.op_attr, memo),
-                            ugraph=memo['ugraph'])
+    for tensor in chain(self.input_tensors, self.output_tensors):
+      deepcopy(tensor, memo)
+    op_info = OperationInfo(
+      name=self.name,
+      input_tensor_names=self.input_tensor_names[:],
+      n_inputs=self.n_inputs,
+      output_tensor_names=self.output_tensor_names[:],
+      n_outputs=self.n_outputs,
+      op_type=self.op_type,
+      lib_name=self.lib_name,
+      op_attr=deepcopy(self.op_attr, memo),
+      ugraph=memo['ugraph']
+    )
     return op_info
 
   def __hash__(self):
     return hash(self.name)
   
   def __eq__(self, other):
-    if not isinstance(other, type(self)):
-      return False
-    return (self.name == other.name) and (self._ugraph is other._ugraph)
+    if self._ugraph is not other.ugraph:
+      raise RuntimeError(
+        'Cannot comapring ops in different graphs'
+      )
+    return self._eq(other)
   
+  def _eq(self, other):
+    return (
+      isinstance(other, type(self)) and
+      (self.name == other.name) and
+      (self.op_type == other.op_type)
+    )
+
   def __getitem__(self, tensor_idx):
     num_out_tensors = len(self.output_tensors)
     if tensor_idx > num_out_tensors:
@@ -479,7 +572,20 @@ class uTensorGraph(IRBase, _NoShallowCopyMixin, uTensorGraphBuilderMixin):
         'output_nodes should be list of str: {}'.format(self.output_nodes)
       )
     self.name = self.name.replace('/', '_')
-  
+    for tensor in self.tensors_map.values():
+      tensor.move_into(self, force=True)
+    for op in self.ops_map.values():
+      op.move_into(self, force=True)
+      self._update_optype_map(op)
+    if self.is_dangling:
+      raise RuntimeError('dangling graph')
+
+  @property
+  def is_dangling(self):
+    return any([
+      op.is_dangling for op in self.ops_map.values()
+    ])
+
   def get_ops_by_type(self, given_op_type):
     """
     Return the ops of given type in the graph
@@ -489,35 +595,13 @@ class uTensorGraph(IRBase, _NoShallowCopyMixin, uTensorGraphBuilderMixin):
 
     :rtype: List[:class:`.OperationInfo`]
     """
-    if not self._type_to_op_map:
-      for op_info in self.ops_map.values():
-        op_type = op_info.op_type
-        ops = self._type_to_op_map.get(
-          op_type,
-          set([])
-        )
-        ops.add(op_info)
-        self._type_to_op_map[op_type] = ops
     return self._type_to_op_map.get(given_op_type, set([]))
 
   def add_op(self, op, force=False):
     for tensor in chain(op.input_tensors, op.output_tensors):
-      self.add_tensor(tensor)
-    if not force and op.name in self.ops_map:
-      dup_op = self.ops_map[op.name]
-      if dup_op == op:
-        raise ValueError(
-          'duplicate op detected: {}'.format(op)
-        )
-    self.ops_map[op.name] = op
-    if op.op_type not in self._type_to_op_map:
-      self._type_to_op_map[op.op_type] = set([])
-    self._type_to_op_map[op.op_type].add(op)
-    op._ugraph = self
-
-  def add_tensor(self, tensor):
-    self.tensors_map[tensor.name] = tensor
-    tensor._ugraph = self
+      tensor.move_into(self, force=force)
+    op.move_into(self, force=force)
+    self._update_optype_map(op)
 
   @property
   def output_ops(self):
@@ -675,9 +759,11 @@ class uTensorGraph(IRBase, _NoShallowCopyMixin, uTensorGraphBuilderMixin):
     """
     for op in self.ops_map.values():
       op.move_into(other_ugraph)
-      if op.op_type not in self._type_to_op_map:
-        self._type_to_op_map[op.op_type] = []
-      self._type_to_op_map[op.op_type].append(op)
+  
+  def _update_optype_map(self, op):
+    if op.op_type not in self._type_to_op_map:
+      self._type_to_op_map[op.op_type] = set()
+    self._type_to_op_map[op.op_type].add(op)
 
   def __deepcopy__(self, memo):
     new_graph = uTensorGraph(

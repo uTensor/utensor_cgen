@@ -24,16 +24,19 @@ def test_ugraph_copy(graph_tuple):
     ugraph_1 = GraphDefParser.parse(graph_def, output_nodes)
     ugraph_2 = deepcopy(ugraph_1)
     assert ugraph_1 is not ugraph_2
-    assert ugraph_1.graph_def == ugraph_2.graph_def
+    for name in ugraph_1.ops_map:
+        assert name in ugraph_2.ops_map
+    for name in ugraph_1.tensors_map:
+        assert name in ugraph_2.tensors_map
 
 def test_op_info():
     np_array = np.array([1, 2, 3], dtype=np.float32)
     t_proto = tf.make_tensor_proto(np_array, dtype=np.float32)
     ugraph = uTensorGraph(output_nodes=['dummy'])
     op_info = OperationInfo(name='testing_op',
-                            input_tensors=[],
+                            input_tensor_names=[],
                             n_inputs=0,
-                            output_tensors=[],
+                            output_tensor_names=[],
                             n_outputs=0,
                             op_type='no_op',
                             lib_name='tensorflow',

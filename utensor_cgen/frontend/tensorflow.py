@@ -35,33 +35,40 @@ class GraphDefParser(Parser):
     )
     for node in graph_def.node:
       op = graph.get_operation_by_name(node.name)
-      in_tensors = [TensorInfo(name=tensor.name,
-                               ugraph=ugraph,
-                               op_name=tensor.op.name,
-                               dtype=np.dtype(tensor.dtype.as_numpy_dtype),
-                               shape=cls._tf_parse_tshape(tensor.shape),
-                               )
-                    for tensor in op.inputs]
-      out_tensors = [TensorInfo(name=tensor.name,
-                                ugraph=ugraph,
-                                op_name=op.name,
-                                dtype=np.dtype(tensor.dtype.as_numpy_dtype),
-                                shape=cls._tf_parse_tshape(tensor.shape),
-                                )
-                     for tensor in op.outputs]
+      in_tensors = [
+        TensorInfo(
+          name=tensor.name,
+          ugraph=ugraph,
+          op_name=tensor.op.name,
+          dtype=np.dtype(tensor.dtype.as_numpy_dtype),
+          shape=cls._tf_parse_tshape(tensor.shape),
+        )
+        for tensor in op.inputs
+      ]
+      out_tensors = [
+        TensorInfo(
+          name=tensor.name,
+          ugraph=ugraph,
+          op_name=op.name,
+          dtype=np.dtype(tensor.dtype.as_numpy_dtype),
+          shape=cls._tf_parse_tshape(tensor.shape),
+        )
+        for tensor in op.outputs
+      ]
       op_type = node.op
       op_attr = node.attr
-      op_info = OperationInfo(name=node.name,
-                              input_tensors=in_tensors,
-                              n_inputs=len(in_tensors),
-                              output_tensors=out_tensors,
-                              n_outputs=len(out_tensors),
-                              op_type=op_type,
-                              lib_name='tensorflow',
-                              op_attr=op_attr,
-                              ugraph=ugraph)
+      op_info = OperationInfo(
+        name=node.name,
+        input_tensor_names=[tensor.name for tensor in in_tensors],
+        n_inputs=len(in_tensors),
+        output_tensor_names=[tensor.name for tensor in out_tensors],
+        n_outputs=len(out_tensors),
+        op_type=op_type,
+        lib_name='tensorflow',
+        op_attr=op_attr,
+        ugraph=ugraph
+      )
       op_info.op_attr['tensorflow__device'] = node.device
-      ugraph.ops_map[node.name] = op_info
     topologic_order_graph(ugraph)
     ugraph = Legalizer.legalize(ugraph, {})
     return ugraph
