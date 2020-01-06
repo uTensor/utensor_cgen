@@ -417,7 +417,6 @@ class OperationInfo(IRBase, _NoShallowCopyMixin):
       self._ugraph.ops_map[self.name] is not self
     )
 
-  
   def add_null_input_tensor(self, idx=-1):
     """
     Insert null tensor as input tensor at given index
@@ -431,7 +430,7 @@ class OperationInfo(IRBase, _NoShallowCopyMixin):
       raise ValueError(
         'can only add null tensor to op of type Placeholder: %s' % self.op_type
       )
-    if idx > len(self.input_tensors):
+    if idx > 0 and idx >= self.n_inputs:
       raise ValueError(
         "can't insert null tensor at {} as {} input tensors present".format(
           idx, len(self,input_tensors)
@@ -443,7 +442,7 @@ class OperationInfo(IRBase, _NoShallowCopyMixin):
     return null_tensor
   
   def replace_with_null_input_tensor(self, idx):
-    if idx >= len(self.input_tensors):
+    if idx >= self.n_inputs:
       raise ValueError(
         'index out of bound: %s' % idx
       )
@@ -596,12 +595,6 @@ class uTensorGraph(IRBase, _NoShallowCopyMixin, uTensorGraphBuilderMixin):
     :rtype: List[:class:`.OperationInfo`]
     """
     return self._type_to_op_map.get(given_op_type, set([]))
-
-  def add_op(self, op, force=False):
-    for tensor in chain(op.input_tensors, op.output_tensors):
-      tensor.move_into(self, force=force)
-    op.move_into(self, force=force)
-    self._update_optype_map(op)
 
   @property
   def output_ops(self):
