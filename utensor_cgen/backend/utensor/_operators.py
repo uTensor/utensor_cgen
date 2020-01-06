@@ -116,18 +116,17 @@ class _ConstOperator(_Operator):
     generic_value = GenericTensorConverterMixin.__utensor_generic_type__(
       np_array=value
     )
+    out_tensor = TensorInfo(
+      name='{}:0'.format(name),
+      op_name=name,
+      dtype=value.dtype,
+      shape=list(value.shape),
+      ugraph=ugraph
+    )
     return OperationInfo(
       name=name,
-      input_tensors=[],
-      output_tensors=[
-        TensorInfo(
-          name='{}:0'.format(name),
-          op_name=name,
-          dtype=value.dtype,
-          shape=list(value.shape),
-          ugraph=ugraph
-        )
-      ],
+      input_tensor_names=[],
+      output_tensor_names=[out_tensor.name],
       op_type=cls.op_type,
       op_attr={
         'value': AttrValueConverter.__utensor_generic_type__(
@@ -166,8 +165,8 @@ class _AddOperator(_Operator):
 
   def __init__(self, op_info, **kwargs):
     _Operator.__init__(self)
-    inputs = [tensor_info.name for tensor_info in op_info.input_tensors]
-    output = op_info.output_tensors[0].name
+    inputs = op_info.input_tensor_names
+    output = op_info.output_tensor_names[0]
     tf_dtype = op_info.input_tensors[0].dtype
     parser = NamescopedKWArgsParser(RefCntOptimizer.KWARGS_NAMESCOPE,
                                     op_info.op_attr)
@@ -182,18 +181,17 @@ class _AddOperator(_Operator):
     dummy_y = np.empty(tensor_y.shape)
     output_shape = np.broadcast(dummy_x, dummy_y).shape
     output_dtype = np.promote_types(tensor_x.dtype, tensor_y.dtype)
+    out_tensor = TensorInfo(
+      name='{}:0'.format(name),
+      op_name=name,
+      dtype=output_dtype,
+      shape=list(output_shape),
+      ugraph=ugraph
+    )
     return OperationInfo(
       name=name,
-      input_tensors=[tensor_x, tensor_y],
-      output_tensors=[
-        TensorInfo(
-          name='{}:0'.format(name),
-          op_name=name,
-          dtype=output_dtype,
-          shape=list(output_shape),
-          ugraph=ugraph
-        )
-      ],
+      input_tensor_names=[tensor_x.name, tensor_y.name],
+      output_tensor_names=[out_tensor.name],
       op_type=cls.op_type,
       op_attr={
         'T': AttrValueConverter.__utensor_generic_type__(
@@ -213,7 +211,7 @@ class _ArgMaxOperator(_Operator):
 
   def __init__(self, op_info, **kwargs):
     _Operator.__init__(self)
-    inputs = [tensor_info.name for tensor_info in op_info.input_tensors]
+    inputs = op_info.input_tensor_names
     out_tensor_info = op_info.output_tensors[0]
     output, out_dtype = out_tensor_info.name, out_tensor_info.dtype
     in_dtype = op_info.input_tensors[0].dtype
@@ -250,19 +248,18 @@ class _ArgMaxOperator(_Operator):
       k: AttrValueConverter.get_generic_value(v)
       for k, v in node_def.attr.items()
     }
+    out_tensor = TensorInfo(
+      name='{}:0'.format(name),
+      op_name=name,
+      dtype=dtype,
+      shape=output_shape,
+      ugraph=ugraph
+    )
     return OperationInfo(
       name=name,
       op_type=cls.op_type,
-      input_tensors=[input_tensor, axis],
-      output_tensors=[
-        TensorInfo(
-          name='{}:0'.format(name),
-          op_name=name,
-          dtype=dtype,
-          shape=output_shape,
-          ugraph=ugraph
-        )
-      ],
+      input_tensor_names=[input_tensor.name, axis.name],
+      output_tensor_names=[out_tensor.name],
       op_attr=op_attr,
       ugraph=ugraph,
       lib_name=kwargs.get('lib_name', 'tensorflow'),
@@ -276,7 +273,7 @@ class _DequantizeOperator(_Operator):
 
   def __init__(self, op_info, **kwargs):
     _Operator.__init__(self)
-    inputs = [tensor_info.name for tensor_info in op_info.input_tensors]
+    inputs = op_info.input_tensor_names
     out_tensor_info = op_info.output_tensors[0]
     data_manager = kwargs['data_manager']
     output, out_dtype = out_tensor_info.name, out_tensor_info.dtype
@@ -297,7 +294,7 @@ class _MaxOperator(_Operator):
 
   def __init__(self, op_info, **kwargs):
     _Operator.__init__(self)
-    inputs = [tensor_info.name for tensor_info in op_info.input_tensors]
+    inputs = op_info.input_tensor_names
     out_tensor_info = op_info.output_tensors[0]
     data_manager = kwargs['data_manager']
     output, out_dtype, out_shape = (out_tensor_info.name,
@@ -333,18 +330,17 @@ class _MaxOperator(_Operator):
         name='dummy'
       )
     node_def = [node for node in graph.as_graph_def().node if node.name == 'dummy'][0]
+    out_tensor = TensorInfo(
+      name='{}:0'.format(name),
+      op_name=name,
+      dtype=tensor.dtype,
+      shape=dummy_out.shape.as_list(),
+      ugraph=ugraph
+    )
     return OperationInfo(
       name=name,
-      input_tensors=[tensor, axis],
-      output_tensors=[
-        TensorInfo(
-          name='{}:0'.format(name),
-          op_name=name,
-          dtype=tensor.dtype,
-          shape=dummy_out.shape.as_list(),
-          ugraph=ugraph
-        )
-      ],
+      input_tensor_names=[tensor.name, axis.name],
+      output_tensor_names=[out_tensor.name],
       op_type=cls.op_type,
       op_attr={
         k: AttrValueConverter.get_generic_value(v)
@@ -362,7 +358,7 @@ class _MinOperator(_Operator):
 
   def __init__(self, op_info, **kwargs):
     _Operator.__init__(self)
-    inputs = [tensor_info.name for tensor_info in op_info.input_tensors]
+    inputs = op_info.input_tensor_names
     out_info = op_info.output_tensors[0]
     output, out_dtype, out_shape = (out_info.name,
                                     out_info.dtype,
@@ -395,18 +391,17 @@ class _MinOperator(_Operator):
       )
     node_def = [node for node in graph.as_graph_def().node if node.name == 'dummy'][0]
     output_shape = dummy_out.shape.as_list()
+    out_tensor = TensorInfo(
+      name='{}:0'.format(name),
+      op_name=name,
+      dtype=tensor.dtype,
+      shape=output_shape,
+      ugraph=ugraph,
+    )
     return OperationInfo(
       name=name,
-      input_tensors=[tensor, axis],
-      output_tensors=[
-        TensorInfo(
-          name='{}:0'.format(name),
-          op_name=name,
-          dtype=tensor.dtype,
-          shape=output_shape,
-          ugraph=ugraph,
-        )
-      ],
+      input_tensor_names=[tensor.name, axis.name],
+      output_tensor_names=[out_tensor.name],
       op_type=cls.op_type,
       lib_name=kwargs.get('lib_name', 'tensorflow'),
       ugraph=ugraph,
@@ -424,7 +419,7 @@ class _MaxPool(_Operator):
 
   def __init__(self, op_info, **kwargs):
     _Operator.__init__(self)
-    inputs = [tensor_info.name for tensor_info in op_info.input_tensors]
+    inputs = op_info.input_tensor_names
     output = op_info.output_tensors[0].name
     dtype = op_info.output_tensors[0].dtype
     ksize = op_info.op_attr['ksize'].value.ints_value
@@ -464,18 +459,17 @@ class _MaxPool(_Operator):
     output_shape = tf_tensor.shape.as_list()
     graph_def = graph.as_graph_def()
     node_def = [node for node in graph_def.node if node.name == 'dummy'][0]
+    out_tensor = TensorInfo(
+      name='{}:0'.format(name),
+      op_name=name,
+      dtype=tensor.dtype,
+      shape=output_shape,
+      ugraph=ugraph
+    )
     return OperationInfo(
       name=name,
-      input_tensors=[tensor],
-      output_tensors=[
-        TensorInfo(
-          name='{}:0'.format(name),
-          op_name=name,
-          dtype=tensor.dtype,
-          shape=output_shape,
-          ugraph=ugraph
-        )
-      ],
+      input_tensor_names=[tensor.name],
+      output_tensor_names=[out_tensor.name],
       op_type=cls.op_type,
       lib_name=kwargs.get('lib_name', 'tensorflow'),
       ugraph=ugraph,
@@ -493,7 +487,7 @@ class _QuantizedMaxPool(_Operator):
 
   def __init__(self, op_info, **kwargs):
     _Operator.__init__(self)
-    inputs = [tensor_info.name for tensor_info in op_info.input_tensors]
+    inputs = op_info.input_tensor_names
     outputs = [tensor_info.name for tensor_info in op_info.output_tensors]
     dtype = op_info.output_tensors[0].dtype
     ksize = op_info.op_attr['ksize'].value.ints_value
@@ -514,7 +508,7 @@ class _MinOperator(_Operator):
 
   def __init__(self, op_info, **kwargs):
     _Operator.__init__(self)
-    inputs = [tensor_info.name for tensor_info in op_info.input_tensors]
+    inputs = op_info.input_tensor_names
     out_info = op_info.output_tensors[0]
     data_manager = kwargs['data_manager']
     output, out_dtype, out_shape = (out_info.name,
@@ -551,18 +545,17 @@ class _MinOperator(_Operator):
       )
     node_def = [node for node in graph.as_graph_def().node if node.name == 'dummy'][0]
     output_shape = dummy_out.shape.as_list()
+    out_tensor = TensorInfo(
+      name='{}:0'.format(name),
+      op_name=name,
+      dtype=tensor.dtype,
+      shape=output_shape,
+      ugraph=ugraph,
+    )
     return OperationInfo(
       name=name,
-      input_tensors=[tensor, axis],
-      output_tensors=[
-        TensorInfo(
-          name='{}:0'.format(name),
-          op_name=name,
-          dtype=tensor.dtype,
-          shape=output_shape,
-          ugraph=ugraph,
-        )
-      ],
+      input_tensor_names=[tensor.name, axis.name],
+      output_tensor_names=[out_tensor.name],
       op_type=cls.op_type,
       lib_name=kwargs.get('lib_name', 'tensorflow'),
       ugraph=ugraph,
@@ -580,7 +573,7 @@ class _QuantizeV2Operator(_Operator):
 
   def __init__(self, op_info, **kwargs):
     _Operator.__init__(self)
-    inputs = [tensor_info.name for tensor_info in op_info.input_tensors]
+    inputs = op_info.input_tensor_names
     outputs = [tensor_info.name for tensor_info in op_info.output_tensors]
     out_dtype = op_info.output_tensors[0].dtype
     data_manager = kwargs['data_manager']
@@ -601,7 +594,7 @@ class _MatMulOperator(_Operator):
 
   def __init__(self, op_info, **kwargs):
     _Operator.__init__(self)
-    inputs = [tensor_info.name for tensor_info in op_info.input_tensors]
+    inputs = op_info.input_tensor_names
     output = op_info.output_tensors[0].name
     in_tensor_info = op_info.input_tensors[0]
     x_dtype, w_dtype, out_dtype = (op_info.input_tensors[0].dtype,
@@ -624,20 +617,17 @@ class _MatMulOperator(_Operator):
       raise ValueError(
         'dimension mismatch: {},{}'.format(tensor_x.shape, tensor_w.shape)
       )
+    out_tensor = TensorInfo(
+      name='{}:0'.format(name),
+      op_name=name,
+      dtype=out_dtype,
+      shape=tensor_x.shape[:-1]+tensor_w.shape[1:],
+      ugraph=ugraph
+    )
     return OperationInfo(
       name=name,
-      input_tensors=[
-        tensor_x, tensor_w
-      ],
-      output_tensors=[
-        TensorInfo(
-          name='{}:0'.format(name),
-          op_name=name,
-          dtype=out_dtype,
-          shape=tensor_x.shape[:-1]+tensor_w.shape[1:],
-          ugraph=ugraph
-        )
-      ],
+      input_tensor_names=[tensor_x.name, tensor_w.name],
+      output_tensor_names=[out_tensor.name],
       op_type=cls.op_type,
       op_attr={
         'T': AttrValueConverter.__utensor_generic_type__(
@@ -665,7 +655,7 @@ class _QuantizedMatMulOperator(_Operator):
 
   def __init__(self, op_info, **kwargs):
     _Operator.__init__(self)
-    inputs = [tensor_info.name for tensor_info in op_info.input_tensors]
+    inputs = op_info.input_tensor_names[:]
     outputs = [tensor_info.name for tensor_info in op_info.output_tensors]
     in_tensor_info = op_info.input_tensors[0]
     x_dtype, w_dtype, out_dtype = (op_info.input_tensors[0].dtype,
@@ -691,7 +681,7 @@ class _ReluOperator(_Operator):
 
   def __init__(self, op_info, **kwargs):
     _Operator.__init__(self)
-    inputs = [tensor_info.name for tensor_info in op_info.input_tensors]
+    inputs = op_info.input_tensor_names[:]
     output = op_info.output_tensors[0].name
     in_dtype, out_dtype = (op_info.input_tensors[0].dtype,
                             op_info.output_tensors[0].dtype)  #NT: why separate this out?
@@ -706,18 +696,17 @@ class _ReluOperator(_Operator):
   
   @classmethod
   def build_op_info(cls, ugraph, name, tensor, **kwargs):
+    out_tensor = TensorInfo(
+      name='{}:0'.format(name),
+      op_name=name,
+      dtype=tensor.dtype,
+      shape=tensor.shape[:],
+      ugraph=ugraph
+    )
     return OperationInfo(
       name=name,
-      input_tensors=[tensor],
-      output_tensors=[
-        TensorInfo(
-          name='{}:0'.format(name),
-          op_name=name,
-          dtype=tensor.dtype,
-          shape=tensor.shape[:],
-          ugraph=ugraph
-        )
-      ],
+      input_tensor_names=[tensor.name],
+      output_tensor_names=[out_tensor.name],
       op_type=cls.op_type,
       op_attr={
         'T': AttrValueConverter.__utensor_generic_type__(
@@ -737,8 +726,8 @@ class _QuantizedReluOperator(_Operator):
 
   def __init__(self, op_info, **kwargs):
     _Operator.__init__(self)
-    inputs = [tensor_info.name for tensor_info in op_info.input_tensors]
-    outputs = [tensor_info.name for tensor_info in op_info.output_tensors]
+    inputs = op_info.input_Tensor_names[:]
+    outputs = op_info.output_tensor_names[:]
     in_dtype, qout_dtype = (op_info.input_tensors[0].dtype,
                             op_info.output_tensors[0].dtype)  #NT: why separate this out?
                                                               #DB: I don't know, it's in the uTensor C code
@@ -763,8 +752,8 @@ class _QuantizedAddOperator(_Operator):
 
   def __init__(self, op_info, **kwargs):
     _Operator.__init__(self)
-    inputs = [tensor_info.name for tensor_info in op_info.input_tensors]
-    outputs = [tensor_info.name for tensor_info in op_info.output_tensors]
+    inputs = op_info.input_tensor_names[:]
+    outputs = op_info.output_tensor_names[:]
     x_dtype, w_dtype, out_dtype = (op_info.input_tensors[0].dtype,
                                    op_info.input_tensors[1].dtype,
                                    op_info.output_tensors[0].dtype)
@@ -788,8 +777,8 @@ class _QuantizedMulOperator(_Operator):
 
   def __init__(self, op_info, **kwargs):
     _Operator.__init__(self)
-    inputs = [tensor_info.name for tensor_info in op_info.input_tensors]
-    outputs = [tensor_info.name for tensor_info in op_info.output_tensors]
+    inputs = op_info.input_tensor_names[:]
+    outputs = op_info.output_tensor_names[:]
     x_dtype, w_dtype, out_dtype = (op_info.input_tensors[0].dtype,
                                    op_info.input_tensors[1].dtype,
                                    op_info.output_tensors[0].dtype)
@@ -956,18 +945,17 @@ class _Conv2DOperator(_Operator):
       k: AttrValueConverter.get_generic_value(v)
       for k, v in node_def.attr.items()
     }
+    out_tensor = TensorInfo(
+      name='{}:0'.format(name),
+      op_name=name,
+      dtype=output_dtype,
+      shape=output_shape,
+      ugraph=ugraph,
+    )
     return OperationInfo(
       name=name,
-      input_tensors=[tensor_x, tensor_w],
-      output_tensors=[
-        TensorInfo(
-          name='{}:0'.format(name),
-          op_name=name,
-          dtype=output_dtype,
-          shape=output_shape,
-          ugraph=ugraph,
-        )
-      ],
+      input_tensor_names=[tensor_x.name, tensor_w.name],
+      output_tensor_names=[out_tensor.name],
       op_type=cls.op_type,
       op_attr=op_attr,
       ugraph=ugraph,
