@@ -412,45 +412,18 @@ def ops_bfs_queue(ugraph, init_nodes=None):
 
 def prune_graph(ugraph):
   """
-  Remove nodes that is no longer needed *in-place*
-
-  this function will trace the output nodes of the
-  given graph by `BFS <https://en.wikipedia.org/wiki/Breadth-first_search>`_
-  and remove all nodes which are not reachable afterward
+  Remove nodes that is no longer needed
 
   :param ugraph: the graph to be pruned
   :type ugraph: :class:`.uTensorGraph`
   """
   new_ugraph = deepcopy(ugraph)
-  # BFS to find all ops you need
-  ops_in_need = set(ugraph.output_nodes)
-  queue = [name for name in ugraph.output_nodes]
-  visited = set([])
-  while queue:
-    op_name = queue.pop(0)
-    #TODO: move the code below to a standalone function.
-    # Maybe using a more extensive data structure
-    # or simply: in_ops = [node.name for node in ugraph.ops_map[op_name].input_nodes]
-    tensors_in = set([t.name for t in ugraph.ops_map[op_name].input_tensors])
-    in_ops = set()
-    for it_node in ugraph.ops_map:
-      if it_node == op_name:
-        continue
-      it_tensors_out = [t.name for t in ugraph.ops_map[it_node].output_tensors]
-      if not tensors_in.isdisjoint(it_tensors_out):
-        in_ops.add(it_node)
-
-    queue.extend([name for name in in_ops if name not in visited])
-    visited.update(in_ops)
-    ops_in_need.update(in_ops)
-
-  ops_to_remove = set([])
-  for op_name in new_ugraph.ops_map.keys():
-    if op_name not in ops_in_need:
-      # remove ops not needed from ops_map
-      ops_to_remove.add(op_name)
-  for op_name in ops_to_remove:
-    new_ugraph.ops_map.pop(op_name)
+  ops_needed = set(new_ugraph.topo_order)
+  for op in list(new_ugraph.ops_map.values()):
+    if op.name not in ops_needed:
+      new_ugraph.ops_map.pop(op.name)
+      for tensor_name in op.output_tensor_names:
+        new_ugraph.tensors_map.pop(tensor_name)
   return new_ugraph
 
 

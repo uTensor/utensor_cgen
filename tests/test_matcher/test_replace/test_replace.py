@@ -19,7 +19,6 @@ def test_replace_fc_with_add(subj_graph_1, patrn_fc_1):
         topologic_order_graph(ugraph)
         ugraph = prune_graph(ugraph)
         patrn_ugraph = match.pattern_ugraph
-        
         input_map = {
             patrn_ugraph.ops_map['a_prime'].input_tensors[0]: ugraph.ops_map['fused_node'].input_tensors[0],
             patrn_ugraph.ops_map['a_prime'].input_tensors[1]: ugraph.ops_map['fused_node'].input_tensors[1]
@@ -29,8 +28,8 @@ def test_replace_fc_with_add(subj_graph_1, patrn_fc_1):
         }
         return ugraph, input_map, output_map
     matcher = uTensorGraphMatcher(patrn_fc_1)
-    matches = matcher.match(subj_graph_1)
-    assert matches, 'no match found'
+    matches = matcher.match_all(subj_graph_1)
+    assert len(matches) == 1, 'expecting 1 match, get {}'.format(matches)
     match = matches[0]
     new_ugraph = match.replace_with(callback)
     test_pass = True

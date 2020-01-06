@@ -45,7 +45,7 @@ class IRBase(object):
     return ['tensorflow']
 
 
-@attr.s(cmp=False)
+@attr.s(cmp=False, repr=False)
 class TensorInfo(IRBase, _NoShallowCopyMixin):
   """
   :param name: the name of the tensor
@@ -200,7 +200,7 @@ class TensorInfo(IRBase, _NoShallowCopyMixin):
   def __deepcopy__(self, memo):
     new_tensor = TensorInfo(
       name=self.name,
-      ugraph=memo['ugraph'],
+      ugraph=memo.get('ugraph', None),
       op_name=self.op_name,
       dtype=self.dtype,
       shape=deepcopy(self.shape, memo)
@@ -225,6 +225,9 @@ class TensorInfo(IRBase, _NoShallowCopyMixin):
       (self.dtype == other.dtype) and
       (self.shape == other.shape)
     )
+  
+  def __repr__(self):
+    return '({tensor.name}, {tensor.dtype}, {tensor.shape})'.format(tensor=self)
 
 
 @attr.s(cmp=False, repr=False)
@@ -437,7 +440,7 @@ class OperationInfo(IRBase, _NoShallowCopyMixin):
         )
       )
     null_tensor = TensorInfo.make_null_tensor(ugraph=self._ugraph)
-    self.input_tensors.insert(idx, null_tensor)
+    self.input_tensor_names.insert(idx, null_tensor.name)
     self.n_inputs += 1
     return null_tensor
   
@@ -446,7 +449,7 @@ class OperationInfo(IRBase, _NoShallowCopyMixin):
       raise ValueError(
         'index out of bound: %s' % idx
       )
-    self.input_tensors[idx] = TensorInfo.make_null_tensor(ugraph=self._ugraph)
+    self.input_tensor_names[idx] = TensorInfo.make_null_tensor(ugraph=self._ugraph).name
 
   def move_into(self, ugraph, force=False):
     """
@@ -466,9 +469,9 @@ class OperationInfo(IRBase, _NoShallowCopyMixin):
         raise RuntimeError(
           'overwrite existing op: {}'.format(self.name)
         )
+    self._ugraph = ugraph
     for tensor in chain(self.input_tensors, self.output_tensors):
       tensor.move_into(ugraph, force=force)
-    self._ugraph = ugraph
     ugraph.ops_map[self.name] = self
   
   def __deepcopy__(self, memo):
@@ -483,7 +486,7 @@ class OperationInfo(IRBase, _NoShallowCopyMixin):
       op_type=self.op_type,
       lib_name=self.lib_name,
       op_attr=deepcopy(self.op_attr, memo),
-      ugraph=memo['ugraph']
+      ugraph=memo.get('ugraph', None),
     )
     return op_info
 
@@ -560,7 +563,6 @@ class uTensorGraph(IRBase, _NoShallowCopyMixin, uTensorGraphBuilderMixin):
   # non-init
   topo_order = attr.ib(factory=list, init=False)
   data_manager = attr.ib(default=None, init=False)
-  _type_to_op_map = attr.ib(factory=dict, init=False, repr=False)
 
   def __attrs_post_init__(self):
     if not all(
@@ -575,7 +577,6 @@ class uTensorGraph(IRBase, _NoShallowCopyMixin, uTensorGraphBuilderMixin):
       tensor.move_into(self, force=True)
     for op in self.ops_map.values():
       op.move_into(self, force=True)
-      self._update_optype_map(op)
     if self.is_dangling:
       raise RuntimeError('dangling graph')
 
@@ -594,7 +595,11 @@ class uTensorGraph(IRBase, _NoShallowCopyMixin, uTensorGraphBuilderMixin):
 
     :rtype: List[:class:`.OperationInfo`]
     """
-    return self._type_to_op_map.get(given_op_type, set([]))
+    ops = set()
+    for op in self.ops_map.values():
+      if op.op_type == given_op_type:
+        ops.add(op)
+    return ops
 
   @property
   def output_ops(self):
@@ -750,13 +755,10 @@ class uTensorGraph(IRBase, _NoShallowCopyMixin, uTensorGraphBuilderMixin):
         attribute of given graph *in-place*, given that **output_nodes** \
         is valid.
     """
+    for tensor in self.tensors_map.values():
+      tensor.move_into(other_ugraph, force=True)
     for op in self.ops_map.values():
-      op.move_into(other_ugraph)
-  
-  def _update_optype_map(self, op):
-    if op.op_type not in self._type_to_op_map:
-      self._type_to_op_map[op.op_type] = set()
-    self._type_to_op_map[op.op_type].add(op)
+      op.move_into(other_ugraph, force=True)
 
   def __deepcopy__(self, memo):
     new_graph = uTensorGraph(
@@ -765,6 +767,10 @@ class uTensorGraph(IRBase, _NoShallowCopyMixin, uTensorGraphBuilderMixin):
       lib_name=self._lib_name
     )
     memo['ugraph'] = new_graph
+    new_graph.tensors_map = {
+      k: deepcopy(v, memo)
+      for k, v in self.tensors_map.items()
+    }
     new_graph.ops_map = {
       k: deepcopy(v, memo)
       for k, v in self.ops_map.items()

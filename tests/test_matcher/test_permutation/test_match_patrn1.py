@@ -3,10 +3,10 @@ from utensor_cgen.matcher import uTensorGraphMatcher
 
 def test_id_match(patrn_ugraph):
     matcher = uTensorGraphMatcher(patrn_ugraph)
-    matches = matcher.match(patrn_ugraph)
-    assert matches, 'expecting matches, get {} matches'.format(len(matches))
-    match = matches[0]
+    matches = matcher.match_all(patrn_ugraph)
+    assert len(matches) == 2, 'expecting 2 matches, get {} matches'.format(len(matches))
 
+    match = matches[0]
     assert match.patrn2subj_op_map['input0'].name in ['input0', 'input1']
     assert match.patrn2subj_op_map['input1'].name in ['input0', 'input1']
     assert match.patrn2subj_op_map['input0'].name != match.patrn2subj_op_map['input1'].name
