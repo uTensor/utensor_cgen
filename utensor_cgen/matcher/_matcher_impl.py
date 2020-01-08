@@ -10,8 +10,7 @@ from utensor_cgen.ir import (MetaOperationInfo, OperationInfo, uTensorGraph,
                              uTensorGraphView)
 from utensor_cgen.logger import logger
 from utensor_cgen.matcher._morphism import Morphism
-from utensor_cgen.utils import (ops_bfs_queue, prune_graph, random_str,
-                                topologic_order_graph)
+from utensor_cgen.utils import ops_bfs_queue, prune_graph, random_str
 
 __all__ = ["uTensorGraphMatcher", "uTensorGraphMatch"]
 
@@ -418,10 +417,6 @@ class uTensorGraphMatch(object):
         patrn_in_tensor = inv_input_map[repl_in_tensor]
         subj_in_tensor = self.patrn2subj_tensor_map[patrn_in_tensor.name]
         op.input_tensor_names[i] = subj_in_tensor.name
-    # new_ugraph.ops_map.update(
-    #   replace_ugraph.ops_map
-    # )
-    topologic_order_graph(new_ugraph)
     new_ugraph = prune_graph(new_ugraph)
     return new_ugraph
 
