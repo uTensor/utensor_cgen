@@ -473,6 +473,8 @@ class OperationInfo(IRBase, _NoShallowCopyMixin):
     for tensor in chain(self.input_tensors, self.output_tensors):
       tensor.move_into(ugraph, force=force)
     ugraph.ops_map[self.name] = self
+    if self.is_dangling:
+      raise RuntimeError('dangling graph after moving op: {}'.format(self))
   
   def __deepcopy__(self, memo):
     for tensor in chain(self.input_tensors, self.output_tensors):
@@ -582,9 +584,13 @@ class uTensorGraph(IRBase, _NoShallowCopyMixin, uTensorGraphBuilderMixin):
 
   @property
   def is_dangling(self):
-    return any([
-      op.is_dangling for op in self.ops_map.values()
+    dangling_ops = set([
+      op for op in self.ops_map.values()
+      if op.is_dangling or op.ugraph is not self
     ])
+    if dangling_ops:
+      logger.warning('dangling ops: %s (%s)' % (dangling_ops, self.name))
+    return bool(dangling_ops)
 
   def get_ops_by_type(self, given_op_type):
     """
@@ -786,6 +792,9 @@ class uTensorGraph(IRBase, _NoShallowCopyMixin, uTensorGraphBuilderMixin):
     if op_name not in self.ops_map:
       raise KeyError('{} not found in the graph'.format(op_name))
     return self.ops_map[op_name]
+  
+  def __iter__(self):
+    return iter(self.ops_map.values())
 
 
 @attr.s(cmp=False)
@@ -806,13 +815,15 @@ class uTensorGraphView(IRBase, _NoShallowCopyMixin):
 
   @property
   def input_ops(self):
+    """
+    ops that all inputs come from ops not in the view
+    """
     ops = set([])
     for name in self.ops_map:
       op = self.ops_map[name]
-      input_tensors = op.input_tensors
       if all([
         tensor.op.name not in self.ops_map
-        for tensor in input_tensors
+        for tensor in op.input_tensors
       ]):
         ops.add(op)
     return ops

@@ -40,3 +40,4 @@ def test_replace_fc_with_add(subj_graph_1, patrn_fc_1):
             missed_op_names.append(op_name)
     assert test_pass, \
         'these ops should not be found in the new ugrah: {}'.format(missed_op_names)
+    assert not new_ugraph.is_dangling, 'dangling graph after replacement: {}'.format(new_ugraph)

@@ -418,7 +418,6 @@ def prune_graph(ugraph):
   :type ugraph: :class:`.uTensorGraph`
   """
   new_ugraph = deepcopy(ugraph)
-  topologic_order_graph(new_ugraph)
   ops_needed = set(new_ugraph.topo_order)
   for op in list(new_ugraph.ops_map.values()):
     if op.name not in ops_needed:

@@ -10,7 +10,7 @@ from utensor_cgen.ir import (MetaOperationInfo, OperationInfo, uTensorGraph,
                              uTensorGraphView)
 from utensor_cgen.logger import logger
 from utensor_cgen.matcher._morphism import Morphism
-from utensor_cgen.utils import ops_bfs_queue, prune_graph, random_str
+from utensor_cgen.utils import ops_bfs_queue, prune_graph, random_str, topologic_order_graph
 
 __all__ = ["uTensorGraphMatcher", "uTensorGraphMatch"]
 
@@ -400,23 +400,20 @@ class uTensorGraphMatch(object):
     replace_ugraph.unsafe_merge_into(new_ugraph)
     subj_graph_view = self.subject_graph_view
     # replacing output tensors
-    for out_tensor in subj_graph_view.output_tensors:
-      repl_out_tensor = output_map[self.subj2patrn_tensor_map[out_tensor.name]]
-      out_ops = [new_ugraph[op.name] for op in out_tensor.op.output_nodes]
-      for op in out_ops:
-        for tensor_name in op.input_tensor_names:
-          if tensor_name == out_tensor.name:
-            new_ugraph.tensors_map[tensor_name] = repl_out_tensor
-      for i, node_name in enumerate(new_ugraph.output_nodes):
-        if node_name == out_tensor.op.name:
-          new_ugraph.output_nodes[i] = repl_out_tensor.op.name
+    for patrn_tensor, repl_tensor in output_map.items():
+      subj_tensor = self.patrn2subj_tensor_map[patrn_tensor.name]
+      for op in new_ugraph.ops_map.values():
+        for i, tensor_name in enumerate(op.input_tensor_names):
+          if tensor_name == subj_tensor.name:
+            op.input_tensor_names[i] = repl_tensor.name
     # replacing input tensors
-    inv_input_map = dict([(v, k) for k, v in input_map.items()])
-    for op in replace_ugraph.input_ops:
-      for i, repl_in_tensor in enumerate(op.input_tensors):
-        patrn_in_tensor = inv_input_map[repl_in_tensor]
-        subj_in_tensor = self.patrn2subj_tensor_map[patrn_in_tensor.name]
-        op.input_tensor_names[i] = subj_in_tensor.name
+    for patrn_tensor, repl_tensor in input_map.items():
+      subj_tensor = self.patrn2subj_tensor_map[patrn_tensor.name]
+      for op in new_ugraph.ops_map.values():
+        for i, tensor_name in enumerate(op.input_tensor_names):
+          if tensor_name == subj_tensor.name:
+            op.input_tensor_names[i] = repl_tensor.name
+    topologic_order_graph(new_ugraph)
     new_ugraph = prune_graph(new_ugraph)
     return new_ugraph
 
