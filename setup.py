@@ -44,7 +44,6 @@ setup(
     author_email="qmalliao@gmail.com",
     license=license,
     packages=find_packages(),
-    package_dir={'utensor_cgen.backend.utensor.snippets': 'utensor_cgen/backend/utensor/snippets'},
     package_data={'utensor_cgen.backend.utensor.snippets': ["templates/*/*.cpp",
                                                             "templates/*/*.hpp"]},
     entry_points={

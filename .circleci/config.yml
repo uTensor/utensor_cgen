@@ -6,7 +6,7 @@ jobs:
     steps:
       - checkout
       - run: mkdir -p /tmp/coverage && mkdir -p /tmp/test_results
-      - run: pip3 install -e .[dev]
+      - run: pip3 install .
       - run: 
           name: Test
           command: pytest -vv tests
