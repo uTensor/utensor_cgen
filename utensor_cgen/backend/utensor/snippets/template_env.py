@@ -1,7 +1,9 @@
 # -*- coding:utf8 -*-
-from jinja2 import Environment, PackageLoader
+import os
+from jinja2 import Environment, FileSystemLoader
 
-_loader = PackageLoader('utensor_cgen', 'backend/utensor/snippets/templates')
+_dir = os.path.join(os.path.dirname(os.path.abspath(__file__)), 'templates/')
+_loader = FileSystemLoader(searchpath=_dir)
 
 env = Environment(loader=_loader, trim_blocks=True, lstrip_blocks=True)
 env.globals.update(zip=zip)
