@@ -269,7 +269,11 @@ class DropoutTransformer(Transformer):
     self._op_name_pattern = re.compile(name_pattern)
 
   def transform(self, ugraph):
-    new_graph = uTensorGraph(name=ugraph.name, output_nodes=ugraph.output_nodes)
+    new_graph = uTensorGraph(
+      name=ugraph.name,
+      output_nodes=ugraph.output_nodes,
+      lib_name=ugraph.lib_name
+    )
     dropout_input_map = self._find_input(ugraph)
     new_ops_map = {}
     for node_name in ugraph.ops_map:
@@ -293,15 +297,17 @@ class DropoutTransformer(Transformer):
           dropout_in_tensor = dropout_input_map[name_scope]
           in_t_infos.pop(i)
           in_t_infos.insert(i, dropout_in_tensor)
-      new_op_info = OperationInfo(name=op_info.name,
-                                  input_tensors=in_t_infos,
-                                  n_inputs=len(in_t_infos),
-                                  output_tensors=out_t_infos,
-                                  n_outputs=len(out_t_infos),
-                                  op_type=op_info.op_type,
-                                  lib_name=op_info.lib_name,
-                                  op_attr=op_attr,
-                                  ugraph=new_graph)
+      new_op_info = OperationInfo(
+        name=op_info.name,
+        input_tensor_names=[tensor.name for tensor in in_t_infos],
+        n_inputs=len(in_t_infos),
+        output_tensor_names=[tensor.name for tensor in out_t_infos],
+        n_outputs=len(out_t_infos),
+        op_type=op_info.op_type,
+        lib_name=op_info.lib_name,
+        op_attr=op_attr,
+        ugraph=new_graph
+      )
       new_ops_map[node_name] = new_op_info
     new_graph.ops_map = new_ops_map
     new_graph._lib_name = ugraph._lib_name
