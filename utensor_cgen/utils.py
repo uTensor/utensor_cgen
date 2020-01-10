@@ -374,11 +374,7 @@ def get_topologic_order(ugraph, init_nodes=None):
       return
 
     for t_info in op_info.input_tensors:
-      # NT: we should not rely on tensor-name conventions for back-tracing
-      # op_name = parse_tensor_name(t_info.name)[0]
-      # It would be nice to rely on something similar to get_tensor_node_names(), but based on ops_map instead of topo_order
-      op_name = t_info.op_name
-      visit(op_name)
+      visit(t_info.op_name)
 
     perm_visit.add(node_name)
     ops_torder.insert(0, node_name)

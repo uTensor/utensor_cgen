@@ -411,8 +411,8 @@ class uTensorGraphMatch(object):
       subj_tensor = self.patrn2subj_tensor_map[patrn_tensor.name]
       for op in new_ugraph.ops_map.values():
         for i, tensor_name in enumerate(op.input_tensor_names):
-          if tensor_name == subj_tensor.name:
-            op.input_tensor_names[i] = repl_tensor.name
+          if tensor_name == repl_tensor.name:
+            op.input_tensor_names[i] = subj_tensor.name
     topologic_order_graph(new_ugraph)
     new_ugraph = prune_graph(new_ugraph)
     return new_ugraph
@@ -446,7 +446,7 @@ class uTensorGraphMatch(object):
       if not out_patrn_tensor.name in out_tensor_names:
         replacible = False
         reasons.append(
-          '{} is not found in the pattern graph'.format(out_patrn_op_name)
+          '{} is not found in the pattern graph'.format(out_patrn_tensor.name)
         )
     return replacible, reasons
 

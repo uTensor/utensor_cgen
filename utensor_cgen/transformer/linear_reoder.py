@@ -20,7 +20,8 @@ class LinearReorderTransformerV2(Transformer):
   METHOD_NAME = 'linear_reorder'
   KWARGS_NAMESCOPE = '_linear_reorder'
 
-  def __init__(self):
+  def __init__(self, max_retry=20):
+    self.max_retry = max_retry
     self.prune_graph = False
 
   @property
@@ -39,9 +40,16 @@ class LinearReorderTransformerV2(Transformer):
   def transform(self, ugraph):
     matcher = uTensorGraphMatcher(pattern_ugraph=self.pattern_ugraph)
     matches = matcher.match(ugraph, 1)
-    while matches:
+    retry_cnt = 0
+    while matches and retry_cnt < self.max_retry:
       match = matches[0]
-      ugraph = match.replace_with(callback=self)
+      subj_relu = match.patrn2subj_op_map['relu']
+      if len(subj_relu.output_nodes) == 1:
+        """If the relu op is not consume only by one pool op, skip.
+        (No trivial way to determine how to resolve the execution order of ops)
+        """
+        ugraph = match.replace_with(callback=self)
+      retry_cnt += 1
       matches = matcher.match(ugraph, 1)
     return ugraph
 
