@@ -54,10 +54,12 @@ class LinearReorderTransformerV2(Transformer):
         ugraph = match.replace_with(callback=self)
       retry_cnt += 1
       matches = matcher.match_all(ugraph)
-      if retry_cnt == self.max_retry and matches:
-        logger.warning(
-          'max retry reached, there are still matches found in the graph: %s', matches
-        )
+    if retry_cnt == self.max_retry and matches:
+      logger.warning(
+        'max retry %s reached, there are still matches found in the graph: %s',
+        self.max_retry,
+        matches,
+      )
     return ugraph
 
   def __call__(self, match):
@@ -73,8 +75,8 @@ class LinearReorderTransformerV2(Transformer):
       tf.nn.relu(max_pool, name='relu')
     ugraph = GraphDefParser.parse(graph.as_graph_def(), output_nodes=['relu'])
     ugraph['max_pool'].replace_with_null_input_tensor(0)
-    ugraph = prune_graph(ugraph)
     topologic_order_graph(ugraph)
+    ugraph = prune_graph(ugraph)
     input_map = {
       match.pattern_ugraph['relu'].input_tensors[0]:ugraph['max_pool'].input_tensors[0]
     }

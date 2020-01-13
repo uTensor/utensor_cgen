@@ -726,7 +726,7 @@ class _QuantizedReluOperator(_Operator):
 
   def __init__(self, op_info, **kwargs):
     _Operator.__init__(self)
-    inputs = op_info.input_Tensor_names[:]
+    inputs = op_info.input_tensor_names[:]
     outputs = op_info.output_tensor_names[:]
     in_dtype, qout_dtype = (op_info.input_tensors[0].dtype,
                             op_info.output_tensors[0].dtype)  #NT: why separate this out?
