@@ -4,6 +4,8 @@ r"""Linear Re-ordering Transformer
 Linear Operation Legalizations
 
 """
+import logging
+
 import tensorflow as tf
 from utensor_cgen.frontend.tensorflow import GraphDefParser
 from utensor_cgen.matcher import uTensorGraphMatcher
@@ -13,6 +15,7 @@ from .base import Transformer
 from .pipeline import TransformerPipeline
 
 __all__ = ["LinearReorderTransformerV2"]
+logger = logging.getLogger(__name__)
 
 
 @TransformerPipeline.register_transformer
@@ -39,7 +42,7 @@ class LinearReorderTransformerV2(Transformer):
 
   def transform(self, ugraph):
     matcher = uTensorGraphMatcher(pattern_ugraph=self.pattern_ugraph)
-    matches = matcher.match(ugraph, 1)
+    matches = matcher.match_all(ugraph)
     retry_cnt = 0
     while matches and retry_cnt < self.max_retry:
       match = matches[0]
@@ -50,7 +53,11 @@ class LinearReorderTransformerV2(Transformer):
         """
         ugraph = match.replace_with(callback=self)
       retry_cnt += 1
-      matches = matcher.match(ugraph, 1)
+      matches = matcher.match_all(ugraph)
+      if retry_cnt == self.max_retry and matches:
+        logger.warning(
+          'max retry reached, there are still matches found in the graph: %s', matches
+        )
     return ugraph
 
   def __call__(self, match):
