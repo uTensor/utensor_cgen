@@ -793,8 +793,12 @@ class uTensorGraph(IRBase, _NoShallowCopyMixin, uTensorGraphBuilderMixin):
       raise KeyError('{} not found in the graph'.format(op_name))
     return self.ops_map[op_name]
   
+  def _iter(self):
+    for op_name in self.topo_order:
+      yield self.ops_map[op_name]
+
   def __iter__(self):
-    return iter(self.ops_map.values())
+    return iter(self._iter())
 
 
 @attr.s(cmp=False)

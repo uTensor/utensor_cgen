@@ -12,7 +12,7 @@ import numpy as np
 
 import tensorflow as tf
 from utensor_cgen.frontend.tensorflow import GraphDefParser
-from utensor_cgen.ir import OperationInfo, uTensorGraph
+from utensor_cgen.ir import OperationInfo, uTensorGraph, TensorInfo
 from utensor_cgen.logger import logger
 from utensor_cgen.matcher import uTensorGraphMatcher
 from utensor_cgen.utils import (parse_tensor_name, prune_graph,
@@ -373,11 +373,18 @@ class DropoutTransformerV2(Transformer):
         dummy_x = tf.constant(np.random.rand(10, 10), dtype=tf.float32, name='dummy_x')
         dummy_rate = tf.placeholder(dtype=tf.float32, name='dummy_rate')
         dropout = tf.nn.dropout(dummy_x, rate=dummy_rate, name='dropout')
-    patrn_ugraph = GraphDefParser.parse(graph.as_graph_def(), output_nodes=[dropout.op.name])
-    # replace dummy_x
-    patrn_ugraph['dropout/truediv'].replace_with_null_input_tensor(0)
-    # # replace dummy_rate
-    patrn_ugraph['dropout/sub'].replace_with_null_input_tensor(1)
+    patrn_ugraph = GraphDefParser.parse(
+      graph.as_graph_def(),
+      output_nodes=[dropout.op.name]
+    )
+    replace_map = {
+      dummy_x.name: TensorInfo.make_null_tensor(ugraph=patrn_ugraph).name,
+      dummy_rate.name: TensorInfo.make_null_tensor(ugraph=patrn_ugraph).name
+    }
+    for op in patrn_ugraph:
+      for i, tensor_name in enumerate(op.input_tensor_names):
+        if tensor_name in replace_map:
+          op.input_tensor_names[i] = replace_map[tensor_name]
     # # replace Shape Op
     patrn_ugraph['dropout/random_uniform/RandomUniform'].replace_with_null_input_tensor(0)
     patrn_ugraph = prune_graph(patrn_ugraph)
@@ -400,7 +407,7 @@ class DropoutTransformerV2(Transformer):
     while matches:
       match = matches[0]
       ugraph = self._handle_match_tf(match)
-      matches = matcher.match(ugraph)
+      matches = matcher.match(ugraph, n=1)
     return ugraph
   
   def _handle_match_tf(self, match):
@@ -413,16 +420,18 @@ class DropoutTransformerV2(Transformer):
     )
     subj_out_op = match.patrn2subj_op_map['dropout/mul']
     subj_out_tensor = subj_out_op.output_tensors[0]
+    # connect dropout input to the node which consume dropout output
     for op in subj_out_op.output_nodes:
-      for idx, tensor in enumerate(op.input_tensors):
-        if tensor.name == subj_out_tensor.name:
-          op.input_tensors[idx] = subj_in_tensor
+      for idx, tensor_name in enumerate(op.input_tensor_names):
+        if tensor_name == subj_out_tensor.name:
+          op.input_tensor_names[idx] = subj_in_tensor.name
+    # check the output nodes of the graph
     for idx, op_name in enumerate(subj_ugraph.output_nodes):
       if op_name == subj_out_op.name:
         subj_ugraph.output_nodes[idx] = subj_in_tensor.op_name
-    match.subject_ugraph = prune_graph(subj_ugraph)
-    topologic_order_graph(match.subject_ugraph)
-    return match.subject_ugraph
+    topologic_order_graph(subj_ugraph)
+    subj_ugraph = prune_graph(subj_ugraph)
+    return subj_ugraph
 
 
 @TransformerPipeline.register_transformer

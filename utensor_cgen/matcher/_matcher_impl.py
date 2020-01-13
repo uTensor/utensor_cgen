@@ -152,6 +152,30 @@ class uTensorGraphMatcher(object):
 
   pattern_ugraph = attr.ib(validator=instance_of(uTensorGraph))
 
+  def match(self, other_ugraph, n=1):
+    """
+    Match the pattern against the graph
+
+    :param other_ugraph: the graph where to search the pattern
+    :type other_ugraph: :py:class:`.uTensorGraph`
+    
+    :param n: the maximum matches to return
+    :type n: int
+
+    :rtype: List[:py:class:`.uTensorGraphMatch`]
+    """
+    match_gen = self._match(other_ugraph)
+    matches = []
+    try:
+      for _ in range(n):
+        matches.append(next(match_gen))
+    except StopIteration:
+      pass
+    return matches
+
+  def match_all(self, other_ugraph):
+    return list(self._match(other_ugraph))
+
   def _match(self, other_ugraph):
     outputs_pool = []
     for op in self.pattern_ugraph.output_ops:
@@ -192,33 +216,12 @@ class uTensorGraphMatcher(object):
                 state.match.patrn2subj_tensor_map[patrn_tensor.name] = subj_tensor
             if input_checked:
               state.match.subject_ugraph = other_ugraph
-              yield state.match
+              # FIXME: the ownership of ops/tensors in the match's map is incorrect.
+              # That is, the match.subject_ugraph does not own some of the ops/tensors.
+              # For now, we make a call to _sanitize_match as a workaround
+              yield self._sanitize_match(state.match)
           else:
             states.append(state)
-
-  def match(self, other_ugraph, n=1):
-    """
-    Match the pattern against the graph
-
-    :param other_ugraph: the graph where to search the pattern
-    :type other_ugraph: :py:class:`.uTensorGraph`
-    
-    :param n: the maximum matches to return
-    :type n: int
-
-    :rtype: List[:py:class:`.uTensorGraphMatch`]
-    """
-    match_gen = self._match(other_ugraph)
-    matches = []
-    try:
-      for _ in range(n):
-        matches.append(next(match_gen))
-    except StopIteration:
-      pass
-    return matches
-
-  def match_all(self, other_ugraph):
-    return list(self._match(other_ugraph))
 
   def _visit(self, states):
     # visit the state with a top-down bfs fashion
@@ -275,6 +278,12 @@ class uTensorGraphMatcher(object):
         )
     return state
 
+  def _sanitize_match(self, match):
+    for op in match.patrn2subj_op_map.values():
+      op.move_into(match.subject_ugraph)
+    for tensor in match.patrn2subj_tensor_map.values():
+      tensor.move_into(match.subject_ugraph)
+    return match
 
 @attr.s(repr=False)
 class uTensorGraphMatch(object):
