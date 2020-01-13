@@ -39,7 +39,7 @@ class ConvPoolTransformer(Transformer):
     quant_ugraph = QuantizeTransformer().transform(ugraph)
     patrn_ugraph = deepcopy(quant_ugraph)
     quant_conv_op = patrn_ugraph['conv/eightbit']
-    for i, _ in enumerate(quant_conv_op.input_tensors):
+    for i in range(len(quant_conv_op.input_tensor_names)):
       quant_conv_op.replace_with_null_input_tensor(i)
     patrn_ugraph.output_nodes = ['maxpool/eightbit']
     topologic_order_graph(patrn_ugraph)

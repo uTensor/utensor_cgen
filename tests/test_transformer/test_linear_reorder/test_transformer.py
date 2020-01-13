@@ -1,4 +1,4 @@
-def test_linear_reorder_1(subj_ugraph_simple):
+def test_linear_reorder_multi(subj_ugraph_simple):
     from utensor_cgen.transformer.linear_reoder import LinearReorderTransformerV2
 
     transformer = LinearReorderTransformerV2()
@@ -6,7 +6,7 @@ def test_linear_reorder_1(subj_ugraph_simple):
     for op in new_ugraph.get_ops_by_type('Relu'):
         assert op.input_tensors[0].op.op_type == 'MaxPool'
 
-def test_linear_reorder_2(subj_ugraph_no_effect):
+def test_linear_reorder_no_effect(subj_ugraph_no_effect):
     from utensor_cgen.transformer.linear_reoder import LinearReorderTransformerV2
 
     transformer = LinearReorderTransformerV2()

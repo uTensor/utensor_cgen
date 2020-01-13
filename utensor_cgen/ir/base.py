@@ -769,7 +769,7 @@ class uTensorGraph(IRBase, _NoShallowCopyMixin, uTensorGraphBuilderMixin):
   def __deepcopy__(self, memo):
     new_graph = uTensorGraph(
       name=self.name,
-      output_nodes=self.output_nodes,
+      output_nodes=self.output_nodes[:],
       lib_name=self._lib_name
     )
     memo['ugraph'] = new_graph
@@ -784,7 +784,6 @@ class uTensorGraph(IRBase, _NoShallowCopyMixin, uTensorGraphBuilderMixin):
     if self.data_manager:
       new_graph.data_manager = DataManager({})
       new_graph.data_manager.StorageCenter = deepcopy(self.data_manager.StorageCenter)
-    new_graph._lib_name = self._lib_name
     topologic_order_graph(new_graph)
     return new_graph
 

@@ -5,11 +5,16 @@ from pytest import fixture
 
 import tensorflow as tf
 from utensor_cgen.frontend.tensorflow import GraphDefParser
+from utensor_cgen.transformer.pipeline import TransformerPipeline
 
 
-@fixture(name='vgg_ugraph')
+@fixture(name='vgg_ugraph_pair', scope='function')
 def gen_vgg_graph():
     graph = tf.Graph()
+    trans = TransformerPipeline([
+            'linear_reorder',
+            'quantize',
+    ])
     with graph.as_default():
         x = tf.placeholder(dtype=tf.float32, shape=[None, 2048, 2048, 3], name='input_x')
         in_feat = x
@@ -40,4 +45,5 @@ def gen_vgg_graph():
                 padding='SAME',
             )        
         ugraph = GraphDefParser.parse(graph.as_graph_def(), output_nodes=[in_feat.op.name])
-    return ugraph
+        ugraph = trans.transform(ugraph)
+    return ugraph, num_layers
