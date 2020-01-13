@@ -42,8 +42,8 @@ class ConvPoolTransformer(Transformer):
     for i, _ in enumerate(quant_conv_op.input_tensors):
       quant_conv_op.replace_with_null_input_tensor(i)
     patrn_ugraph.output_nodes = ['maxpool/eightbit']
-    patrn_ugraph = prune_graph(patrn_ugraph)
     topologic_order_graph(patrn_ugraph)
+    patrn_ugraph = prune_graph(patrn_ugraph)
     return patrn_ugraph
 
   def transform(self, ugraph):
@@ -80,9 +80,9 @@ class ConvPoolTransformer(Transformer):
     ]
     quant_conv2d_pool_op = OperationInfo(
       name=op_name,
-      input_tensors=input_tensors,
+      input_tensor_names=[tensor.name for tensor in input_tensors],
       n_inputs=len(input_tensors),
-      output_tensors=output_tensors,
+      output_tensor_names=[tensor.name for tensor in  output_tensors],
       n_outputs=len(output_tensors),
       op_type='QuantizedFusedConv2DMaxpool',
       lib_name=subj_conv_op.lib_name,
