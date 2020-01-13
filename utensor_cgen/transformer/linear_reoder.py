@@ -23,7 +23,7 @@ class LinearReorderTransformerV2(Transformer):
   METHOD_NAME = 'linear_reorder'
   KWARGS_NAMESCOPE = '_linear_reorder'
 
-  def __init__(self, max_retry=20):
+  def __init__(self, max_retry=10):
     self.max_retry = max_retry
     self.prune_graph = False
 

@@ -335,7 +335,7 @@ def topologic_order_graph(ugraph):
 
   - `Topological Sorting (wiki) <https://en.wikipedia.org/wiki/Topological_sorting>`_
   """
-  ugraph.topo_order = get_topologic_order(ugraph, ugraph.output_nodes)[::-1]
+  ugraph.topo_order = get_topologic_order(ugraph, ugraph.output_nodes)
 
 
 def get_topologic_order(ugraph, init_nodes=None):
@@ -382,7 +382,7 @@ def get_topologic_order(ugraph, init_nodes=None):
   while queue:
     node_name = queue.pop(0)
     visit(node_name)
-  return ops_torder
+  return ops_torder[::-1]
 
 
 def ops_bfs_queue(ugraph, init_nodes=None):
@@ -414,7 +414,12 @@ def prune_graph(ugraph):
   :type ugraph: :class:`.uTensorGraph`
   """
   new_ugraph = deepcopy(ugraph)
-  ops_needed = set(new_ugraph.topo_order)
+  ops_needed = set(
+    get_topologic_order(
+      new_ugraph,
+      init_nodes=new_ugraph.output_nodes
+    )
+  )
   for op in list(new_ugraph.ops_map.values()):
     if op.name not in ops_needed:
       new_ugraph.ops_map.pop(op.name)
