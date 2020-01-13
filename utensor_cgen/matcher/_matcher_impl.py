@@ -519,6 +519,22 @@ class uTensorGraphMatch(object):
       output_nodes=output_nodes,
     )
 
+  @property
+  def is_dangling(self):
+    for op in self.patrn2subj_op_map.values():
+      if op.ugraph is not self.subject_ugraph:
+        return True
+    for op in self.subj2patrn_op_map.values():
+      if op.ugraph is not self.pattern_ugraph:
+        return True
+    for tensor in self.patrn2subj_tensor_map.values():
+      if tensor.ugraph is not self.subject_ugraph:
+        return True
+    for tensor in self.subj2patrn_tensor_map.values():
+      if tensor.ugraph is not self.pattern_ugraph:
+        return True
+    return False
+  
   def __repr__(self):
     repr_str = self.__class__.__name__ + '(\n'
     repr_str += style('    <op in pattern graph> -> <op in subject graph>', bold=True) + '\n'

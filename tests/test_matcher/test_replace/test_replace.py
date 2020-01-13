@@ -31,6 +31,7 @@ def test_replace_fc_with_add(subj_graph_1, patrn_fc_1):
     matches = matcher.match_all(subj_graph_1)
     assert len(matches) == 1, 'expecting 1 match, get {}'.format(matches)
     match = matches[0]
+    assert not match.is_dangling
     new_ugraph = match.replace_with(callback)
     test_pass = True
     missed_op_names = []
