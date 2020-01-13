@@ -215,7 +215,6 @@ class uTensorGraphMatcher(object):
                 state.match.subj2patrn_tensor_map[subj_tensor.name] = patrn_tensor
                 state.match.patrn2subj_tensor_map[patrn_tensor.name] = subj_tensor
             if input_checked:
-              state.match.subject_ugraph = other_ugraph
               # FIXME: the ownership of ops/tensors in the match's map is incorrect.
               # That is, the match.subject_ugraph does not own some of the ops/tensors.
               # For now, we make a call to _sanitize_match as a workaround
