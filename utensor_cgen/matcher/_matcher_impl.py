@@ -1,3 +1,4 @@
+import logging
 from collections import deque
 from copy import deepcopy
 from itertools import product
@@ -8,11 +9,11 @@ from click import style
 
 from utensor_cgen.ir import (MetaOperationInfo, OperationInfo, uTensorGraph,
                              uTensorGraphView)
-from utensor_cgen.logger import logger
 from utensor_cgen.matcher._morphism import Morphism
 from utensor_cgen.utils import ops_bfs_queue, prune_graph, random_str, topologic_order_graph
 
 __all__ = ["uTensorGraphMatcher", "uTensorGraphMatch"]
+logger = logging.getLogger(__name__)
 
 @attr.s(frozen=True, slots=True)
 class OpEqualityDelegate(object):
@@ -73,6 +74,7 @@ class OpEqualityDelegate(object):
       a list of equivalent ops derieved from `sub_op`
     """
     cls._setup()
+    print('matching {} --> {}'.format(patrn_op, sub_op))
     is_eq = False
     equivalent_ops = []
     if sub_op is None or patrn_op is None:

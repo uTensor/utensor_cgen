@@ -11,15 +11,10 @@ from utensor_cgen.transformer.pipeline import TransformerPipeline
 @fixture(name='vgg_ugraph_pair', scope='function')
 def gen_vgg_graph():
     graph = tf.Graph()
-    trans = TransformerPipeline([
-            'linear_reorder',
-            'quantize',
-    ])
     with graph.as_default():
         x = tf.placeholder(dtype=tf.float32, shape=[None, 2048, 2048, 3], name='input_x')
         in_feat = x
         num_layers = sample([3, 4, 5], 1)[0]
-        num_layers = 3
         for i in range(1, num_layers+1):
             ksize = sample([2, 3, 5], 1)[0]
             in_channel = in_feat.shape.as_list()[-1]
@@ -44,7 +39,13 @@ def gen_vgg_graph():
                 strides=[1, stride, stride, 1],
                 name='pool_{}'.format(i),
                 padding='SAME',
-            )        
+            )
+        trans = TransformerPipeline([
+            'linear_reorder',
+            'quantize',
+        ])
         ugraph = GraphDefParser.parse(graph.as_graph_def(), output_nodes=[in_feat.op.name])
+        # ugraph.save('vgg_ori.pkl')
         ugraph = trans.transform(ugraph)
+        # ugraph.save('vgg_quant.pkl')
     return ugraph, num_layers
