@@ -414,6 +414,9 @@ class uTensorGraphMatch(object):
         for i, tensor_name in enumerate(op.input_tensor_names):
           if tensor_name == subj_tensor.name:
             op.input_tensor_names[i] = repl_tensor_name
+      for i, name in enumerate(new_ugraph.output_nodes):
+        if name == subj_tensor.op_name:
+          new_ugraph.output_nodes[i] = new_ugraph.tensors_map[repl_tensor_name].op_name
     # replacing input tensors
     for patrn_tensor_name, repl_tensor_name in input_map.items():
       subj_tensor = self.patrn2subj_tensor_map[patrn_tensor_name]

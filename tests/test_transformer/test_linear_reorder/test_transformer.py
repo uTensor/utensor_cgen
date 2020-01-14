@@ -10,6 +10,7 @@ def test_linear_reorder_conti(subj_ugraph_conti):
     from utensor_cgen.transformer.linear_reoder import LinearReorderTransformerV2
 
     transformer = LinearReorderTransformerV2()
+    import ipdb; ipdb.set_trace()
     new_ugraph = transformer.transform(subj_ugraph_conti)
     for op in new_ugraph.get_ops_by_type('Relu'):
         assert op.input_tensors[0].op.op_type == 'MaxPool'
