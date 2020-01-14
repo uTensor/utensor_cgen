@@ -1,6 +1,7 @@
 # -*- coding: utf8 -*-
 import re
 import logging
+import pickle
 from copy import deepcopy
 from functools import reduce
 from itertools import chain
@@ -43,6 +44,16 @@ class IRBase(object):
   @property
   def all_supported_libs(self):
     return ['tensorflow']
+
+  @classmethod
+  def load(cls, path):
+    with open(path, 'rb') as fid:
+      self = pickle.load(fid)
+    return self
+  
+  def save(self, path):
+    with open(path, 'wb') as fid:
+      pickle.dump(self, fid)
 
 
 @attr.s(cmp=False, repr=False)

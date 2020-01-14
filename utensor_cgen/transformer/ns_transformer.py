@@ -387,8 +387,8 @@ class DropoutTransformerV2(Transformer):
           op.input_tensor_names[i] = replace_map[tensor_name]
     # # replace Shape Op
     patrn_ugraph['dropout/random_uniform/RandomUniform'].replace_with_null_input_tensor(0)
-    patrn_ugraph = prune_graph(patrn_ugraph)
     topologic_order_graph(patrn_ugraph)
+    patrn_ugraph = prune_graph(patrn_ugraph)
     return patrn_ugraph
   
   def transform(self, ugraph):

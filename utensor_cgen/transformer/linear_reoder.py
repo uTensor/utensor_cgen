@@ -36,8 +36,8 @@ class LinearReorderTransformerV2(Transformer):
       tf.nn.max_pool(relu, ksize=[1, 2, 2, 1], strides=[1, 2, 2, 1], padding='SAME', name='max_pool')
     pattern_ugraph = GraphDefParser.parse(graph.as_graph_def(), output_nodes=['max_pool'])
     pattern_ugraph['relu'].replace_with_null_input_tensor(0)
-    pattern_ugraph = prune_graph(pattern_ugraph)
     topologic_order_graph(pattern_ugraph)
+    pattern_ugraph = prune_graph(pattern_ugraph)
     return pattern_ugraph
 
   def transform(self, ugraph):

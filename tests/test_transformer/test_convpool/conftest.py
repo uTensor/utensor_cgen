@@ -19,6 +19,7 @@ def gen_vgg_graph():
         x = tf.placeholder(dtype=tf.float32, shape=[None, 2048, 2048, 3], name='input_x')
         in_feat = x
         num_layers = sample([3, 4, 5], 1)[0]
+        num_layers = 3
         for i in range(1, num_layers+1):
             ksize = sample([2, 3, 5], 1)[0]
             in_channel = in_feat.shape.as_list()[-1]
