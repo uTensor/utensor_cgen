@@ -17,6 +17,18 @@ def subj_ugraph_simple():
     subj_ugraph = GraphDefParser.parse(graph.as_graph_def(), output_nodes=[output.op.name])
     return subj_ugraph
 
+@fixture(scope='session', name='subj_ugraph_conti')
+def subj_ugraph_conti():
+    graph = tf.Graph()
+    with graph.as_default():
+        input_1 = tf.placeholder(dtype=tf.float32, shape=[None, 512, 512, 10], name='input_1')
+        relu_1 = tf.nn.relu(input_1, name='relu_1')
+        max_pool_1 = tf.nn.max_pool(relu_1, ksize=[1, 3, 3, 1], strides=[1, 2, 2, 1], padding='VALID', name='pool_1')
+        relu_2 = tf.nn.relu(max_pool_1, name='relu_2')
+        max_pool_2 = tf.nn.max_pool(relu_2, ksize=[1, 3, 3, 1], strides=[1, 2, 2, 1], padding='VALID', name='pool_2')
+    subj_ugraph = GraphDefParser.parse(graph.as_graph_def(), output_nodes=[max_pool_2.op.name])
+    return subj_ugraph
+
 @fixture(scope='session', name='subj_ugraph_no_effect')
 def subj_ugraph_no_effect():
     graph = tf.Graph()
