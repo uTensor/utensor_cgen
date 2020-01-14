@@ -64,14 +64,14 @@ class ConvPoolTransformer(Transformer):
     )
     subj_conv_op = match.patrn2subj_op_map['conv/eightbit']
     subj_pool_op = match.patrn2subj_op_map['maxpool/eightbit']
-    output_tensors = [
+    output_tensor_names = [
       TensorInfo(
         name='{}:{}'.format(op_name, i),
         op_name=op_name,
         dtype=subj_tensor.dtype,
         shape=subj_tensor.shape,
         ugraph=repl_ugraph
-      )
+      ).name
       for i, subj_tensor in enumerate(subj_pool_op.output_tensors)
     ]
     input_tensors = [
@@ -82,8 +82,8 @@ class ConvPoolTransformer(Transformer):
       name=op_name,
       input_tensor_names=[tensor.name for tensor in input_tensors],
       n_inputs=len(input_tensors),
-      output_tensor_names=[tensor.name for tensor in  output_tensors],
-      n_outputs=len(output_tensors),
+      output_tensor_names=output_tensor_names,
+      n_outputs=len(output_tensor_names),
       op_type='QuantizedFusedConv2DMaxpool',
       lib_name=subj_conv_op.lib_name,
       op_attr={
@@ -94,16 +94,16 @@ class ConvPoolTransformer(Transformer):
     )
     topologic_order_graph(repl_ugraph)
     input_map = {
-      match.pattern_ugraph['conv/eightbit'].input_tensors[0]: quant_conv2d_pool_op.input_tensors[0],
-      match.pattern_ugraph['conv/eightbit'].input_tensors[1]: quant_conv2d_pool_op.input_tensors[1],
-      match.pattern_ugraph['conv/eightbit'].input_tensors[2]: quant_conv2d_pool_op.input_tensors[2],
-      match.pattern_ugraph['conv/eightbit'].input_tensors[3]: quant_conv2d_pool_op.input_tensors[3],
-      match.pattern_ugraph['conv/eightbit'].input_tensors[4]: quant_conv2d_pool_op.input_tensors[4],
-      match.pattern_ugraph['conv/eightbit'].input_tensors[5]: quant_conv2d_pool_op.input_tensors[5],
+      match.pattern_ugraph['conv/eightbit'].input_tensor_names[0]: quant_conv2d_pool_op.input_tensor_names[0],
+      match.pattern_ugraph['conv/eightbit'].input_tensor_names[1]: quant_conv2d_pool_op.input_tensor_names[1],
+      match.pattern_ugraph['conv/eightbit'].input_tensor_names[2]: quant_conv2d_pool_op.input_tensor_names[2],
+      match.pattern_ugraph['conv/eightbit'].input_tensor_names[3]: quant_conv2d_pool_op.input_tensor_names[3],
+      match.pattern_ugraph['conv/eightbit'].input_tensor_names[4]: quant_conv2d_pool_op.input_tensor_names[4],
+      match.pattern_ugraph['conv/eightbit'].input_tensor_names[5]: quant_conv2d_pool_op.input_tensor_names[5],
     }
     output_map = {
-      match.pattern_ugraph['maxpool/eightbit'].output_tensors[0]: output_tensors[0],
-      match.pattern_ugraph['maxpool/eightbit'].output_tensors[1]: output_tensors[1],
-      match.pattern_ugraph['maxpool/eightbit'].output_tensors[2]: output_tensors[2],
+      match.pattern_ugraph['maxpool/eightbit'].output_tensor_names[0]: output_tensor_names[0],
+      match.pattern_ugraph['maxpool/eightbit'].output_tensor_names[1]: output_tensor_names[1],
+      match.pattern_ugraph['maxpool/eightbit'].output_tensor_names[2]: output_tensor_names[2],
     }
     return repl_ugraph, input_map, output_map

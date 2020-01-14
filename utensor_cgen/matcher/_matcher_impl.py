@@ -74,7 +74,7 @@ class OpEqualityDelegate(object):
       a list of equivalent ops derieved from `sub_op`
     """
     cls._setup()
-    print('matching {} --> {}'.format(patrn_op, sub_op))
+    logger.info('matching {} --> {}', patrn_op, sub_op)
     is_eq = False
     equivalent_ops = []
     if sub_op is None or patrn_op is None:
@@ -385,6 +385,9 @@ class uTensorGraphMatch(object):
       graph returned by ``callback``. If not given, it will be a random string
     :type suffix: str
 
+    :param ugraph: (optional) the ugraph where the replacement take place.
+    :type ugraph: :py:class:`.uTensorGraphMatcher`
+
     :rtype: :py:class:`.uTensorGraph`, a **new** graph with matched subgraph replaced
     """
     # build a matched subgraph and pass it to callback
@@ -392,6 +395,7 @@ class uTensorGraphMatch(object):
     #  {
     #     tensor in pattern graph : tensor in replacing graph
     #  }
+    new_ugraph = deepcopy(self.subject_ugraph)
     replace_ugraph, input_map, output_map = callback(self)
     replaceible, reasons = self._is_replacible(replace_ugraph, input_map, output_map)
     if not replaceible:
@@ -401,27 +405,21 @@ class uTensorGraphMatch(object):
     replace_ugraph, input_map, output_map = self.new_ugraph_with_suffix(
       replace_ugraph, input_map, output_map, suffix
     )
-    new_ugraph = deepcopy(self.subject_ugraph)
-    # make replace_ugraph be a subgraph in the new_ugraph
-    for tensor in input_map.values():
-      tensor.move_into(new_ugraph)
-    for tensor in output_map.values():
-      tensor.move_into(new_ugraph)
     replace_ugraph.unsafe_merge_into(new_ugraph)
     subj_graph_view = self.subject_graph_view
     # replacing output tensors
-    for patrn_tensor, repl_tensor in output_map.items():
-      subj_tensor = self.patrn2subj_tensor_map[patrn_tensor.name]
+    for patrn_tensor_name, repl_tensor_name in output_map.items():
+      subj_tensor = self.patrn2subj_tensor_map[patrn_tensor_name]
       for op in new_ugraph.ops_map.values():
         for i, tensor_name in enumerate(op.input_tensor_names):
           if tensor_name == subj_tensor.name:
-            op.input_tensor_names[i] = repl_tensor.name
+            op.input_tensor_names[i] = repl_tensor_name
     # replacing input tensors
-    for patrn_tensor, repl_tensor in input_map.items():
-      subj_tensor = self.patrn2subj_tensor_map[patrn_tensor.name]
+    for patrn_tensor_name, repl_tensor_name in input_map.items():
+      subj_tensor = self.patrn2subj_tensor_map[patrn_tensor_name]
       for op in new_ugraph.ops_map.values():
         for i, tensor_name in enumerate(op.input_tensor_names):
-          if tensor_name == repl_tensor.name:
+          if tensor_name == repl_tensor_name:
             op.input_tensor_names[i] = subj_tensor.name
     topologic_order_graph(new_ugraph)
     new_ugraph = prune_graph(new_ugraph)
@@ -443,7 +441,8 @@ class uTensorGraphMatch(object):
     if len(output_map) != len(subj_graph_view.output_tensors):
       replacible = False
       reasons.append('the number of output tensors does not match')
-    for in_patrn_tensor in input_map:
+    for tensor_name in input_map:
+      in_patrn_tensor = self.pattern_ugraph.tensors_map[tensor_name]
       in_tensor_names = set([t.name for t in self.pattern_ugraph.input_tensors])
       if not in_patrn_tensor.name in in_tensor_names:
         replacible = False
@@ -451,8 +450,9 @@ class uTensorGraphMatch(object):
           '{} is not found in the pattern graph'.format(in_patrn_tensor.name)
         )
         continue
-    for out_patrn_tensor, _ in output_map.items():
+    for name in output_map:
       out_tensor_names = set([t.name for t in self.pattern_ugraph.output_tensors])
+      out_patrn_tensor = self.pattern_ugraph.tensors_map[name]
       if not out_patrn_tensor.name in out_tensor_names:
         replacible = False
         reasons.append(
@@ -496,16 +496,15 @@ class uTensorGraphMatch(object):
     new_ugraph.ops_map = new_ops_map
     new_ugraph.tensors_map = new_tensors_map
     new_input_map = {}
-    for k, in_tensor in input_map.items():
-      tensor_idx = in_tensor.name.split(':')[1]
-      new_tensor_name = '{}_{}:{}'.format(in_tensor.op_name, suffix, tensor_idx)
-      new_input_map[k] = new_ugraph.tensors_map[new_tensor_name]
+    for patrn_tensor_name, subj_tensor_name in input_map.items():
+      op_name, tensor_idx = subj_tensor_name.split(':')
+      new_tensor_name = '{}_{}:{}'.format(op_name, suffix, tensor_idx)
+      new_input_map[patrn_tensor_name] = new_tensor_name
     new_output_map = {}
-    for k, out_tensor in output_map.items():
-      tensor_idx = out_tensor.name.split(':')[1]
-      new_tensor_name = '{}_{}:{}'.format(out_tensor.op_name, suffix, tensor_idx)
-      new_output_map[k] = new_ugraph.tensors_map[new_tensor_name]
-
+    for patrn_tensor_name, subj_tensor_name in output_map.items():
+      op_name, tensor_idx = subj_tensor_name.split(':')
+      new_tensor_name = '{}_{}:{}'.format(op_name, suffix, tensor_idx)
+      new_output_map[patrn_tensor_name] = new_tensor_name
     return new_ugraph, new_input_map, new_output_map
 
   @property
