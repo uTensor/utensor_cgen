@@ -45,7 +45,7 @@ def gen_vgg_graph():
             'quantize',
         ])
         ugraph = GraphDefParser.parse(graph.as_graph_def(), output_nodes=[in_feat.op.name])
-        # ugraph.save('vgg_ori.pkl')
+        ugraph.save('vgg_ori.pkl')
         ugraph = trans.transform(ugraph)
-        # ugraph.save('vgg_quant.pkl')
+        ugraph.save('vgg_quant.pkl')
     return ugraph, num_layers

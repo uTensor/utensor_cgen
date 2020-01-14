@@ -208,6 +208,14 @@ class TensorInfo(IRBase, _NoShallowCopyMixin):
       (self.op_name not in self._ugraph.ops_map)
     )
 
+  @property
+  def output_nodes(self):
+    ops = []
+    for op in self._ugraph.ops_map.values():
+      if self.name in op.input_tensor_names:
+        ops.append(op)
+    return ops
+
   def __deepcopy__(self, memo):
     new_tensor = TensorInfo(
       name=self.name,

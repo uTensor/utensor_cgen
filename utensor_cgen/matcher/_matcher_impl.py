@@ -417,9 +417,10 @@ class uTensorGraphMatch(object):
     # replacing input tensors
     for patrn_tensor_name, repl_tensor_name in input_map.items():
       subj_tensor = self.patrn2subj_tensor_map[patrn_tensor_name]
-      for op in new_ugraph.ops_map.values():
+      repl_tensor = new_ugraph.tensors_map[repl_tensor_name]
+      for op in repl_tensor.output_nodes:
         for i, tensor_name in enumerate(op.input_tensor_names):
-          if tensor_name == repl_tensor_name:
+          if tensor_name == repl_tensor.name:
             op.input_tensor_names[i] = subj_tensor.name
     topologic_order_graph(new_ugraph)
     new_ugraph = prune_graph(new_ugraph)
