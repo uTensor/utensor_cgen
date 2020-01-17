@@ -1,10 +1,10 @@
 #-*- coding:utf8 -*-
 import os
 import sys
+import importlib
 from pathlib import Path
 
 import click
-from click.types import Choice
 from toml import dumps, loads
 
 from utensor_cgen import __version__
@@ -15,37 +15,40 @@ from utensor_cgen.utils import NArgsParam
 def _get_pb_model_name(path):
   return os.path.basename(os.path.splitext(path)[0])
 
-def _load_transformer(path):
-  # FIXME: better way to activate user plugins other than exec
-  from utensor_cgen.transformer import TransformerPipeline, Transformer
-
-  _globals = {}
-  transform_plugin = Path(path).absolute()
-  with transform_plugin.open('r') as fid:
-    exec(fid.read(), _globals)
-  for obj in _globals.values():
-    if obj is Transformer:
-      continue
-    if isinstance(obj, type) and issubclass(obj, Transformer):
-      TransformerPipeline.register_transformer(obj)
-
+def _load_plugin(path):
+  path = Path(path)
+  if not path.exists():
+    raise RuntimeError('{} does not exists'.format(path))
+  sys.path.insert(0, str(path.parent))
+  mod_name = path.name.split()[0]
+  importlib.import_module(mod_name)
+  sys.path.pop(0)
 
 @click.group(name='utensor-cli')
 @click.help_option('-h', '--help')
 @click.version_option(__version__,
                       '-V', '--version')
-@click.option("--transform-plugin",
+@click.option("--plugin",
               default=None,
-              help="path of the python file which user-defined transformers live",
+              help="path of the python module which will be loaded as plugin",
               metavar="MODULE.py",
 )
-def cli(transform_plugin):
-  if transform_plugin is not None:
-    _load_transformer(transform_plugin)
+def cli(plugin):
+  if plugin is not None:
+    _load_plugin(plugin)
+
+@cli.command(name='list-backends', help='list all available backends')
+@click.help_option('-h', '--help')
+def list_backends():
+  click.secho('Available backends:', fg='green', bold=True)
+  for backend in BackendManager.backends:
+    click.secho(
+      '  - {}'.format(backend), fg='green'
+    )
 
 @cli.command(name='generate-config', help='generate config toml file')
 @click.help_option('-h', '--help')
-@click.option('--target', type=Choice(BackendManager.backends), required=True, help='target framework/platform')
+@click.option('--target', required=True, help='target framework/platform')
 @click.option('-o', '--output', default='utensor_cli.toml', metavar='CONFIG.toml', help='the output config file name')
 def generate_config(target, output):
   backend_cls = BackendManager.get_backend(target)
@@ -79,8 +82,7 @@ def generate_config(target, output):
 @click.option('--config', default='utenosr_cli.toml', show_default=True, metavar='CONFIG.toml')
 @click.option('--target',
               default='utensor',
-              show_default=True, 
-              type=Choice(BackendManager.backends),
+              show_default=True,
               help='target framework/platform'
 )
 def convert_graph(model_file, output_nodes, config, target):
