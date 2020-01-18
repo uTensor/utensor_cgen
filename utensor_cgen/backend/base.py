@@ -19,7 +19,11 @@ class _BackendBase(object):
 
   @class_property
   def default_config(cls):
-    raise RuntimeError('No default configuration for {}'.format(cls))
+    """empty config if not overwriten
+    """
+    return {
+      cls.TARGET: {}
+    }
 
   def __call__(self, *args, **kwargs):
     return self.apply(*args, **kwargs)

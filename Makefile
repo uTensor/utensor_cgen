@@ -3,7 +3,7 @@
 tests:
 	rm -f tests_log.txt
 	make test_utils test_ir test_transformer test_frontend \
-		test_matcher test_graph_constructor
+		test_matcher test_graph_constructor test_backend
 
 test_%:
 	@if [ -d .venv ]; then \
