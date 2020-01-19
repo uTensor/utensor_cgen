@@ -11,7 +11,7 @@ class DummyBackend(Backend):
     def __init__(self, config):
         if not config:
             config = self.default_config
-        self.output_file = config[self.TARGET]['output-file']
+        self.output_file = config[self.TARGET][self.COMPONENT]['output-file']
 
     def apply(self, ugraph):
         with open(self.output_file, 'w') as fid:
@@ -27,6 +27,8 @@ class DummyBackend(Backend):
     def default_config(cls):
         return {
             cls.TARGET: {
-                'output-file': 'list_op.c'
+                    cls.COMPONENT: {
+                    'output-file': 'list_op.c'
+                }
             }
         }
