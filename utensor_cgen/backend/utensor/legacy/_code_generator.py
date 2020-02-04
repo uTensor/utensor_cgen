@@ -15,19 +15,19 @@ from utensor_cgen.utils import (NamescopedKWArgsParser, class_property,
                                 parse_toml, LazyLoader)
 
 from ._operators import OperatorFactory
-from .snippets import (CommentSnippet, ContextGlobalArrayContainer,
+from ..snippets import (CommentSnippet, ContextGlobalArrayContainer,
                        ContextHeaderSnippet, ContextSnippetsContainer,
                        CreateTensorBinarySnippet, CreateTensorIdxSnippet)
-from .snippets.composer import Composer
+from ..snippets.composer import Composer
 
-__all__ = ["uTensorCodeGenerator"]
+__all__ = ["uTensorLegacyCodeGenerator"]
 _logger = logging.getLogger('utensor-cli')
 tf = LazyLoader('tensorflow')
 
-class uTensorCodeGenerator(BackendPart, object):
+class uTensorLegacyCodeGenerator(BackendPart, object):
 
   TARGET = 'utensor'
-  PART = 'code_generator'
+  PART = 'legacy_code_generator'
 
   def __init__(
     self,
