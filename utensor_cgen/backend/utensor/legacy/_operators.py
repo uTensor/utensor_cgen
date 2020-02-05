@@ -15,7 +15,7 @@ from utensor_cgen.matcher import OpEqualityDelegate, _morphism
 from utensor_cgen.transformer.optimizer import RefCntOptimizer
 from utensor_cgen.utils import NamescopedKWArgsParser, LazyLoader
 
-from ..snippets import *  # pylint: disable=W0401,W0614
+from ..snippets.legacy import *  # pylint: disable=W0401,W0614
 
 __all__ = ['OperatorFactory', 'OpNotSupportedError']
 tf = LazyLoader('tensorflow')

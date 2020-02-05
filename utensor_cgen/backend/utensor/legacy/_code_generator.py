@@ -15,9 +15,11 @@ from utensor_cgen.utils import (NamescopedKWArgsParser, class_property,
                                 parse_toml, LazyLoader)
 
 from ._operators import OperatorFactory
-from ..snippets import (CommentSnippet, ContextGlobalArrayContainer,
-                       ContextHeaderSnippet, ContextSnippetsContainer,
-                       CreateTensorBinarySnippet, CreateTensorIdxSnippet)
+from ..snippets.legacy import (
+  CommentSnippet, ContextGlobalArrayContainer,
+  ContextHeaderSnippet, ContextSnippetsContainer,
+  CreateTensorBinarySnippet, CreateTensorIdxSnippet
+)
 from ..snippets.composer import Composer
 
 __all__ = ["uTensorLegacyCodeGenerator"]
