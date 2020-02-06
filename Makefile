@@ -28,4 +28,7 @@ upload: package
 	.venv/bin/twine upload -r pypi dist/*
 
 clean:
-	rm -rf tests_log.txt *.pdf tests/test_backend/{models,data} .pytest_cache dist/ build/
+	rm -rf tests_log.txt *.pdf \
+	models data \
+	tests/test_backend/{models,data} \
+	.pytest_cache dist/ build/

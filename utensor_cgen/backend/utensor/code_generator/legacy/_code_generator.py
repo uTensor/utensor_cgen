@@ -12,29 +12,30 @@ from utensor_cgen.ir import uTensorGraph
 from utensor_cgen.transformer.optimizer import RefCntOptimizer
 from utensor_cgen.transformer.pipeline import TransformerPipeline
 from utensor_cgen.utils import (NamescopedKWArgsParser, class_property,
-                                parse_toml, LazyLoader)
+                                parse_toml, LazyLoader, Configuration)
+from utensor_cgen.backend.utensor.snippets.legacy import (
+  CommentSnippet, ContextGlobalArrayContainer,
+  ContextHeaderSnippet, ContextSnippetsContainer,
+  CreateTensorBinarySnippet, CreateTensorIdxSnippet
+)
+from utensor_cgen.backend.utensor.snippets.composer import Composer
 
 from ._operators import OperatorFactory
-from .snippets import (CommentSnippet, ContextGlobalArrayContainer,
-                       ContextHeaderSnippet, ContextSnippetsContainer,
-                       CreateTensorBinarySnippet, CreateTensorIdxSnippet)
-from .snippets.composer import Composer
 
-__all__ = ["uTensorCodeGenerator"]
+__all__ = ["uTensorLegacyCodeGenerator"]
 _logger = logging.getLogger('utensor-cli')
 tf = LazyLoader('tensorflow')
 
-class uTensorCodeGenerator(BackendPart, object):
+class uTensorLegacyCodeGenerator(BackendPart, object):
 
   TARGET = 'utensor'
-  PART = 'code_generator'
+  PART = 'legacy_code_generator'
 
   def __init__(
     self,
     config
   ):
-    final_config = type(self).default_config
-    final_config.update(config)
+    final_config = Configuration(self.default_config, config)
     self.src_fname = final_config['src_fname']
     self.params_dir = final_config['params_dir'].rstrip('/')
     if not os.path.exists(self.params_dir):

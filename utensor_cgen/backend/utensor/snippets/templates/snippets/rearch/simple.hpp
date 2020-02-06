@@ -1,0 +1,1 @@
+{{ op_type }} {{ var_name }};

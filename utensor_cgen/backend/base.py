@@ -1,4 +1,7 @@
-from utensor_cgen.utils import MUST_OVERWRITEN, class_property, parse_toml
+from utensor_cgen.utils import (
+  MUST_OVERWRITEN, class_property,
+  parse_toml, Configuration,
+)
 
 
 class _BackendBase(object):
@@ -11,6 +14,8 @@ class _BackendBase(object):
       if name.startswith('_validate'):
         validator = getattr(self, name)
         validator(config, *args, **kwargs)
+    if isinstance(config, dict):
+      config = Configuration(cls.default_config, config)
     self._config = config
     return self
 
@@ -19,11 +24,7 @@ class _BackendBase(object):
 
   @class_property
   def default_config(cls):
-    """empty config if not overwriten
-    """
-    return {
-      cls.TARGET: {}
-    }
+    return NotImplementedError('All backends should overwrite default config')
 
   def __call__(self, *args, **kwargs):
     return self.apply(*args, **kwargs)
@@ -33,7 +34,7 @@ class _BackendBase(object):
     return self._config
 
   def _validate_config(self, config):
-    assert isinstance(config, dict), \
+    assert isinstance(config, (dict, Configuration)), \
       'expecting {}, get {}'.format(dict, type(config))
 
 
@@ -55,11 +56,7 @@ class Backend(_BackendBase):
 
   @classmethod
   def from_config(cls, config, *args, **kwargs):
-    default_config = cls.default_config
-    if cls.TARGET in config:
-      config = config[cls.TARGET]
-    default_config.update(config)
-    return cls(default_config, *args, **kwargs)
+    return cls(config, *args, **kwargs)
 
 class BackendPart(Backend):
 

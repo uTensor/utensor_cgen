@@ -1,8 +1,8 @@
 # -*- coding:utf8 -*-
 import numpy as np
 
-from ._base import Snippet, SnippetContainerBase  # pylint: disable=W0611
-from ._types import NP_TYPES_MAP
+from .._base import Snippet, SnippetContainerBase  # pylint: disable=W0611
+from .._types import NP_TYPES_MAP
 
 __all__ = ["Snippet", "SnippetContainerBase",
            "CreateTensorIdxSnippet", "CreateTensorNewSnippet",
@@ -26,7 +26,7 @@ __all__ = ["Snippet", "SnippetContainerBase",
 
 # TODO: Better abstraction, i.e a better backend for code generation
 class CreateTensorIdxSnippet(Snippet):
-  __template_name__ = "snippets/create_tensor_idx.cpp"
+  __template_name__ = "snippets/legacy/create_tensor_idx.cpp"
   __headers__ = set(['"uTensor/loaders/tensorIdxImporter.hpp"',
                      '"uTensor/core/context.hpp"',
                      '"uTensor/core/tensor.hpp"'])
@@ -56,7 +56,7 @@ class CreateTensorIdxSnippet(Snippet):
     self.template_vars["to_eval"] = to_eval
 
 class CreateTensorRamSnippet(Snippet):
-  __template_name__ = "snippets/create_tensor_new.cpp"
+  __template_name__ = "snippets/legacy/create_tensor_new.cpp"
   __headers__ = set(['"uTensor/core/context.hpp"',
                      '"uTensor/core/tensor.hpp"'])
 
@@ -87,7 +87,7 @@ class CreateTensorRamSnippet(Snippet):
 
 
 class CreateTensorBinarySnippet(Snippet):
-  __template_name__ = "snippets/create_tensor_binary.cpp"
+  __template_name__ = "snippets/legacy/create_tensor_binary.cpp"
   __headers__ = set(['"uTensor/core/context.hpp"',
                      '"uTensor/core/tensor.hpp"'])
 
@@ -124,7 +124,7 @@ class CreateTensorBinarySnippet(Snippet):
 
 
 class CreateTensorNewSnippet(Snippet):
-  __template_name__ = "snippets/create_tensor_new.cpp"
+  __template_name__ = "snippets/legacy/create_tensor_new.cpp"
   __headers__ = set(['"uTensor/core/context.hpp"', '"uTensor/core/tensor.hpp"'])
 
   def __init__(self, tensor_name, np_dtype,
@@ -170,7 +170,7 @@ def _permute_args(args, perm=None):
 
 
 class AddOpSnippet(Snippet):
-  __template_name__ = "snippets/add_op.cpp"
+  __template_name__ = "snippets/legacy/add_op.cpp"
   __headers__ = set(['"uTensor/ops/MathOps.hpp"'])
 
   def __init__(self, inputs, output, np_dtype,
@@ -187,7 +187,7 @@ class AddOpSnippet(Snippet):
 
 
 class MinOpSnippet(Snippet):
-  __template_name__ = "snippets/min_op.cpp"
+  __template_name__ = "snippets/legacy/min_op.cpp"
   __headers__ = set(['"uTensor/ops/MathOps.hpp"'])
 
   def __init__(self, inputs, output, out_dtype,
@@ -207,7 +207,7 @@ class MinOpSnippet(Snippet):
 
 
 class MaxOpSnippet(Snippet):
-  __template_name__ = "snippets/max_op.cpp"
+  __template_name__ = "snippets/legacy/max_op.cpp"
   __headers__ = set(['"uTensor/ops/MathOps.hpp"'])
 
   def __init__(self, inputs, output, out_dtype,
@@ -226,7 +226,7 @@ class MaxOpSnippet(Snippet):
     self.template_vars["address"] = address
 
 class MaxPoolSnippet(Snippet):
-  __template_name__ = "snippets/max_pool_op.cpp"
+  __template_name__ = "snippets/legacy/max_pool_op.cpp"
   __headers__ = set(['"uTensor/ops/NnOps.hpp"'])
 
   def __init__(self, inputs, output, dtype,
@@ -250,7 +250,7 @@ class MaxPoolSnippet(Snippet):
 
 
 class QuantizedMaxPoolSnippet(Snippet):
-  __template_name__ = "snippets/qmax_pool_op.cpp"
+  __template_name__ = "snippets/legacy/qmax_pool_op.cpp"
   __headers__ = set(['"uTensor/ops/NnOps.hpp"'])
 
   def __init__(self, inputs, outputs, dtype,
@@ -279,7 +279,7 @@ class QuantizedMaxPoolSnippet(Snippet):
 
 
 class ArgMaxOpSnippet(Snippet):
-  __template_name__ = "snippets/argmax_op.cpp"
+  __template_name__ = "snippets/legacy/argmax_op.cpp"
   __headers__ = set(['"uTensor/ops/MathOps.hpp"'])
 
   def __init__(self, inputs, output, in_dtype, out_dtype,
@@ -298,7 +298,7 @@ class ArgMaxOpSnippet(Snippet):
 
 
 class DequantizeOpSnippet(Snippet):
-  __template_name__ = "snippets/dequantize_op.cpp"
+  __template_name__ = "snippets/legacy/dequantize_op.cpp"
   __headers__ = set(['"uTensor/ops/ArrayOps.hpp"'])
 
   def __init__(self, inputs, output, out_dtype,
@@ -315,7 +315,7 @@ class DequantizeOpSnippet(Snippet):
     self.template_vars["address"] = address
 
 class MatMulOpSnippet(Snippet):
-  __template_name__ = "snippets/matmul_op.cpp"
+  __template_name__ = "snippets/legacy/matmul_op.cpp"
   __headers__ = set(['"uTensor/ops/MatrixOps.hpp"'])
 
   def __init__(self, inputs, output, x_dtype, w_dtype, out_dtype,
@@ -333,7 +333,7 @@ class MatMulOpSnippet(Snippet):
 
 
 class QuantizedMatMulOpSnippet(Snippet):
-  __template_name__ = "snippets/qmatmul_op.cpp"
+  __template_name__ = "snippets/legacy/qmatmul_op.cpp"
   __headers__ = set(['"uTensor/ops/MatrixOps.hpp"'])
 
   def __init__(self, inputs, outputs, x_dtype, w_dtype, out_dtype,
@@ -361,7 +361,7 @@ class QuantizedMatMulOpSnippet(Snippet):
 
 
 class QuantizedAddOpSnippet(Snippet):
-  __template_name__ = "snippets/qadd_op.cpp"
+  __template_name__ = "snippets/legacy/qadd_op.cpp"
   __headers__ = set(['"uTensor/ops/MathOps.hpp"'])
 
   def __init__(self, inputs, outputs, x_dtype, w_dtype, out_dtype,
@@ -388,7 +388,7 @@ class QuantizedAddOpSnippet(Snippet):
     self.template_vars['address'] = address
 
 class QuantizedMulOpSnippet(Snippet):
-  __template_name__ = "snippets/qmul_op.cpp"
+  __template_name__ = "snippets/legacy/qmul_op.cpp"
   __headers__ = set(['"uTensor/ops/MathOps.hpp"'])
 
   def __init__(self, inputs, outputs, x_dtype, w_dtype, out_dtype,
@@ -414,7 +414,7 @@ class QuantizedMulOpSnippet(Snippet):
 
 
 class QuantizeV2OpSnippet(Snippet):
-  __template_name__ = "snippets/quantV2_op.cpp"
+  __template_name__ = "snippets/legacy/quantV2_op.cpp"
   __headers__ = set(['"uTensor/ops/ArrayOps.hpp"'])
 
   def __init__(self, inputs, outputs, out_dtype,
@@ -437,7 +437,7 @@ class QuantizeV2OpSnippet(Snippet):
 
 
 class ReluOpSnippet(Snippet):
-  __template_name__ = "snippets/relu_op.cpp"
+  __template_name__ = "snippets/legacy/relu_op.cpp"
   __headers__ = set(['"uTensor/ops/NnOps.hpp"'])
 
   def __init__(self, inputs, output, in_dtype, out_dtype,
@@ -453,7 +453,7 @@ class ReluOpSnippet(Snippet):
     self.template_vars["to_eval"] = to_eval
 
 class QuantizedReluOpSnippet(Snippet):
-  __template_name__ = "snippets/qrelu_op.cpp"
+  __template_name__ = "snippets/legacy/qrelu_op.cpp"
   __headers__ = set(['"uTensor/ops/NnOps.hpp"'])
 
   def __init__(self, inputs, outputs, in_dtype, out_dtypes, qout_dtype,
@@ -477,7 +477,7 @@ class QuantizedReluOpSnippet(Snippet):
     self.template_vars["address"] = address
 
 class RequantizationRangeOpSnippet(Snippet):
-  __template_name__ = "snippets/requant_range_op.cpp"
+  __template_name__ = "snippets/legacy/requant_range_op.cpp"
   __headers__ = set(['"uTensor/ops/MathOps.hpp"'])
 
   def __init__(self, inputs, outputs, out_dtype,
@@ -500,7 +500,7 @@ class RequantizationRangeOpSnippet(Snippet):
 
 
 class RequantizeOpSnippet(Snippet):
-  __template_name__ = "snippets/requant_op.cpp"
+  __template_name__ = "snippets/legacy/requant_op.cpp"
   __headers__ = set(['"uTensor/ops/MathOps.hpp"'])
 
   def __init__(self, inputs, outputs, qout_dtype, range_dtype,
@@ -528,7 +528,7 @@ class RequantizeOpSnippet(Snippet):
 
 
 class StridedSliceOpSnippet(Snippet):
-  __template_name__ = "snippets/strided_slice_op.cpp"
+  __template_name__ = "snippets/legacy/strided_slice_op.cpp"
   __headers__ = set(['"uTensor/ops/ArrayOps.hpp"'])
 
   def __init__(self, inputs, output, dtype, out_dtype,
@@ -550,7 +550,7 @@ class StridedSliceOpSnippet(Snippet):
     self.template_vars["to_eval"] = to_eval
 
 class PackOpSnippet(Snippet):
-  __template_name__ = "snippets/pack_op.cpp"
+  __template_name__ = "snippets/legacy/pack_op.cpp"
   __headers__ = set(['"uTensor/ops/ArrayOps.hpp"'])
 
   def __init__(self, inputs, output, dtype, out_dtype, N, axis,
@@ -568,7 +568,7 @@ class PackOpSnippet(Snippet):
     self.template_vars["to_eval"] = to_eval
 
 class ShapeOpSnippet(Snippet):
-  __template_name__ = "snippets/shape_op.cpp"
+  __template_name__ = "snippets/legacy/shape_op.cpp"
   __headers__ = set(['"uTensor/ops/ArrayOps.hpp"'])
 
   def __init__(self, inputs, output, out_dtype,
@@ -583,7 +583,7 @@ class ShapeOpSnippet(Snippet):
     self.template_vars["to_eval"] = to_eval
 
 class SoftmaxOpSnippet(Snippet):
-  __template_name__ = "snippets/softmax_op.cpp"
+  __template_name__ = "snippets/legacy/softmax_op.cpp"
   __headers__ = set(['"uTensor/ops/NnOps.hpp"'])
 
   def __init__(self, input_tname, output_tname,
@@ -603,7 +603,7 @@ class SoftmaxOpSnippet(Snippet):
 
 
 class ReshapeOpSnippet(Snippet):
-  __template_name__ = "snippets/reshape_op.cpp"
+  __template_name__ = "snippets/legacy/reshape_op.cpp"
   __headers__ = set(['"uTensor/ops/ArrayOps.hpp"'])
 
   def __init__(self, inputs, output, dtype,
@@ -621,7 +621,7 @@ class ReshapeOpSnippet(Snippet):
 
 
 class QuantizedReshapeOpSnippet(Snippet):
-  __template_name__ = "snippets/qreshape_op.cpp"
+  __template_name__ = "snippets/legacy/qreshape_op.cpp"
   __headers__ = set(['"uTensor/ops/ArrayOps.hpp"'])
 
   def __init__(self, inputs, outputs,
@@ -635,7 +635,7 @@ class QuantizedReshapeOpSnippet(Snippet):
     self.template_vars["to_eval"] = to_eval
 
 class CMSISNNFCOpSnippet(Snippet):
-  __template_name__ = "snippets/cmsis_nn_fc_op.cpp"
+  __template_name__ = "snippets/legacy/cmsis_nn_fc_op.cpp"
   __headers__ = set(['"uTensor/ops/cmsis_ops/FullyConnectedOps.hpp"'])
 
   def __init__(self, inputs, output, in_dtypes, out_dtype,
@@ -651,7 +651,7 @@ class CMSISNNFCOpSnippet(Snippet):
     self.template_vars["to_eval"] = to_eval
 
 class Conv2DOpSnippet(Snippet):
-  __template_name__ = "snippets/conv2d_op.cpp"
+  __template_name__ = "snippets/legacy/conv2d_op.cpp"
   __headers__ = set(['"uTensor/ops/MatrixOps.hpp"'])
 
   def __init__(self, inputs, output, strides, padding,
@@ -671,7 +671,7 @@ class Conv2DOpSnippet(Snippet):
     self.template_vars["to_eval"] = to_eval
 
 class FusedConv2DMaxpoolOpSnippet(Snippet):
-  __template_name__ = "snippets/fused_conv2d_maxpool_op.cpp"
+  __template_name__ = "snippets/legacy/fused_conv2d_maxpool_op.cpp"
   __headers__ = set(['"uTensor/ops/MatrixOps.hpp"'])
 
   def __init__(self, inputs, output, strides, ksize, padding,
@@ -692,7 +692,7 @@ class FusedConv2DMaxpoolOpSnippet(Snippet):
     self.template_vars["to_eval"] = to_eval
 
 class QuantizedFusedConv2DMaxpoolOpSnippet(Snippet):
-  __template_name__ = "snippets/quantized_fused_conv2d_maxpool_op.cpp"
+  __template_name__ = "snippets/legacy/quantized_fused_conv2d_maxpool_op.cpp"
   __headers__ = set(['"uTensor/ops/MatrixOps.hpp"'])
 
   def __init__(self, inputs, outputs, strides, ksize, padding,
@@ -717,7 +717,7 @@ class QuantizedFusedConv2DMaxpoolOpSnippet(Snippet):
     self.template_vars["to_eval"] = to_eval
 
 class Conv2DQuantOpSnippet(Snippet):
-  __template_name__ = "snippets/qconv2d_op.cpp"
+  __template_name__ = "snippets/legacy/qconv2d_op.cpp"
   __headers__ = set(['"uTensor/ops/MatrixOps.hpp"'])
 
   def __init__(self, inputs, outputs, strides, padding,
@@ -742,7 +742,7 @@ class Conv2DQuantOpSnippet(Snippet):
     self.template_vars["to_eval"] = to_eval
 
 class Uint8Q7OriginSnippet(Snippet):
-  __template_name__ = "snippets/cmsis_uint8q7origin_op.cpp"
+  __template_name__ = "snippets/legacy/cmsis_uint8q7origin_op.cpp"
   __headers__ = set(['"uTensor/ops/cmsis_ops/supportOps.hpp"'])
 
   def __init__(self, inputs, output,
@@ -756,7 +756,7 @@ class Uint8Q7OriginSnippet(Snippet):
     self.template_vars["to_eval"] = to_eval
 
 class QuantRangeForMultiplicationSnippet(Snippet):
-  __template_name__ = "snippets/quant_range_for_multiplication_op.cpp"
+  __template_name__ = "snippets/legacy/quant_range_for_multiplication_op.cpp"
   __headers__ = set(['"uTensor/ops/cmsis_ops/supportOps.hpp"'])
 
   def __init__(self, inputs, outputs, out_dtype,
@@ -776,7 +776,7 @@ class QuantRangeForMultiplicationSnippet(Snippet):
     self.template_vars["to_eval"] = to_eval
 
 class CommentSnippet(Snippet):
-  __template_name__ = "snippets/comments.cpp"
+  __template_name__ = "snippets/legacy/comments.cpp"
   __headers__ = set([])
 
   def __init__(self, comments):
@@ -785,7 +785,7 @@ class CommentSnippet(Snippet):
 
 
 class ContextHeaderSnippet(Snippet):
-  __template_name__ = "snippets/get_ctx.hpp"
+  __template_name__ = "snippets/legacy/get_ctx.hpp"
   __headers__ = set(['"uTensor/core/context.hpp"', '"uTensor/core/tensor.hpp"'])
 
   def __init__(self, guard_name, graph_name, placeholders=None):
@@ -797,7 +797,7 @@ class ContextHeaderSnippet(Snippet):
     self.template_vars["placeholders"] = placeholders
 
 class WeightSnippet(Snippet):
-  __template_name__ = "snippets/weight_snippet.hpp"
+  __template_name__ = "snippets/legacy/weight_snippet.hpp"
   __headers__ = set([])
 
   def __init__(self, inline_name, type, shape, value):
@@ -810,7 +810,7 @@ class WeightSnippet(Snippet):
 
 
 class ContextGlobalArrayContainer(SnippetContainerBase):
-  __template_name__ = "containers/weight_header.hpp"
+  __template_name__ = "containers/legacy/weight_header.hpp"
   __headers__ = set([])
 
   def __init__(self, snippets=None):
@@ -818,7 +818,7 @@ class ContextGlobalArrayContainer(SnippetContainerBase):
 
 
 class ContextSnippetsContainer(SnippetContainerBase):
-  __template_name__ = "containers/get_ctx.cpp"
+  __template_name__ = "containers/legacy/get_ctx.cpp"
   __headers__ = set([])
 
   def __init__(self,
@@ -840,7 +840,7 @@ class ContextSnippetsContainer(SnippetContainerBase):
     self.add_header('"{}"'.format(ctx_weightheader_name))
 
 class GatherOpSnippet(Snippet):
-  __template_name__ = "snippets/gather_op.cpp"
+  __template_name__ = "snippets/legacy/gather_op.cpp"
   __headers__ = set(['"uTensor/ops/ArrayOps.hpp"'])
 
   def __init__(self, inputs, output, np_dtype,

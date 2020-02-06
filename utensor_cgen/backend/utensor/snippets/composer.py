@@ -1,7 +1,7 @@
 # -*- coding:utf8 -*-
 import re
 
-from ._snippets import Snippet, SnippetContainerBase
+from ._base import Snippet, SnippetContainerBase
 
 _STD_PATTERN = re.compile(r'^<[\w]+(.h|.hpp)?>$')
 
