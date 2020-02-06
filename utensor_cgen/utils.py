@@ -488,9 +488,41 @@ class Pipeline(object):
     cls = type(self)
     return cls(funcs=self._funcs[slice_obj])
 
+
 def parse_toml(file_or_path):
   if isinstance(file_or_path, str):
     fid = open(file_or_path, 'r')
   doc = _parse(fid.read())
   fid.close()
   return doc
+
+
+class Configuration(object):
+  def __init__(self, defaults=None, user_config=None):
+    if defaults is None:
+      defaults = {}
+    if user_config is None:
+      user_config = {}
+    self._defaults = defaults
+    self._user_config = user_config
+
+  def __getitem__(self, key):
+    if key not in self:
+      raise KeyError('invalid key: {}'.format(key))
+    value = self._user_config.get(
+      key, self._defaults[key]
+    )
+    if isinstance(value, dict):
+      value = type(self)(value, {})
+    return value
+
+  def __contains__(self, key):
+    return key in self._user_config or key in self._defaults
+
+  def __repr__(self):
+    return (
+      'Configuration(\n'
+      '  defaults={},\n'
+      '  user_config={} \n'
+      ')'
+    ).format(self._defaults, self._user_config)
