@@ -152,7 +152,7 @@ def _show_pb_file(pb_file, output_nodes, **kwargs):
 
 def _show_ugraph(ugraph, oneline=False, ignore_unknown_op=False):
   import textwrap
-  from utensor_cgen.backend.utensor._operators import OperatorFactory
+  from utensor_cgen.backend.utensor.code_generator.legacy._operators import OperatorFactory
 
   unknown_ops = set([])
   if oneline:

@@ -1,6 +1,9 @@
 # https://github.com/toml-lang/toml
 # <target_name>.<component>.<part>
-[utensor.backend.code_generator]
+[utensor.backend]
+legacy-api = true
+
+[utensor.backend.legacy_code_generator]
 src_fname = "None"
 params_dir = "data"
 embed_params_dir = "/fs/data"

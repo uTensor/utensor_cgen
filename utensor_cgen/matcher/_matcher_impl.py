@@ -109,7 +109,7 @@ class OpEqualityDelegate(object):
   @classmethod
   def _setup(cls):
     # to activate all configurations
-    import utensor_cgen.backend.utensor._operators
+    import utensor_cgen.backend.utensor.code_generator.legacy._operators
 
 @attr.s
 class uTensorGraphMatcher(object):

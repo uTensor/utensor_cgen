@@ -13,18 +13,23 @@ class uTensorBackend(Backend):
   TARGET = 'utensor'
 
   def __init__(self, config, code_generator=None, graph_lower=None):
-    final_config = self.default_config[self.TARGET]
-    if config:
-      final_config.update(config[self.TARGET])
+    default_config = self.default_config[self.TARGET][self.COMPONENT]
+    config = config[self.TARGET][self.COMPONENT]
     if code_generator is None:
-      if final_config[self.COMPONENT]['legacy-api']:
-        part_config = final_config[self.COMPONENT][uTensorLegacyCodeGenerator.PART]
+      if config.get('legacy-api', default_config['legacy-api']):
+        part_config = config.get(
+          uTensorLegacyCodeGenerator.PART,
+          default_config[uTensorLegacyCodeGenerator.PART]
+        )
         code_generator = uTensorLegacyCodeGenerator(config=part_config)
       else:
         # TODO: use new code generator
         pass
     if graph_lower is None:
-      part_config = final_config[self.COMPONENT][uTensorGraphLower.PART]
+      part_config = config.get(
+        uTensorGraphLower.PART,
+        default_config[uTensorGraphLower.PART]
+      )
       graph_lower = uTensorGraphLower(config=part_config)
     self._graph_lower = graph_lower
     self._code_generator = code_generator
