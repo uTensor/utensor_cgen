@@ -499,15 +499,10 @@ def parse_toml(file_or_path):
 
 class Configuration(object):
   def __init__(self, defaults=None, user_config=None):
-    cls = type(self)
     if defaults is None:
       defaults = {}
-    elif isinstance(defaults, cls):
-      defaults = defaults.defaults
     if user_config is None:
       user_config = {}
-    elif isinstance(user_config, cls):
-      user_config = user_config.user_config
     self._defaults = defaults
     self._user_config = user_config
 
@@ -518,6 +513,15 @@ class Configuration(object):
   @property
   def user_config(self):
     return self._user_config
+  
+  def get(self, key, default=None):
+    value = default
+    if key in self._user_config:
+      value = self._user_config[key]
+    elif key in self._defaults:
+      value = self._defaults[key]
+    return value
+     
 
   def __getitem__(self, key):
     if key not in self:

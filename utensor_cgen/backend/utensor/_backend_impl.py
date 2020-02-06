@@ -1,5 +1,9 @@
 from utensor_cgen.backend.base import Backend
-from utensor_cgen.utils import class_property, parse_toml, LazyLoader, LazyAttrib
+from utensor_cgen.utils import (
+  class_property, parse_toml,
+  LazyLoader, LazyAttrib,
+  Configuration,
+)
 
 code_generator = LazyLoader(submod_name='backend.utensor.code_generator')
 _graph_lower = LazyLoader(submod_name='backend.utensor._graph_lower')
@@ -14,22 +18,22 @@ class uTensorBackend(Backend):
 
   def __init__(self, config, code_generator=None, graph_lower=None):
     default_config = self.default_config[self.TARGET][self.COMPONENT]
-    config = config[self.TARGET][self.COMPONENT]
+    config = Configuration(default_config, config.get(
+      self.TARGET,
+      {self.COMPONENT: {}}
+    ).get(
+      self.COMPONENT, {}
+      )
+    )
     if code_generator is None:
-      if config.get('legacy-api', default_config['legacy-api']):
-        part_config = config.get(
-          uTensorLegacyCodeGenerator.PART,
-          default_config[uTensorLegacyCodeGenerator.PART]
-        )
+      if config['legacy-api']:
+        part_config = config[uTensorLegacyCodeGenerator.PART]
         code_generator = uTensorLegacyCodeGenerator(config=part_config)
       else:
         # TODO: use new code generator
         pass
     if graph_lower is None:
-      part_config = config.get(
-        uTensorGraphLower.PART,
-        default_config[uTensorGraphLower.PART]
-      )
+      part_config = config[uTensorGraphLower.PART]
       graph_lower = uTensorGraphLower(config=part_config)
     self._graph_lower = graph_lower
     self._code_generator = code_generator
