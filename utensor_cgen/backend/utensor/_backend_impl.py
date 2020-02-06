@@ -1,12 +1,12 @@
 from utensor_cgen.backend.base import Backend
 from utensor_cgen.utils import class_property, parse_toml, LazyLoader, LazyAttrib
 
-_code_generator = LazyLoader(submod_name='backend.utensor.legacy._code_generator')
+code_generator = LazyLoader(submod_name='backend.utensor.code_generator')
 _graph_lower = LazyLoader(submod_name='backend.utensor._graph_lower')
-uTensorLegacyCodeGenerator = LazyAttrib(_code_generator, 'uTensorLegacyCodeGenerator')
+uTensorLegacyCodeGenerator = LazyAttrib(code_generator, 'uTensorLegacyCodeGenerator')
 uTensorGraphLower = LazyAttrib(_graph_lower, 'uTensorGraphLower')
 
-del _code_generator, _graph_lower
+del code_generator, _graph_lower
 
 class uTensorBackend(Backend):
 

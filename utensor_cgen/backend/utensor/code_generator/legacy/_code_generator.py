@@ -13,14 +13,14 @@ from utensor_cgen.transformer.optimizer import RefCntOptimizer
 from utensor_cgen.transformer.pipeline import TransformerPipeline
 from utensor_cgen.utils import (NamescopedKWArgsParser, class_property,
                                 parse_toml, LazyLoader)
-
-from ._operators import OperatorFactory
-from ..snippets.legacy import (
+from utensor_cgen.backend.utensor.snippets.legacy import (
   CommentSnippet, ContextGlobalArrayContainer,
   ContextHeaderSnippet, ContextSnippetsContainer,
   CreateTensorBinarySnippet, CreateTensorIdxSnippet
 )
-from ..snippets.composer import Composer
+from utensor_cgen.backend.utensor.snippets.composer import Composer
+
+from ._operators import OperatorFactory
 
 __all__ = ["uTensorLegacyCodeGenerator"]
 _logger = logging.getLogger('utensor-cli')
