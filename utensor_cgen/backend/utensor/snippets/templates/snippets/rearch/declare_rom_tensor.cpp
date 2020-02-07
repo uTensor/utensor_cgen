@@ -1,0 +1,1 @@
+Tensor {{tensor_var_name}} = new RomTensor({ {%for s in shape[:-1]%}{{s}}, {%endfor%}{{shape[-1]}} }, {{utensor_dtype}}, {{buffer_var_name}});

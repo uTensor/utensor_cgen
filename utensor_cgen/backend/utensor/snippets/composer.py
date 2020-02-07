@@ -1,7 +1,7 @@
 # -*- coding:utf8 -*-
 import re
 
-from ._base import Snippet, SnippetContainerBase
+from ._base import Snippet, SnippetContainerBase, SnippetBase
 
 _STD_PATTERN = re.compile(r'^<[\w]+(.h|.hpp)?>$')
 
@@ -11,11 +11,9 @@ class Composer(object):
   def __init__(self, snippets=None):
     if snippets is None:
       snippets = []
+    self._snippets = []
     for snp in snippets:
-      if not isinstance(snp, (Snippet, SnippetContainerBase)):
-        msg = "expecting Snippet/SnippetContainerBase objects, get {}".format(type(snp))
-        raise TypeError(msg)
-    self._snippets = snippets
+      self.add_snippet(snp)
     self._cached = False
     self._text = ""
 
@@ -29,7 +27,7 @@ class Composer(object):
     return self._text
 
   def add_snippet(self, snippet):
-    if not isinstance(snippet, (Snippet, SnippetContainerBase)):
+    if not isinstance(snippet, (SnippetBase, Snippet, SnippetContainerBase)):
       msg = "expecting Snippet/SnippetContainerBase object, get {}".format(type(snippet))
       raise ValueError(msg)
     self._cached = False

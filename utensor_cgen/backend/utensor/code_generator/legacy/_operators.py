@@ -20,11 +20,12 @@ from utensor_cgen.backend.utensor.snippets.legacy import *  # pylint: disable=W0
 __all__ = ['OperatorFactory', 'OpNotSupportedError']
 tf = LazyLoader('tensorflow')
 
+
 class OpNotSupportedError(Exception): pass
 
 
-class OperatorFactory():
-  # Can easily do something smarter
+class OperatorFactory(object):
+
   _operators = {}
 
   def createOperatorSnippet(self, op_info, **kwargs):

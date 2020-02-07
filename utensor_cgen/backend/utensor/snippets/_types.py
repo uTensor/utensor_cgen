@@ -52,10 +52,46 @@ class NumpyTypesMap(object):
         np.dtype(tf.qint32.as_numpy_dtype): _TYPE_MAP_VALUE(importer_type_str="int", 
                                                             tensor_type_str="int"),
         np.dtype('uint16'): _TYPE_MAP_VALUE(importer_type_str="ushort",
-                                                            tensor_type_str="uint16_t"),
+                                            tensor_type_str="uint16_t"),
         np.dtype('int8'): _TYPE_MAP_VALUE(importer_type_str="int8",
-                                                            tensor_type_str="q7_t"),
+                                          tensor_type_str="q7_t"),
       }
       cls._inited = True
 
 NP_TYPES_MAP = NumpyTypesMap()
+
+class Numpy2uTensorTypesMap(object):
+  _obj = None
+  _NP_TYPES_MAP = {}
+  _inited = False
+
+  def __new__(cls):
+    if cls._obj is None:
+      cls._obj = object.__new__(cls)
+    return cls._obj
+
+  def __getitem__(self, key):
+    cls = type(self)
+    cls._init()
+    return cls._NP_TYPES_MAP.get(key, 'undefined')
+
+  def __contains__(self, key):
+    cls = type(self)
+    cls._init()
+    return key in cls._NP_TYPES_MAP
+  
+  @classmethod
+  def _init(cls):
+    if not cls._inited:
+      cls._NP_TYPES_MAP = {
+        np.dtype('int8'): 'i8',
+        np.dtype('uint8'): 'u8',
+        np.dtype('int16'): 'i16',
+        np.dtype('uint16'): 'u16',
+        np.dtype('int32'): 'i32',
+        np.dtype('uint32'): 'u32',
+        np.dtype('float'): 'flt',
+      }
+      cls._inited = True
+
+UTENSOR_TYPES_MAP = Numpy2uTensorTypesMap()
