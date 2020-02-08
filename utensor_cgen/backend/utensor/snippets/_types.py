@@ -52,9 +52,9 @@ class NumpyTypesMap(object):
         np.dtype(tf.qint32.as_numpy_dtype): _TYPE_MAP_VALUE(importer_type_str="int", 
                                                             tensor_type_str="int"),
         np.dtype('uint16'): _TYPE_MAP_VALUE(importer_type_str="ushort",
-                                                            tensor_type_str="uint16_t"),
+                                            tensor_type_str="uint16_t"),
         np.dtype('int8'): _TYPE_MAP_VALUE(importer_type_str="int8",
-                                                            tensor_type_str="q7_t"),
+                                          tensor_type_str="q7_t"),
       }
       cls._inited = True
 

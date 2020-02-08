@@ -1,4 +1,5 @@
 #include "{{header_file}}"
+#include "{{weight_header_file}}"
 #include "uTensor/tensors/RamTensor.hpp"
 #include "uTensor/tensors/RomTensor.hpp"
 

@@ -1,9 +1,11 @@
 import os
+from pathlib import Path
 
 from utensor_cgen.backend.base import BackendPart
 from utensor_cgen.transformer.pipeline import TransformerPipeline
 from utensor_cgen.utils import Configuration, class_property
 from utensor_cgen.backend.utensor.snippets import env
+from utensor_cgen.backend.utensor.snippets.legacy import ContextGlobalArrayContainer, WeightSnippet
 
 class uTensorRearchCodeGenerator(BackendPart):
 
@@ -59,6 +61,28 @@ class uTensorRearchCodeGenerator(BackendPart):
     # 3. generate computing logic
     # 4. write files
     # generate inline arrays
+    snippets = []
+    buffer_map = {}
+    for op_info in new_ugraph.ops_info.values():
+      if op_info.op_type == 'Inline':
+        tensor = op_info.output_tensors[0]
+        buffer_name = 'data_{}'.format(tensor.name.replace(':', '_').replace('/', '_'))
+        buffer_map[tensor.name] = buffer_name
+        snippets.append(
+          WeightSnippet(
+            buffer_name,
+            tensor.dtype,
+            tensor.shape,
+            op_info.op_attr['value'].value.np_array.ravel()
+          )
+        )
+    weight_file_path = Path(self.params_dir) / ugraph.name / 'weights_{}.hpp'.format(ugraph.name)
+    if not weight_file_path.parent.exists():
+      weight_file_path.parent.mkdir(parents=True)
+    with weight_file_path.open('w') as fid:
+      weight_container = ContextGlobalArrayContainer(snippets=snippets)
+      fid.write(weight_container.render())
+      template_vars['weight_header_file'] = fid.name
     # generate the computation function
     src_fname = self.src_fname == 'None' and '{}.cpp'.format(ugraph.name) or self.src_fname
     with open(src_fname, 'w') as fid:
