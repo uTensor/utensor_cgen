@@ -1,18 +1,20 @@
 import os
-import re
 import pickle
-from pathlib import Path
+import re
 from itertools import chain
+from pathlib import Path
 
 from utensor_cgen.backend.base import BackendPart
+from utensor_cgen.backend.utensor.snippets.composer import Composer
+from utensor_cgen.backend.utensor.snippets.legacy import (
+    ContextGlobalArrayContainer, WeightSnippet)
+from utensor_cgen.backend.utensor.snippets.rearch import SimpleContainer
+from utensor_cgen.backend.utensor.snippets.template_env import env
 from utensor_cgen.transformer.pipeline import TransformerPipeline
 from utensor_cgen.utils import Configuration, class_property
-from utensor_cgen.backend.utensor.snippets.template_env import env
-from utensor_cgen.backend.utensor.snippets.composer import Composer
-from utensor_cgen.backend.utensor.snippets.legacy import ContextGlobalArrayContainer, WeightSnippet
-from utensor_cgen.backend.utensor.snippets.rearch import SimpleContainer
 
 from ._operators import OperatorFactory
+
 
 class uTensorRearchCodeGenerator(BackendPart):
 

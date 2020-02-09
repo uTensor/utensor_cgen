@@ -1,10 +1,9 @@
 from six import with_metaclass
 
 from utensor_cgen.backend.utensor.snippets._types import NP_TYPES_MAP
-from utensor_cgen.backend.utensor.snippets.rearch import (
-  DeclareOpSnippet, RomTensorSnippet,
-  AddOpEvalSnippet
-)
+from utensor_cgen.backend.utensor.snippets.rearch import (AddOpEvalSnippet,
+                                                          DeclareOpSnippet,
+                                                          RomTensorSnippet)
 
 __all__ = ['OperatorFactory', 'OpNotSupportedError']
 
