@@ -1,4 +1,4 @@
-from utensor_cgen.backend.utensor.snippets._types import UTENSOR_TYPES_MAP
+from utensor_cgen.backend.utensor.snippets._types import UTENSOR_TYPES_MAP, NP_TYPES_MAP
 from utensor_cgen.backend.utensor.snippets._base import Snippet, SnippetBase
 
 __all__ = ['RomTensorSnippet', 'DeclareOpSnippet', 'AddOpEvalSnippet', 'SimpleContainer']
@@ -55,7 +55,7 @@ class OpEvalSnippet(Snippet):
       tensor_var_map[tensor.name]: UTENSOR_TYPES_MAP[tensor.dtype]
       for tensor in op_info.output_tensors
     }
-    utensor_dtypes = [UTENSOR_TYPES_MAP[dtype] for dtype in dtypes]
+    utensor_dtypes = [NP_TYPES_MAP[dtype].tensor_type_str for dtype in dtypes]
     if utensor_dtypes:
       op_type = '{}<{}>'.format(op_info.op_type, ', '.join(utensor_dtypes))
     else:
