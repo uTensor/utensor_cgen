@@ -99,6 +99,17 @@ class SimpleContainer(SnippetBase):
     self.__headers__.update(snippet.headers)
     self._eval_snippests.append(snippet)
   
+  def add_header(self, header, *headers):
+    self._add_header(header)
+    for header in headers:
+      self._add_header(header)
+    return self
+  
+  def _add_header(self, header):
+    if not header.startswith('"') and not header.startswith("<"):
+      header = '"{}"'.format(header)
+    self.__headers__.add(header)
+  
   def render(self):
     return self.template.render(
       declare_snippets=self._declare_snippets,

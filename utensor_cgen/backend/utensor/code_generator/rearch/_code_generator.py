@@ -106,22 +106,25 @@ class uTensorRearchCodeGenerator(BackendPart):
     # 4. write files
     params_dir = Path(self.params_dir) / ugraph.name
     params_dir.mkdir(parents=True, exist_ok=True)
+    weight_header_fname = None
     if weight_snippets:
       with (params_dir / 'params_{}.hpp'.format(ugraph.name)).open('w') as fid:
         weight_container = ContextGlobalArrayContainer(snippets=weight_snippets)
         fid.write(weight_container.render())
-        template_vars['weight_header_file'] = fid.name
+        weight_header_fname = fid.name
 
     # # generate the computation function
     model_file_dir = Path(self.model_dir)
     header_fname = self.header_fname == 'None' and '{}.hpp'.format(ugraph.name) or self.header_fname
     container_snippet = SimpleContainer(declare_snippets=declare_snippets, eval_snippests=eval_snippets)
     container_snippet.template_vars.update(template_vars)
-    container_snippet.template_vars['header_fname'] = header_fname
     (model_file_dir / ugraph.name).mkdir(parents=True, exist_ok=True)
     with (model_file_dir / ugraph.name / header_fname).open('w') as fid:
       template = env.get_template('snippets/rearch/simple.hpp')
       fid.write(template.render(**template_vars))
+      container_snippet.add_header(fid.name)
+    if weight_header_fname:
+      container_snippet.add_header(weight_header_fname)
     composer = Composer(snippets=[container_snippet])
     src_fname = self.src_fname == 'None' and '{}.cpp'.format(ugraph.name) or self.src_fname
     with (model_file_dir / ugraph.name / src_fname ).open('w') as fid:

@@ -1,7 +1,3 @@
-#include "{{header_fname}}"
-{%if weight_header_file%}#include "{{weight_header_file}}"
-{%endif%}
-
 using namespace uTensor;
 
 {%for snippet in declare_snippets%}

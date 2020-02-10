@@ -37,8 +37,8 @@ class Composer(object):
     unique_headers = set([])
     for snp in self._snippets:
       unique_headers.update(snp.headers)
-    headers = [(header, 0) if _STD_PATTERN.match(header) else (header, 1) for header in unique_headers]
-    headers = [t[0] for t in sorted(headers, key=lambda t: t[1], reverse=True)]
+    headers = [(0, header) if _STD_PATTERN.match(header) else (1, header) for header in unique_headers]
+    headers = [t[1] for t in sorted(headers, reverse=True)]
     for header in headers:
       self._text += "#include {}\n".format(header)
     self._text += "\n\n"
