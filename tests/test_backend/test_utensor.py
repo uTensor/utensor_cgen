@@ -1,6 +1,6 @@
 import os
 
-def test_utensor(mlp_ugraph):
+def test_legacy_utensor(mlp_ugraph):
     from utensor_cgen.backend.utensor import uTensorBackend
 
     this_dir = os.path.dirname(__file__)
