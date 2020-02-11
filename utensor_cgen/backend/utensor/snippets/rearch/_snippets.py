@@ -3,9 +3,11 @@ from utensor_cgen.backend.utensor.snippets._base import Snippet, SnippetBase
 
 __all__ = ['RomTensorSnippet', 'DeclareOpSnippet', 'AddOpEvalSnippet', 'SimpleContainer']
 
+class _SnippetBase(Snippet):
+  __headers__ = set(['"uTensor/uTensor.hpp"'])
 
-class RomTensorSnippet(Snippet):
-  __headers__ = set(['"uTensor/tensors/RomTensor.hpp"'])
+
+class RomTensorSnippet(_SnippetBase):
   __template_name__ = 'snippets/rearch/declare_rom_tensor.cpp'
 
   def __init__(self, tensor_var_name, buffer_var_name, tensor):
@@ -19,8 +21,7 @@ class RomTensorSnippet(Snippet):
     }
 
 
-class DeclareOpSnippet(Snippet):
-  __headers__ = set(['"uTensor/ops/Arithmetic.hpp"'])
+class DeclareOpSnippet(_SnippetBase):
   __template_name__ = 'snippets/rearch/declare_op.cpp'
 
   def __init__(self, op_type, dtypes, op_var_name):
@@ -30,9 +31,8 @@ class DeclareOpSnippet(Snippet):
     self.template_vars['op_var_name'] = op_var_name
 
 
-class OpEvalSnippet(Snippet):
+class OpEvalSnippet(_SnippetBase):
   __template_name__ = 'snippets/rearch/eval_op.cpp'
-  __headers__ = set(['"uTensor/tensors/RamTensor.hpp"'])
   __inputs__ = []
   __outputs__ = []
   
@@ -69,13 +69,12 @@ class OpEvalSnippet(Snippet):
 
 
 class AddOpEvalSnippet(OpEvalSnippet):
-  __headers__ = OpEvalSnippet.__headers__.union(['"uTensor/ops/Arithmetic.hpp"'])
   __inputs__ = ['a', 'b']
   __outputs__ = ['c']
 
 
 class SimpleContainer(SnippetBase):
-  __headers__ = set(['"uTensor/core/context.hpp"', "<vector>"])
+  __headers__ = set(['"uTensor/uTensor.hpp"', "<vector>"])
   __template_name__ = 'containers/rearch/simple.cpp'
 
   def __init__(self, declare_snippets=None, eval_snippests=None):
