@@ -90,7 +90,7 @@ class Numpy2uTensorTypesMap(object):
         np.dtype('uint16'): 'u16',
         np.dtype('int32'): 'i32',
         np.dtype('uint32'): 'u32',
-        np.dtype('float'): 'flt',
+        np.dtype('float32'): 'flt',
       }
       cls._inited = True
 
