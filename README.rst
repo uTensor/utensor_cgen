@@ -248,8 +248,8 @@ TensorFlow_
 
 1. Freeze your `tensorflow.Graph`
 
-  - please refer to the `official doc <https://www.tensorflow.org/guide/extend/model_files>`_
-    and read the `Freezing <https://www.tensorflow.org/guide/extend/model_files#freezing>`_ section
+  - please refer to this `issue track <https://github.com/tensorflow/tensorflow/issues/27614>`_ for detail
+  - especially this `comment <https://github.com/tensorflow/tensorflow/issues/27614#issuecomment-571889676>`_ by Robin2091
 
 2. Follow instructions in :ref:`install` section to install :mod:`utensor_cgen`
 
