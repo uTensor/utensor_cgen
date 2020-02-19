@@ -16,3 +16,14 @@ def test_utensor(mlp_ugraph):
             },
         }
     }).apply(mlp_ugraph)
+
+
+def test_offlinememory(mlp_ugraph):
+    from utensor_cgen.backend.utensor import uTensorOfflineMemoryPlanner
+
+    uTensorOfflineMemoryPlanner(config={
+                'size_float': 4,
+                'size_int': 4,
+                'size_uint8_t': 1
+        }
+    ).apply(mlp_ugraph)
