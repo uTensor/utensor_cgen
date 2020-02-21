@@ -31,10 +31,7 @@ class uTensorLegacyCodeGenerator(BackendPart, object):
   TARGET = 'utensor'
   PART = 'legacy_code_generator'
 
-  def __init__(
-    self,
-    config
-  ):
+  def __init__(self, config):
     final_config = Configuration(self.default_config, config)
     self.src_fname = final_config['src_fname']
     self.params_dir = final_config['params_dir'].rstrip('/')

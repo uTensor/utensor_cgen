@@ -192,6 +192,10 @@ def _show_ugraph(ugraph, oneline=False, ignore_unknown_op=False):
       if not OperatorFactory.is_supported(op_info.op_type):
         unknown_ops.add(op_info)
     click.echo('\n'.join(paragraphs))
+  click.secho(
+    'topological ordered ops: {}'.format(ugraph.topo_order),
+    fg='white', bold=True,
+  )
   if unknown_ops and not ignore_unknown_op:
     click.echo(
       click.style('Unknown Ops Detected', fg='red', bold=True)

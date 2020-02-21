@@ -4,8 +4,7 @@ import numpy as np
 from .._base import Snippet, SnippetContainerBase  # pylint: disable=W0611
 from .._types import NP_TYPES_MAP
 
-__all__ = ["Snippet", "SnippetContainerBase",
-           "CreateTensorIdxSnippet", "CreateTensorNewSnippet",
+__all__ = ["CreateTensorIdxSnippet", "CreateTensorNewSnippet",
            "AddOpSnippet", "MinOpSnippet", "MaxOpSnippet",
            "ArgMaxOpSnippet", "DequantizeOpSnippet",
            "QuantizedMaxPoolSnippet", "MaxPoolSnippet",
