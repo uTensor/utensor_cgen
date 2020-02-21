@@ -84,7 +84,7 @@ def generate_config(target, output):
   required=True,
   help="list of output nodes"
 )
-@click.option('--config', default='utenosr_cli.toml', show_default=True, metavar='CONFIG.toml')
+@click.option('--config', default='utensor_cli.toml', show_default=True, metavar='CONFIG.toml')
 @click.option('--target',
               default='utensor',
               show_default=True,

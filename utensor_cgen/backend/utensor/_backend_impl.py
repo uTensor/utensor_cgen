@@ -41,7 +41,7 @@ class uTensorBackend(Backend):
     config = {}
     config[cls.TARGET] = {}
     config[cls.TARGET][cls.COMPONENT] = {}
-    config[cls.TARGET][cls.COMPONENT]['legacy-api'] = False
+    config[cls.TARGET][cls.COMPONENT]['legacy-api'] = True
     config[cls.TARGET][cls.COMPONENT][uTensorLegacyCodeGenerator.PART] = uTensorLegacyCodeGenerator.default_config
     config[cls.TARGET][cls.COMPONENT][uTensorRearchCodeGenerator.PART] = uTensorRearchCodeGenerator.default_config
     config[cls.TARGET][cls.COMPONENT][uTensorLegacyGraphLower.PART] = uTensorLegacyGraphLower.default_config
