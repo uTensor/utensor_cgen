@@ -1,8 +1,8 @@
 #-*- coding:utf8 -*-
+import importlib
 import os
 import re
 import sys
-import importlib
 from pathlib import Path
 
 import click
@@ -131,24 +131,26 @@ def list_trans_methods(verbose):
               help="list of output nodes")
 @click.argument('model_file', required=True, metavar='MODEL.{pb,pkl}')
 def show_graph(model_file, **kwargs):
+  import pickle
+  from utensor_cgen.frontend import FrontendSelector
   _, ext = os.path.splitext(model_file)
   output_nodes = kwargs.pop('output_nodes')
-  if ext == '.pb' or ext == '.pbtxt':
-    _show_pb_file(model_file, output_nodes=output_nodes, **kwargs)
-  elif ext == '.pkl':
-    import pickle
+
+  if ext == '.pkl':
     with open(model_file, 'rb') as fid:
       ugraph = pickle.load(fid)
     _show_ugraph(ugraph, **kwargs)
-  else:
-    msg = click.style('unknown file extension: {}'.format(ext), fg='red', bold=True)
-    click.echo(msg, file=sys.stderr)
+    return 0
 
-def _show_pb_file(pb_file, output_nodes, **kwargs):
-  import tensorflow as tf
-  from utensor_cgen.frontend.tensorflow import GraphDefParser
-  ugraph = GraphDefParser.parse(pb_file, output_nodes=output_nodes)
-  _show_ugraph(ugraph, **kwargs)
+  try:
+    parser = FrontendSelector.select_parser(ext)
+    ugraph = parser.parse(model_file, output_nodes)
+    _show_ugraph(ugraph, **kwargs)
+    return 0
+  except RuntimeError as err:
+    msg = err.args[0]
+    click.secho(msg, fg='red', bold=True)
+    return 1
 
 def _show_ugraph(ugraph, oneline=False, ignore_unknown_op=False):
   import textwrap

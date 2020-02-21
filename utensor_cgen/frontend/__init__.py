@@ -34,7 +34,7 @@ class FrontendSelector(object):
     cls._setup()
     parser_cls = cls._parser_map.get(file_ext, None)
     if parser_cls is None:
-      raise RuntimeError("unknown model file ext found: %s" % file_ext)
+      raise RuntimeError("unknown model file extension: %s" % file_ext)
     return parser_cls
   
   @classmethod
