@@ -352,10 +352,6 @@ def get_topologic_order(ugraph, init_nodes=None):
 
   - `Topological Sorting (wiki) <https://en.wikipedia.org/wiki/Topological_sorting>`_
   """
-  if ugraph.lib_name != "tensorflow":
-    raise ValueError(
-      "topologic_order_graph works only on tensorflow graph"
-    )
   if init_nodes is None:
     init_nodes = ugraph.output_nodes
   queue = deepcopy(init_nodes)

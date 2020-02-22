@@ -81,7 +81,6 @@ def generate_config(target, output):
   '--output-nodes',
   type=NArgsParam(),
   metavar="NODE_NAME,NODE_NAME,...",
-  required=True,
   help="list of output nodes"
 )
 @click.option('--config', default='utensor_cli.toml', show_default=True, metavar='CONFIG.toml')
@@ -129,10 +128,12 @@ def list_trans_methods(verbose):
               type=NArgsParam(),
               metavar="NODE_NAME,NODE_NAME,...",
               help="list of output nodes")
+@click.option('--config', default='utensor_cli.toml', show_default=True, metavar='CONFIG.toml')
 @click.argument('model_file', required=True, metavar='MODEL.{pb,pkl}')
-def show_graph(model_file, **kwargs):
+def show_graph(model_file, config, **kwargs):
   import pickle
   from utensor_cgen.frontend import FrontendSelector
+
   _, ext = os.path.splitext(model_file)
   output_nodes = kwargs.pop('output_nodes')
 
@@ -142,9 +143,13 @@ def show_graph(model_file, **kwargs):
     _show_ugraph(ugraph, **kwargs)
     return 0
 
+  if os.path.exists(config):
+    with open(config) as fid:
+      config = loads(fid.read())
+  else:
+    config = {}
   try:
-    parser = FrontendSelector.select_parser(ext)
-    ugraph = parser.parse(model_file, output_nodes)
+    ugraph = FrontendSelector.parse(model_file, output_nodes, config)
     _show_ugraph(ugraph, **kwargs)
     return 0
   except RuntimeError as err:

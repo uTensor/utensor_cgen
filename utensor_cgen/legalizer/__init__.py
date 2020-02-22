@@ -1,5 +1,6 @@
 from .base import LegalizerBase
 from .tensorflow import GraphDefLegalizer
+from .onnx import OnnxLegalizer
 
 
 class Legalizer(object):
@@ -32,3 +33,4 @@ class Legalizer(object):
     return legalizer.legalize(ugraph)
 
 Legalizer.register(GraphDefLegalizer)
+Legalizer.register(OnnxLegalizer)

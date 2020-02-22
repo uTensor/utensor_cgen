@@ -5,6 +5,7 @@ Linear Operation Legalizations
 
 """
 import tensorflow as tf
+
 from utensor_cgen.frontend.tensorflow import GraphDefParser
 from utensor_cgen.matcher import uTensorGraphMatcher
 from utensor_cgen.utils import prune_graph, topologic_order_graph
@@ -30,7 +31,7 @@ class LinearReorderTransformerV2(Transformer):
       dummy_input = tf.placeholder(dtype=tf.float32, shape=[None, 128, 128, 3])
       relu = tf.nn.relu(dummy_input, name='relu')
       tf.nn.max_pool(relu, ksize=[1, 2, 2, 1], strides=[1, 2, 2, 1], padding='SAME', name='max_pool')
-    pattern_ugraph = GraphDefParser.parse(graph.as_graph_def(), output_nodes=['max_pool'])
+    pattern_ugraph = GraphDefParser(config={}).parse(graph.as_graph_def(), output_nodes=['max_pool'])
     pattern_ugraph['relu'].replace_with_null_input_tensor(0)
     pattern_ugraph = prune_graph(pattern_ugraph)
     topologic_order_graph(pattern_ugraph)
@@ -56,7 +57,7 @@ class LinearReorderTransformerV2(Transformer):
       dummy_input = tf.placeholder(dtype=tf.float32, shape=[None, 128, 128, 3])
       max_pool = tf.nn.max_pool(dummy_input, ksize=ksize, strides=strides, padding=padding, name='max_pool')
       tf.nn.relu(max_pool, name='relu')
-    ugraph = GraphDefParser.parse(graph.as_graph_def(), output_nodes=['relu'])
+    ugraph = GraphDefParser(config={}).parse(graph.as_graph_def(), output_nodes=['relu'])
     ugraph['max_pool'].replace_with_null_input_tensor(0)
     ugraph = prune_graph(ugraph)
     topologic_order_graph(ugraph)

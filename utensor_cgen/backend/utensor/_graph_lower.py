@@ -1,21 +1,28 @@
+import logging
 from copy import deepcopy
 
 from utensor_cgen.backend.base import BackendPart
 from utensor_cgen.utils import class_property
 
+logger = logging.getLogger(__name__)
 
-class uTensorLegacyGraphLower(BackendPart):
-
+class uTensorGraphLowerBase(BackendPart):
   TARGET = 'utensor'
-  PART = 'legacy_graph_lower'
 
+  def handle_default(self, ugraph):
+    logger.warning('fall back to default graph lowering (do nothing)')
+    return ugraph
+  
+  def get_handler(self, ugraph):
+    handler = getattr(self, 'handle_{}'.format(ugraph.lib_name), self.handle_default)
+    return handler
+  
   def apply(self, ugraph):
-    handler = getattr(self, 'handle_{}'.format(ugraph.lib_name))
-    if handler is None:
-      raise RuntimeError(
-        'can not lower ugraph from {} to utensor'.format(ugraph.lib_name)
-      )
+    handler = self.get_handler(ugraph)
     return handler(ugraph)
+
+class uTensorLegacyGraphLower(uTensorGraphLowerBase):
+  PART = 'legacy_graph_lower'
 
   def handle_tensorflow(self, ugraph):
     return ugraph
@@ -25,11 +32,10 @@ class uTensorLegacyGraphLower(BackendPart):
     return {}
 
 
-class uTensorRearchGraphLower(BackendPart):
-  TARGET = 'utensor'
+class uTensorRearchGraphLower(uTensorGraphLowerBase):
   PART = 'rearch_graph_lower'
 
-  class OptypRenameManager(object):
+  class OptypeRenameManager(object):
     NAME_MAP = {
       'Add': 'AddOperator',
       'Conv2D': 'ConvOperator',
@@ -40,22 +46,12 @@ class uTensorRearchGraphLower(BackendPart):
     def get_new_optype(cls, op_type):
       return cls.NAME_MAP.get(op_type, op_type)
 
-  def apply(self, ugraph):
-    handler = getattr(self, 'handle_{}'.format(ugraph.lib_name))
-    if handler is None:
-      raise RuntimeError(
-        'can not lower ugraph from {} to utensor'.format(ugraph.lib_name)
-      )
-    return handler(ugraph)
-
   def handle_tensorflow(self, ugraph):
     new_ugraph = deepcopy(ugraph)
     for op_info in new_ugraph.ops_info.values():
-      op_info.op_type = self.OptypRenameManager.get_new_optype(op_info.op_type)
+      op_info.op_type = self.OptypeRenameManager.get_new_optype(op_info.op_type)
     return new_ugraph
   
   @class_property
   def default_config(cls):
     return {}
-  
-

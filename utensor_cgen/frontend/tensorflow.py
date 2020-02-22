@@ -17,10 +17,9 @@ from utensor_cgen.utils import random_str, topologic_order_graph
 @FrontendSelector.register(target_exts=['.pb', '.pbtxt'])
 class GraphDefParser(Parser):
 
-  @classmethod
-  def parse(cls, pb_file, output_nodes=None):
-    graph_def, graph_name = cls._load_graph_def(pb_file)
-    if not cls._tf_is_freeze_graph(graph_def):
+  def parse(self, pb_file, output_nodes=None):
+    graph_def, graph_name = self._load_graph_def(pb_file)
+    if not self._tf_is_freeze_graph(graph_def):
       raise ValueError('Given graph_def is not freezed')
     if output_nodes is None:
       output_nodes = [node.name for node in graph_def.node]
@@ -39,14 +38,14 @@ class GraphDefParser(Parser):
                                ugraph=ugraph,
                                op_name=tensor.op.name,
                                dtype=np.dtype(tensor.dtype.as_numpy_dtype),
-                               shape=cls._tf_parse_tshape(tensor.shape),
+                               shape=self._tf_parse_tshape(tensor.shape),
                                )
                     for tensor in op.inputs]
       out_tensors = [TensorInfo(name=tensor.name,
                                 ugraph=ugraph,
                                 op_name=op.name,
                                 dtype=np.dtype(tensor.dtype.as_numpy_dtype),
-                                shape=cls._tf_parse_tshape(tensor.shape),
+                                shape=self._tf_parse_tshape(tensor.shape),
                                 )
                      for tensor in op.outputs]
       op_type = node.op
@@ -91,7 +90,7 @@ class GraphDefParser(Parser):
       shape = None
     return shape
 
-  @classmethod
-  def _tf_is_freeze_graph(self, graph_def):
+  @staticmethod
+  def _tf_is_freeze_graph(graph_def):
     is_frozen = all(node.op not in ['VariableV2'] for node in graph_def.node)
     return is_frozen

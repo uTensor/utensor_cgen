@@ -66,7 +66,7 @@ class TensorInfo(IRBase, _NoShallowCopyMixin):
   """
   name = attr.ib(validator=instance_of(six.string_types))
   op_name = attr.ib(validator=instance_of(six.string_types))
-  dtype = attr.ib(validator=instance_of(np.dtype))
+  dtype = attr.ib(validator=instance_of((np.dtype, type(None))))
 
   shape = attr.ib(validator=instance_of((list, type(None))))
   
