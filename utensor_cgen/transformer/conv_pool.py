@@ -7,6 +7,7 @@ Node fusion for QuantConv2d QuantMaxPool operators
 from copy import deepcopy
 
 import tensorflow as tf
+
 from utensor_cgen.frontend.tensorflow import GraphDefParser
 from utensor_cgen.ir import OperationInfo, TensorInfo, uTensorGraph
 from utensor_cgen.matcher import uTensorGraphMatcher
@@ -35,7 +36,7 @@ class ConvPoolTransformer(Transformer):
       dummy_weight = tf.zeros([32, 32, 3, 10], dtype=tf.float32, name='dummy_weight')
       conv = tf.nn.conv2d(dummy_input, dummy_weight, strides=[1, 2, 2, 1], padding='VALID', name='conv')
       maxpool = tf.nn.max_pool(conv, ksize=[1, 2, 2, 1], strides=[1, 2, 2, 1], padding='VALID', name='maxpool')
-    ugraph = GraphDefParser.parse(graph.as_graph_def(), output_nodes=[maxpool.op.name])
+    ugraph = GraphDefParser(config={}).parse(graph.as_graph_def(), output_nodes=[maxpool.op.name])
     quant_ugraph = QuantizeTransformer().transform(ugraph)
     patrn_ugraph = deepcopy(quant_ugraph)
     quant_conv_op = patrn_ugraph['conv/eightbit']

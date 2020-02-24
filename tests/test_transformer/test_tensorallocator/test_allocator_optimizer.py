@@ -4,7 +4,7 @@ from utensor_cgen.transformer import TensorLifeProbe
 
 def test_create_resource_table(refgraph_tuple):
     (graph_def, output_nodes)= refgraph_tuple
-    ugraph = GraphDefParser.parse(graph_def, output_nodes=output_nodes)
+    ugraph = GraphDefParser(config={}).parse(graph_def, output_nodes=output_nodes)
     transformer = TensorLifeProbe()
     table = transformer._create_resource_table(ugraph)
     resource_ans = {
@@ -21,7 +21,7 @@ def test_create_resource_table(refgraph_tuple):
 
 def test_create_allocate_table(refgraph_tuple):
     (graph_def, output_nodes)= refgraph_tuple
-    ugraph = GraphDefParser.parse(graph_def, output_nodes=output_nodes)
+    ugraph = GraphDefParser(config={}).parse(graph_def, output_nodes=output_nodes)
     transformer = TensorLifeProbe()
     table = transformer._create_resource_table(ugraph)
     allocate_table = dict()
@@ -36,7 +36,7 @@ def test_create_allocate_table(refgraph_tuple):
 
 def test_query_offset_address(refgraph_tuple):
     (graph_def, output_nodes)= refgraph_tuple
-    ugraph = GraphDefParser.parse(graph_def, output_nodes=output_nodes)
+    ugraph = GraphDefParser(config={}).parse(graph_def, output_nodes=output_nodes)
     transformer = TensorLifeProbe()
     table = transformer._create_resource_table(ugraph)
     allocate_table = dict()
@@ -50,7 +50,7 @@ def test_query_offset_address(refgraph_tuple):
 
 def test_query_timeline(refgraph_tuple):
     (graph_def, output_nodes)= refgraph_tuple
-    ugraph = GraphDefParser.parse(graph_def, output_nodes=output_nodes)
+    ugraph = GraphDefParser(config={}).parse(graph_def, output_nodes=output_nodes)
     transformer = TensorLifeProbe()
     table = transformer._create_resource_table(ugraph)
     allocate_table = dict()
@@ -64,7 +64,7 @@ def test_query_timeline(refgraph_tuple):
 
 def test_query_result(refgraph_tuple):
     (graph_def, output_nodes)= refgraph_tuple
-    ugraph = GraphDefParser.parse(graph_def, output_nodes=output_nodes)
+    ugraph = GraphDefParser(config={}).parse(graph_def, output_nodes=output_nodes)
     transformer = TensorLifeProbe()
     table = transformer._create_resource_table(ugraph)
     allocate_table = dict()
@@ -91,7 +91,7 @@ def test_query_result(refgraph_tuple):
 
 def test_allocate_tensor(refgraph_tuple):
     (graph_def, output_nodes) = refgraph_tuple
-    ugraph = GraphDefParser.parse(graph_def, output_nodes=output_nodes)
+    ugraph = GraphDefParser(config={}).parse(graph_def, output_nodes=output_nodes)
     transformer = TensorLifeProbe()
     tensors = []
     table = transformer._create_resource_table(ugraph)
@@ -108,7 +108,7 @@ def test_allocate_tensor(refgraph_tuple):
     
 def test_allocate_graph(refgraph_tuple):
   (graph_def, output_nodes) = refgraph_tuple
-  ugraph = GraphDefParser.parse(graph_def, output_nodes=output_nodes)
+  ugraph = GraphDefParser(config={}).parse(graph_def, output_nodes=output_nodes)
   transformer = TensorLifeProbe()
   use_def_table = transformer._create_resource_table(ugraph)
   unit_size = 4
@@ -120,7 +120,7 @@ def test_allocate_graph(refgraph_tuple):
 
 def test_query_check(refgraph_tuple):
     (graph_def, output_nodes)= refgraph_tuple
-    ugraph = GraphDefParser.parse(graph_def, output_nodes=output_nodes)
+    ugraph = GraphDefParser(config={}).parse(graph_def, output_nodes=output_nodes)
     transformer = TensorLifeProbe()
     table = transformer._create_resource_table(ugraph)
     allocate_table = dict()
@@ -136,6 +136,6 @@ def test_query_check(refgraph_tuple):
 
 def test_memory_allocation(refgraph_tuple):
     (graph_def, output_nodes)= refgraph_tuple
-    ugraph = GraphDefParser.parse(graph_def, output_nodes=output_nodes)
+    ugraph = GraphDefParser(config={}).parse(graph_def, output_nodes=output_nodes)
     transformer = TensorLifeProbe()
     ugraph = transformer.transform(ugraph)

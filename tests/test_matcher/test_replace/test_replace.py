@@ -1,6 +1,6 @@
 import numpy as np
-
 import tensorflow as tf
+
 from utensor_cgen.frontend.tensorflow import GraphDefParser
 from utensor_cgen.matcher import uTensorGraphMatcher
 from utensor_cgen.utils import prune_graph, topologic_order_graph
@@ -13,7 +13,7 @@ def test_replace_fc_with_add(subj_graph_1, patrn_fc_1):
             a = tf.placeholder(dtype=tf.float32, name='a')
             b = tf.placeholder(dtype=tf.float32, name='b')
             out = tf.add(a, b, name='fused_node')
-        ugraph = GraphDefParser.parse(graph.as_graph_def(), output_nodes=[out.op.name])
+        ugraph = GraphDefParser(config={}).parse(graph.as_graph_def(), output_nodes=[out.op.name])
         ugraph.ops_info['fused_node'].replace_with_null_input_tensor(0)
         ugraph.ops_info['fused_node'].replace_with_null_input_tensor(1)
         topologic_order_graph(ugraph)

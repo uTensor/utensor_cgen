@@ -9,8 +9,8 @@ from collections import defaultdict
 from copy import deepcopy
 
 import numpy as np
-
 import tensorflow as tf
+
 from utensor_cgen.frontend.tensorflow import GraphDefParser
 from utensor_cgen.ir import OperationInfo, uTensorGraph
 from utensor_cgen.logger import logger
@@ -367,7 +367,7 @@ class DropoutTransformerV2(Transformer):
         dummy_x = tf.constant(np.random.rand(10, 10), dtype=tf.float32, name='dummy_x')
         dummy_rate = tf.placeholder(dtype=tf.float32, name='dummy_rate')
         dropout = tf.nn.dropout(dummy_x, rate=dummy_rate, name='dropout')
-    patrn_ugraph = GraphDefParser.parse(graph.as_graph_def(), output_nodes=[dropout.op.name])
+    patrn_ugraph = GraphDefParser(config={}).parse(graph.as_graph_def(), output_nodes=[dropout.op.name])
     # replace dummy_x
     patrn_ugraph['dropout/truediv'].replace_with_null_input_tensor(0)
     # # replace dummy_rate

@@ -1,7 +1,7 @@
 import numpy as np
+import tensorflow as tf
 from pytest import fixture
 
-import tensorflow as tf
 from utensor_cgen.frontend.tensorflow import GraphDefParser
 from utensor_cgen.utils import prune_graph, topologic_order_graph
 
@@ -14,7 +14,7 @@ def fully_connect_pattern1():
         w_prime = tf.constant(np.random.rand(3, 3), name='w_prime', dtype=tf.float32)
         a_prime = tf.matmul(z_prime, w_prime, name='a_prime')
         r_prime = tf.nn.relu(a_prime, name='r_prime')
-    patrn_ugraph = GraphDefParser.parse(patrn_graph.as_graph_def(), output_nodes=[r_prime.op.name])
+    patrn_ugraph = GraphDefParser(config={}).parse(patrn_graph.as_graph_def(), output_nodes=[r_prime.op.name])
     for i in range(2):
         patrn_ugraph.ops_info['a_prime'].replace_with_null_input_tensor(i)
     patrn_ugraph = prune_graph(patrn_ugraph)
@@ -33,5 +33,5 @@ def subject_ugraph_1():
         a = tf.matmul(z, w, name='a')
         r = tf.nn.relu(a, name='r')
         out = tf.add(x, r, name='out')
-    subj_ugraph = GraphDefParser.parse(subj_graph.as_graph_def(), output_nodes=[out.op.name])
+    subj_ugraph = GraphDefParser(config={}).parse(subj_graph.as_graph_def(), output_nodes=[out.op.name])
     return subj_ugraph

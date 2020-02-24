@@ -2,8 +2,8 @@ from random import sample
 
 import numpy as np
 import pytest
-
 import tensorflow as tf
+
 from utensor_cgen.frontend.tensorflow import GraphDefParser
 from utensor_cgen.utils import random_str
 
@@ -68,4 +68,4 @@ def gen_vgg_graph():
             )
             if i != num_layers:
                 in_feat = tf.nn.dropout(in_feat, rate=rate, name='dropout_{}'.format(i))   
-    return GraphDefParser.parse(graph.as_graph_def(), output_nodes=[in_feat.op.name])
+    return GraphDefParser(config={}).parse(graph.as_graph_def(), output_nodes=[in_feat.op.name])
