@@ -54,12 +54,9 @@ class IdOpRemoveOptimizer(Transformer):
     self.prune_graph = True
 
   def transform(self, ugraph):
-    if ugraph.lib_name == 'tensorflow':
-      return self._transform_tf(ugraph)
-    else:
-      raise RuntimeError('unsupported lib_name: {}'.format(ugraph.lib_name))
+    return self._transform(ugraph)
 
-  def _transform_tf(self, ugraph):
+  def _transform(self, ugraph):
     ops_to_remove = [
       op
       for op_name, op in ugraph.ops_info.items()

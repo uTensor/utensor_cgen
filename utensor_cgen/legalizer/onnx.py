@@ -51,3 +51,7 @@ class OnnxLegalizer(LegalizerBase):
       op_attr={}
     )
     op_info.output_tensors[0].op_name = add_op.name
+
+  def _visit_id(self, op_info):
+    # identity op should have op_type == 'Identity'
+    return op_info
