@@ -60,6 +60,7 @@ setup(
         'onnx-tf==1.2.1',
         'graphviz',
         'toml',
+        'ortools',
     ],
     extras_require={
         'dev': ['pytest']
