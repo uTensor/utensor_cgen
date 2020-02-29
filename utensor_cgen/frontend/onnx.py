@@ -7,7 +7,6 @@ import onnx
 import tensorflow as tf
 from onnx.onnx_pb import TensorProto
 from onnx_tf.backend import TensorflowBackend, prepare
-
 from utensor_cgen.frontend import FrontendSelector
 from utensor_cgen.frontend.base import Parser
 from utensor_cgen.ir import OperationInfo, TensorInfo, uTensorGraph
@@ -209,10 +208,12 @@ class _PostProcessing(object):
   def _handle_gemm(op_info):
     ugraph = op_info.ugraph
     output_tensor = op_info.output_tensors[0]
+    if output_tensor.dtype is not None and output_tensor.shape is not None:
+      return
     input_a, input_w, input_bias = op_info.input_tensors
-    a = np.empty(input_a.shape, dtype=input_a.dtype)
-    w = np.empty(input_w.shape, dtype=input_w.dtype)
-    b = np.empty(input_bias.shape, dtype=input_bias.dtype)
+    a = np.zeros(input_a.shape, dtype=input_a.dtype)
+    w = np.zeros(input_w.shape, dtype=input_w.dtype)
+    b = np.zeros(input_bias.shape, dtype=input_bias.dtype)
     out = np.matmul(a, w.T) + b
     output_tensor.dtype = out.dtype
     output_tensor.shape = list(out.shape)
@@ -230,9 +231,11 @@ class _PostProcessing(object):
   @staticmethod
   def _handle_softmax(op_info):
     input_tensor = op_info.input_tensors[0]
-    logistics = np.empty(input_tensor.shape, dtype=input_tensor.dtype)
-    out = np.exp(-logistics)
-    out /= out.sum(axis=1)
     output_tensor = op_info.output_tensors[0]
+    if output_tensor.dtype is not None and output_tensor.shape is not None:
+      return
+    logistics = np.zeros(input_tensor.shape, dtype=input_tensor.dtype)
+    out = np.exp(-logistics) * 1e-6
+    out /= out.sum(axis=1)
     output_tensor.shape = list(out.shape)
     output_tensor.dtype = out.dtype

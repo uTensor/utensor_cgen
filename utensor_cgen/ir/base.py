@@ -4,10 +4,10 @@ from copy import deepcopy
 from functools import reduce
 
 import attr
-import numpy as np
 import six
 from attr.validators import instance_of
 
+import numpy as np
 import tensorflow as tf
 from tensorflow.core.framework.attr_value_pb2 import AttrValue as _AttrValue
 from tensorflow.core.framework.attr_value_pb2 import \
@@ -464,6 +464,7 @@ class uTensorGraph(IRBase, _NoShallowCopyMixin, uTensorGraphBuilderMixin):
   topo_order = attr.ib(factory=list, init=False)
   data_manager = attr.ib(default=None, init=False)
   _type_to_op_map = attr.ib(factory=dict, init=False, repr=False)
+  attributes = attr.ib(factory=dict, init=False, repr=False)
 
   def __attrs_post_init__(self):
     if not all(
@@ -671,6 +672,7 @@ class uTensorGraph(IRBase, _NoShallowCopyMixin, uTensorGraphBuilderMixin):
       new_graph.data_manager = DataManager({})
       new_graph.data_manager.StorageCenter = deepcopy(self.data_manager.StorageCenter)
     new_graph._lib_name = self._lib_name
+    new_graph.attributes = deepcopy(self.attributes)
     topologic_order_graph(new_graph)
     return new_graph
 
