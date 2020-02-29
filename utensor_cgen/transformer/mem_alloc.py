@@ -2,6 +2,7 @@ from collections import Counter, defaultdict, namedtuple
 from itertools import combinations, product
 
 from ortools.sat.python import cp_model
+from utensor_cgen.logger import logger
 
 from .base import Transformer
 from .pipeline import TransformerPipeline
@@ -30,17 +31,23 @@ class TensorAllocationTransformer(Transformer):
       nonoverlap_map = defaultdict(set)
       for op_name in ugraph.topo_order:
         op_info = ugraph.ops_info[op_name]
+        # no overlapping between input/output tensors
         for in_tensor, out_tensor in product(op_info.input_tensors, op_info.output_tensors):
           nonoverlap_map[out_tensor].add(in_tensor)
           visited_tensors.add(in_tensor)
-      for known_tensor, out_tensor in product(visited_tensors, op_info.output_tensors):
-        if ref_cnts[known_tensor.name] > 0:
-          nonoverlap_map[out_tensor].add(known_tensor)
-      for in_tensor in op_info.input_tensors:
-        ref_cnts[in_tensor.name] -= 1
-      for out_tensor1, out_tensor2 in combinations(ugraph.output_tensors, 2):
-        nonoverlap_map[out_tensor1].add(out_tensor2)
-      visited_tensors.update(ugraph.output_tensors)
+        # no overlapping among input tensors
+        for in_tensor1, in_tensor2 in combinations(op_info.input_tensors, 2):
+          nonoverlap_map[in_tensor1].add(in_tensor2)
+        # no overlapping between output tensors and all evaluated tensors
+        for known_tensor, out_tensor in product(visited_tensors, op_info.output_tensors):
+          if ref_cnts[known_tensor.name] > 0:
+            nonoverlap_map[out_tensor].add(known_tensor)
+        visited_tensors.update(op_info.output_tensors)
+        for in_tensor in op_info.input_tensors:
+          ref_cnts[in_tensor.name] -= 1
+        for out_tensor1, out_tensor2 in combinations(ugraph.output_tensors, 2):
+          nonoverlap_map[out_tensor1].add(out_tensor2)
+        visited_tensors.update(ugraph.output_tensors)
 
       model = cp_model.CpModel()
       inter_vars = {}
@@ -72,8 +79,11 @@ class TensorAllocationTransformer(Transformer):
             end=solver.Value(alloc.end),
             size=alloc.size
           )
+        logger.info('optimal tensor allocation plan solved, memory span: %i bytes', opt_mem_span)
         ugraph.attributes[self.KWARGS_NAMESCOPE] = AllocationPlan(
           plan=alloc_plan,
           total_size=opt_mem_span
         )
+      else:
+        logger.info('tensor allocation plan not found, status: %s', solver.StatusName(status))
       return ugraph
