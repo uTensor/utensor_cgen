@@ -17,6 +17,7 @@ from tensorflow.core.framework.tensor_shape_pb2 import \
     TensorShapeProto as _TensorShapeProto
 from tensorflow.core.framework.types_pb2 import DataType as _DataType
 from utensor_cgen.ir.instr import DataManager
+from utensor_cgen.logger import logger
 from utensor_cgen.utils import random_str, topologic_order_graph
 
 from .converter import AttrValueConverter, ConverterDispatcher
@@ -173,6 +174,12 @@ class TensorInfo(IRBase, _NoShallowCopyMixin):
 
   @property
   def size(self):
+    if None in self.shape:
+      logger.warning(
+        'nondeterministic shape, implicit converting None to 1: %s, %s',
+        self.name,
+        self.shape,
+      )
     return reduce(lambda i, j: i*(j is None and 1 or j), self.shape, 1)
 
   def __deepcopy__(self, memo):

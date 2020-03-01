@@ -59,6 +59,7 @@ setup(
         'torchvision',
         'onnx-tf==1.2.1',
         'graphviz',
+        'matplotlib',
         'toml',
         'ortools',
     ],
