@@ -1,4 +1,4 @@
-from random import random
+from random import random, seed
 
 import matplotlib.pyplot as plt
 from graphviz import Digraph
@@ -72,7 +72,8 @@ def viz_graph(ugraph, out_fname=None, view=False, cleanup=True, colored_nodes=No
   return dot
 
 
-def viz_memalloc(ugraph, out_fname=None, fontsize=12, lw=15, cmap=_cm.BrBG_r):
+def viz_memalloc(ugraph, out_fname=None, fontsize=12, lw=15, cmap=_cm.BrBG_r, rand_seed=1024):
+  seed(rand_seed)
   fig = plt.gcf()
   if TensorAllocationTransformer.KWARGS_NAMESCOPE not in ugraph.attributes:
     logger.info('No tensor allocation plan to visualize: %s', ugraph.name)
