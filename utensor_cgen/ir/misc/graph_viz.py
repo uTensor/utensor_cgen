@@ -103,6 +103,7 @@ def viz_memalloc(ugraph, out_fname=None, fontsize=12, lw=15, cmap=_cm.BrBG_r, ra
     plt.text(xmax, y-0.15, '{} bytes'.format(size), fontdict={'fontsize': fontsize})
   plt.xlabel('Offset (bytes)', fontdict={'fontsize': fontsize})
   plt.yticks(ys, labels, fontsize=fontsize)
+  plt.xticks(fontsize=fontsize)
   plt.ylabel('Tensor Names (Topological Ordered, Top to Bottom)', fontdict={'fontsize':fontsize})
   fig.set_size_inches(len(ys), len(ys)*0.5)
   plt.tight_layout()

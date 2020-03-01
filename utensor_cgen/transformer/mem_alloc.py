@@ -58,10 +58,10 @@ class TensorAllocationTransformer(Transformer):
     inter_vars = {}
     tensor_allocs = {}
     for tensor in visited_tensors:
-      var_start = model.NewIntVar(0, self.max_pool_size, f'{tensor.name}_start')
-      var_end = model.NewIntVar(0, self.max_pool_size, f'{tensor.name}_end')
+      var_start = model.NewIntVar(0, self.max_pool_size, '{}_start'.format(tensor.name))
+      var_end = model.NewIntVar(0, self.max_pool_size, '{}_end'.format(tensor.name))
       size = tensor.size * tensor.dtype.itemsize
-      intv_var = model.NewIntervalVar(var_start, size, var_end, f'{tensor.name}_alloc')
+      intv_var = model.NewIntervalVar(var_start, size, var_end, '{}_alloc'.format(tensor.name))
       inter_vars[tensor.name] = intv_var
       tensor_allocs[tensor.name] = Allocation(var_start, var_end, size)
     for tensor in visited_tensors:
@@ -69,7 +69,7 @@ class TensorAllocationTransformer(Transformer):
       nonoverlap_vars = [inter_vars[t.name] for t in nonoverlap_map[tensor]]
       for other in nonoverlap_vars:
           model.AddNoOverlap([inter_var, other])
-    var_mem_span = model.NewIntVar(0, self.max_pool_size, f'mem_span')
+    var_mem_span = model.NewIntVar(0, self.max_pool_size, 'mem_span')
     model.AddMaxEquality(var_mem_span, [alloc.end for alloc in tensor_allocs.values()])
     model.Minimize(var_mem_span)
 
