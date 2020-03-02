@@ -16,7 +16,6 @@ from tensorflow.core.framework.tensor_pb2 import TensorProto as _TensorProto
 from tensorflow.core.framework.tensor_shape_pb2 import \
     TensorShapeProto as _TensorShapeProto
 from tensorflow.core.framework.types_pb2 import DataType as _DataType
-from utensor_cgen.ir.instr import DataManager
 from utensor_cgen.logger import logger
 from utensor_cgen.utils import random_str, topologic_order_graph
 
@@ -469,7 +468,6 @@ class uTensorGraph(IRBase, _NoShallowCopyMixin, uTensorGraphBuilderMixin):
   ops_info = attr.ib(factory=dict)
   # non-init
   topo_order = attr.ib(factory=list, init=False)
-  data_manager = attr.ib(default=None, init=False)
   _type_to_op_map = attr.ib(factory=dict, init=False, repr=False)
   attributes = attr.ib(factory=dict, init=False, repr=False)
 
@@ -617,10 +615,6 @@ class uTensorGraph(IRBase, _NoShallowCopyMixin, uTensorGraphBuilderMixin):
     if not self.topo_order:
       topologic_order_graph(self)
     return [self.ops_info[name] for name in self.topo_order]
-  
-  def setup_data_manager(self, datas):
-    manager = DataManager(datas)
-    self.data_manager = manager
 
   def unsafe_merge_into(self, other_ugraph):
     """
@@ -675,9 +669,6 @@ class uTensorGraph(IRBase, _NoShallowCopyMixin, uTensorGraphBuilderMixin):
       k: deepcopy(v, memo)
       for k, v in self.ops_info.items()
     }
-    if self.data_manager:
-      new_graph.data_manager = DataManager({})
-      new_graph.data_manager.StorageCenter = deepcopy(self.data_manager.StorageCenter)
     new_graph._lib_name = self._lib_name
     new_graph.attributes = deepcopy(self.attributes)
     topologic_order_graph(new_graph)
