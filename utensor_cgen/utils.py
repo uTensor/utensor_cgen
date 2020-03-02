@@ -6,15 +6,17 @@ import types
 from ast import literal_eval
 from collections import deque
 from copy import deepcopy
+from functools import wraps
 from random import choice
 from string import ascii_letters, digits
+from time import time
 
 import attr
-import numpy as np
 from click.types import ParamType
 from toml import loads as _parse
 
 import idx2numpy as idx2np
+import numpy as np
 from utensor_cgen.logger import logger
 
 __all__ = ["save_idx", "save_consts", "save_graph", "log_graph",
@@ -197,7 +199,7 @@ class NamescopedKWArgsParser:
 
   TODO: replace it with a better data manager
   """
-  def __init__(self, namespace, kwargs, data_manager=None, op_info=None):
+  def __init__(self, namespace, kwargs):
     ns_pattern = re.compile(r'^([^\d\W][\w\d_]*)__([^\d\W][\w\d_]*)')
     self._namespace = namespace
     self._private_kwargs = {}
@@ -211,17 +213,7 @@ class NamescopedKWArgsParser:
           self._private_kwargs[argname] = value
       else:
         self._shared_kwargs[key] = value
-    if op_info is not None and data_manager is not None:
-      outputs = [tensor_info.name for tensor_info in op_info.output_tensors]
-      for tensor in outputs:
-        values = data_manager.group(tensor)
-        for key, value in values.items():
-          if key not in self._private_kwargs:
-            self._private_kwargs[key] = []
-            self._private_kwargs[key].append(value)
-          else:
-            self._private_kwargs[key].append(value)
-  
+
   def get(self, argname, default=None):
     """
     Get value of given name in the namespace
@@ -539,3 +531,16 @@ class Configuration(object):
       '  user_config={} \n'
       ')'
     ).format(self._defaults, self._user_config)
+
+
+def timed(func):
+
+  @wraps(func)
+  def wrapped(*args, **kwargs):
+    start_time = time()
+    ret = func(*args, **kwargs)
+    end_time = time()
+    logger.info('collapsed time of calling %s: %0.4f seconds', func.__name__, end_time - start_time)
+    return ret
+  
+  return wrapped

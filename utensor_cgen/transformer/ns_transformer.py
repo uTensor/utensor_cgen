@@ -10,7 +10,6 @@ from copy import deepcopy
 
 import numpy as np
 import tensorflow as tf
-
 from utensor_cgen.frontend.tensorflow import GraphDefParser
 from utensor_cgen.ir import OperationInfo, uTensorGraph
 from utensor_cgen.logger import logger
@@ -21,13 +20,18 @@ from utensor_cgen.utils import (parse_tensor_name, prune_graph,
 from .base import Transformer
 from .pipeline import TransformerPipeline
 
-__all__ = ["DropoutTransformer", "BatchNormTransformer", "InlineTransformer", "TensorLifeProbe"]
+__all__ = [
+  "DropoutTransformer",
+  "BatchNormTransformer",
+  "InlineTransformer",
+  "TensorLifeProbe"
+]
 
 
 @TransformerPipeline.register_transformer
 class TensorLifeProbe(Transformer):
   METHOD_NAME = 'tensorlife'
-  KWARGS_NAMESCOPE = '_utensor_utlife'
+  KWARGS_NAMESCOPE = '_tensorlife'
   DATA_NAME = 'address'
 
   def __init__(
@@ -56,6 +60,7 @@ class TensorLifeProbe(Transformer):
         for out_o in out_t_infos:
           if out_o.name in allocate_table:
             new_ugraph.data_manager.address = (out_o.name, allocate_table[out_o.name]['offsetstart'])
+      new_ugraph.attributes[self.KWARGS_NAMESCOPE] = allocate_table
       return new_ugraph
     return ugraph
 

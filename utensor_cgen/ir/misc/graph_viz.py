@@ -72,7 +72,7 @@ def viz_graph(ugraph, out_fname=None, view=False, cleanup=True, colored_nodes=No
   return dot
 
 
-def viz_memalloc(ugraph, out_fname=None, fontsize=12, lw=15, cmap=_cm.BrBG_r, rand_seed=1024):
+def viz_memalloc(ugraph, out_fname=None, figsize=None, fontsize=12, lw=15, cmap=_cm.BrBG_r, rand_seed=1111):
   seed(rand_seed)
   fig = plt.gcf()
   if TensorAllocationTransformer.KWARGS_NAMESCOPE not in ugraph.attributes:
@@ -84,11 +84,11 @@ def viz_memalloc(ugraph, out_fname=None, fontsize=12, lw=15, cmap=_cm.BrBG_r, ra
   for op_name in ugraph.topo_order:
     op_info = ugraph.ops_info[op_name]
     for tensor in op_info.input_tensors:
-      if tensor not in visited_tensors:
+      if tensor.name in alloc_plan.plan and tensor not in visited_tensors:
         topo_tensors.append(tensor)
         visited_tensors.add(tensor)
   for tensor in ugraph.output_tensors:
-    if tensor not in visited_tensors:
+    if tensor.name in alloc_plan.plan and tensor not in visited_tensors:
       topo_tensors.append(tensor)
       visited_tensors.add(tensor)
   num_tensors = len(topo_tensors)
@@ -104,8 +104,17 @@ def viz_memalloc(ugraph, out_fname=None, fontsize=12, lw=15, cmap=_cm.BrBG_r, ra
   plt.xlabel('Offset (bytes)', fontdict={'fontsize': fontsize})
   plt.yticks(ys, labels, fontsize=fontsize)
   plt.xticks(fontsize=fontsize)
-  plt.ylabel('Tensor Names (Topological Ordered, Top to Bottom)', fontdict={'fontsize':fontsize})
-  fig.set_size_inches(len(ys), len(ys)*0.5)
+  plt.ylabel(
+    'Tensor Names (Topological Ordered, Top to Bottom)',
+    fontdict={'fontsize':fontsize}
+  )
+  plt.title(
+    'Optimal Tensor Allocation: {} bytes in total'.format(alloc_plan.total_size),
+    fontdict={'fontsize': fontsize}
+  )
+  if figsize is None:
+    figsize = (len(ys), len(ys)*0.5)
+  fig.set_size_inches(*figsize)
   plt.tight_layout()
   if out_fname:
     logger.info('saving tensor mem allocation to %s', out_fname)

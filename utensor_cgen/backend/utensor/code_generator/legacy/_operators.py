@@ -4,18 +4,17 @@ TODO: remove all tensorflow graph construction in `build_op_info`
 '''
 import os
 
-import numpy as np
-
 import idx2numpy as idx2np
+import numpy as np
+from utensor_cgen.backend.utensor.snippets.legacy import *  # pylint: disable=W0401,W0614
 from utensor_cgen.ir import OperationInfo, TensorInfo
 from utensor_cgen.ir.converter import (AttrValueConverter, DataTypeConverter,
                                        GenericTensorConverterMixin)
 from utensor_cgen.logger import logger
 from utensor_cgen.matcher import OpEqualityDelegate, _morphism
+from utensor_cgen.transformer.mem_alloc import TensorAllocationTransformer
 from utensor_cgen.transformer.optimizer import RefCntOptimizer
-from utensor_cgen.utils import NamescopedKWArgsParser, LazyLoader
-
-from utensor_cgen.backend.utensor.snippets.legacy import *  # pylint: disable=W0401,W0614
+from utensor_cgen.utils import LazyLoader, NamescopedKWArgsParser
 
 __all__ = ['OperatorFactory', 'OpNotSupportedError']
 tf = LazyLoader('tensorflow')
@@ -218,14 +217,19 @@ class _ArgMaxOperator(_Operator):
     out_tensor_info = op_info.output_tensors[0]
     output, out_dtype = out_tensor_info.name, out_tensor_info.dtype
     in_dtype = op_info.input_tensors[0].dtype
-    data_manager = kwargs['data_manager']
-    parser = NamescopedKWArgsParser(RefCntOptimizer.KWARGS_NAMESCOPE, 
-                                    op_info.op_attr,
-                                    data_manager,
-                                    op_info)
+    parser = NamescopedKWArgsParser(
+      RefCntOptimizer.KWARGS_NAMESCOPE, 
+      op_info.op_attr
+    )
     ref_count = parser.get('ref_counts', [0])[0]
     to_eval = parser.get('to_eval', False)
-    address = parser.get('address', [])
+    alloc_plan = op_info.ugraph.attributes.get(TensorAllocationTransformer.KWARGS_NAMESCOPE)
+    if alloc_plan is not None:
+      address = [
+        alloc_plan.plan[tensor.name].start for tensor in op_info.output_tensors
+      ]
+    else:
+      address  = []
     self._snippet = ArgMaxOpSnippet(inputs, output, in_dtype, out_dtype, ref_count, to_eval, address)
 
   @classmethod
@@ -279,15 +283,20 @@ class _DequantizeOperator(_Operator):
     _Operator.__init__(self)
     inputs = [tensor_info.name for tensor_info in op_info.input_tensors]
     out_tensor_info = op_info.output_tensors[0]
-    data_manager = kwargs['data_manager']
     output, out_dtype = out_tensor_info.name, out_tensor_info.dtype
-    parser = NamescopedKWArgsParser(RefCntOptimizer.KWARGS_NAMESCOPE, 
-                                    op_info.op_attr,
-                                    data_manager,
-                                    op_info)
+    parser = NamescopedKWArgsParser(
+      RefCntOptimizer.KWARGS_NAMESCOPE, 
+      op_info.op_attr
+    )
     ref_count = parser.get('ref_counts', [0])[0]
     to_eval = parser.get('to_eval', False)
-    address = parser.get('address', [])
+    alloc_plan = op_info.ugraph.attributes.get(TensorAllocationTransformer.KWARGS_NAMESCOPE)
+    if alloc_plan is not None:
+      address = [
+        alloc_plan.plan[tensor.name].start for tensor in op_info.output_tensors
+      ]
+    else:
+      address  = []
     self._snippet = DequantizeOpSnippet(inputs, output, out_dtype, ref_count, to_eval, address)
 
 
@@ -300,20 +309,25 @@ class _MaxOperator(_Operator):
     _Operator.__init__(self)
     inputs = [tensor_info.name for tensor_info in op_info.input_tensors]
     out_tensor_info = op_info.output_tensors[0]
-    data_manager = kwargs['data_manager']
     output, out_dtype, out_shape = (out_tensor_info.name,
                                     out_tensor_info.dtype,
                                     out_tensor_info.shape)
     # FIXME: automatic alloc for uTensor fail
     if not out_shape:
       out_shape = [1]
-    parser = NamescopedKWArgsParser(RefCntOptimizer.KWARGS_NAMESCOPE, 
-                                    op_info.op_attr,
-                                    data_manager,
-                                    op_info)
+    parser = NamescopedKWArgsParser(
+      RefCntOptimizer.KWARGS_NAMESCOPE, 
+      op_info.op_attr
+    )
     ref_count = parser.get('ref_counts', [0])[0]
     to_eval = parser.get('to_eval', False)
-    address = parser.get('address', [])
+    alloc_plan = op_info.ugraph.attributes.get(TensorAllocationTransformer.KWARGS_NAMESCOPE)
+    if alloc_plan is not None:
+      address = [
+        alloc_plan.plan[tensor.name].start for tensor in op_info.output_tensors
+      ]
+    else:
+      address  = []
     self._snippet = MaxOpSnippet(inputs, output, out_dtype, out_shape, ref_count, to_eval, address)
   
   @classmethod
@@ -517,20 +531,25 @@ class _MinOperator(_Operator):
     _Operator.__init__(self)
     inputs = [tensor_info.name for tensor_info in op_info.input_tensors]
     out_info = op_info.output_tensors[0]
-    data_manager = kwargs['data_manager']
     output, out_dtype, out_shape = (out_info.name,
                                     out_info.dtype,
                                     out_info.shape)
     # FIXME: automatic alloc for uTensor fail
     if not out_shape:
       out_shape = [1]
-    parser = NamescopedKWArgsParser(RefCntOptimizer.KWARGS_NAMESCOPE,
-                                    op_info.op_attr,
-                                    data_manager,
-                                    op_info)
+    parser = NamescopedKWArgsParser(
+      RefCntOptimizer.KWARGS_NAMESCOPE,
+      op_info.op_attr
+    )
     ref_count = parser.get('ref_counts', [0])[0]
     to_eval = parser.get('to_eval', False)
-    address = parser.get('address', [])
+    alloc_plan = op_info.ugraph.attributes.get(TensorAllocationTransformer.KWARGS_NAMESCOPE)
+    if alloc_plan is not None:
+      address = [
+        alloc_plan.plan[tensor.name].start for tensor in op_info.output_tensors
+      ]
+    else:
+      address  = []
     self._snippet = MinOpSnippet(inputs, output, out_dtype, out_shape, ref_count, to_eval, address)
 
   @classmethod
@@ -584,14 +603,19 @@ class _QuantizeV2Operator(_Operator):
     inputs = [tensor_info.name for tensor_info in op_info.input_tensors]
     outputs = [tensor_info.name for tensor_info in op_info.output_tensors]
     out_dtype = op_info.output_tensors[0].dtype
-    data_manager = kwargs['data_manager']
-    parser = NamescopedKWArgsParser(RefCntOptimizer.KWARGS_NAMESCOPE,
-                                    op_info.op_attr,
-                                    data_manager,
-                                    op_info)
+    parser = NamescopedKWArgsParser(
+      RefCntOptimizer.KWARGS_NAMESCOPE,
+      op_info.op_attr
+    )
     ref_counts = parser.get('ref_counts', [])
     to_eval = parser.get('to_eval', False)
-    address = parser.get('address', [])
+    alloc_plan = op_info.ugraph.attributes.get(TensorAllocationTransformer.KWARGS_NAMESCOPE)
+    if alloc_plan is not None:
+      address = [
+        alloc_plan.plan[tensor.name].start for tensor in op_info.output_tensors
+      ]
+    else:
+      address  = []
     self._snippet = QuantizeV2OpSnippet(inputs, outputs, out_dtype, ref_counts, to_eval, address)
 
 
@@ -672,14 +696,19 @@ class _QuantizedMatMulOperator(_Operator):
     x_dtype, w_dtype, out_dtype = (op_info.input_tensors[0].dtype,
                                    op_info.input_tensors[1].dtype,
                                    op_info.output_tensors[0].dtype)
-    data_manager = kwargs['data_manager']
-    parser = NamescopedKWArgsParser(RefCntOptimizer.KWARGS_NAMESCOPE,
-                                    op_info.op_attr,
-                                    data_manager,
-                                    op_info)
+    parser = NamescopedKWArgsParser(
+      RefCntOptimizer.KWARGS_NAMESCOPE,
+      op_info.op_attr
+    )
     ref_counts = parser.get('ref_counts', [])
     to_eval = parser.get('to_eval', False)
-    address = parser.get('address', [])
+    alloc_plan = op_info.ugraph.attributes.get(TensorAllocationTransformer.KWARGS_NAMESCOPE)
+    if alloc_plan is not None:
+      address = [
+        alloc_plan.plan[tensor.name].start for tensor in op_info.output_tensors
+      ]
+    else:
+      address  = []
     self._snippet = QuantizedMatMulOpSnippet(inputs, outputs,
                                              x_dtype, w_dtype, out_dtype, 
                                              ref_counts, to_eval, address)
@@ -743,15 +772,20 @@ class _QuantizedReluOperator(_Operator):
     in_dtype, qout_dtype = (op_info.input_tensors[0].dtype,
                             op_info.output_tensors[0].dtype)  #NT: why separate this out?
                                                               #DB: I don't know, it's in the uTensor C code
-    data_manager = kwargs['data_manager']
     out_dtypes = [tensor_info.dtype for tensor_info in op_info.output_tensors[1:]]
-    parser = NamescopedKWArgsParser(RefCntOptimizer.KWARGS_NAMESCOPE,
-                                    op_info.op_attr,
-                                    data_manager,
-                                    op_info)
+    parser = NamescopedKWArgsParser(
+      RefCntOptimizer.KWARGS_NAMESCOPE,
+      op_info.op_attr
+    )
     ref_counts = parser.get('ref_counts', [])
     to_eval = parser.get('to_eval', False)
-    address = parser.get('address', [])
+    alloc_plan = op_info.ugraph.attributes.get(TensorAllocationTransformer.KWARGS_NAMESCOPE)
+    if alloc_plan is not None:
+      address = [
+        alloc_plan.plan[tensor.name].start for tensor in op_info.output_tensors
+      ]
+    else:
+      address  = []
     self._snippet = QuantizedReluOpSnippet(inputs, outputs, in_dtype,
                                            out_dtypes, qout_dtype, 
                                            ref_counts, to_eval, address)
@@ -769,14 +803,19 @@ class _QuantizedAddOperator(_Operator):
     x_dtype, w_dtype, out_dtype = (op_info.input_tensors[0].dtype,
                                    op_info.input_tensors[1].dtype,
                                    op_info.output_tensors[0].dtype)
-    data_manager =  kwargs['data_manager']                          
-    parser = NamescopedKWArgsParser(RefCntOptimizer.KWARGS_NAMESCOPE,
-                                    op_info.op_attr,
-                                    data_manager,
-                                    op_info)
+    parser = NamescopedKWArgsParser(
+      RefCntOptimizer.KWARGS_NAMESCOPE,
+      op_info.op_attr,
+    )
     ref_counts = parser.get('ref_counts', [])
     to_eval = parser.get('to_eval', False)
-    address = parser.get('address', [])
+    alloc_plan = op_info.ugraph.attributes.get(TensorAllocationTransformer.KWARGS_NAMESCOPE)
+    if alloc_plan is not None:
+      address = [
+        alloc_plan.plan[tensor.name].start for tensor in op_info.output_tensors
+      ]
+    else:
+      address  = []
     self._snippet = QuantizedAddOpSnippet(inputs, outputs, 
                                           x_dtype, w_dtype, out_dtype, 
                                           ref_counts, to_eval, address)
@@ -813,14 +852,15 @@ class _RequantizationRangeOperator(_Operator):
     inputs = [tensor_info.name for tensor_info in op_info.input_tensors]
     outputs = [tensor_info.name for tensor_info in op_info.output_tensors]
     out_dtype = op_info.output_tensors[0].dtype
-    data_manager = kwargs['data_manager']
     parser = NamescopedKWArgsParser(RefCntOptimizer.KWARGS_NAMESCOPE,
-                                    op_info.op_attr,
-                                    data_manager,
-                                    op_info)
+                                    op_info.op_attr)
     ref_counts = parser.get('ref_counts', [])
     to_eval = parser.get('to_eval', False)
-    address = parser.get('address', [])
+    alloc_plan = op_info.ugraph.attributes.get(TensorAllocationTransformer.KWARGS_NAMESCOPE)
+    if alloc_plan is not None:
+      address = [alloc_plan.plan[tensor.name].start for tensor in op_info.output_tensors]
+    else:
+      address = []
     self._snippet = RequantizationRangeOpSnippet(inputs, outputs, out_dtype, 
                                                  ref_counts, to_eval, address)
 
@@ -835,14 +875,19 @@ class _RequantizeOperator(_Operator):
     outputs = [tensor_info.name for tensor_info in op_info.output_tensors]
     qout_dtype = op_info.output_tensors[0].dtype
     range_dtype = op_info.output_tensors[1].dtype
-    data_manager = kwargs['data_manager']
-    parser = NamescopedKWArgsParser(RefCntOptimizer.KWARGS_NAMESCOPE,
-                                    op_info.op_attr,
-                                    data_manager,
-                                    op_info)
+    parser = NamescopedKWArgsParser(
+      RefCntOptimizer.KWARGS_NAMESCOPE,
+      op_info.op_attr,
+    )
     ref_counts = parser.get('ref_counts', [])
     to_eval = parser.get('to_eval', False)
-    address = parser.get('address', [])
+    alloc_plan = op_info.ugraph.attributes.get(TensorAllocationTransformer.KWARGS_NAMESCOPE)
+    if alloc_plan is not None:
+      address = [
+        alloc_plan.plan[tensor.name].start for tensor in op_info.output_tensors
+      ]
+    else:
+      address  = []
     self._snippet = RequantizeOpSnippet(inputs, outputs,
                                         qout_dtype, range_dtype,
                                         ref_counts, to_eval, address)
@@ -857,15 +902,20 @@ class _ReshapeOperator(_Operator):
     _Operator.__init__(self)
     inputs = [tensor_info.name for tensor_info in op_info.input_tensors]
     output = op_info.output_tensors[0].name
-    data_manager = kwargs['data_manager']
-    parser = NamescopedKWArgsParser(RefCntOptimizer.KWARGS_NAMESCOPE,
-                                    op_info.op_attr,
-                                    data_manager,
-                                    op_info)
+    parser = NamescopedKWArgsParser(
+      RefCntOptimizer.KWARGS_NAMESCOPE,
+      op_info.op_attr
+    )
     ref_count = parser.get('ref_counts', [0])[0]
     to_eval = parser.get('to_eval', False)
-    address = parser.get('address', [])
     dtype = op_info.input_tensors[0].dtype
+    alloc_plan = op_info.ugraph.attributes.get(TensorAllocationTransformer.KWARGS_NAMESCOPE)
+    if alloc_plan is not None:
+      address = [
+        alloc_plan.plan[tensor.name].start for tensor in op_info.output_tensors
+      ]
+    else:
+      address  = []
     self._snippet = ReshapeOpSnippet(inputs, output, dtype, ref_count, to_eval, address)
 
 

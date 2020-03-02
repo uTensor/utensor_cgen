@@ -5,20 +5,19 @@ import pickle
 from tempfile import NamedTemporaryFile
 
 import numpy as np
-
 from utensor_cgen.backend.base import BackendPart
+from utensor_cgen.backend.utensor.snippets.composer import Composer
+from utensor_cgen.backend.utensor.snippets.legacy import (
+    CommentSnippet, ContextGlobalArrayContainer, ContextHeaderSnippet,
+    ContextSnippetsContainer, CreateTensorBinarySnippet,
+    CreateTensorIdxSnippet)
 from utensor_cgen.frontend import FrontendSelector
 from utensor_cgen.ir import uTensorGraph
 from utensor_cgen.transformer.optimizer import RefCntOptimizer
 from utensor_cgen.transformer.pipeline import TransformerPipeline
-from utensor_cgen.utils import (NamescopedKWArgsParser, class_property,
-                                parse_toml, LazyLoader, Configuration)
-from utensor_cgen.backend.utensor.snippets.legacy import (
-  CommentSnippet, ContextGlobalArrayContainer,
-  ContextHeaderSnippet, ContextSnippetsContainer,
-  CreateTensorBinarySnippet, CreateTensorIdxSnippet
-)
-from utensor_cgen.backend.utensor.snippets.composer import Composer
+from utensor_cgen.utils import (Configuration, LazyLoader,
+                                NamescopedKWArgsParser, class_property,
+                                parse_toml)
 
 from ._operators import OperatorFactory
 
@@ -96,11 +95,12 @@ class uTensorLegacyCodeGenerator(BackendPart, object):
       else:
         # TODO: the operator may correspond to multiple snippets (such as InlinTensor)
         # weight_container is passed to function for workaround
-        snippet = opFactory.createOperatorSnippet(op_info,
-                                                  idx_dir=os.path.join(self.params_dir, ugraph.name),
-                                                  embed_data_dir=self.embed_data_dir,
-                                                  weight_container=weight_container,
-                                                  data_manager=quant_ugraph.data_manager)
+        snippet = opFactory.createOperatorSnippet(
+          op_info,
+          idx_dir=os.path.join(self.params_dir, ugraph.name),
+          embed_data_dir=self.embed_data_dir,
+          weight_container=weight_container,
+        )
         container.add_snippet(snippet)
 
       if self.debug_cmt:
@@ -138,15 +138,15 @@ class uTensorLegacyCodeGenerator(BackendPart, object):
     config['embed_params_dir'] = '/fs/data'
     config['model_dir'] = 'models'
     config['transform_methods'] = [
-      'dropout(name_pattern=r"(dropout[_\w\d]*)/.*")',
-      'linear_reorder',
-      'quantize',
-      'conv_pool',
-      'inline',
-      'biasAdd',
-      'remove_id_op',
-      'fake_gather_v2',
-      'refcnt'
+      "dropout(name_pattern=r'(dropout[_\w\d]*)/.*')",
+      "linear_reorder",
+      "quantize",
+      "conv_pool",
+      "inline",
+      "biasAdd",
+      "remove_id_op",
+      "fake_gather_v2",
+      "refcnt",
     ]
     config['save_graph'] = False
     config['debug_cmt'] = False
