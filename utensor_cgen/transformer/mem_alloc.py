@@ -1,3 +1,4 @@
+import pickle
 from collections import Counter, defaultdict, namedtuple
 from itertools import chain, combinations, product
 
@@ -15,6 +16,23 @@ AllocationPlan = namedtuple('AllocationPlan', ['plan', 'total_size'])
 
 @TransformerPipeline.register_transformer
 class TensorAllocationTransformer(Transformer):
+  """
+  Offline Tensor Allocation Optimizer
+
+  analyse tensor lifetime and find the optimal allocation offset in the managed memory pool
+
+  :param max_pool_size: the size of the memory pool (default: 1 KB)
+  :type max_pool_size: int
+
+  :param include_inputs: include the input tensors (Placeholder) in the allocation plan
+  :type include_inputs: bool
+
+  :param out_fname: the file name of memory allocation visualization (will NOT generate if not given)
+  :type out_fname: str
+
+  :param aesthetic_kwargs: the keyword arguments controlling the aesthetic of the visualization of allocation plan
+  :type aesthetic_kwargs: dict
+  """
   METHOD_NAME = "tensor_alloc"
   KWARGS_NAMESCOPE = "_tensor_alloc"
 
@@ -22,13 +40,15 @@ class TensorAllocationTransformer(Transformer):
     self,
     prune_graph=False,
     max_pool_size=1024*1024, # 1k bytes
-    vizualize_fname=None,
-    **vizualize_kwargs
+    include_inputs=False,
+    out_fname=None,
+    **aesthetic_kwargs
   ):
     super(TensorAllocationTransformer, self).__init__(prune_graph=prune_graph)
     self.max_pool_size = max_pool_size
-    self.vizualize_fname = vizualize_fname
-    self.vizualize_kwargs = vizualize_kwargs
+    self.include_inputs = include_inputs
+    self.out_fname = out_fname
+    self.aesthetic_kwargs = aesthetic_kwargs
 
   def transform(self, ugraph):
     ref_cnts = Counter()
@@ -43,10 +63,21 @@ class TensorAllocationTransformer(Transformer):
         for op in ugraph.get_ops_by_type('Inline')
       ])
     )
+    if not self.include_inputs:
+      tensors_to_ignore.update(
+        chain(*[
+          op.output_tensors
+          for op in ugraph.get_ops_by_type('Placeholder')
+        ])
+      )
     nonoverlap_map = defaultdict(set)
     for op_name in ugraph.topo_order:
       op_info = ugraph.ops_info[op_name]
+      # ignore inline ops
       if op_info.op_type == 'Inline':
+        continue
+      # ignore placeholders if not included
+      if not self.include_inputs and op_info.op_type == 'Placeholder':
         continue
       # no overlapping between input/output tensors
       for in_tensor, out_tensor in product(op_info.input_tensors, op_info.output_tensors):
@@ -72,8 +103,11 @@ class TensorAllocationTransformer(Transformer):
     alloc_plan = self._solve_opt_plan(tensors_to_schedule, nonoverlap_map)
     if alloc_plan is not None:
       ugraph.attributes[self.KWARGS_NAMESCOPE] = alloc_plan
-    if self.vizualize_fname:
-      viz_memalloc(ugraph=ugraph, out_fname=self.vizualize_fname, **self.vizualize_kwargs)
+    if self.out_fname:
+      fig = viz_memalloc(ugraph=ugraph, out_fname=self.out_fname, **self.aesthetic_kwargs)
+      with open('{}.pkl'.format(self.out_fname), 'wb') as fid:
+        pickle.dump(fig, fid)
+        logger.info('matplotlib figure object dumped (pickle): %s', fid.name)
     return ugraph
 
   @timed
