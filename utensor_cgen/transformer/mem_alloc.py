@@ -152,4 +152,5 @@ class TensorAllocationTransformer(Transformer):
       logger.info('tensor allocation plan not found, status: %s', solver.StatusName(status))
     return alloc_plan
 
+# FIXME: cyclic import
 from utensor_cgen.ir.misc.graph_viz import viz_memalloc  # isort:skip
