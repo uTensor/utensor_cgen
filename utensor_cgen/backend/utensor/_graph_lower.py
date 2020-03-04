@@ -1,9 +1,11 @@
 from copy import deepcopy
 
+import numpy as np
+import tensorflow as tf
 from utensor_cgen.backend.base import BackendPart
 from utensor_cgen.backend.utensor.snippets._types import NP_TYPES_MAP
 from utensor_cgen.logger import logger
-from utensor_cgen.utils import class_property
+from utensor_cgen.utils import Configuration, class_property
 
 
 class uTensorGraphLowerBase(BackendPart):
@@ -58,16 +60,15 @@ class uTensorRearchGraphLower(uTensorGraphLowerBase):
  
 
 class uTensorOfflineMemoryPlanner(BackendPart):
-
   TARGET = 'utensor'
   PART = 'offlinememory'
-
+  DATA_NAME = 'address'
 
   def __init__(
     self,
+    config,
     buff_size=100000, #1k bytes
     unit_size=4,
-    config
   ):
     self.buff_size = buff_size
     self.unit_size = unit_size
@@ -254,12 +255,11 @@ class uTensorOfflineMemoryPlanner(BackendPart):
 
     return resource_table
 
-
-    @class_property
-    def default_config(cls):
-      config = {}
-      config['size_float'] = 4
-      config['size_int'] = 4
-      config['size_uint8_t'] = 1
-      
-      return config
+  @class_property
+  def default_config(cls):
+    config = {}
+    config['size_float'] = 4
+    config['size_int'] = 4
+    config['size_uint8_t'] = 1
+    
+    return config

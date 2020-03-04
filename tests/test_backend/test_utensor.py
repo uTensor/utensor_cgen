@@ -1,5 +1,8 @@
 import os
 
+import pytest
+
+
 def test_legacy_utensor(mlp_ugraph):
     from utensor_cgen.backend.utensor import uTensorBackend
 
@@ -19,6 +22,7 @@ def test_legacy_utensor(mlp_ugraph):
     }).apply(mlp_ugraph)
 
 
+@pytest.mark.slow_test
 def test_offlinememory(mlp_ugraph):
     from utensor_cgen.backend.utensor import uTensorOfflineMemoryPlanner
 

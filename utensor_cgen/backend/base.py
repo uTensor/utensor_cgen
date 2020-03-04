@@ -1,7 +1,5 @@
-from utensor_cgen.utils import (
-  MUST_OVERWRITEN, class_property,
-  parse_toml, Configuration,
-)
+from utensor_cgen.utils import (MUST_OVERWRITEN, Configuration, class_property,
+                                parse_toml)
 
 
 class _BackendBase(object):
@@ -24,7 +22,7 @@ class _BackendBase(object):
 
   @class_property
   def default_config(cls):
-    return NotImplementedError('All backends should overwrite default config')
+    raise NotImplementedError('All backends should overwrite default config')
 
   def __call__(self, *args, **kwargs):
     return self.apply(*args, **kwargs)
