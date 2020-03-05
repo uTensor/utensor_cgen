@@ -14,11 +14,27 @@ class _BackendBase(object):
         validator(config, *args, **kwargs)
     if isinstance(config, dict):
       config = Configuration(cls.default_config, config)
+    elif config is None:
+      config = Configuration(cls.default_config, {})
     self._config = config
     return self
 
   def apply(self, ugraph):
-    raise NotImplementedError('all backend object must overwrite apply method')
+    """Applying side-effect to ugraph
+
+    Any backend part that implement apply method can create side-effect on given graph,
+    such as adding attribute or creating files.
+    """
+    raise NotImplementedError('base apply method invoked: %s' % self)
+  
+  def transform(self, ugraph):
+    """Transform Graph
+
+    transform should not create side-effect on the given graph and should
+    return a new ugraph that is the result of transformation applied to the
+    given ugraph.
+    """
+    raise NotImplementedError('base transform method invoked: %s' % self)
 
   @class_property
   def default_config(cls):
@@ -32,7 +48,7 @@ class _BackendBase(object):
     return self._config
 
   def _validate_config(self, config):
-    assert isinstance(config, (dict, Configuration)), \
+    assert isinstance(config, (dict, Configuration, type(None))), \
       'expecting {}, get {}'.format(dict, type(config))
 
 

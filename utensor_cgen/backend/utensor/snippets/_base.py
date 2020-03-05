@@ -62,6 +62,10 @@ class SnippetContainerBase(SnippetBase):
     self._snippets = snippets
     for snp in self._snippets:
       self.__headers__.update(snp.headers)
+  
+  @property
+  def snippets(self):
+    return self._snippets
 
   def add_snippet(self, snippet):
     """Add snippet into containers

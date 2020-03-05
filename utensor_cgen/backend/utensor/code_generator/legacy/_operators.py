@@ -6,13 +6,13 @@ import os
 
 import idx2numpy as idx2np
 import numpy as np
+from utensor_cgen.backend.graph_lower import TensorAllocationPlanner
 from utensor_cgen.backend.utensor.snippets.legacy import *  # pylint: disable=W0401,W0614
 from utensor_cgen.ir import OperationInfo, TensorInfo
 from utensor_cgen.ir.converter import (AttrValueConverter, DataTypeConverter,
                                        GenericTensorConverterMixin)
 from utensor_cgen.logger import logger
 from utensor_cgen.matcher import OpEqualityDelegate, _morphism
-from utensor_cgen.transformer.mem_alloc import TensorAllocationTransformer
 from utensor_cgen.transformer.optimizer import RefCntOptimizer
 from utensor_cgen.utils import LazyLoader, NamescopedKWArgsParser
 
@@ -223,10 +223,10 @@ class _ArgMaxOperator(_Operator):
     )
     ref_count = parser.get('ref_counts', [0])[0]
     to_eval = parser.get('to_eval', False)
-    alloc_plan = op_info.ugraph.attributes.get(TensorAllocationTransformer.KWARGS_NAMESCOPE)
+    alloc_plan = op_info.ugraph.attributes.get(TensorAllocationPlanner.KWARGS_NAMESCOPE)
     if alloc_plan is not None:
       address = [
-        alloc_plan.plan[tensor.name].start for tensor in op_info.output_tensors
+        alloc_plan.plan[tensor.name].offset_start for tensor in op_info.output_tensors
       ]
     else:
       address  = []
@@ -290,10 +290,10 @@ class _DequantizeOperator(_Operator):
     )
     ref_count = parser.get('ref_counts', [0])[0]
     to_eval = parser.get('to_eval', False)
-    alloc_plan = op_info.ugraph.attributes.get(TensorAllocationTransformer.KWARGS_NAMESCOPE)
+    alloc_plan = op_info.ugraph.attributes.get(TensorAllocationPlanner.KWARGS_NAMESCOPE)
     if alloc_plan is not None:
       address = [
-        alloc_plan.plan[tensor.name].start for tensor in op_info.output_tensors
+        alloc_plan.plan[tensor.name].offset_start for tensor in op_info.output_tensors
       ]
     else:
       address  = []
@@ -321,10 +321,10 @@ class _MaxOperator(_Operator):
     )
     ref_count = parser.get('ref_counts', [0])[0]
     to_eval = parser.get('to_eval', False)
-    alloc_plan = op_info.ugraph.attributes.get(TensorAllocationTransformer.KWARGS_NAMESCOPE)
+    alloc_plan = op_info.ugraph.attributes.get(TensorAllocationPlanner.KWARGS_NAMESCOPE)
     if alloc_plan is not None:
       address = [
-        alloc_plan.plan[tensor.name].start for tensor in op_info.output_tensors
+        alloc_plan.plan[tensor.name].offset_start for tensor in op_info.output_tensors
       ]
     else:
       address  = []
@@ -543,10 +543,10 @@ class _MinOperator(_Operator):
     )
     ref_count = parser.get('ref_counts', [0])[0]
     to_eval = parser.get('to_eval', False)
-    alloc_plan = op_info.ugraph.attributes.get(TensorAllocationTransformer.KWARGS_NAMESCOPE)
+    alloc_plan = op_info.ugraph.attributes.get(TensorAllocationPlanner.KWARGS_NAMESCOPE)
     if alloc_plan is not None:
       address = [
-        alloc_plan.plan[tensor.name].start for tensor in op_info.output_tensors
+        alloc_plan.plan[tensor.name].offset_start for tensor in op_info.output_tensors
       ]
     else:
       address  = []
@@ -609,10 +609,10 @@ class _QuantizeV2Operator(_Operator):
     )
     ref_counts = parser.get('ref_counts', [])
     to_eval = parser.get('to_eval', False)
-    alloc_plan = op_info.ugraph.attributes.get(TensorAllocationTransformer.KWARGS_NAMESCOPE)
+    alloc_plan = op_info.ugraph.attributes.get(TensorAllocationPlanner.KWARGS_NAMESCOPE)
     if alloc_plan is not None:
       address = [
-        alloc_plan.plan[tensor.name].start for tensor in op_info.output_tensors
+        alloc_plan.plan[tensor.name].offset_start for tensor in op_info.output_tensors
       ]
     else:
       address  = []
@@ -702,10 +702,10 @@ class _QuantizedMatMulOperator(_Operator):
     )
     ref_counts = parser.get('ref_counts', [])
     to_eval = parser.get('to_eval', False)
-    alloc_plan = op_info.ugraph.attributes.get(TensorAllocationTransformer.KWARGS_NAMESCOPE)
+    alloc_plan = op_info.ugraph.attributes.get(TensorAllocationPlanner.KWARGS_NAMESCOPE)
     if alloc_plan is not None:
       address = [
-        alloc_plan.plan[tensor.name].start for tensor in op_info.output_tensors
+        alloc_plan.plan[tensor.name].offset_start for tensor in op_info.output_tensors
       ]
     else:
       address  = []
@@ -779,10 +779,10 @@ class _QuantizedReluOperator(_Operator):
     )
     ref_counts = parser.get('ref_counts', [])
     to_eval = parser.get('to_eval', False)
-    alloc_plan = op_info.ugraph.attributes.get(TensorAllocationTransformer.KWARGS_NAMESCOPE)
+    alloc_plan = op_info.ugraph.attributes.get(TensorAllocationPlanner.KWARGS_NAMESCOPE)
     if alloc_plan is not None:
       address = [
-        alloc_plan.plan[tensor.name].start for tensor in op_info.output_tensors
+        alloc_plan.plan[tensor.name].offset_start for tensor in op_info.output_tensors
       ]
     else:
       address  = []
@@ -809,10 +809,10 @@ class _QuantizedAddOperator(_Operator):
     )
     ref_counts = parser.get('ref_counts', [])
     to_eval = parser.get('to_eval', False)
-    alloc_plan = op_info.ugraph.attributes.get(TensorAllocationTransformer.KWARGS_NAMESCOPE)
+    alloc_plan = op_info.ugraph.attributes.get(TensorAllocationPlanner.KWARGS_NAMESCOPE)
     if alloc_plan is not None:
       address = [
-        alloc_plan.plan[tensor.name].start for tensor in op_info.output_tensors
+        alloc_plan.plan[tensor.name].offset_start for tensor in op_info.output_tensors
       ]
     else:
       address  = []
@@ -856,9 +856,9 @@ class _RequantizationRangeOperator(_Operator):
                                     op_info.op_attr)
     ref_counts = parser.get('ref_counts', [])
     to_eval = parser.get('to_eval', False)
-    alloc_plan = op_info.ugraph.attributes.get(TensorAllocationTransformer.KWARGS_NAMESCOPE)
+    alloc_plan = op_info.ugraph.attributes.get(TensorAllocationPlanner.KWARGS_NAMESCOPE)
     if alloc_plan is not None:
-      address = [alloc_plan.plan[tensor.name].start for tensor in op_info.output_tensors]
+      address = [alloc_plan.plan[tensor.name].offset_start for tensor in op_info.output_tensors]
     else:
       address = []
     self._snippet = RequantizationRangeOpSnippet(inputs, outputs, out_dtype, 
@@ -881,10 +881,10 @@ class _RequantizeOperator(_Operator):
     )
     ref_counts = parser.get('ref_counts', [])
     to_eval = parser.get('to_eval', False)
-    alloc_plan = op_info.ugraph.attributes.get(TensorAllocationTransformer.KWARGS_NAMESCOPE)
+    alloc_plan = op_info.ugraph.attributes.get(TensorAllocationPlanner.KWARGS_NAMESCOPE)
     if alloc_plan is not None:
       address = [
-        alloc_plan.plan[tensor.name].start for tensor in op_info.output_tensors
+        alloc_plan.plan[tensor.name].offset_start for tensor in op_info.output_tensors
       ]
     else:
       address  = []
@@ -909,10 +909,10 @@ class _ReshapeOperator(_Operator):
     ref_count = parser.get('ref_counts', [0])[0]
     to_eval = parser.get('to_eval', False)
     dtype = op_info.input_tensors[0].dtype
-    alloc_plan = op_info.ugraph.attributes.get(TensorAllocationTransformer.KWARGS_NAMESCOPE)
+    alloc_plan = op_info.ugraph.attributes.get(TensorAllocationPlanner.KWARGS_NAMESCOPE)
     if alloc_plan is not None:
       address = [
-        alloc_plan.plan[tensor.name].start for tensor in op_info.output_tensors
+        alloc_plan.plan[tensor.name].offset_start for tensor in op_info.output_tensors
       ]
     else:
       address  = []

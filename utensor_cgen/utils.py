@@ -509,7 +509,18 @@ class Configuration(object):
     elif key in self._defaults:
       value = self._defaults[key]
     return value
-     
+  
+  def items(self):
+    config = self.to_dict()
+    return config.items()
+  
+  def to_dict(self):
+    config = deepcopy(self._defaults)
+    config.update(self._user_config)
+    return config
+
+  def __setitem__(self, key, value):
+    self._user_config[key] = value
 
   def __getitem__(self, key):
     if key not in self:
