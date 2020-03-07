@@ -24,9 +24,9 @@ def test_legacy_utensor(mlp_ugraph):
 
 @pytest.mark.slow_test
 def test_offlinememory(mlp_ugraph):
-    from utensor_cgen.backend.utensor import uTensorOfflineMemoryPlanner
+    from utensor_cgen.backend.graph_lower.generic_graph_lower import BrutalForceMemoryPlanner
 
-    uTensorOfflineMemoryPlanner(config={
+    BrutalForceMemoryPlanner(config={
                 'size_float': 4,
                 'size_int': 4,
                 'size_uint8_t': 1
