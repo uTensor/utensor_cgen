@@ -72,6 +72,7 @@ class Backend(_BackendBase):
   def from_config(cls, config, *args, **kwargs):
     return cls(config, *args, **kwargs)
 
+
 class BackendPart(Backend):
 
   PART = MUST_OVERWRITEN

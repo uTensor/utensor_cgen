@@ -68,6 +68,10 @@ def generate_config(target, output):
       '# https://github.com/toml-lang/toml\n'
       '# <target_name>.<component>.<part>\n'
     )
+    fid.write(
+      '# we use string \'None\' to represent python None value\n'
+      '# you should convert the string to None if you try to write extension for utensor_cgen\n'
+    )
     fid.write(dumps(config))
 
 @cli.command(name='convert', help='convert graph to cpp/hpp files')
