@@ -61,7 +61,6 @@ class uTensorBackend(Backend):
     new_ugraph = self._graph_transformer.transform(ugraph)
     self._graph_alloc_lower.apply(new_ugraph)
     self._code_generator.apply(new_ugraph)
-    return new_ugraph
 
   def __call__(self, ugraph):
     return self.apply(ugraph)

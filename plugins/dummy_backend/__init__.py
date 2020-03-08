@@ -1,8 +1,9 @@
 from textwrap import wrap
 
-from utensor_cgen.backend.base import Backend
 from utensor_cgen.backend import BackendManager
+from utensor_cgen.backend.base import Backend
 from utensor_cgen.utils import class_property
+
 
 @BackendManager.register
 class DummyBackend(Backend):

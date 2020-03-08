@@ -5,7 +5,6 @@ Linear Operation Legalizations
 
 """
 import tensorflow as tf
-
 from utensor_cgen.frontend.tensorflow import GraphDefParser
 from utensor_cgen.matcher import uTensorGraphMatcher
 from utensor_cgen.utils import prune_graph, topologic_order_graph
@@ -22,7 +21,7 @@ class LinearReorderTransformerV2(Transformer):
   KWARGS_NAMESCOPE = '_linear_reorder'
 
   def __init__(self):
-    self.prune_graph = False
+    super(LinearReorderTransformerV2, self).__init__(prune_graph=False)
 
   @property
   def pattern_ugraph(self):

@@ -49,6 +49,9 @@ class InlineTransformer(Transformer):
   METHOD_NAME = 'inline'
   KWARGS_NAMESCOPE = '_utensor_inline'
 
+  def __init__(self):
+    super(InlineTransformer, self).__init__(prune_graph=False)
+
   def transform(self, ugraph):
     for node_name in ugraph.topo_order:
       op_type = ugraph.ops_info[node_name].op_type
@@ -79,6 +82,7 @@ class DropoutTransformer(Transformer):
   TARGET_NODENAME_PATTERN = re.compile(r'(dropout[_\w\d]*)/.*')
 
   def __init__(self, name_pattern=r'(dropout[_\w\d]*)/.*'):
+    super(DropoutTransformer, self).__init__(prune_graph=True)
     self._op_name_pattern = re.compile(name_pattern)
 
   def transform(self, ugraph):

@@ -35,12 +35,12 @@ def _load_plugin(path):
   "-p",
   "--plugin",
   multiple=True,
-  help="path of the python module which will be loaded as plugin",
+  help="path of the python module which will be loaded as plugin (multiple)",
   metavar="MODULE",
 )
 def cli(plugin):
-  for module in plugin:
-    _load_plugin(module)
+  for module_path in plugin:
+    _load_plugin(module_path)
 
 @cli.command(name='list-backends', help='list all available backends')
 @click.help_option('-h', '--help')
