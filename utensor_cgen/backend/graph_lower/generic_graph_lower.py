@@ -254,8 +254,8 @@ class TensorAllocationPlanner(BackendPart):
 
 class BrutalForceMemoryPlanner(BackendPart):
   TARGET = 'utensor'
-  PART = 'offlinememory'
-  DATA_NAME = 'address'
+  PART = 'brutal_force_mem_alloc'
+  DATA_NAME = '_brutal_force_mem_alloc'
 
   def __init__(
     self,
