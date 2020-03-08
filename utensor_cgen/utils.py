@@ -509,7 +509,13 @@ class Configuration(object):
     elif key in self._defaults:
       value = self._defaults[key]
     return value
+
+  def keys(self):
+    return self.to_dict().keys()
   
+  def values(self):
+    return self.to_dict().values()
+
   def items(self):
     config = self.to_dict()
     return config.items()

@@ -1,6 +1,6 @@
 from utensor_cgen.backend.base import Backend
-from utensor_cgen.utils import (Configuration, LazyAttrib, LazyLoader,
-                                class_property, parse_toml)
+from utensor_cgen.utils import (LazyAttrib, LazyLoader, class_property,
+                                parse_toml)
 
 code_generator = LazyLoader(submod_name='backend.utensor.code_generator')
 transformer = LazyLoader(submod_name='backend.transformer')
@@ -19,21 +19,15 @@ class uTensorBackend(Backend):
 
   TARGET = 'utensor'
 
-  def __init__(self,
+  def __init__(
+    self,
     config,
     code_generator=None,
     graph_transformer=None,
     graph_op_lower=None,
     graph_alloc_lower=None,
   ):
-    default_config = self.default_config[self.TARGET][self.COMPONENT]
-    config = Configuration(default_config, config.get(
-      self.TARGET,
-      {self.COMPONENT: {}}
-    ).get(
-      self.COMPONENT, {}
-      )
-    )
+    config = self.config[self.TARGET][self.COMPONENT]
     if config['legacy-api']:
       code_generator = code_generator or uTensorLegacyCodeGenerator(config=config[uTensorLegacyCodeGenerator.PART])
       graph_op_lower = graph_op_lower or uTensorLegacyGraphLower(config=config[uTensorLegacyGraphLower.PART])
