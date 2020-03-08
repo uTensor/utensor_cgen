@@ -13,6 +13,7 @@ from math import ceil, log10
 import numpy as np
 import tensorflow as tf
 from ortools.sat.python import cp_model
+
 from utensor_cgen.backend.base import BackendPart
 from utensor_cgen.backend.utensor.snippets._types import NP_TYPES_MAP
 from utensor_cgen.logger import logger
@@ -92,9 +93,13 @@ class TensorAllocationPlanner(BackendPart):
     if aesthetic_kwargs['figsize'] == 'None':
       aesthetic_kwargs['figsize'] = None
     self.aesthetic_kwargs = aesthetic_kwargs.to_dict()
+    self.enabled = self.config['enabled']
     self.dtype_size_map = self._parse_dtype_size_map(self.config)
 
   def apply(self, ugraph):
+    if not self.enabled:
+      # not enabled, do nothing
+      return
     time_alloc_plan = ugraph.attributes.get(
       TopoOrderTensorTimeslotPlanner.KWARGS_NAMESCOPE
     )
@@ -238,6 +243,7 @@ class TensorAllocationPlanner(BackendPart):
         'lw': 12,
         'rand_seed': 1111
       },
+      'enabled': True,
       'dtype_size_map': {
         'float': 4,
         'double': 8,
