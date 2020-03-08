@@ -487,6 +487,12 @@ def parse_toml(file_or_path):
 
 class Configuration(object):
   def __init__(self, defaults=None, user_config=None):
+    """
+    Note
+    ----
+    - any value that is in user_config should be in defaults
+    - any value that is not in defaults should not be in user_config 
+    """
     if defaults is None:
       defaults = {}
     if user_config is None:
@@ -533,9 +539,9 @@ class Configuration(object):
       raise KeyError('invalid key: {}'.format(key))
     value = self._user_config.get(
       key, self._defaults[key]
-    )
+    )       
     if isinstance(value, dict):
-      value = type(self)(value, {})
+      value = type(self)(self._defaults[key], value)
     return value
 
   def __contains__(self, key):

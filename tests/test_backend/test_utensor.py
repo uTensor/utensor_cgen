@@ -8,18 +8,18 @@ def test_legacy_utensor(mlp_ugraph):
 
     this_dir = os.path.dirname(__file__)
 
-    uTensorBackend(config={
+    backend = uTensorBackend(config={
         'utensor': {
             'backend': {
                 'legacy-api': True,
-                'code_generator': {
+                'legacy_code_generator': {
                     'model_dir': os.path.join(this_dir, 'models'),
                     'params_dir': os.path.join(this_dir, 'data'),
                 },
-                'graph_lower': {}
             },
         }
-    }).apply(mlp_ugraph)
+    })
+    backend.apply(mlp_ugraph)
 
 
 @pytest.mark.slow_test

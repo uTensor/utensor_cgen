@@ -6,3 +6,4 @@ def test_config_nested(config_nested):
     assert isinstance(config_nested['dict1'], type(config_nested))
     assert isinstance(config_nested['dict1']['inner'], type(config_nested))
     assert config_nested['dict1']['inner']['x'] == 2
+    assert config_nested['dict1']['inner']['y'] == 4

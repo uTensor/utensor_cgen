@@ -23,14 +23,15 @@ def config_nested():
         defaults={
             'dict1': {
                 'inner': {
-                    'x': 3
+                    'x': 3,
+                    'y': 4
                 }
             }
         },
         user_config={
             'dict1': {
                 'inner': {
-                    'x': 2
+                    'x': 2,
                 }
             }
         }

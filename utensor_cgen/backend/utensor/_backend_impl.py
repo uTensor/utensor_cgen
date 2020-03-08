@@ -29,14 +29,14 @@ class uTensorBackend(Backend):
   ):
     config = self.config[self.TARGET][self.COMPONENT]
     if config['legacy-api']:
-      code_generator = code_generator or uTensorLegacyCodeGenerator(config=config[uTensorLegacyCodeGenerator.PART])
-      graph_op_lower = graph_op_lower or uTensorLegacyGraphLower(config=config[uTensorLegacyGraphLower.PART])
-      graph_alloc_lower = graph_alloc_lower or TensorAllocationPlanner(config=config[TensorAllocationPlanner.PART])
+      code_generator = code_generator or uTensorLegacyCodeGenerator(config=config[uTensorLegacyCodeGenerator.PART].to_dict())
+      graph_op_lower = graph_op_lower or uTensorLegacyGraphLower(config=config[uTensorLegacyGraphLower.PART].to_dict())
+      graph_alloc_lower = graph_alloc_lower or TensorAllocationPlanner(config=config[TensorAllocationPlanner.PART].to_dict())
     else:
-      code_generator = code_generator or uTensorRearchCodeGenerator(config=config[uTensorRearchCodeGenerator.PART])
-      graph_op_lower = graph_op_lower or uTensorRearchGraphLower(config=config[uTensorRearchGraphLower.PART])
-      graph_alloc_lower = TensorAllocationPlanner(config=config[TensorAllocationPlanner.PART])
-    graph_transformer = graph_transformer or PipelineTransformer(config=config[PipelineTransformer.PART])
+      code_generator = code_generator or uTensorRearchCodeGenerator(config=config[uTensorRearchCodeGenerator.PART].to_dict())
+      graph_op_lower = graph_op_lower or uTensorRearchGraphLower(config=config[uTensorRearchGraphLower.PART].to_dict())
+      graph_alloc_lower = TensorAllocationPlanner(config=config[TensorAllocationPlanner.PART].to_dict())
+    graph_transformer = graph_transformer or PipelineTransformer(config=config[PipelineTransformer.PART].to_dict())
     self._graph_op_lower = graph_op_lower
     self._graph_transformer = graph_transformer
     self._graph_alloc_lower = graph_alloc_lower

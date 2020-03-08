@@ -13,7 +13,6 @@ from math import ceil, log10
 import numpy as np
 import tensorflow as tf
 from ortools.sat.python import cp_model
-
 from utensor_cgen.backend.base import BackendPart
 from utensor_cgen.backend.utensor.snippets._types import NP_TYPES_MAP
 from utensor_cgen.logger import logger
@@ -252,6 +251,7 @@ class TensorAllocationPlanner(BackendPart):
         'long': 8,
       },
     }
+
 
 class BrutalForceMemoryPlanner(BackendPart):
   TARGET = 'utensor'
