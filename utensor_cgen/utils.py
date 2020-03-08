@@ -493,6 +493,7 @@ class Configuration(object):
     - any value that is in user_config should be in defaults
     - any value that is not in defaults should not be in user_config 
     """
+    # TODO: write a check on the inputs?
     if defaults is None:
       defaults = {}
     if user_config is None:
@@ -530,9 +531,6 @@ class Configuration(object):
     config = deepcopy(self._defaults)
     config.update(self._user_config)
     return config
-
-  def __setitem__(self, key, value):
-    self._user_config[key] = value
 
   def __getitem__(self, key):
     if key not in self:

@@ -88,10 +88,9 @@ class TensorAllocationPlanner(BackendPart):
     self.out_fname = self.config['out_fname']
     if self.out_fname == 'None':
       self.out_fname = None
-    aesthetic_kwargs = self.config['aesthetic_kwargs']
-    if aesthetic_kwargs['figsize'] == 'None':
-      aesthetic_kwargs['figsize'] = None
-    self.aesthetic_kwargs = aesthetic_kwargs.to_dict()
+    self.aesthetic_kwargs = self.config['aesthetic_kwargs'].to_dict()
+    if self.aesthetic_kwargs['figsize'] == 'None':
+      self.aesthetic_kwargs['figsize'] = None
     self.enabled = self.config['enabled']
     self.dtype_size_map = self._parse_dtype_size_map(self.config)
 
