@@ -53,6 +53,13 @@ class _BackendBase(object):
 
 
 class Backend(_BackendBase):
+  """
+  - Constrcutor signature must be ``__init__(self, config, *args, **kwargs)``
+    - ``config`` should be a dictionay
+    - It will run through various check in ``__new__``, so it's better to access the value
+    of config via ``self.config``, which is an instance of ``Configuration``
+    - It will make sure if users do not provide the value required, default one will be used
+  """
 
   TARGET = MUST_OVERWRITEN
 

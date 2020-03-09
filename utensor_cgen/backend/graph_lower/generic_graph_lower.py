@@ -257,21 +257,15 @@ class BrutalForceMemoryPlanner(BackendPart):
   PART = 'brutal_force_mem_alloc'
   KWARGS_NAMESCOPE = '_brutal_force_mem_alloc'
 
-  def __init__(
-    self,
-    config,
-    buff_size=100000, #1k bytes
-    unit_size=4,
-  ):
-    self.buff_size = buff_size
-    self.unit_size = unit_size
-    final_config = Configuration(self.default_config, config)
+  def __init__(self, config):
+    self.buff_size = self.config['buff_size']
+    self.unit_size = self.config['unit_size']
     self._type = {}
-    self._type[np.dtype(tf.float32.as_numpy_dtype)] = final_config['size_float']
-    self._type[np.dtype(tf.int32.as_numpy_dtype)] = final_config['size_int']
-    self._type[np.dtype(tf.quint8.as_numpy_dtype)] = final_config['size_uint8_t']
-    self._type[np.dtype(tf.qint8.as_numpy_dtype)] = final_config['size_uint8_t']
-    self._type[np.dtype(tf.qint32.as_numpy_dtype)] = final_config['size_int']
+    self._type[np.dtype(tf.float32.as_numpy_dtype)] = self.config['size_float']
+    self._type[np.dtype(tf.int32.as_numpy_dtype)] = self.config['size_int']
+    self._type[np.dtype(tf.quint8.as_numpy_dtype)] = self.config['size_uint8_t']
+    self._type[np.dtype(tf.qint8.as_numpy_dtype)] = self.config['size_uint8_t']
+    self._type[np.dtype(tf.qint32.as_numpy_dtype)] = self.config['size_int']
 
   def apply(self, ugraph):
     # ugraph.setup_data_manager(self.KWARGS_NAMESCOPE, {})
@@ -487,6 +481,8 @@ class BrutalForceMemoryPlanner(BackendPart):
     config['size_float'] = 4
     config['size_int'] = 4
     config['size_uint8_t'] = 1
+    config['buff_size'] = 100000 #1k bytes
+    config['unit_size'] = 4
     
     return config
 
