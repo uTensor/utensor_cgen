@@ -255,7 +255,7 @@ class TensorAllocationPlanner(BackendPart):
 class BrutalForceMemoryPlanner(BackendPart):
   TARGET = 'utensor'
   PART = 'brutal_force_mem_alloc'
-  DATA_NAME = '_brutal_force_mem_alloc'
+  KWARGS_NAMESCOPE = '_brutal_force_mem_alloc'
 
   def __init__(
     self,
@@ -274,25 +274,58 @@ class BrutalForceMemoryPlanner(BackendPart):
     self._type[np.dtype(tf.qint32.as_numpy_dtype)] = final_config['size_int']
 
   def apply(self, ugraph):
-    new_ugraph = deepcopy(ugraph)
-    new_ugraph.setup_data_manager({self.DATA_NAME: " "})
+    # ugraph.setup_data_manager(self.KWARGS_NAMESCOPE, {})
     # use_def_table: dict, tensor_name -> {'start': op_idx, 'end': op_idx}
-    use_def_table = self._create_resource_table(new_ugraph)
+    use_def_table = self._create_resource_table(ugraph)
     allocate_table = dict()
-    allocate_success = self.allocate_graph(new_ugraph, allocate_table, use_def_table, self.buff_size, self.unit_size)
-
+    allocate_success = self.allocate_graph(ugraph, allocate_table, use_def_table, self.buff_size, self.unit_size)
     if allocate_success:
-      for node_name in new_ugraph.topo_order:
-        in_t_infos = new_ugraph.ops_info[node_name].input_tensors
+      allocs = []
+      max_offset_end = 0
+      for node_name in ugraph.topo_order:
+        in_t_infos = ugraph.ops_info[node_name].input_tensors
         for in_o in in_t_infos:
           if in_o.name in allocate_table:
-            new_ugraph.data_manager.address = (in_o.name, allocate_table[in_o.name]['offsetstart'])
+            time_alloc = TimeslotAllocation(
+              time_slot_start=use_def_table[in_o.name]['start'],
+              time_slot_end=use_def_table[in_o.name]['end']
+            )
+            space_alloc = SpaceAllocation(
+              offset_start=allocate_table[in_o.name]['offsetstart'],
+              offset_end=allocate_table[in_o.name]['offsetend'],
+            )
+            if allocate_table[in_o.name]['offsetend'] >= max_offset_end:
+              max_offset_end = allocate_table[in_o.name]['offsetend']
+            allocs.append(
+              TimeSpaceAllocation(
+                entity_name=in_o.name,
+                time_alloc=time_alloc,
+                space_alloc=space_alloc,
+              )
+             )
+            # new_ugraph.data_manager.address = (in_o.name, allocate_table[in_o.name]['offsetstart'])
         out_t_infos = new_ugraph.ops_info[node_name].output_tensors
         for out_o in out_t_infos:
           if out_o.name in allocate_table:
-            new_ugraph.data_manager.address = (out_o.name, allocate_table[out_o.name]['offsetstart'])
-      return new_ugraph
-    return ugraph
+            time_alloc = TimeslotAllocation(
+              time_slot_start=use_def_table[out_o.name]['start'],
+              time_slot_end=use_def_table[out_o.name]['end']
+            )
+            space_alloc = SpaceAllocation(
+              offset_start=allocate_table[out_o.name]['offsetstart'],
+              offset_end=allocate_table[out_o.name]['offsetend'],
+            )
+            if allocate_table[out_o.name]['offsetend'] >= max_offset_end:
+              max_offset_end = allocate_table[out_o.name]['offsetend']
+            allocs.append(
+              TimeSpaceAllocation(
+                entity_name=out_o.name,
+                time_alloc=time_alloc,
+                space_alloc=space_alloc,
+              )
+             )
+            # new_ugraph.data_manager.address = (out_o.name, allocate_table[out_o.name]['offsetstart'])
+      ugraph.attributes[self.KWARGS_NAMESCOPE] = AllocationPlan(allocs=allocs, total_size=max_offset_end)
 
   def _query_offset_fromallocate_table(self, allocate_table, start, end):
     new_start = start
