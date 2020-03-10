@@ -329,7 +329,6 @@ def topologic_order_graph(ugraph):
   """
   ugraph.topo_order = get_topologic_order(ugraph, ugraph.output_nodes)[::-1]
 
-
 def get_topologic_order(ugraph, init_nodes=None):
   """
   return list of op names in topological order
@@ -376,7 +375,6 @@ def get_topologic_order(ugraph, init_nodes=None):
     visit(node_name)
   return ops_torder
 
-
 def ops_bfs_queue(ugraph, init_nodes=None):
   if init_nodes is None:
     init_nodes = [
@@ -396,7 +394,6 @@ def ops_bfs_queue(ugraph, init_nodes=None):
     queue.extend(op.input_nodes)
     bfs_deck.append(op)
   return bfs_deck
-
 
 def prune_graph(ugraph):
   """
@@ -441,11 +438,34 @@ def prune_graph(ugraph):
     new_ugraph.ops_info.pop(op_name)
   return new_ugraph
 
-
 def random_str(length=8):
   letters = ascii_letters+digits
   chars = [choice(letters) for _ in range(length)]
   return ''.join(chars)
+
+def parse_toml(file_or_path):
+  if isinstance(file_or_path, str):
+    fid = open(file_or_path, 'r')
+  doc = _parse(fid.read())
+  fid.close()
+  return doc
+
+def timed(func):
+
+  @wraps(func)
+  def wrapped(*args, **kwargs):
+    start_time = time()
+    ret = func(*args, **kwargs)
+    end_time = time()
+    logger.info('collapsed time of calling %s: %0.4f seconds', func.__name__, end_time - start_time)
+    return ret
+  
+  return wrapped
+
+def is_abstract(func):
+  if isinstance(func, types.MethodType):
+    func = func.__func__
+  return getattr(func, '__isabstractmethod__', False)
 
 
 class class_property(object):
@@ -475,15 +495,6 @@ class Pipeline(object):
   def __getitem__(self, slice_obj):
     cls = type(self)
     return cls(funcs=self._funcs[slice_obj])
-
-
-def parse_toml(file_or_path):
-  if isinstance(file_or_path, str):
-    fid = open(file_or_path, 'r')
-  doc = _parse(fid.read())
-  fid.close()
-  return doc
-
 
 class Configuration(object):
   def __init__(self, defaults=None, user_config=None):
@@ -552,16 +563,3 @@ class Configuration(object):
       '  user_config={} \n'
       ')'
     ).format(self._defaults, self._user_config)
-
-
-def timed(func):
-
-  @wraps(func)
-  def wrapped(*args, **kwargs):
-    start_time = time()
-    ret = func(*args, **kwargs)
-    end_time = time()
-    logger.info('collapsed time of calling %s: %0.4f seconds', func.__name__, end_time - start_time)
-    return ret
-  
-  return wrapped

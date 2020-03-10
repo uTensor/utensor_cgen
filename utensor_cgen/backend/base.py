@@ -1,5 +1,7 @@
+from abc import abstractmethod
+
 from utensor_cgen.utils import (MUST_OVERWRITEN, Configuration, class_property,
-                                parse_toml)
+                                is_abstract, parse_toml)
 
 
 class _BackendBase(object):
@@ -19,6 +21,7 @@ class _BackendBase(object):
     self._config = config
     return self
 
+  @abstractmethod
   def apply(self, ugraph):
     """Applying side-effect to ugraph
 
@@ -26,7 +29,8 @@ class _BackendBase(object):
     such as adding attribute or creating files.
     """
     raise NotImplementedError('base apply method invoked: %s' % self)
-  
+
+  @abstractmethod
   def transform(self, ugraph):
     """Transform Graph
 
@@ -47,9 +51,13 @@ class _BackendBase(object):
   def config(self):
     return self._config
 
-  def _validate_config(self, config):
+  def _validate_config(self, config, *args, **kwargs):
     assert isinstance(config, (dict, Configuration, type(None))), \
       'expecting {}, get {}'.format(dict, type(config))
+
+  def _validate_abstracts(self, config, *args, **kwargs):
+    if is_abstract(self.apply) and is_abstract(self.transform):
+      raise ValueError('must overwrite at least one of apply or transorm: %s' % self)
 
 
 class Backend(_BackendBase):
@@ -59,6 +67,9 @@ class Backend(_BackendBase):
     - It will run through various check in ``__new__``, so it's better to access the value
     of config via ``self.config``, which is an instance of ``Configuration``
     - It will make sure if users do not provide the value required, default one will be used
+  - You must at least implement one of ``apply`` or ``transform`` method
+    - ``apply`` will introduce side-effect on given ugraph **in place** and return nothing
+    - ``transform`` will create a new ugraph, applying side-effect on new ugraph and return it
   """
 
   TARGET = MUST_OVERWRITEN
