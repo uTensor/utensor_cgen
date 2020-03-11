@@ -9,7 +9,6 @@ from collections import Counter, defaultdict, namedtuple
 from copy import deepcopy
 from itertools import chain, combinations, product
 from math import ceil, log10
-import pdb
 
 import numpy as np
 import tensorflow as tf
