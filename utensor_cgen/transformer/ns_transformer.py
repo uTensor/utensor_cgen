@@ -10,6 +10,9 @@ from copy import deepcopy
 
 import numpy as np
 import tensorflow as tf
+# FIXME: remove uTensorOpEqualityDelegate import after we have generic ops
+from utensor_cgen.backend.utensor.code_generator.legacy._operators import \
+    uTensorOpEqualityDelegate
 from utensor_cgen.frontend.tensorflow import GraphDefParser
 from utensor_cgen.ir import OperationInfo, uTensorGraph
 from utensor_cgen.logger import logger
@@ -206,7 +209,11 @@ class DropoutTransformerV2(Transformer):
     return new_ugraph
   
   def _transform_tf(self, ugraph):
-    matcher = uTensorGraphMatcher(pattern_ugraph=self.pattern_ugraph)
+    # FIXME: should use a generic op_equality_delegate
+    matcher = uTensorGraphMatcher(
+      pattern_ugraph=self.pattern_ugraph,
+      op_equality_delegate=uTensorOpEqualityDelegate
+    )
     matches = matcher.match(ugraph, n=1)
     while matches:
       match = matches[0]

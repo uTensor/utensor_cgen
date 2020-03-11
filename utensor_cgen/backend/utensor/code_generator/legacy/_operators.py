@@ -12,12 +12,14 @@ from utensor_cgen.ir import OperationInfo, TensorInfo
 from utensor_cgen.ir.converter import (AttrValueConverter, DataTypeConverter,
                                        GenericTensorConverterMixin)
 from utensor_cgen.logger import logger
-from utensor_cgen.matcher import OpEqualityDelegate, _morphism
+from utensor_cgen.matcher import OpEqualityDelegateBase, _morphism
 from utensor_cgen.transformer.optimizer import RefCntOptimizer
 from utensor_cgen.utils import LazyLoader, NamescopedKWArgsParser
 
 __all__ = ['OperatorFactory', 'OpNotSupportedError']
 tf = LazyLoader('tensorflow')
+
+class uTensorOpEqualityDelegate(OpEqualityDelegateBase): pass
 
 
 class OpNotSupportedError(Exception): pass
@@ -86,7 +88,7 @@ class _Operator(object):
 
 
 @OperatorFactory.register
-@OpEqualityDelegate.is_compatible_with("Inline", _morphism.Const2InlineMorphism)
+@uTensorOpEqualityDelegate.is_compatible_with("Inline", _morphism.Const2InlineMorphism)
 class _ConstOperator(_Operator):
 
   op_type = "Const"
@@ -157,7 +159,7 @@ class _ConstOperator(_Operator):
 
 
 @OperatorFactory.register
-@OpEqualityDelegate.is_associative(
+@uTensorOpEqualityDelegate.is_associative(
   permutations=((0, 1), (1, 0))
 )
 class _AddOperator(_Operator):
@@ -1137,7 +1139,7 @@ class _QuantRangeForMultiplication_u8_u8_int32_Operator(_Operator):
 
 
 @OperatorFactory.register
-@OpEqualityDelegate.is_compatible_with("Const", _morphism.Inline2ConstMorphism)
+@uTensorOpEqualityDelegate.is_compatible_with("Const", _morphism.Inline2ConstMorphism)
 class _InlineOperator(_Operator):
 
   op_type = "Inline"

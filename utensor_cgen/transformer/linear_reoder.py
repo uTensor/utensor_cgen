@@ -5,6 +5,9 @@ Linear Operation Legalizations
 
 """
 import tensorflow as tf
+# FIXME: remove uTensorOpEqualityDelegate import after we have generic ops
+from utensor_cgen.backend.utensor.code_generator.legacy._operators import \
+    uTensorOpEqualityDelegate
 from utensor_cgen.frontend.tensorflow import GraphDefParser
 from utensor_cgen.matcher import uTensorGraphMatcher
 from utensor_cgen.utils import prune_graph, topologic_order_graph
@@ -37,7 +40,11 @@ class LinearReorderTransformerV2(Transformer):
     return pattern_ugraph
 
   def transform(self, ugraph):
-    matcher = uTensorGraphMatcher(pattern_ugraph=self.pattern_ugraph)
+    # FIXME: should use a generic op_equality_delegate
+    matcher = uTensorGraphMatcher(
+      pattern_ugraph=self.pattern_ugraph,
+      op_equality_delegate=uTensorOpEqualityDelegate
+    )
     matches = matcher.match(ugraph, 1)
     while matches:
       match = matches[0]
