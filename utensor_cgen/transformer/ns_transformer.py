@@ -10,6 +10,9 @@ from copy import deepcopy
 
 import numpy as np
 import tensorflow as tf
+# FIXME: remove uTensorOpEqualityDelegate import after we have generic ops
+from utensor_cgen.backend.utensor.code_generator.legacy._operators import \
+    uTensorOpEqualityDelegate
 from utensor_cgen.frontend.tensorflow import GraphDefParser
 from utensor_cgen.ir import OperationInfo, uTensorGraph
 from utensor_cgen.logger import logger
@@ -49,6 +52,9 @@ class InlineTransformer(Transformer):
   METHOD_NAME = 'inline'
   KWARGS_NAMESCOPE = '_utensor_inline'
 
+  def __init__(self):
+    super(InlineTransformer, self).__init__(prune_graph=False)
+
   def transform(self, ugraph):
     for node_name in ugraph.topo_order:
       op_type = ugraph.ops_info[node_name].op_type
@@ -79,6 +85,7 @@ class DropoutTransformer(Transformer):
   TARGET_NODENAME_PATTERN = re.compile(r'(dropout[_\w\d]*)/.*')
 
   def __init__(self, name_pattern=r'(dropout[_\w\d]*)/.*'):
+    super(DropoutTransformer, self).__init__(prune_graph=True)
     self._op_name_pattern = re.compile(name_pattern)
 
   def transform(self, ugraph):
@@ -202,7 +209,11 @@ class DropoutTransformerV2(Transformer):
     return new_ugraph
   
   def _transform_tf(self, ugraph):
-    matcher = uTensorGraphMatcher(pattern_ugraph=self.pattern_ugraph)
+    # FIXME: should use a generic op_equality_delegate
+    matcher = uTensorGraphMatcher(
+      pattern_ugraph=self.pattern_ugraph,
+      op_equality_delegate=uTensorOpEqualityDelegate
+    )
     matches = matcher.match(ugraph, n=1)
     while matches:
       match = matches[0]

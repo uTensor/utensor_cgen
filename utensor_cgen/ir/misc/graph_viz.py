@@ -1,5 +1,3 @@
-import os
-from math import ceil, log10
 from random import random, seed
 
 import matplotlib.pyplot as plt
@@ -80,53 +78,32 @@ class _MemallcVisualizer(object):
   def viz_memalloc(
     cls,
     ugraph,
-    out_fname=None,
     split_on_large_graph=True,
     num_tensors_per_split=20,
-    figsize=None, 
+    figsize=None,
     fontsize=12,
-    lw=15, 
+    lw=12,
     cmap=_cm.BrBG_r,
     rand_seed=1111
   ):
     seed(rand_seed)
-    if TensorAllocationTransformer.KWARGS_NAMESCOPE not in ugraph.attributes:
+    if TensorAllocationPlanner.KWARGS_NAMESCOPE not in ugraph.attributes:
       logger.info('No tensor allocation plan to visualize: %s', ugraph.name)
       return plt.Figure()
-    alloc_plan = ugraph.attributes[TensorAllocationTransformer.KWARGS_NAMESCOPE]
-    topo_tensors = []
-    visited_tensors = set()
-    for op_name in ugraph.topo_order:
-      op_info = ugraph.ops_info[op_name]
-      for tensor in op_info.input_tensors:
-        if tensor.name in alloc_plan.plan and tensor not in visited_tensors:
-          topo_tensors.append(tensor)
-          visited_tensors.add(tensor)
-    for tensor in ugraph.output_tensors:
-      if tensor.name in alloc_plan.plan and tensor not in visited_tensors:
-        topo_tensors.append(tensor)
-        visited_tensors.add(tensor)
-    if out_fname:
-      figs = cls._draw_figs(topo_tensors, alloc_plan, cmap, figsize, fontsize, lw, split_on_large_graph, num_tensors_per_split)
-      if len(figs) == 1:
-        logger.info('saving tensor mem allocation to %s', out_fname)
-        figs[0].savefig(out_fname)
-      else:
-        num_digits = ceil(log10(len(figs)))
-        file_format = '{{}}_{{:0{}d}}{{}}'.format(num_digits)
-        for i, fig in enumerate(figs, 1):
-          fname, ext = os.path.splitext(out_fname)
-          fname = file_format.format(fname, i, ext)
-          logger.info('saving tensor mem allocation to %s', fname)
-          fig.savefig(fname)
+    alloc_plan = ugraph.attributes[TensorAllocationPlanner.KWARGS_NAMESCOPE]
+    topo_tensors = sorted(
+      [tensor_name for tensor_name in alloc_plan.plan],
+      key=lambda tensor_name: alloc_plan.plan[tensor_name].time_slot_start
+    )
+    return cls._draw_figs(topo_tensors, alloc_plan, cmap, figsize, fontsize, lw, split_on_large_graph, num_tensors_per_split)
   
   @classmethod
   def _draw_figs(cls, topo_tensors, alloc_plan, cmap, figsize, fontsize, lw, split_on_large_graph, num_tensors_per_split):
-    xmins = [alloc_plan.plan[tensor.name].start for tensor in topo_tensors]
-    xmaxs = [alloc_plan.plan[tensor.name].end for tensor in topo_tensors]
+    xmins = [alloc_plan.plan[tensor_name].offset_start for tensor_name in topo_tensors]
+    xmaxs = [alloc_plan.plan[tensor_name].offset_end for tensor_name in topo_tensors]
     colors = [cmap(random()) for _ in alloc_plan.plan]
-    labels = [tensor.name for tensor in topo_tensors]
-    sizes = [alloc_plan.plan[tensor.name].size for tensor in topo_tensors]
+    labels = topo_tensors[:]
+    sizes = [alloc_plan.plan[tensor_name].size for tensor_name in topo_tensors]
     if split_on_large_graph:
       xmin_chunks = [xmins[i:i+num_tensors_per_split] for i in range(0, len(xmins), num_tensors_per_split)]
       xmax_chunks = [xmaxs[i:i+num_tensors_per_split] for i in range(0, len(xmaxs), num_tensors_per_split)]
@@ -137,15 +114,15 @@ class _MemallcVisualizer(object):
       xmin_chunks = [xmins]
       xmax_chunks = [xmaxs]
       color_chunks = [colors]
-      label_chunks = [labe]
+      label_chunks = [labels]
       size_chunks = [sizes]
     figs = []
-    for i, (xmins, xmaxs, colors, sizes) in enumerate(zip(xmin_chunks, xmax_chunks, color_chunks, size_chunks)):
+    for i, (xmins, xmaxs, colors, labels, sizes) in enumerate(zip(xmin_chunks, xmax_chunks, color_chunks, label_chunks, size_chunks)):
       fig, _ = plt.subplots(1, 1)
       ys = [len(xmins)-i for i in range(len(xmins))]
       for y, xmin, xmax, color, size in zip(ys, xmins, xmaxs, colors, sizes):
         plt.hlines(y, xmin, xmax, lw=lw, colors=color)
-        plt.text(xmax+lw*5, y-0.2*lw/3, '{} bytes'.format(size), fontdict={'fontsize': fontsize})
+        plt.text(xmax+lw*10, y-0.01*lw, '{} bytes'.format(size), fontdict={'fontsize': fontsize})
       plt.xlabel('Offset (bytes)', fontdict={'fontsize': fontsize})
       plt.yticks(ys, labels, fontsize=fontsize)
       plt.xticks(fontsize=fontsize)
@@ -171,4 +148,4 @@ class _MemallcVisualizer(object):
 viz_memalloc = _MemallcVisualizer.viz_memalloc
 
 # FIXME: cyclic import
-from utensor_cgen.transformer.mem_alloc import TensorAllocationTransformer # isort:skip
+from utensor_cgen.backend.graph_lower.generic_graph_lower import TensorAllocationPlanner # isort:skip

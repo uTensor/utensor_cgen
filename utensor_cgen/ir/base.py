@@ -21,6 +21,7 @@ from utensor_cgen.utils import random_str, topologic_order_graph
 
 from .converter import AttrValueConverter, ConverterDispatcher
 from .graph_builder import uTensorGraphBuilderMixin
+from .instr import DataManager
 
 __all__ = [
   'TensorInfo', 'OperationInfo',
@@ -615,6 +616,10 @@ class uTensorGraph(IRBase, _NoShallowCopyMixin, uTensorGraphBuilderMixin):
     if not self.topo_order:
       topologic_order_graph(self)
     return [self.ops_info[name] for name in self.topo_order]
+
+  def setup_data_manager(self, datas):
+    manager = DataManager(datas)
+    self.data_manager = manager
 
   def unsafe_merge_into(self, other_ugraph):
     """

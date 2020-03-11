@@ -1,5 +1,4 @@
 import tensorflow as tf
-
 from utensor_cgen.frontend.tensorflow import GraphDefParser
 from utensor_cgen.transformer.ns_transformer import (DropoutTransformer,
                                                      DropoutTransformerV2)
@@ -11,6 +10,7 @@ def test_dropout_trans_1_1(droput_graph_tuple):
      output_nodes) = droput_graph_tuple
     ugraph = GraphDefParser(config={}).parse(graph_def, output_nodes=output_nodes)
     transformer = DropoutTransformer()
+    assert transformer.prune_graph
     new_ugraph = transformer.transform(ugraph)
     for op in new_ugraph.ops_info.values():
         assert op.ugraph
@@ -43,6 +43,7 @@ def test_dropout_trans_1_2(droput_graph_tuple):
      output_nodes) = droput_graph_tuple
     ugraph = GraphDefParser(config={}).parse(graph_def, output_nodes=output_nodes)
     transformer = DropoutTransformerV2()
+    assert transformer.prune_graph
     new_ugraph = transformer.transform(ugraph)
     for op in new_ugraph.ops_info.values():
         assert op.ugraph

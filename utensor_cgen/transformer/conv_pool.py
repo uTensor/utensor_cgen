@@ -7,6 +7,9 @@ Node fusion for QuantConv2d QuantMaxPool operators
 from copy import deepcopy
 
 import tensorflow as tf
+# FIXME: remove uTensorOpEqualityDelegate import after we have generic ops
+from utensor_cgen.backend.utensor.code_generator.legacy._operators import \
+    uTensorOpEqualityDelegate
 from utensor_cgen.frontend.tensorflow import GraphDefParser
 from utensor_cgen.ir import OperationInfo, TensorInfo, uTensorGraph
 from utensor_cgen.matcher import uTensorGraphMatcher
@@ -49,7 +52,11 @@ class ConvPoolTransformer(Transformer):
   def transform(self, ugraph):
     if ugraph.lib_name != 'tensorflow':
       raise ValueError('only support tensorflow graph')
-    matcher = uTensorGraphMatcher(pattern_ugraph=self.pattern_ugraph)
+    # FIXME: should use a generic op_equality_delegate
+    matcher = uTensorGraphMatcher(
+      pattern_ugraph=self.pattern_ugraph,
+      op_equality_delegate=uTensorOpEqualityDelegate
+    )
     matches = matcher.match(ugraph, n=1)
     while matches:
       match = matches[0]

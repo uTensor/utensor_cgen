@@ -2,6 +2,10 @@ from utensor_cgen.frontend.tensorflow import GraphDefParser
 from utensor_cgen.transformer.optimizer import IdOpRemoveOptimizer
 
 
+def test_id_rm_prune_graph():
+    optimizer = IdOpRemoveOptimizer()
+    assert optimizer.prune_graph
+
 def test_id_rm_transform_1(id_graph_def_1):
     ugraph = GraphDefParser(config={}).parse(id_graph_def_1, output_nodes=['z'])
     optimizer = IdOpRemoveOptimizer()

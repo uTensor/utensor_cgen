@@ -8,7 +8,6 @@ __all__ = ['QuantizeTransformer']
 
 @TransformerPipeline.register_transformer
 class QuantizeTransformer(Transformer):
-
   METHOD_NAME = 'quantize'
   KWARGS_NAMESCOPE = '_quantize'
 

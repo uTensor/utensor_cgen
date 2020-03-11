@@ -1,10 +1,9 @@
-import logging
 from copy import deepcopy
 
 from utensor_cgen.backend.base import BackendPart
+from utensor_cgen.logger import logger
 from utensor_cgen.utils import class_property
 
-logger = logging.getLogger(__name__)
 
 class uTensorGraphLowerBase(BackendPart):
   TARGET = 'utensor'

@@ -35,12 +35,12 @@ def _load_plugin(path):
   "-p",
   "--plugin",
   multiple=True,
-  help="path of the python module which will be loaded as plugin",
+  help="path of the python module which will be loaded as plugin (multiple)",
   metavar="MODULE",
 )
 def cli(plugin):
-  for module in plugin:
-    _load_plugin(module)
+  for module_path in plugin:
+    _load_plugin(module_path)
 
 @cli.command(name='list-backends', help='list all available backends')
 @click.help_option('-h', '--help')
@@ -67,6 +67,10 @@ def generate_config(target, output):
     fid.write(
       '# https://github.com/toml-lang/toml\n'
       '# <target_name>.<component>.<part>\n'
+    )
+    fid.write(
+      '# we use string \'None\' to represent python None value\n'
+      '# you should convert the string to None if you try to write extension for utensor_cgen\n'
     )
     fid.write(dumps(config))
 
