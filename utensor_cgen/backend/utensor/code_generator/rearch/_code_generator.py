@@ -26,26 +26,19 @@ class uTensorRearchCodeGenerator(BackendPart):
     self.src_fname = final_config['src_fname']
     self.header_fname = final_config['header_fname']
     self.params_dir = final_config['params_dir'].rstrip('/')
-    self.trans_methods = final_config['transform_methods']
     self.meta_data_pool_size = final_config['meta_data_pool_size']
     self.ram_data_pool_size = final_config['ram_data_pool_size']
     self.model_dir = final_config['model_dir'].rstrip('/')
-    self.save_graph = final_config['save_graph']
 
   def apply(self, ugraph):
     src_fname = self.src_fname
     if src_fname == 'None':
       src_fname = '{}.cpp'.format(ugraph.name)
-    pipeline = TransformerPipeline(self.trans_methods)
-    new_ugraph = pipeline.transform(ugraph)
-    if self.save_graph:
-      with open('transformed_{}.pkl'.format(ugraph.name), 'wb') as fid:
-        pickle.dump(new_ugraph, fid)
     # 1. find all ops required
     ops = set()
     placeholders = set()
     tensor_var_map = {} # tensor name -> var name
-    for op_info in new_ugraph.ops_info.values():
+    for op_info in ugraph.ops_info.values():
       for tensor in op_info.output_tensors:
         tensor_var_name = re.sub(r'[:/]', '', tensor.name)
         tensor_var_map[tensor.name] = tensor_var_name
@@ -63,7 +56,7 @@ class uTensorRearchCodeGenerator(BackendPart):
       ops_map[op] = op_var_name
       declare_snippets.append(op.get_declare_snippet(op_var_name))
     weight_snippets = []
-    for op_info in filter(lambda op_info: op_info.op_type == 'Inline', new_ugraph.ops_info.values()):
+    for op_info in filter(lambda op_info: op_info.op_type == 'Inline', ugraph.ops_info.values()):
       tensor = op_info.output_tensors[0]
       buffer_name = 'data_{}'.format(tensor.name.replace(':', '_').replace('/', '_'))
       weight_snippets.append(
@@ -83,8 +76,8 @@ class uTensorRearchCodeGenerator(BackendPart):
       )
     # 3. evaluation snippets
     eval_snippets = []
-    for op_name in new_ugraph.topo_order:
-      op_info = new_ugraph.ops_info[op_name]
+    for op_name in ugraph.topo_order:
+      op_info = ugraph.ops_info[op_name]
       if op_info.op_type in ['Placeholder', 'Inline']:
         continue
       op = OperatorFactory.get_opertor(op_info)
@@ -94,13 +87,13 @@ class uTensorRearchCodeGenerator(BackendPart):
       )
     template_vars = {}
     template_vars['model_name'] = ugraph.name
-    template_vars['meta_data_pool_size'] = self._compute_meta_data_size(new_ugraph)
-    template_vars['ram_data_pool_size'] = self._compute_ram_data_size(new_ugraph)
+    template_vars['meta_data_pool_size'] = self._compute_meta_data_size(ugraph)
+    template_vars['ram_data_pool_size'] = self._compute_ram_data_size(ugraph)
     template_vars['placeholders'] = placeholders
     template_vars['out_tensor_var_names'] = [
       tensor_var_map[tensor.name] for tensor in chain(*[
-        new_ugraph.ops_info[op_name].output_tensors
-        for op_name in new_ugraph.output_nodes
+        ugraph.ops_info[op_name].output_tensors
+        for op_name in ugraph.output_nodes
       ])
     ]
     # 4. write files
@@ -137,20 +130,8 @@ class uTensorRearchCodeGenerator(BackendPart):
     config['header_fname'] = 'None'
     config['params_dir'] = 'data'
     config['model_dir'] = 'models'
-    config['transform_methods'] = [
-      'dropout(name_pattern=r"(dropout[_\w\d]*)/.*")',
-      # 'linear_reorder',
-      # 'quantize',
-      # 'conv_pool',
-      'inline',
-      'biasAdd',
-      'remove_id_op',
-      'fake_gather_v2',
-      # 'refcnt'
-    ]
     config['meta_data_pool_size'] = 'auto'
     config['ram_data_pool_size'] = 'auto'
-    config['save_graph'] = False
     return config
 
   def _compute_meta_data_size(self, ugraph):

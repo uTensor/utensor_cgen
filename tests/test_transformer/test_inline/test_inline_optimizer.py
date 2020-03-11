@@ -6,6 +6,7 @@ def test_inline_optimizer(inlinegraph_tuple):
     (graph_def, inline_ans, output_nodes)=  inlinegraph_tuple
     ugraph = GraphDefParser(config={}).parse(graph_def, output_nodes)
     transformer = InlineTransformer()
+    assert not transformer.prune_graph
     ugraph = transformer.transform(ugraph)
     for node_name in ugraph.topo_order:
         if node_name in inline_ans:

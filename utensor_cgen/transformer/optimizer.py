@@ -13,8 +13,8 @@ class RefCntOptimizer(Transformer):
   METHOD_NAME = 'refcnt'
   KWARGS_NAMESCOPE = '_utensor_refcnt'
 
-  def __init__(self, **kwargs):
-    self.prune_graph = False
+  def __init__(self):
+    super(RefCntOptimizer, self).__init__(prune_graph=False)
 
   def transform(self, ugraph):
     """Optimization with reference count
@@ -49,9 +49,6 @@ class IdOpRemoveOptimizer(Transformer):
 
   METHOD_NAME = 'remove_id_op'
   KWARGS_NAMESCOPE = '_utensor_remove_id_op'
-
-  def __init__(self, **kwargs):
-    self.prune_graph = True
 
   def transform(self, ugraph):
     return self._transform(ugraph)

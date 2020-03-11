@@ -22,12 +22,10 @@ class FrontendSelector(object):
     return _register
 
   @classmethod
-  def parse(cls, model_file, output_nodes, config=None):
+  def parse(cls, model_file, output_nodes=None, config=None):
     if config is None:
       config = {}
     _, ext = os.path.splitext(model_file)
-    if ext != '.onnx' and not output_nodes:
-      raise ValueError('output_nodes are required for {} file'.format(ext))
     parser = cls.select_parser(ext)(config)
     return parser.parse(model_file, output_nodes)
 
