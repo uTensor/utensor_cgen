@@ -11,6 +11,7 @@ uTensorRearchCodeGenerator = LazyAttrib(code_generator, 'uTensorRearchCodeGenera
 uTensorLegacyGraphLower = LazyAttrib(_op_lower, 'uTensorLegacyGraphLower')
 uTensorRearchGraphLower = LazyAttrib(_op_lower, 'uTensorRearchGraphLower')
 TensorAllocationPlanner = LazyAttrib(generic_graph_lower, 'TensorAllocationPlanner')
+BrutalForceMemoryPlanner = LazyAttrib(generic_graph_lower, 'BrutalForceMemoryPlanner')
 PipelineTransformer = LazyAttrib(transformer, 'PipelineTransformer')
 
 del code_generator, _op_lower, generic_graph_lower
@@ -31,7 +32,7 @@ class uTensorBackend(Backend):
     if config['legacy-api']:
       code_generator = code_generator or uTensorLegacyCodeGenerator(config=config[uTensorLegacyCodeGenerator.PART].to_dict())
       graph_op_lower = graph_op_lower or uTensorLegacyGraphLower(config=config[uTensorLegacyGraphLower.PART].to_dict())
-      graph_alloc_lower = graph_alloc_lower or TensorAllocationPlanner(config=config[TensorAllocationPlanner.PART].to_dict())
+      graph_alloc_lower = graph_alloc_lower or BrutalForceMemoryPlanner(config=config[BrutalForceMemoryPlanner.PART].to_dict())
     else:
       code_generator = code_generator or uTensorRearchCodeGenerator(config=config[uTensorRearchCodeGenerator.PART].to_dict())
       graph_op_lower = graph_op_lower or uTensorRearchGraphLower(config=config[uTensorRearchGraphLower.PART].to_dict())
@@ -48,7 +49,7 @@ class uTensorBackend(Backend):
     config[cls.TARGET] = {}
     config[cls.TARGET][cls.COMPONENT] = {}
     config[cls.TARGET][cls.COMPONENT]['legacy-api'] = True
-    config[cls.TARGET][cls.COMPONENT][TensorAllocationPlanner.PART] = TensorAllocationPlanner.default_config
+    config[cls.TARGET][cls.COMPONENT][BrutalForceMemoryPlanner.PART] = BrutalForceMemoryPlanner.default_config
     config[cls.TARGET][cls.COMPONENT][uTensorLegacyCodeGenerator.PART] = uTensorLegacyCodeGenerator.default_config
     config[cls.TARGET][cls.COMPONENT][uTensorLegacyGraphLower.PART] = uTensorLegacyGraphLower.default_config
     config[cls.TARGET][cls.COMPONENT][uTensorRearchCodeGenerator.PART] = uTensorRearchCodeGenerator.default_config

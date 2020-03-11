@@ -9,6 +9,7 @@ from collections import Counter, defaultdict, namedtuple
 from copy import deepcopy
 from itertools import chain, combinations, product
 from math import ceil, log10
+import pdb
 
 import numpy as np
 import tensorflow as tf
@@ -266,6 +267,7 @@ class BrutalForceMemoryPlanner(BackendPart):
     self._type[np.dtype(tf.quint8.as_numpy_dtype)] = self.config['size_uint8_t']
     self._type[np.dtype(tf.qint8.as_numpy_dtype)] = self.config['size_uint8_t']
     self._type[np.dtype(tf.qint32.as_numpy_dtype)] = self.config['size_int']
+    self._type[np.dtype(tf.int64.as_numpy_dtype)] = self.config['size_int']
 
   def apply(self, ugraph):
     # ugraph.setup_data_manager(self.KWARGS_NAMESCOPE, {})
@@ -286,7 +288,7 @@ class BrutalForceMemoryPlanner(BackendPart):
             )
             space_alloc = SpaceAllocation(
               offset_start=allocate_table[in_o.name]['offsetstart'],
-              offset_end=allocate_table[in_o.name]['offsetend'],
+              size=allocate_table[in_o.name]['offsetend'] - allocate_table[in_o.name]['offsetstart'],
             )
             if allocate_table[in_o.name]['offsetend'] >= max_offset_end:
               max_offset_end = allocate_table[in_o.name]['offsetend']
@@ -298,7 +300,7 @@ class BrutalForceMemoryPlanner(BackendPart):
               )
              )
             # new_ugraph.data_manager.address = (in_o.name, allocate_table[in_o.name]['offsetstart'])
-        out_t_infos = new_ugraph.ops_info[node_name].output_tensors
+        out_t_infos = ugraph.ops_info[node_name].output_tensors
         for out_o in out_t_infos:
           if out_o.name in allocate_table:
             time_alloc = TimeslotAllocation(
@@ -307,7 +309,7 @@ class BrutalForceMemoryPlanner(BackendPart):
             )
             space_alloc = SpaceAllocation(
               offset_start=allocate_table[out_o.name]['offsetstart'],
-              offset_end=allocate_table[out_o.name]['offsetend'],
+              size=allocate_table[out_o.name]['offsetend'] - allocate_table[out_o.name]['offsetstart'],
             )
             if allocate_table[out_o.name]['offsetend'] >= max_offset_end:
               max_offset_end = allocate_table[out_o.name]['offsetend']
