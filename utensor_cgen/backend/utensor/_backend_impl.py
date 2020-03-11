@@ -11,7 +11,6 @@ uTensorRearchCodeGenerator = LazyAttrib(code_generator, 'uTensorRearchCodeGenera
 uTensorLegacyGraphLower = LazyAttrib(_op_lower, 'uTensorLegacyGraphLower')
 uTensorRearchGraphLower = LazyAttrib(_op_lower, 'uTensorRearchGraphLower')
 TensorAllocationPlanner = LazyAttrib(generic_graph_lower, 'TensorAllocationPlanner')
-BrutalForceMemoryPlanner = LazyAttrib(generic_graph_lower, 'BrutalForceMemoryPlanner')
 PipelineTransformer = LazyAttrib(transformer, 'PipelineTransformer')
 
 del code_generator, _op_lower, generic_graph_lower
