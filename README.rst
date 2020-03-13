@@ -241,14 +241,13 @@ Considering following simple multi layers perceptron (`simple_mnist.pb`_):
 
 \ |mlp-alloc-graph|
 
-Once enabled the optimization transformer, ``tensor_alloc``,
-which is an offline tensor memory allocation planner,
+Once enabled the optimization transformer, ``tensor_alloc``, an offline tensor memory allocation planner,
 ``utensor-cli`` will generate ``uTensor`` runtime codes that use following optimized allocation plan:
 
 \ |mlp-alloc|
 
-- On the y-axis, these are tensor names ordered by topological sorting
-- On the x-axis, these are the memory span occupied by each tensor
+- y-axis: tensor names ordered by topological sorting
+- x-axis: these are the memory span occupied by each tensor
 
 .. offline-tensor-alloc-end
 

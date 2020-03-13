@@ -1,6 +1,6 @@
 from abc import abstractmethod
 
-from utensor_cgen.utils import (MUST_OVERWRITEN, Configuration, class_property,
+from utensor_cgen.utils import (MUST_OVERWRITE, Configuration, class_property,
                                 is_abstract, parse_toml)
 
 
@@ -72,11 +72,11 @@ class Backend(_BackendBase):
     - ``transform`` will create a new ugraph, applying side-effect on new ugraph and return it
   """
 
-  TARGET = MUST_OVERWRITEN
+  TARGET = MUST_OVERWRITE
 
   @classmethod
   def _validate_target(cls, config, *args, **kwargs):
-    if cls.TARGET is MUST_OVERWRITEN:
+    if cls.TARGET is MUST_OVERWRITE:
       raise ValueError(
         'Every Backend must overwrite TARGET attribute: {}'.format(cls)
       )
@@ -93,11 +93,11 @@ class Backend(_BackendBase):
 
 class BackendPart(Backend):
 
-  PART = MUST_OVERWRITEN
+  PART = MUST_OVERWRITE
 
   @classmethod
   def _validate_part(cls, config, *args, **kwargs):
-    if cls.PART is MUST_OVERWRITEN:
+    if cls.PART is MUST_OVERWRITE:
       raise ValueError(
         'Every BackendPart must overwrite PART attribute: {}'.format(cls)
       )

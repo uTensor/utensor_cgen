@@ -92,6 +92,7 @@ class TensorAllocationPlanner(BackendPart):
     if self.aesthetic_kwargs['figsize'] == 'None':
       self.aesthetic_kwargs['figsize'] = None
     self.enabled = self.config['enabled']
+    self.data_alignment = self.config['data_alignment']
     self.dtype_size_map = self._parse_dtype_size_map(self.config)
 
   def apply(self, ugraph):
@@ -209,9 +210,15 @@ class TensorAllocationPlanner(BackendPart):
     return alloc_plan, opt_mempool_size
 
   def _compute_tensor_bytes_size(self, tensor_info):
+    """
+    compute aligned memory size (in bytes)
+    """
     size = tensor_info.size
     elem_size = self.dtype_size_map.get(tensor_info.dtype, tensor_info.dtype.itemsize)
-    return elem_size * size
+    total_size =  elem_size * size
+    if total_size % self.data_alignment:
+      total_size = ceil(total_size / self.data_alignment) * self.data_alignment
+    return total_size
 
   @classmethod
   def _parse_dtype_size_map(cls, config):
@@ -230,7 +237,7 @@ class TensorAllocationPlanner(BackendPart):
   @class_property
   def default_config(cls):
     return {
-      'max_pool_size': 1024*1024, # 1k bytes
+      'max_pool_size': 1024*1024, # 1G bytes
       'include_inputs': False,
       'out_fname': 'None',
       'aesthetic_kwargs': {
@@ -242,6 +249,7 @@ class TensorAllocationPlanner(BackendPart):
         'rand_seed': 1111
       },
       'enabled': True,
+      'data_alignment': 2, # 2-bytes alignment
       'dtype_size_map': {
         'float': 4,
         'double': 8,

@@ -20,7 +20,7 @@ import numpy as np
 from utensor_cgen.logger import logger
 
 __all__ = ["save_idx", "save_consts", "save_graph", "log_graph",
-           "NamescopedKWArgsParser", "NArgsParam", "MUST_OVERWRITEN"]
+           "NamescopedKWArgsParser", "NArgsParam", "MUST_OVERWRITE"]
 
 class LazyLoader(types.ModuleType):
 
@@ -315,7 +315,7 @@ class _MustOverwrite(object):
     return cls._obj
 
 
-MUST_OVERWRITEN = _MustOverwrite()
+MUST_OVERWRITE = _MustOverwrite()
 
 
 def topologic_order_graph(ugraph):
