@@ -197,7 +197,7 @@ class TensorAllocationPlanner(BackendPart):
     status = solver.Solve(model)
     alloc_plan = {}
     opt_mempool_size = None
-    if solver.StatusName(status) == 'OPTIMAL':
+    if status == cp_model.OPTIMAL:
       opt_mempool_size = solver.Value(var_mempool_size)
       for name, alloc in tensor_allocs.items():
         alloc_plan[name] = SpaceAllocation(
@@ -205,9 +205,13 @@ class TensorAllocationPlanner(BackendPart):
           size=alloc.size,
           data_alignment=self.data_alignment,
         )
-      logger.info('optimal tensor allocation plan solved, memory span: %i bytes', opt_mempool_size)
+      logger.info('optimal tensor allocation plan solved, total memory required: %i bytes', opt_mempool_size)
     else:
       logger.info('tensor allocation plan not found, status: %s', solver.StatusName(status))
+      if status == cp_model.INFEASIBLE:
+        logger.info(
+          'the optimal plan is infeasible, please set `max_pool_size` a larger value: %s' % self.max_pool_size
+        )
     return alloc_plan, opt_mempool_size
 
   def _compute_tensor_bytes_size(self, tensor_info):

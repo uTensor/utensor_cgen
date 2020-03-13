@@ -174,20 +174,24 @@ class TensorInfo(IRBase, _NoShallowCopyMixin):
 
   @property
   def size(self):
+    if self.shape is None:
+      raise RuntimeError('nondeterministic shape has no size')
     if None in self.shape:
       logger.warning(
-        'nondeterministic shape, implicit converting None to 1: %s, %s',
+        'nondeterministic dimension detected, implicitly converting None to 1: %s, %s',
         self.name,
         self.shape,
       )
     return reduce(lambda i, j: i*(j is None and 1 or j), self.shape, 1)
 
   def __deepcopy__(self, memo):
-    new_tensor = TensorInfo(name=self.name,
-                            ugraph=memo['ugraph'],
-                            op_name=self.op_name,
-                            dtype=self.dtype,
-                            shape=deepcopy(self.shape, memo))
+    new_tensor = TensorInfo(
+      name=self.name,
+      ugraph=memo['ugraph'],
+      op_name=self.op_name,
+      dtype=self.dtype,
+      shape=deepcopy(self.shape, memo)
+    )
     return new_tensor
   
   def __hash__(self):
