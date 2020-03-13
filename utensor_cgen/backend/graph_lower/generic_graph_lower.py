@@ -202,7 +202,8 @@ class TensorAllocationPlanner(BackendPart):
       for name, alloc in tensor_allocs.items():
         alloc_plan[name] = SpaceAllocation(
           offset_start=solver.Value(alloc.start),
-          size=alloc.size
+          size=alloc.size,
+          data_alignment=self.data_alignment,
         )
       logger.info('optimal tensor allocation plan solved, memory span: %i bytes', opt_mempool_size)
     else:

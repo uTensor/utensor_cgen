@@ -31,6 +31,7 @@ class TimeslotAllocation(object):
 class SpaceAllocation(object):
   offset_start = attr.ib(validator=instance_of(int))
   size = attr.ib(validator=instance_of(int))
+  data_alignment = attr.ib(validator=instance_of(int))
   offset_end = attr.ib(init=False)
 
   def __attrs_post_init__(self):
@@ -38,6 +39,12 @@ class SpaceAllocation(object):
       'invalid offset_start: %s' % self.offset_start
     assert self.size > 0, \
       'invalid size: %s' % self.size
+    errmsg = ( self.data_alignment > 1 and
+      'the memory offset is not aligned: %s (not %ss aligned)' or
+      'the memory offset is not aligned: %s (not %s aligned)'
+    )
+    assert self.size % self.data_alignment == 0, \
+      errmsg  % (self.size, self.data_alignment)
     self.offset_end = self.offset_start + self.size - 1
   
   def __contains__(self, offset):
