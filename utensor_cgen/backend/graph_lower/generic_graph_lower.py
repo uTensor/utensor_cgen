@@ -219,9 +219,12 @@ class TensorAllocationPlanner(BackendPart):
     compute aligned memory size (in bytes)
     """
     size = tensor_info.size
+    # use user-defined element size or fall back to numpy size
     elem_size = self.dtype_size_map.get(tensor_info.dtype, tensor_info.dtype.itemsize)
     total_size =  elem_size * size
-    if total_size % self.data_alignment:
+    if total_size % self.data_alignment != 0:
+      # if not aligned, compute the smallest aligned size
+      # TODO: do we need to take care how data is zero-padded?
       total_size = ceil(total_size / self.data_alignment) * self.data_alignment
     return total_size
 
