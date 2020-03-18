@@ -29,12 +29,9 @@ class uTensorRearchCodeGenerator(BackendPart):
     self.meta_data_pool_size = final_config['meta_data_pool_size']
     self.ram_data_pool_size = final_config['ram_data_pool_size']
     self.model_dir = final_config['model_dir'].rstrip('/')
-
-  def apply(self, ugraph):
-    src_fname = self.src_fname
-    if src_fname == 'None':
-      src_fname = '{}.cpp'.format(ugraph.name)
-    # 1. find all ops required
+  
+  def _find_required_ops(self, ugraph):
+    # find all ops required
     ops = set()
     placeholders = set()
     tensor_var_map = {} # tensor name -> var name
@@ -48,7 +45,10 @@ class uTensorRearchCodeGenerator(BackendPart):
         ops.add(
           OperatorFactory.get_opertor(op_info)
         )
-    # 2. ops/tensors declaration
+    return ops, placeholders, tensor_var_map
+  
+  def _get_declare_snippets(self, ugraph, ops, tensor_var_map):
+    # get ops/tensors declaration snippets
     declare_snippets = []
     ops_map = {} # op -> op variable name
     for i, op in enumerate(ops):
@@ -74,6 +74,18 @@ class uTensorRearchCodeGenerator(BackendPart):
           tensor=tensor
         )
       )
+    return ops_map, declare_snippets
+
+  def apply(self, ugraph):
+    src_fname = self.src_fname
+    if src_fname == 'None':
+      src_fname = '{}.cpp'.format(ugraph.name)
+    (
+      ops,            # Set[OperationInfo]
+      placeholders,   # Set[OperationInfo]
+      tensor_var_map, # dict, tensor name -> var name
+    ) = self._find_required_ops(ugraph)
+    ops_map, declare_snippets = self._get_declare_snippets(ugraph, ops, tensor_var_map)
     # 3. evaluation snippets
     eval_snippets = []
     for op_name in ugraph.topo_order:
@@ -134,7 +146,8 @@ class uTensorRearchCodeGenerator(BackendPart):
     config['ram_data_pool_size'] = 'auto'
     return config
 
-  def _compute_meta_data_size(self, ugraph):
+  def _compute_meta_data_size(self, ugraph, mem_optimizer=None):
+    # TODO: if mem_optimizer is None, use a default mem optimizer
     if self.meta_data_pool_size == 'auto':
       # TODO: compute actual meta data size with ugraph
       size = 256
@@ -142,7 +155,8 @@ class uTensorRearchCodeGenerator(BackendPart):
       size = self.meta_data_pool_size
     return size
 
-  def _compute_ram_data_size(self, ugraph):
+  def _compute_ram_data_size(self, ugraph, mem_optimizer=None):
+    # TODO: if mem_optimizer is None, use a default mem optimizer
     if self.ram_data_pool_size == 'auto':
       # TODO: compute actual ram data size with ugraph
       size = 256

@@ -7,7 +7,6 @@ import onnx
 import tensorflow as tf
 from onnx.onnx_pb import TensorProto
 from onnx_tf.backend import TensorflowBackend, prepare
-
 from utensor_cgen.frontend import FrontendSelector
 from utensor_cgen.frontend.base import Parser
 from utensor_cgen.ir import OperationInfo, TensorInfo, uTensorGraph
@@ -50,12 +49,47 @@ class OnnxParser(Parser):
     ugraph = Legalizer.legalize(ugraph)
     tf.reset_default_graph()
     return ugraph
-  
+
   def _build_graph(self, onnx_graph, ugraph):
-    op_types_cnt = Counter()
-    tensor_names_map = {}
-    # add const ops
-    params_dict = self._get_params_dict(onnx_graph)
+    op_types_cnt = Counter() # op_type (str) -> count (int)
+    tensor_names_map = {}    # tensor_name (str) -> tensor_info (TensorInfo)
+    # these methods will update inputs **inplace**
+    self._build_param_ops(
+      onnx_graph, ugraph, op_types_cnt, tensor_names_map
+    )
+    self._build_input_ops(
+      onnx_graph, ugraph, op_types_cnt, tensor_names_map
+    )
+    self._build_intermediate_ops(
+      onnx_graph, ugraph, op_types_cnt, tensor_names_map,
+    )
+    # find outupt nodes
+    distinct_out_ops = set()
+    graph_output = set([v.name for v in onnx_graph.output])
+    for name, tensor_info in tensor_names_map.items():
+      if name in graph_output:
+        distinct_out_ops.add(tensor_info.op_name)
+    ugraph.output_nodes = list(distinct_out_ops)
+    topologic_order_graph(ugraph)
+    _PostProcessing.post_process(ugraph)
+  
+  def _build_param_ops(self, onnx_graph, ugraph, op_types_cnt, tensor_names_map):
+    """Find all tensors in initialization list in onnx_graph, normally constants
+
+    Note that this method will update op_types_cnt and tensor_names_map **inplace**
+    """
+    # find Const ops
+    params_dict = {}
+    # FIXME: avoid using internal api of other library
+    dict_items = TensorflowBackend._onnx_initializer_to_input_dict_items(onnx_graph.initializer)
+    for name, tf_tensor in dict_items:
+      params_dict[name] = AttrValueConverter.GenericType(
+        value_name='value',
+        value=TensorProtoConverter.get_generic_value(
+          tf_tensor.op.get_attr('value')
+        )
+      )
+    # build Const ops
     for tensor_name, tensor_value in params_dict.items():
       cnt = op_types_cnt['Const']
       node_name = self._format_node_name(tensor_name, 'Const', cnt)
@@ -78,6 +112,13 @@ class OnnxParser(Parser):
           'value': tensor_value
         }
       )
+
+  def _build_input_ops(self, onnx_graph, ugraph, op_types_cnt, tensor_names_map):
+    """Find placeholders
+    That is, those ops in the input list but not in initialization list
+
+    Note this method will update inputs **inplace**
+    """
     # placeholders
     for value in onnx_graph.input:
       # value: ValueInfoProto
@@ -113,18 +154,10 @@ class OnnxParser(Parser):
         lib_name='onnx',
         op_attr={}
       )
-    for node in onnx_graph.node:
-      cnt = op_types_cnt[node.op_type]
-      node_name = self._format_node_name(node.name, node.op_type, cnt)
-      for i, tensor_name in enumerate(node.output):
-        tensor_names_map[tensor_name] = TensorInfo(
-          name=self._format_tensor_name(tensor_name, node_name, i),
-          op_name=node_name,
-          dtype=None,
-          shape=None,
-          ugraph=ugraph,
-        )
-    node_names_map = {}
+
+  def _build_intermediate_ops(self, onnx_graph, ugraph, op_types_cnt, tensor_names_map):
+    """Build all intermediate nodes, the nodes that is not in neither initialization list nor input list
+    """
     # create all outupt tensors
     for node in onnx_graph.node:
       cnt = op_types_cnt[node.op_type]
@@ -138,8 +171,6 @@ class OnnxParser(Parser):
           shape=None,
           ugraph=ugraph
         )
-      if node.name:
-        node_names_map[node.name] = node_name
     # create ops
     for node in onnx_graph.node:
       input_tensors = [
@@ -148,7 +179,6 @@ class OnnxParser(Parser):
       output_tensors = [
         tensor_names_map[name] for name in node.output
       ]
-      
       op_attr = {
         attrib_pb.name: _convert_op_attribute(attrib_pb)
         for attrib_pb in node.attribute
@@ -163,16 +193,7 @@ class OnnxParser(Parser):
         ugraph=ugraph,
         op_attr=op_attr
       )
-    # find outupt nodes
-    distinct_out_tensors = set()
-    graph_output = set([v.name for v in onnx_graph.output])
-    for name, tensor_info in tensor_names_map.items():
-      if name in graph_output:
-        distinct_out_tensors.add(tensor_info.op_name)
-    ugraph.output_nodes = list(distinct_out_tensors)
-    topologic_order_graph(ugraph)
-    _PostProcessing.post_process(ugraph)
-  
+
   def _format_node_name(self, node_name, op_type, op_cnt):
     if node_name == '':
       node_name = '{}_{}'.format(op_type, op_cnt)
@@ -182,18 +203,6 @@ class OnnxParser(Parser):
     if re.match(r'[a-zA-Z][a-zA-Z0-9]*:[0-9]+', name):
       return name
     return '{}:{}'.format(node_name, offset)
-
-  def _get_params_dict(self, onnx_graph):
-    dict_items = TensorflowBackend._onnx_initializer_to_input_dict_items(onnx_graph.initializer)
-    params_dict = {}
-    for name, tf_tensor in dict_items:
-      params_dict[name] = AttrValueConverter.GenericType(
-        value_name='value',
-        value=TensorProtoConverter.get_generic_value(
-          tf_tensor.op.get_attr('value')
-        )
-      )
-    return params_dict
 
 
 class _PostProcessing(object):

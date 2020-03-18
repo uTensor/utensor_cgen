@@ -8,10 +8,10 @@ class OnnxLegalizer(LegalizerBase):
   TARGET = 'onnx'
 
   def legalize(self, ugraph):
-    self._visit(ugraph)
+    self._visit_all(ugraph)
     return ugraph
 
-  def _visit(self, ugraph):
+  def _visit_all(self, ugraph):
     for op_info in list(ugraph.ops_info.values()):
       visitor = getattr(
         self,
