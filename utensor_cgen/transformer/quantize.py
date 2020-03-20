@@ -1,19 +1,18 @@
 from tensorflow.tools.graph_transforms import TransformGraph
-
-from utensor_cgen.ir.base import uTensorGraph
 from utensor_cgen.frontend.tensorflow import GraphDefParser
 
 from .base import Transformer
+from .pipeline import TransformerPipeline
 
 __all__ = ['QuantizeTransformer']
 
+@TransformerPipeline.register_transformer
 class QuantizeTransformer(Transformer):
 
   METHOD_NAME = 'quantize'
   KWARGS_NAMESCOPE = '_quantize'
 
   def transform(self, ugraph):
-    #import pdb; pdb.set_trace()
     graph_def = ugraph.graph_def
     quant_graph_def = TransformGraph(input_graph_def=graph_def,
                                      inputs=[],

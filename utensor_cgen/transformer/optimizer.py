@@ -1,12 +1,13 @@
-from abc import ABCMeta, abstractmethod
 from collections import defaultdict
 from copy import deepcopy
 
 from .base import Transformer
+from .pipeline import TransformerPipeline
 
 __all__ = ['RefCntOptimizer']
 
 
+@TransformerPipeline.register_transformer
 class RefCntOptimizer(Transformer):
   
   METHOD_NAME = 'refcnt'
@@ -42,6 +43,8 @@ class RefCntOptimizer(Transformer):
         tensor_ref_count[tname] += 1
     return tensor_ref_count
 
+
+@TransformerPipeline.register_transformer
 class IdOpRemoveOptimizer(Transformer):
 
   METHOD_NAME = 'remove_id_op'
@@ -51,10 +54,10 @@ class IdOpRemoveOptimizer(Transformer):
     self.prune_graph = True
 
   def transform(self, ugraph):
-    if ugraph.backend == 'tensorflow':
+    if ugraph.lib_name == 'tensorflow':
       return self._transform_tf(ugraph)
     else:
-      raise RuntimeError('unsupported backend: {}'.format(ugraph.backend))
+      raise RuntimeError('unsupported lib_name: {}'.format(ugraph.lib_name))
 
   def _transform_tf(self, ugraph):
     ops_to_remove = [
