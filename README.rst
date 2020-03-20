@@ -247,7 +247,8 @@ Once enabled the optimization transformer, ``tensor_alloc``, an offline tensor m
 \ |mlp-alloc|
 
 - y-axis: tensor names ordered by topological sorting
-- x-axis: these are the memory span occupied by each tensor
+- x-axis: these are the memory span occupied by each tensor, that is, the memory address offset and
+the size of the tensor
 
 .. offline-tensor-alloc-end
 
