@@ -79,12 +79,12 @@ class GraphDefParser(Parser):
     if isinstance(pb_file, tf.GraphDef):
       return pb_file, "tf_graph_{}".format(random_str(6))
     assert isinstance(pb_file, six.string_types)
-    graph_name, _ = os.path.splitext(os.path.basename(pb_file))
+    graph_name, ext = os.path.splitext(os.path.basename(pb_file))
     graph_def = tf.GraphDef()
-    if pb_file[-3:] == ".pb":
+    if ext == ".pb":
       with open(pb_file, "rb") as fid:
         graph_def.ParseFromString(fid.read())
-    elif pb_file[-6:] == ".pbtxt":
+    elif ext == ".pbtxt":
       with open(pb_file, "r") as fid:
         text_format.Parse(fid.read(), graph_def)
     else:
