@@ -4,10 +4,10 @@ from copy import deepcopy
 from functools import reduce
 
 import attr
-import numpy as np
 import six
 from attr.validators import instance_of
 
+import numpy as np
 import tensorflow as tf
 from tensorflow.core.framework.attr_value_pb2 import AttrValue as _AttrValue
 from tensorflow.core.framework.attr_value_pb2 import \
@@ -69,6 +69,7 @@ class TensorInfo(IRBase, _NoShallowCopyMixin):
   dtype = attr.ib(validator=instance_of(np.dtype))
 
   shape = attr.ib(validator=instance_of((list, type(None))))
+  attributes = attr.ib(factory=dict, validator=instance_of(dict))
   
   @shape.validator
   def check(self, attrib, shape_values):
