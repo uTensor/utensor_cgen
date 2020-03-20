@@ -69,20 +69,20 @@ class TensorInfo(IRBase, _NoShallowCopyMixin):
   dtype = attr.ib(validator=instance_of(np.dtype))
 
   shape = attr.ib(validator=instance_of((list, type(None))))
-  attributes = attr.ib(factory=dict, validator=instance_of(dict))
-  
   @shape.validator
   def check(self, attrib, shape_values):
     if shape_values is not None:
       for v in shape_values:
         assert isinstance(v, (int, type(None))), \
           "shape should be a list of integers"
-          
+
   _ugraph = attr.ib(repr=False)
   @_ugraph.validator
   def check(self, attrib, value):
     if not isinstance(value, uTensorGraph):
       raise ValueError('Expecting a uTensorGraph, get {}'.format(type(value)))
+
+  attributes = attr.ib(factory=dict, validator=instance_of(dict))
 
   _NULL_PREFIX = 'utensor_null'
 
