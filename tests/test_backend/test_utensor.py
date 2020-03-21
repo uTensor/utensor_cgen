@@ -21,6 +21,27 @@ def test_legacy_utensor(mlp_ugraph):
     })
     backend.apply(mlp_ugraph)
 
+def test_rearch_utensor(simple_ugraph):
+    from utensor_cgen.backend.utensor import uTensorBackend
+
+    this_dir = os.path.dirname(__file__)
+
+    backend = uTensorBackend(config={
+        'utensor': {
+            'backend': {
+                'legacy-api': False,
+                'rearch_code_generator': {
+                    'model_dir': os.path.join(this_dir, 'models'),
+                    'params_dir': os.path.join(this_dir, 'data'),
+                },
+                'pipeline_transformer': {
+                    'transform_methods': ['inline']
+                }
+            },
+        }
+    })
+    backend.apply(simple_ugraph)
+
 
 @pytest.mark.slow_test
 def test_offlinememory(mlp_ugraph):

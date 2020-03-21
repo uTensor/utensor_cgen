@@ -46,10 +46,8 @@ class uTensorRearchGraphLower(uTensorGraphLowerBase):
       return cls.NAME_MAP.get(op_type, op_type)
 
   def handle_tensorflow(self, ugraph):
-    new_ugraph = deepcopy(ugraph)
-    for op_info in new_ugraph.ops_info.values():
+    for op_info in ugraph.ops_info.values():
       op_info.op_type = self.OptypeRenameManager.get_new_optype(op_info.op_type)
-    return new_ugraph
   
   @class_property
   def default_config(cls):
