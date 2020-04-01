@@ -1,6 +1,7 @@
 from __future__ import absolute_import
 import os
 import six
+import re
 
 import numpy as np
 
@@ -12,104 +13,185 @@ from utensor_cgen.utils import topologic_order_graph
 import flatbuffers
 from .tflite_flatbuffer.Model import Model
 
+tensor_np_type = dict()
+tensor_np_type[0] = np.float32
+tensor_np_type[1] = np.float16
+tensor_np_type[2] = np.int32
+tensor_np_type[3] = np.uint8
+tensor_np_type[4] = np.uint64
+tensor_np_type[5] = np.ubyte #FIXME: supposed to be string
+tensor_np_type[6] = np.bool
+tensor_np_type[7] = np.int16
+tensor_np_type[8] = np.cdouble
+tensor_np_type[9] = np.int8
+
+builtin_ops = {v: k for k, v in BuiltinOperator.__dict__.items()}
+
 @FrontendSelector.register(target_exts=['.tflite'])
 class TFLiteParser(Parser):
 
   @classmethod
-  def parse(self, pb_file, output_nodes=None):
-      print("TF Lite Parser")
-      exit()
-#     buf = open(pb_file, 'rb').read()
-#     buf = bytearray(buf)
-#     model = Model.GetRootAsModel(buf, 0)
-#     #TODO: version check
-#     #print(model.Version())
+  def parse(self, tflite_file, output_nodes=None):
+    graph_name, _ = os.path.splitext(tflite_file)
+    buf = open(tflite_file, 'rb').read()
+    buf = bytearray(buf)
+    fb_model = Model.GetRootAsModel(buf, 0)
 
-#     assert model.SubgraphsLength() == 1
-#     subgraph = model.Subgraphs(0)
+    ugraph = uTensorGraph(
+      name=graph_name,
+      output_nodes=[],
+      lib_name='tflite',
+      ops_info={},
+    )
 
-#     #table to convert opcode to op-class
-#     opcode_to_class= []
-#     for i in range(0, model.OperatorCodesLength()):
-#         op_code =  model.OperatorCodes(i)
-#         opcode_to_class.append(op_code)
+    #print("TF Lite Parser")
 
-#     #construct lookup objects for builtin ops
-#     from tflite.BuiltinOperator import BuiltinOperator
-#     from tflite.BuiltinOptions import BuiltinOptions
+    self._build_graph(fb_model, ugraph)
+    return ugraph
 
-#     builtin_ops = {v: k for k, v in BuiltinOperator.__dict__.items()}
-#     op_options = {v: k for k, v in BuiltinOptions.__dict__.items()}
-#     builtin_option_class = self.get_builtin_option_class()
+  def _build_graph(self, fb_model, ugraph):
+    self.tensor_names_map = {} #addresseed by indexi
+    self._build_tensor_map(fb_model, ugraph)
 
-#     ugraph = uTensorGraph(output_nodes=output_nodes,
-#                         backend="tensorflow") #FIXME: with the proper backend
-
-#     #assuming this is the equivalent to ugraph's topological order
-#     for i in range(0, subgraph.OperatorsLength()):
-#       op = subgraph.Operators(i)
-#       opIndex = op.OpcodeIndex()
-#       op_class = opcode_to_class[opIndex]
-#       builtin_code = op_class.BuiltinCode()
-#       op_type = builtin_ops[builtin_code] #op's type in string
-
-#       node_name = op_type + "_" + i
-
-#       op_attr = dict()
-
-#       if(op.CustomOptionsLength() < 1):
-#         option = builtin_option_class[op_type]
-#         builtin_data = op.BuiltinOptions()
-#         option.Init(builtin_data.Bytes, builtin_data.Pos)
-#         op_attr['option'] = option
-
-#         if(op_type == 'FULLY_CONNECTED'):
-#           from tflite_flatbuffer.FullyConnectedOptionsWeightsFormat import FullyConnectedOptionsWeightsFormat
-#           w_formats = {v: k for k, v in FullyConnectedOptionsWeightsFormat.__dict__.items()}
-#           op_attr['weights_format'] = w_formats
-#       else:
-#         op_attr['custom_option'] = op.CustomOptionsAsNumpy()
-
-#       fb_input_tensors = [subgraph.Tensors(input_idx) for input_idx in op.InputsAsNumpy()]
-#       in_tensors = [TensorInfo(name=tensor.Name(),
-#                     ugraph=ugraph,
-#                     op_name=tensor.op.name, #FIXME: who the fuck knows
-#                     dtype=self.tensor_type_lookup(tensor.Type()),
-#                     shape=tensor.ShapeAsNumpy())
-#                     for tensor in fb_input_tensors]
-
-#       fb_output_tensors = [subgraph.Tensors(output_idx) for output_idx in op.OutputsAsNumpy()]
-#       out_tensors = [TensorInfo(name=tensor.Name(),
-#               ugraph=ugraph,
-#               op_name=tensor.op.name, #FIXME: who the fuck knows
-#               dtype=self.tensor_type_lookup(tensor.Type()),
-#               shape=tensor.ShapeAsNumpy())
-#               for tensor in fb_output_tensors]
-
-#       op_info = OperationInfo(name=node_name,
-#         input_tensors=in_tensors,
-#         output_tensors=out_tensors,
-#         op_type=op_type,
-#         backend='tensorflow',  #FIXME: what should this be?
-#         op_attr=op_attr,
-#         ugraph=ugraph)
-
-#       ugraph.ops_info[node_name] = op_info
-    
-#     topologic_order_graph(ugraph)
-#     return ugraph
-
-      
-#   def get_builtin_option_class(self):
-#     from tflite_flatbuffer.FullyConnectedOptions import FullyConnectedOptions
-#     from tflite_flatbuffer.ArgMaxOptions import ArgMaxOptions
-
-#     table = dict()
-#     table['FULLY_CONNECTED'] = FullyConnectedOptions()
-#     table['ARG_MAX'] = ArgMaxOptions()
-
-#     return table
+    self._build_param_ops(fb_model, ugraph)
+    #find and set input nodes
+    self._build_input_ops(fb_model, ugraph)
+    self._build_intermediate_ops(fb_model, ugraph)
+    #TODO: set output nodes
+    topologic_order_graph(ugraph)
   
-#   def tensor_type_lookup(self, int_type):
-#       #see TensorType.py
-#       return -1
+  def _build_tensor_map(self, fb_model, ugraph):
+    subgraph = self._get_tflm_get_subgraph(fb_model)
+
+    for idx in range(0, subgraph.TensorsLength()):
+      tensor = subgraph.Tensors(idx)
+
+      tensor_name = tensor.Name()
+      if tensor_name is '' or None:
+        tensor_name = 'tensor_' + str(idx)
+  
+      dtype=tensor_np_type[tensor.Type()]
+
+      self.tensor_names_map[idx] = TensorInfo(
+        name=self._format_tensor_name('', tensor_name, 0),
+        op_name="",
+        dtype=dtype,
+        shape=tensor.ShapeAsNumpy(),
+        ugraph=ugraph
+      )
+
+      # 0 if intermediate
+      #buffer_index = tensor.Buffer()
+      #buffer_content = model.Buffers(buffer_index).DataAsNumpy().astype(dtype)
+
+      #tensor.Type()
+
+      # quantization missing
+
+  def _build_param_ops(self, fb_model, ugraph):
+    """Find all tensors in initialization list in onnx_graph, normally constants
+    Note that this method will update op_types_cnt and tensor_names_map **inplace**
+    """
+    subgraph = self._get_tflm_get_subgraph(fb_model)
+
+    for idx in range(0, subgraph.TensorsLength()):
+      tensor = subgraph.Tensors(idx)
+      buffer_index = tensor.Buffer()
+
+      if buffer_index == 0:
+        continue
+
+      # TODO: quantization conversion
+
+      node_name = self.tensor_names_map[idx].name + "_Const"
+      dtype = self.tensor_names_map[idx].dtype
+
+      buffer_content = fb_model.Buffers(buffer_index).DataAsNumpy().astype(dtype)
+
+      OperationInfo(
+        name=node_name,
+        input_tensors=[],
+        output_tensors=[self.tensor_names_map[idx]],
+        op_type='Const',
+        lib_name='tflm',
+        ugraph=ugraph,
+        op_attr={
+          'value': buffer_content
+        }
+      )
+
+      self._set_tensor_node(idx, node_name)
+
+
+  def _build_input_ops(self, fb_model, ugraph):
+    """Find placeholders
+    Attach placeholders to input tensors
+    Note this method will update inputs **inplace**
+    """
+    subgraph_inputs_indexi = fb_model.InputsAsNumpy()
+    for index in subgraph_inputs_indexi:
+      node_name = self.tensor_names_map[index].name + "_Placeholder"
+      self._set_tensor_node(index, node_name)
+      OperationInfo(
+        name=node_name,
+        input_tensors=[],
+        output_tensors=[self.tensor_names_map[index]],
+        op_type='Placeholder',
+        ugraph=ugraph,
+        lib_name='tflm',
+        op_attr={}
+      )
+
+  def _build_intermediate_ops(self, fb_model, ugraph):
+    """Build all intermediate nodes, the nodes that is not in neither initialization list nor input list
+    """
+    subgraphs_len = fb_model.SubgraphsLength()
+    assert subgraphs_len == 1, "only 1 subgraph is supported"
+    subgraph = fb_model.Subgraphs(0)
+    for i in range(0, subgraph.OperatorsLength()):
+      #topological order, op-index defined by schema
+      #BuiltinOperator: https://github.com/tensorflow/tensorflow/blob/031804922d8f4d18b61e3ad077f9f1b69273ff21/tensorflow/lite/schema/schema_v3.fbs#L71
+      op = subgraph.Operators(i)
+      local_op_code = op.OpcodeIndex()
+      global_op_code = fb_model.OperatorCodes(local_op_code)
+      builtinOperator_code = global_op_code.BuiltinCode()
+      op_type = builtin_ops[builtinOperator_code]
+
+      node_name = str(i) + "_" + op_type
+
+      input_tensor_names = [self.tensor_names_map[input_index].name for input_index in op.InputsAsNumpy()]
+      output_tensor_names = [self.tensor_names_map[output_index].name for output_index in op.OutputsAsNumpy()]
+
+      OperationInfo(
+        name=node_name,
+        input_tensors=input_tensor_names,
+        output_tensors=output_tensor_names,
+        op_type=op_type,
+        ugraph=ugraph,
+        lib_name='tflm',
+        op_attr={}
+      )
+      
+      for tensor_index in op.OutputsAsNumpy():
+        self._set_tensor_node(tensor_index, node_name)
+
+  def _get_tflm_get_subgraph(self, fb_model):
+    subgraphs_len = fb_model.SubgraphsLength()
+    assert subgraphs_len == 1, "only 1 subgraph is supported"
+    subgraph = fb_model.Subgraphs(0)
+
+    return subgraph
+
+  def _set_tensor_node(self, idx, name):
+    assert self.tensor_names_map[idx].op_name != ""
+    self.tensor_names_map[idx].op_name = name
+
+  def _format_node_name(self, node_name, op_type, op_cnt):
+    if node_name == '':
+      node_name = '{}_{}'.format(op_type, op_cnt)
+    return re.sub(r'[\.:/]', '_', node_name)
+
+  def _format_tensor_name(self, name, node_name, offset):
+    if re.match(r'[a-zA-Z][a-zA-Z0-9]*:[0-9]+', name):
+      return name
+    return '{}:{}'.format(node_name, offset)
