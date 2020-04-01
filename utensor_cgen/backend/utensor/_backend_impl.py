@@ -57,10 +57,14 @@ class uTensorBackend(Backend):
     return config
 
   def apply(self, ugraph):
-    self._graph_op_lower.apply(ugraph)
-    new_ugraph = self._graph_transformer.transform(ugraph)
-    self._graph_alloc_lower.apply(new_ugraph)
-    self._code_generator.apply(new_ugraph)
+    # 1. graph optimization
+    opt_ugraph = self._graph_transformer.transform(ugraph)
+    # 2. lowering to target specific graph
+    self._graph_op_lower.apply(opt_ugraph)
+    # 3. apply memory allocation planner
+    self._graph_alloc_lower.apply(opt_ugraph)
+    # 4. generate target files
+    self._code_generator.apply(opt_ugraph)
 
   def __call__(self, ugraph):
     return self.apply(ugraph)
