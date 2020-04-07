@@ -109,11 +109,15 @@ class AllocationPlan(object):
     self._plan[entity_name] = alloc
 
   def __getitem__(self, entity_name):
-    if entity_name not in self._plan:
+    if entity_name not in self.plan:
       raise KeyError('%s not found' % entity_name)
+    return self.plan[entity_name]
+  
+  def __contains__(self, entity_name):
+    return entity_name in self.plan
   
   def __delitem__(self, entity_name):
-    del self._plan[entity_name]
+    del self.plan[entity_name]
   
   def __getattr__(self, attr_name):
-    return getattr(self._plan, attr_name)
+    return getattr(self.plan, attr_name)

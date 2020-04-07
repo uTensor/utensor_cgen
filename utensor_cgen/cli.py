@@ -65,7 +65,8 @@ def generate_config(target, output):
   )
   with open(output, 'w') as fid:
     fid.write(
-      '# https://github.com/toml-lang/toml\n'
+      '# utensor-cli version {}\n'.format(__version__) + \
+      '# https://github.com/toml-lang/toml\n' + \
       '# <target_name>.<component>.<part>\n'
     )
     fid.write(

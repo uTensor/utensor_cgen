@@ -11,6 +11,7 @@ from itertools import chain, combinations, product
 from math import ceil, log10
 
 import numpy as np
+
 import tensorflow as tf
 from ortools.sat.python import cp_model
 from utensor_cgen.backend.base import BackendPart
@@ -85,6 +86,7 @@ class TensorAllocationPlanner(BackendPart):
   def __init__(self, config):
     self.max_pool_size = self.config['max_pool_size']
     self.include_inputs = self.config['include_inputs']
+    self.include_outputs  = self.config['include_outputs']
     self.out_fname = self.config['out_fname']
     if self.out_fname == 'None':
       self.out_fname = None
@@ -105,28 +107,22 @@ class TensorAllocationPlanner(BackendPart):
     if time_alloc_plan is None:
       TopoOrderTensorTimeslotPlanner(config={}).apply(ugraph)
       time_alloc_plan = ugraph.attributes[TopoOrderTensorTimeslotPlanner.KWARGS_NAMESCOPE]
-    tensors_to_ignore = set(
-      chain(*[
-        op.output_tensors
-        for op in ugraph.get_ops_by_type('Inline')
-      ])
+    ops_to_ignore = set(
+      ugraph.get_ops_by_type('Inline')
     )
     if not self.include_inputs:
-      tensors_to_ignore.update(
-        chain(*[
-          op.output_tensors
-          for op in ugraph.get_ops_by_type('Placeholder')
-        ])
+      ops_to_ignore.update(
+        ugraph.get_ops_by_type('Placeholder')
+      )
+    if not self.include_outputs:
+      ops_to_ignore.update(
+        ugraph.output_ops
       )
     tensors_to_schedule = set()
     nonoverlap_map = defaultdict(set)
     for time_slot, op_name in enumerate(ugraph.topo_order):
       op_info = ugraph.ops_info[op_name]
-      # ignore inline ops
-      if op_info.op_type == 'Inline':
-        continue
-      # ignore placeholders if not included
-      if not self.include_inputs and op_info.op_type == 'Placeholder':
+      if op_info in ops_to_ignore:
         continue
       # all output tensor should not overlap with tensors that's still alive
       for out_tensor, known_tensor in product(op_info.output_tensors, tensors_to_schedule):
@@ -206,6 +202,7 @@ class TensorAllocationPlanner(BackendPart):
           data_alignment=self.data_alignment,
         )
       logger.info('optimal tensor allocation plan solved, total memory required: %i bytes', opt_mempool_size)
+      logger.info('number of tensors allocated: %i' % len(alloc_plan))
     else:
       logger.info('tensor allocation plan not found, status: %s', solver.StatusName(status))
       if status == cp_model.INFEASIBLE:
@@ -247,6 +244,7 @@ class TensorAllocationPlanner(BackendPart):
     return {
       'max_pool_size': 1024*1024, # 1G bytes
       'include_inputs': False,
+      'include_outputs': True, # for RNN, this may be False
       'out_fname': 'None',
       'aesthetic_kwargs': {
         'split_on_large_graph': True,
