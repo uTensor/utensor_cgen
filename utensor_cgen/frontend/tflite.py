@@ -25,12 +25,12 @@ tensor_np_type[7] = np.int16
 tensor_np_type[8] = np.cdouble
 tensor_np_type[9] = np.int8
 
+from .tflite_flatbuffer.BuiltinOperator import BuiltinOperator
 builtin_ops = {v: k for k, v in BuiltinOperator.__dict__.items()}
 
 @FrontendSelector.register(target_exts=['.tflite'])
 class TFLiteParser(Parser):
 
-  @classmethod
   def parse(self, tflite_file, output_nodes=None):
     graph_name, _ = os.path.splitext(tflite_file)
     buf = open(tflite_file, 'rb').read()
@@ -47,6 +47,7 @@ class TFLiteParser(Parser):
     #print("TF Lite Parser")
 
     self._build_graph(fb_model, ugraph)
+
     return ugraph
 
   def _build_graph(self, fb_model, ugraph):
@@ -57,9 +58,22 @@ class TFLiteParser(Parser):
     #find and set input nodes
     self._build_input_ops(fb_model, ugraph)
     self._build_intermediate_ops(fb_model, ugraph)
-    #TODO: set output nodes
+    self._set_output_ops(fb_model, ugraph)
+
     topologic_order_graph(ugraph)
-  
+
+  def _set_output_ops(self, fb_model, ugraph):
+    """identfy output nodes in fb_mdel
+    sets output_nodes in ugraph
+    Note this method will update ugraph **inplace**
+    """
+    subgraph_outputs_indexi = fb_model.OutputsAsNumpy() #tensor indexi
+    output_node_names = set()
+    for index in subgraph_outputs_indexi:
+      output_node_names.add(self.tensor_names_map[index].op_name)
+
+    ugraph.output_nodes = list(output_node_names)
+
   def _build_tensor_map(self, fb_model, ugraph):
     subgraph = self._get_tflm_get_subgraph(fb_model)
 
@@ -72,11 +86,15 @@ class TFLiteParser(Parser):
   
       dtype=tensor_np_type[tensor.Type()]
 
+      attributes = dict()
+      attributes['quantizationParam'] = tensor.Quantization()
+
       self.tensor_names_map[idx] = TensorInfo(
         name=self._format_tensor_name('', tensor_name, 0),
         op_name="",
         dtype=dtype,
         shape=tensor.ShapeAsNumpy(),
+        attributes=attributes,
         ugraph=ugraph
       )
 
@@ -85,8 +103,6 @@ class TFLiteParser(Parser):
       #buffer_content = model.Buffers(buffer_index).DataAsNumpy().astype(dtype)
 
       #tensor.Type()
-
-      # quantization missing
 
   def _build_param_ops(self, fb_model, ugraph):
     """Find all tensors in initialization list in onnx_graph, normally constants
@@ -100,8 +116,6 @@ class TFLiteParser(Parser):
 
       if buffer_index == 0:
         continue
-
-      # TODO: quantization conversion
 
       node_name = self.tensor_names_map[idx].name + "_Const"
       dtype = self.tensor_names_map[idx].dtype
@@ -121,7 +135,6 @@ class TFLiteParser(Parser):
       )
 
       self._set_tensor_node(idx, node_name)
-
 
   def _build_input_ops(self, fb_model, ugraph):
     """Find placeholders
