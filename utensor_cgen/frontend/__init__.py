@@ -22,7 +22,7 @@ class FrontendSelector(object):
     return _register
 
   @classmethod
-  def parse(cls, model_file, output_nodes, config=None):
+  def parse(cls, model_file, output_nodes=None, config=None):
     if config is None:
       config = {}
     _, ext = os.path.splitext(model_file)

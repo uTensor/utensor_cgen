@@ -1,3 +1,5 @@
+from copy import deepcopy
+
 from six import with_metaclass
 
 from utensor_cgen.backend.utensor.snippets._types import NP_TYPES_MAP
@@ -61,6 +63,7 @@ class _Operator(with_metaclass(_OperatorMeta), object):
       self = object.__new__(cls)
       self.in_dtypes = in_dtypes
       self.out_dtypes = out_dtypes
+      self.attributes = deepcopy(op_info.op_attr)
       cls._cache[type_signature] = self
     return cls._cache[type_signature]
 

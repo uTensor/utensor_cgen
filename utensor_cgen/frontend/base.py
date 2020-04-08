@@ -11,6 +11,10 @@ class Parser(object):
     self._config = config
     return self
 
+  @property
+  def config(self):
+    return self._config
+
   @classmethod
   @abstractmethod
   def parse(cls, fname, outupt_nodes):

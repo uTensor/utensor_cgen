@@ -6,19 +6,21 @@ import types
 from ast import literal_eval
 from collections import deque
 from copy import deepcopy
+from functools import wraps
 from random import choice
 from string import ascii_letters, digits
+from time import time
 
 import attr
-import numpy as np
 from click.types import ParamType
 from toml import loads as _parse
 
 import idx2numpy as idx2np
+import numpy as np
 from utensor_cgen.logger import logger
 
 __all__ = ["save_idx", "save_consts", "save_graph", "log_graph",
-           "NamescopedKWArgsParser", "NArgsParam", "MUST_OVERWRITEN"]
+           "NamescopedKWArgsParser", "NArgsParam", "MUST_OVERWRITE"]
 
 class LazyLoader(types.ModuleType):
 
@@ -197,7 +199,7 @@ class NamescopedKWArgsParser:
 
   TODO: replace it with a better data manager
   """
-  def __init__(self, namespace, kwargs, data_manager=None, op_info=None):
+  def __init__(self, namespace, kwargs):
     ns_pattern = re.compile(r'^([^\d\W][\w\d_]*)__([^\d\W][\w\d_]*)')
     self._namespace = namespace
     self._private_kwargs = {}
@@ -211,17 +213,7 @@ class NamescopedKWArgsParser:
           self._private_kwargs[argname] = value
       else:
         self._shared_kwargs[key] = value
-    if op_info is not None and data_manager is not None:
-      outputs = [tensor_info.name for tensor_info in op_info.output_tensors]
-      for tensor in outputs:
-        values = data_manager.group(tensor)
-        for key, value in values.items():
-          if key not in self._private_kwargs:
-            self._private_kwargs[key] = []
-            self._private_kwargs[key].append(value)
-          else:
-            self._private_kwargs[key].append(value)
-  
+
   def get(self, argname, default=None):
     """
     Get value of given name in the namespace
@@ -323,7 +315,7 @@ class _MustOverwrite(object):
     return cls._obj
 
 
-MUST_OVERWRITEN = _MustOverwrite()
+MUST_OVERWRITE = _MustOverwrite()
 
 
 def topologic_order_graph(ugraph):
@@ -336,7 +328,6 @@ def topologic_order_graph(ugraph):
   - `Topological Sorting (wiki) <https://en.wikipedia.org/wiki/Topological_sorting>`_
   """
   ugraph.topo_order = get_topologic_order(ugraph, ugraph.output_nodes)[::-1]
-
 
 def get_topologic_order(ugraph, init_nodes=None):
   """
@@ -352,10 +343,6 @@ def get_topologic_order(ugraph, init_nodes=None):
 
   - `Topological Sorting (wiki) <https://en.wikipedia.org/wiki/Topological_sorting>`_
   """
-  if ugraph.lib_name != "tensorflow":
-    raise ValueError(
-      "topologic_order_graph works only on tensorflow graph"
-    )
   if init_nodes is None:
     init_nodes = ugraph.output_nodes
   queue = deepcopy(init_nodes)
@@ -388,7 +375,6 @@ def get_topologic_order(ugraph, init_nodes=None):
     visit(node_name)
   return ops_torder
 
-
 def ops_bfs_queue(ugraph, init_nodes=None):
   if init_nodes is None:
     init_nodes = [
@@ -408,7 +394,6 @@ def ops_bfs_queue(ugraph, init_nodes=None):
     queue.extend(op.input_nodes)
     bfs_deck.append(op)
   return bfs_deck
-
 
 def prune_graph(ugraph):
   """
@@ -453,11 +438,34 @@ def prune_graph(ugraph):
     new_ugraph.ops_info.pop(op_name)
   return new_ugraph
 
-
 def random_str(length=8):
   letters = ascii_letters+digits
   chars = [choice(letters) for _ in range(length)]
   return ''.join(chars)
+
+def parse_toml(file_or_path):
+  if isinstance(file_or_path, str):
+    fid = open(file_or_path, 'r')
+  doc = _parse(fid.read())
+  fid.close()
+  return doc
+
+def timed(func):
+
+  @wraps(func)
+  def wrapped(*args, **kwargs):
+    start_time = time()
+    ret = func(*args, **kwargs)
+    end_time = time()
+    logger.info('collapsed time of calling %s: %0.4f seconds', func.__name__, end_time - start_time)
+    return ret
+  
+  return wrapped
+
+def is_abstract(func):
+  if isinstance(func, types.MethodType):
+    func = func.__func__
+  return getattr(func, '__isabstractmethod__', False)
 
 
 class class_property(object):
@@ -488,17 +496,15 @@ class Pipeline(object):
     cls = type(self)
     return cls(funcs=self._funcs[slice_obj])
 
-
-def parse_toml(file_or_path):
-  if isinstance(file_or_path, str):
-    fid = open(file_or_path, 'r')
-  doc = _parse(fid.read())
-  fid.close()
-  return doc
-
-
 class Configuration(object):
   def __init__(self, defaults=None, user_config=None):
+    """
+    Note
+    ----
+    - any value that is in user_config should be in defaults
+    - any value that is not in defaults should not be in user_config 
+    """
+    # TODO: write a check on the inputs?
     if defaults is None:
       defaults = {}
     if user_config is None:
@@ -521,16 +527,30 @@ class Configuration(object):
     elif key in self._defaults:
       value = self._defaults[key]
     return value
-     
+
+  def keys(self):
+    return self.to_dict().keys()
+  
+  def values(self):
+    return self.to_dict().values()
+
+  def items(self):
+    config = self.to_dict()
+    return config.items()
+  
+  def to_dict(self):
+    config = deepcopy(self._defaults)
+    config.update(self._user_config)
+    return config
 
   def __getitem__(self, key):
     if key not in self:
       raise KeyError('invalid key: {}'.format(key))
     value = self._user_config.get(
       key, self._defaults[key]
-    )
+    )       
     if isinstance(value, dict):
-      value = type(self)(value, {})
+      value = type(self)(self._defaults[key], value)
     return value
 
   def __contains__(self, key):

@@ -8,8 +8,9 @@ def test_dropout_trans_1_1(droput_graph_tuple):
     (graph_def,
      (keep_prob_name, dropout_output_name),
      output_nodes) = droput_graph_tuple
-    ugraph = GraphDefParser.parse(graph_def, output_nodes=output_nodes)
+    ugraph = GraphDefParser(config={}).parse(graph_def, output_nodes=output_nodes)
     transformer = DropoutTransformer()
+    assert transformer.prune_graph
     new_ugraph = transformer.transform(ugraph)
     for op in new_ugraph.ops_info.values():
         assert op.ugraph
@@ -40,8 +41,9 @@ def test_dropout_trans_1_2(droput_graph_tuple):
     (graph_def,
      (keep_prob_name, dropout_output_name),
      output_nodes) = droput_graph_tuple
-    ugraph = GraphDefParser.parse(graph_def, output_nodes=output_nodes)
+    ugraph = GraphDefParser(config={}).parse(graph_def, output_nodes=output_nodes)
     transformer = DropoutTransformerV2()
+    assert transformer.prune_graph
     new_ugraph = transformer.transform(ugraph)
     for op in new_ugraph.ops_info.values():
         assert op.ugraph
@@ -70,7 +72,7 @@ def test_dropout_trans_1_2(droput_graph_tuple):
 
 def test_dropout_trans_2(dropout_graph_tuple2):
     graph_def, output_nodes = dropout_graph_tuple2
-    ugraph = GraphDefParser.parse(graph_def, output_nodes=output_nodes)
+    ugraph = GraphDefParser(config={}).parse(graph_def, output_nodes=output_nodes)
     trans = DropoutTransformerV2()
     new_ugraph = trans.transform(ugraph)
     assert len(new_ugraph.ops_info) == 1

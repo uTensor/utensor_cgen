@@ -9,8 +9,10 @@ from collections import defaultdict
 from copy import deepcopy
 
 import numpy as np
-
 import tensorflow as tf
+# FIXME: remove uTensorOpEqualityDelegate import after we have generic ops
+from utensor_cgen.backend.utensor.code_generator.legacy._operators import \
+    uTensorOpEqualityDelegate
 from utensor_cgen.frontend.tensorflow import GraphDefParser
 from utensor_cgen.ir import OperationInfo, uTensorGraph
 from utensor_cgen.logger import logger
@@ -21,197 +23,11 @@ from utensor_cgen.utils import (parse_tensor_name, prune_graph,
 from .base import Transformer
 from .pipeline import TransformerPipeline
 
-__all__ = ["DropoutTransformer", "BatchNormTransformer", "InlineTransformer", "TensorLifeProbe"]
-
-
-@TransformerPipeline.register_transformer
-class TensorLifeProbe(Transformer):
-  METHOD_NAME = 'tensorlife'
-  KWARGS_NAMESCOPE = '_utensor_utlife'
-  DATA_NAME = 'address'
-
-  def __init__(
-    self,
-    buff_size=100000, #1k bytes
-    unit_size=4
-  ):
-    self.buff_size = buff_size
-    self.unit_size = unit_size
-
-  def transform(self, ugraph):
-    new_ugraph = deepcopy(ugraph)
-    new_ugraph.setup_data_manager({self.DATA_NAME: " "})
-    # use_def_table: dict, tensor_name -> {'start': op_idx, 'end': op_idx}
-    use_def_table = self._create_resource_table(new_ugraph)
-    allocate_table = dict()
-    allocate_success = self.allocate_graph(new_ugraph, allocate_table, use_def_table, self.buff_size, self.unit_size)
-
-    if allocate_success:
-      for node_name in new_ugraph.topo_order:
-        in_t_infos = new_ugraph.ops_info[node_name].input_tensors
-        for in_o in in_t_infos:
-          if in_o.name in allocate_table:
-            new_ugraph.data_manager.address = (in_o.name, allocate_table[in_o.name]['offsetstart'])
-        out_t_infos = new_ugraph.ops_info[node_name].output_tensors
-        for out_o in out_t_infos:
-          if out_o.name in allocate_table:
-            new_ugraph.data_manager.address = (out_o.name, allocate_table[out_o.name]['offsetstart'])
-      return new_ugraph
-    return ugraph
-
-  def _query_offset_fromallocate_table(self, allocate_table, start, end):
-    new_start = start
-    new_end = end
-    for key in allocate_table:
-      if allocate_table[key]['offsetstart'] >= start and allocate_table[key]['offsetend'] <= end:
-        continue
-      elif allocate_table[key]['offsetstart'] <= start and allocate_table[key]['offsetend'] >= start:
-        new_start = allocate_table[key]['offsetstart']
-        if allocate_table[key]['offsetend'] >= end:
-          new_end = max(new_end, allocate_table[key]['offsetend'])
-        else:
-          new_end = max(end, new_end)
-      elif allocate_table[key]['offsetstart'] >= start and allocate_table[key]['offsetend'] >= start:
-        if allocate_table[key]['offsetend'] >= end:
-          new_end = max(new_end, allocate_table[key]['offsetend'])
-        else:
-          new_end = max(end, new_end)
-    return new_start, new_end
-
-  def _query_time_fromallocate_table(self, allocate_table, start, end):
-    time_start = start
-    time_end = end
-    for key in allocate_table:
-      if allocate_table[key]['start'] >= start and allocate_table[key]['end'] <= end:
-        continue
-      elif allocate_table[key]['start'] <= start and allocate_table[key]['end'] >= start:
-        if allocate_table[key]['end'] >= end:
-          time_end = max(time_end, allocate_table[key]['end'])
-        else:
-          time_end = max(end, time_end)
-      elif allocate_table[key]['start'] >= start and allocate_table[key]['end'] >= start:
-        if allocate_table[key]['end'] >= end:
-          time_end = max(time_end, allocate_table[key]['end'])
-        else:
-          time_end = max(end, time_end)
-    return time_start, time_end
-
-  def _query_result(self, allocate_table, offset, length, timestart, timeend):
-    for key in allocate_table:
-      mem_occupied = (
-        (allocate_table[key]['offsetstart'] >= offset and allocate_table[key]['offsetstart'] <= offset + length) or
-        (allocate_table[key]['offsetstart'] <= offset and allocate_table[key]['offsetend'] >= offset)
-      )
-      life_span_occupied = (
-        (allocate_table[key]['start'] >= timestart and allocate_table[key]['start'] <= timeend) or
-        (allocate_table[key]['start'] <= timestart and allocate_table[key]['end'] >= timestart)
-      )
-      if mem_occupied and life_span_occupied:
-        return True
-    return False
-  
-  def allocate_tensor(self, tensors, tensor_index, allocate_table, use_def_table, buffer_size, unit_size):
-    if tensor_index == len(tensors):
-      return True
-    if tensors[tensor_index].name in allocate_table:
-      return self.allocate_tensor(tensors, tensor_index + 1, allocate_table, use_def_table, buffer_size, unit_size)
-
-    tensor = tensors[tensor_index]
-    candidates = self._get_candidates(allocate_table, use_def_table, buffer_size, unit_size, tensor)
-    if not candidates:
-      return False
-    success = False
-    for candidate in candidates:
-      self._update_allocation_table(allocate_table, use_def_table, tensor, candidate, candidate + tensor.size)
-      success = self.allocate_tensor(tensors, tensor_index + 1, allocate_table, use_def_table, buffer_size, unit_size)
-      if success:
-        break
-      else:
-        self._remove_allocate_table(allocate_table, tensor)
-    return success
-
-  def allocate_graph(self, ugraph, allocate_table, use_def_table, buffer_size, unit_size):
-    tensors = []
-
-    for node_name in ugraph.topo_order:
-      in_t_infos = [
-        tensor
-        for tensor in ugraph.ops_info[node_name].input_tensors
-        if tensor.op.op_type != 'Inline'
-      ]
-      out_t_infos = [
-        tensor
-        for tensor in ugraph.ops_info[node_name].output_tensors
-        if tensor.op.op_type != 'Inline'
-      ]
-      tensors.extend(in_t_infos)
-      tensors.extend(out_t_infos)
-    
-    succ = self.allocate_tensor(tensors, 0, allocate_table, use_def_table, buffer_size, unit_size)
-    return succ
-
-  def _check(self, allocate_table, use_def_table, tensor, tensor_offset_start, tensor_offset_end):
-    valid = False
-    timestart = use_def_table[tensor.name]['start']
-    timeend = use_def_table[tensor.name]['end']
-    offset, length = self._query_offset_fromallocate_table(allocate_table, tensor_offset_start, tensor_offset_end)
-    timestart, timeend = self._query_time_fromallocate_table(allocate_table, timestart, timeend)
-    occupied = self._query_result(allocate_table, offset, length, timestart, timeend)
-    if not occupied:
-      valid = True
-    return valid
-
-  def _get_candidates(self, allocate_table, use_def_table, buffer_size, unit_size, in_o):
-    ret = []
-    for i in range(0, buffer_size, unit_size):
-      if self._check(allocate_table, use_def_table, in_o, i, i + in_o.size):
-        ret.append(i)
-    return ret
-  
-  def _update_allocation_table(
-    self,
-    allocate_table,
-    use_def_table,
-    tensor,
-    offset_start,
-    offset_end
-  ):   
-    time_start = use_def_table[tensor.name]['start']
-    time_end = use_def_table[tensor.name]['end']
-    attribute = dict()
-    attribute['start'] = time_start
-    attribute['end'] = time_end
-    attribute['offsetstart'] = offset_start
-    attribute['offsetend'] = offset_end
-    allocate_table[tensor.name] = attribute
-    return allocate_table   
-  
-  def _remove_allocate_table(self, allocate_table, tensor):
-    del allocate_table[tensor.name]
-
-  def _create_resource_table(self, ugraph):
-    resource_table = dict()
-    len_map = {
-      op_name: idx
-      for idx, op_name in enumerate(ugraph.topo_order)
-    }
-    for node_name in ugraph.topo_order:
-      for tensor_info in ugraph.ops_info[node_name].input_tensors:
-        if tensor_info.name not in resource_table:
-          lifetime = dict()
-          lifetime['start'] = len_map[node_name]
-          lifetime['end'] = len_map[node_name]  
-          resource_table[tensor_info.name] = lifetime   
-        resource_table[tensor_info.name]['end']= len_map[node_name] 
-      
-      for outtensor in ugraph.ops_info[node_name].output_tensors:
-        if outtensor.name not in resource_table:
-          lifetime = dict()
-          lifetime['start'] = len_map[node_name]
-          lifetime['end'] = len_map[node_name]  
-          resource_table[outtensor.name] = lifetime
-
-    return resource_table
+__all__ = [
+  "DropoutTransformer",
+  "BatchNormTransformer",
+  "InlineTransformer",
+]
 
 
 @TransformerPipeline.register_transformer
@@ -235,6 +51,9 @@ class BiasAddTransformer(Transformer):
 class InlineTransformer(Transformer):
   METHOD_NAME = 'inline'
   KWARGS_NAMESCOPE = '_utensor_inline'
+
+  def __init__(self):
+    super(InlineTransformer, self).__init__(prune_graph=False)
 
   def transform(self, ugraph):
     for node_name in ugraph.topo_order:
@@ -266,6 +85,7 @@ class DropoutTransformer(Transformer):
   TARGET_NODENAME_PATTERN = re.compile(r'(dropout[_\w\d]*)/.*')
 
   def __init__(self, name_pattern=r'(dropout[_\w\d]*)/.*'):
+    super(DropoutTransformer, self).__init__(prune_graph=True)
     self._op_name_pattern = re.compile(name_pattern)
 
   def transform(self, ugraph):
@@ -367,7 +187,7 @@ class DropoutTransformerV2(Transformer):
         dummy_x = tf.constant(np.random.rand(10, 10), dtype=tf.float32, name='dummy_x')
         dummy_rate = tf.placeholder(dtype=tf.float32, name='dummy_rate')
         dropout = tf.nn.dropout(dummy_x, rate=dummy_rate, name='dropout')
-    patrn_ugraph = GraphDefParser.parse(graph.as_graph_def(), output_nodes=[dropout.op.name])
+    patrn_ugraph = GraphDefParser(config={}).parse(graph.as_graph_def(), output_nodes=[dropout.op.name])
     # replace dummy_x
     patrn_ugraph['dropout/truediv'].replace_with_null_input_tensor(0)
     # # replace dummy_rate
@@ -389,7 +209,11 @@ class DropoutTransformerV2(Transformer):
     return new_ugraph
   
   def _transform_tf(self, ugraph):
-    matcher = uTensorGraphMatcher(pattern_ugraph=self.pattern_ugraph)
+    # FIXME: should use a generic op_equality_delegate
+    matcher = uTensorGraphMatcher(
+      pattern_ugraph=self.pattern_ugraph,
+      op_equality_delegate=uTensorOpEqualityDelegate
+    )
     matches = matcher.match(ugraph, n=1)
     while matches:
       match = matches[0]

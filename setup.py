@@ -59,8 +59,10 @@ setup(
         'torchvision',
         'onnx-tf==1.2.1',
         'graphviz',
+        'matplotlib',
         'toml',
         'flatbuffers',
+        'ortools',
     ],
     extras_require={
         'dev': ['pytest']

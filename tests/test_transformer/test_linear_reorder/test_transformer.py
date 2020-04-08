@@ -2,6 +2,7 @@ def test_linear_reorder_1(subj_ugraph_1):
     from utensor_cgen.transformer.linear_reoder import LinearReorderTransformerV2
 
     transformer = LinearReorderTransformerV2()
+    assert not transformer.prune_graph
     new_ugraph = transformer.transform(subj_ugraph_1)
     for op in new_ugraph['output'].input_nodes:
         assert op.op_type == 'Relu', 'expecting Relu, get {}'.format(op.op_type)

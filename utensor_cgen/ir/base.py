@@ -16,11 +16,12 @@ from tensorflow.core.framework.tensor_pb2 import TensorProto as _TensorProto
 from tensorflow.core.framework.tensor_shape_pb2 import \
     TensorShapeProto as _TensorShapeProto
 from tensorflow.core.framework.types_pb2 import DataType as _DataType
-from utensor_cgen.ir.instr import DataManager
+from utensor_cgen.logger import logger
 from utensor_cgen.utils import random_str, topologic_order_graph
 
 from .converter import AttrValueConverter, ConverterDispatcher
 from .graph_builder import uTensorGraphBuilderMixin
+from .instr import DataManager
 
 __all__ = [
   'TensorInfo', 'OperationInfo',
@@ -66,7 +67,7 @@ class TensorInfo(IRBase, _NoShallowCopyMixin):
   """
   name = attr.ib(validator=instance_of(six.string_types))
   op_name = attr.ib(validator=instance_of(six.string_types))
-  dtype = attr.ib(validator=instance_of(np.dtype))
+  dtype = attr.ib(validator=instance_of((np.dtype, type(None))))
 
   shape = attr.ib(validator=instance_of((list, type(None))))
   @shape.validator
@@ -174,14 +175,24 @@ class TensorInfo(IRBase, _NoShallowCopyMixin):
 
   @property
   def size(self):
+    if self.shape is None:
+      raise RuntimeError('nondeterministic shape has no size')
+    if None in self.shape:
+      logger.warning(
+        'nondeterministic dimension detected, implicitly converting None to 1: %s, %s',
+        self.name,
+        self.shape,
+      )
     return reduce(lambda i, j: i*(j is None and 1 or j), self.shape, 1)
 
   def __deepcopy__(self, memo):
-    new_tensor = TensorInfo(name=self.name,
-                            ugraph=memo['ugraph'],
-                            op_name=self.op_name,
-                            dtype=self.dtype,
-                            shape=deepcopy(self.shape, memo))
+    new_tensor = TensorInfo(
+      name=self.name,
+      ugraph=memo['ugraph'],
+      op_name=self.op_name,
+      dtype=self.dtype,
+      shape=deepcopy(self.shape, memo)
+    )
     return new_tensor
   
   def __hash__(self):
@@ -463,8 +474,8 @@ class uTensorGraph(IRBase, _NoShallowCopyMixin, uTensorGraphBuilderMixin):
   ops_info = attr.ib(factory=dict)
   # non-init
   topo_order = attr.ib(factory=list, init=False)
-  data_manager = attr.ib(default=None, init=False)
   _type_to_op_map = attr.ib(factory=dict, init=False, repr=False)
+  attributes = attr.ib(factory=dict, init=False, repr=False)
 
   def __attrs_post_init__(self):
     if not all(
@@ -610,7 +621,7 @@ class uTensorGraph(IRBase, _NoShallowCopyMixin, uTensorGraphBuilderMixin):
     if not self.topo_order:
       topologic_order_graph(self)
     return [self.ops_info[name] for name in self.topo_order]
-  
+
   def setup_data_manager(self, datas):
     manager = DataManager(datas)
     self.data_manager = manager
@@ -668,10 +679,8 @@ class uTensorGraph(IRBase, _NoShallowCopyMixin, uTensorGraphBuilderMixin):
       k: deepcopy(v, memo)
       for k, v in self.ops_info.items()
     }
-    if self.data_manager:
-      new_graph.data_manager = DataManager({})
-      new_graph.data_manager.StorageCenter = deepcopy(self.data_manager.StorageCenter)
     new_graph._lib_name = self._lib_name
+    new_graph.attributes = deepcopy(self.attributes)
     topologic_order_graph(new_graph)
     return new_graph
 
