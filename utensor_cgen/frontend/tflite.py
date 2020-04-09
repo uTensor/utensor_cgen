@@ -9,21 +9,22 @@ from utensor_cgen.frontend.base import Parser
 from utensor_cgen.frontend import FrontendSelector
 from utensor_cgen.ir.base import TensorInfo, OperationInfo, uTensorGraph
 from utensor_cgen.utils import topologic_order_graph
+from utensor_cgen.ir.converter import GenericTensorConverterMixin
 
 import flatbuffers
 from .tflite_flatbuffer.Model import Model
 
 tensor_np_type = dict()
-tensor_np_type[0] = np.float32
-tensor_np_type[1] = np.float16
-tensor_np_type[2] = np.int32
-tensor_np_type[3] = np.uint8
-tensor_np_type[4] = np.uint64
-tensor_np_type[5] = np.ubyte #FIXME: supposed to be string
-tensor_np_type[6] = np.bool
-tensor_np_type[7] = np.int16
-tensor_np_type[8] = np.cdouble
-tensor_np_type[9] = np.int8
+tensor_np_type[0] = np.dtype('float32')
+tensor_np_type[1] = np.dtype('float16')
+tensor_np_type[2] = np.dtype('int32')
+tensor_np_type[3] = np.dtype('uint8')
+tensor_np_type[4] = np.dtype('uint64')
+tensor_np_type[5] = np.dtype('ubyte') #FIXME: supposed to be string
+tensor_np_type[6] = np.dtype('bool')
+tensor_np_type[7] = np.dtype('int16')
+tensor_np_type[8] = np.dtype('cdouble')
+tensor_np_type[9] = np.dtype('int8')
 
 from .tflite_flatbuffer.BuiltinOperator import BuiltinOperator
 builtin_ops = {v: k for k, v in BuiltinOperator.__dict__.items()}
@@ -67,7 +68,8 @@ class TFLiteParser(Parser):
     sets output_nodes in ugraph
     Note this method will update ugraph **inplace**
     """
-    subgraph_outputs_indexi = fb_model.OutputsAsNumpy() #tensor indexi
+    subgraph = self._get_tflm_get_subgraph(fb_model)
+    subgraph_outputs_indexi = subgraph.OutputsAsNumpy() #tensor indexi
     output_node_names = set()
     for index in subgraph_outputs_indexi:
       output_node_names.add(self.tensor_names_map[index].op_name)
@@ -89,11 +91,17 @@ class TFLiteParser(Parser):
       attributes = dict()
       attributes['quantizationParam'] = tensor.Quantization()
 
+
+      if type(tensor.ShapeAsNumpy()) == np.ndarray:
+        shape = tensor.ShapeAsNumpy().tolist()
+      else:
+        shape = [d for d in fb_model.Buffers(12).DataAsNumpy().shape]
+
       self.tensor_names_map[idx] = TensorInfo(
         name=self._format_tensor_name('', tensor_name, 0),
         op_name="",
         dtype=dtype,
-        shape=tensor.ShapeAsNumpy(),
+        shape=shape,
         attributes=attributes,
         ugraph=ugraph
       )
@@ -120,6 +128,9 @@ class TFLiteParser(Parser):
       node_name = self.tensor_names_map[idx].name + "_Const"
       dtype = self.tensor_names_map[idx].dtype
 
+      buffer_array = fb_model.Buffers(buffer_index).DataAsNumpy()
+      if type(buffer_array) == int:
+        continue #somehow, sometimes, the buffer contains no data
       buffer_content = fb_model.Buffers(buffer_index).DataAsNumpy().astype(dtype)
 
       OperationInfo(
@@ -130,7 +141,7 @@ class TFLiteParser(Parser):
         lib_name='tflm',
         ugraph=ugraph,
         op_attr={
-          'value': buffer_content
+          'value': GenericTensorConverterMixin.GenericType(np_array=buffer_content)
         }
       )
 
@@ -141,7 +152,8 @@ class TFLiteParser(Parser):
     Attach placeholders to input tensors
     Note this method will update inputs **inplace**
     """
-    subgraph_inputs_indexi = fb_model.InputsAsNumpy()
+    subgraph = self._get_tflm_get_subgraph(fb_model)
+    subgraph_inputs_indexi = subgraph.InputsAsNumpy()
     for index in subgraph_inputs_indexi:
       node_name = self.tensor_names_map[index].name + "_Placeholder"
       self._set_tensor_node(index, node_name)
@@ -172,8 +184,8 @@ class TFLiteParser(Parser):
 
       node_name = str(i) + "_" + op_type
 
-      input_tensor_names = [self.tensor_names_map[input_index].name for input_index in op.InputsAsNumpy()]
-      output_tensor_names = [self.tensor_names_map[output_index].name for output_index in op.OutputsAsNumpy()]
+      input_tensor_names = [self.tensor_names_map[input_index] for input_index in op.InputsAsNumpy()]
+      output_tensor_names = [self.tensor_names_map[output_index] for output_index in op.OutputsAsNumpy()]
 
       OperationInfo(
         name=node_name,
@@ -196,7 +208,7 @@ class TFLiteParser(Parser):
     return subgraph
 
   def _set_tensor_node(self, idx, name):
-    assert self.tensor_names_map[idx].op_name != ""
+    assert self.tensor_names_map[idx].op_name == ""
     self.tensor_names_map[idx].op_name = name
 
   def _format_node_name(self, node_name, op_type, op_cnt):
