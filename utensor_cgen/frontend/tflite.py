@@ -9,7 +9,7 @@ from utensor_cgen.frontend.base import Parser
 from utensor_cgen.frontend import FrontendSelector
 from utensor_cgen.ir.base import TensorInfo, OperationInfo, uTensorGraph
 from utensor_cgen.utils import topologic_order_graph
-from utensor_cgen.ir.converter import GenericTensorConverterMixin
+from utensor_cgen.ir.converter import GenericTensorConverterMixin, AttrValueConverter
 
 import flatbuffers
 from .tflite_flatbuffer.Model import Model
@@ -28,6 +28,131 @@ tensor_np_type[9] = np.dtype('int8')
 
 from .tflite_flatbuffer.BuiltinOperator import BuiltinOperator
 builtin_ops = {v: k for k, v in BuiltinOperator.__dict__.items()}
+
+from .tflite_flatbuffer.ActivationFunctionType import ActivationFunctionType
+from .tflite_flatbuffer.FullyConnectedOptionsWeightsFormat import FullyConnectedOptionsWeightsFormat
+from .tflite_flatbuffer.CustomOptionsFormat import CustomOptionsFormat
+
+def class_option2str(obj, idx):
+    names_lookup = {v: k for k, v in obj.__dict__.items()}
+    name = names_lookup[idx]
+    return str(idx) + " (" + name + ")"
+
+customOptionFormat_lookup = {v: k for k, v in CustomOptionsFormat.__dict__.items()}
+
+def fully_connected_op_data(op):
+    option_dict = {}
+    if(op.CustomOptionsLength() < 1):
+        from .tflite_flatbuffer.FullyConnectedOptions import FullyConnectedOptions
+        option = FullyConnectedOptions()
+        builtin_data = op.BuiltinOptions()
+        option.Init(builtin_data.Bytes, builtin_data.Pos)
+        option_dict["FusedActivationFunction"] = class_option2str(ActivationFunctionType, option.FusedActivationFunction())
+        option_dict["w_formats"] = class_option2str(FullyConnectedOptionsWeightsFormat, option.WeightsFormat())
+    else:
+        option_dict[customOptionFormat_lookup[op.CustomOptionsFormat()]] = op.CustomOptionsAsNumpy()
+    return option_dict
+        
+def depthwise_conv2d_op_data(op):
+    option_dict = {}
+    if(op.CustomOptionsLength() < 1):
+        from .tflite_flatbuffer.DepthwiseConv2DOptions import DepthwiseConv2DOptions
+        option = DepthwiseConv2DOptions()
+        builtin_data = op.BuiltinOptions()
+        option.Init(builtin_data.Bytes, builtin_data.Pos)
+        option_dict["Padding"] = option.Padding()
+        option_dict["StrideW"] = option.StrideW()
+        option_dict["StrideH"] = option.StrideH()
+        option_dict["DepthMultiplier"] = option.DepthMultiplier()
+        option_dict["FusedActivationFunction"] = class_option2str(ActivationFunctionType, option.FusedActivationFunction())
+        option_dict["DilationWFactor"] = option.DilationWFactor()
+        option_dict["DilationHFactor"] = option.DilationHFactor()
+        
+    else:
+        option_dict[customOptionFormat_lookup[op.CustomOptionsFormat()]] = op.CustomOptionsAsNumpy()
+        
+    return option_dict
+        
+def reshape_op_data(op):
+    option_dict = {}
+    if(op.CustomOptionsLength() < 1):
+        from .tflite_flatbuffer.ReshapeOptions import ReshapeOptions
+        option = ReshapeOptions()
+        builtin_data = op.BuiltinOptions()
+        option.Init(builtin_data.Bytes, builtin_data.Pos)
+        option_dict["NewShape"] = option.NewShapeAsNumpy()
+    else:
+        option_dict[customOptionFormat_lookup[op.CustomOptionsFormat()]] = op.CustomOptionsAsNumpy()
+        
+    return option_dict
+        
+def dequantize_op_data(op):
+    if(op.CustomOptionsLength() < 1):
+        from .tflite_flatbuffer.DequantizeOptions import DequantizeOptions
+        option = DequantizeOptions()
+        builtin_data = op.BuiltinOptions()
+        if builtin_data is None:
+            return builtin_data
+        option.Init(builtin_data.Bytes, builtin_data.Pos)
+        return [option]
+    else:
+        custom_option = op.CustomOptionsAsNumpy()
+        return [custom_option]
+        #print("custom option format: ", op.CustomOptionsFormat())
+        
+def quantize_op_data(op):
+    if(op.CustomOptionsLength() < 1):
+        from .tflite_flatbuffer.QuantizeOptions import QuantizeOptions
+        option = QuantizeOptions()
+        builtin_data = op.BuiltinOptions()
+        if builtin_data is None:
+            return builtin_data
+        option.Init(builtin_data.Bytes, builtin_data.Pos)
+        return [option]
+    else:
+        custom_option = op.CustomOptionsAsNumpy()
+        return [custom_option]
+        #print("custom option format: ", op.CustomOptionsFormat())
+        
+def pool2d_op_data(op):
+    option_dict = {}
+    if(op.CustomOptionsLength() < 1):
+        from .tflite_flatbuffer.Pool2DOptions import Pool2DOptions
+        option = Pool2DOptions()
+        builtin_data = op.BuiltinOptions()
+        option.Init(builtin_data.Bytes, builtin_data.Pos)
+        option_dict["Padding"] = option.Padding()
+        option_dict["StrideW"] = option.StrideW()
+        option_dict["StrideH"] = option.StrideH()
+        option_dict["FilterWidth"] = option.FilterWidth()
+        option_dict["FilterHeight"] = option.FilterHeight()
+        option_dict["FusedActivationFunction"] = class_option2str(ActivationFunctionType, option.FusedActivationFunction())
+    else:
+        option_dict[customOptionFormat_lookup[op.CustomOptionsFormat()]] = op.CustomOptionsAsNumpy()
+        
+    return option_dict
+
+def argmax_op_data(op):
+    option_dict = {}
+    if(op.CustomOptionsLength() < 1):
+        from .tflite_flatbuffer.ArgMaxOptions import ArgMaxOptions
+        option = ArgMaxOptions()
+        builtin_data = op.BuiltinOptions()
+        option.Init(builtin_data.Bytes, builtin_data.Pos)
+        option_dict["OutputType"] = option.OutputType()
+    else:
+        option_dict[customOptionFormat_lookup[op.CustomOptionsFormat()]] = op.CustomOptionsAsNumpy()
+        
+    return option_dict
+
+op_data_func = dict()
+op_data_func["QUANTIZE"] = quantize_op_data
+op_data_func["DEPTHWISE_CONV_2D"] = depthwise_conv2d_op_data
+op_data_func["MAX_POOL_2D"] = pool2d_op_data
+op_data_func["RESHAPE"] = reshape_op_data
+op_data_func["FULLY_CONNECTED"] = fully_connected_op_data
+op_data_func["DEQUANTIZE"] = dequantize_op_data
+op_data_func["ARG_MAX"] = argmax_op_data
 
 @FrontendSelector.register(target_exts=['.tflite'])
 class TFLiteParser(Parser):
@@ -106,12 +231,6 @@ class TFLiteParser(Parser):
         ugraph=ugraph
       )
 
-      # 0 if intermediate
-      #buffer_index = tensor.Buffer()
-      #buffer_content = model.Buffers(buffer_index).DataAsNumpy().astype(dtype)
-
-      #tensor.Type()
-
   def _build_param_ops(self, fb_model, ugraph):
     """Find all tensors in initialization list in onnx_graph, normally constants
     Note that this method will update op_types_cnt and tensor_names_map **inplace**
@@ -122,6 +241,7 @@ class TFLiteParser(Parser):
       tensor = subgraph.Tensors(idx)
       buffer_index = tensor.Buffer()
 
+      # buffer_index == 0 if intermediate
       if buffer_index == 0:
         continue
 
@@ -130,7 +250,7 @@ class TFLiteParser(Parser):
 
       buffer_array = fb_model.Buffers(buffer_index).DataAsNumpy()
       if type(buffer_array) == int:
-        continue #somehow, sometimes, the buffer contains no data
+        continue #somehow, sometimes, the buffer contains no data, likely to be an intermediate tensor
       buffer_content = fb_model.Buffers(buffer_index).DataAsNumpy().astype(dtype)
 
       OperationInfo(
@@ -141,7 +261,10 @@ class TFLiteParser(Parser):
         lib_name='tflm',
         ugraph=ugraph,
         op_attr={
-          'value': GenericTensorConverterMixin.GenericType(np_array=buffer_content)
+          'value': AttrValueConverter.GenericType(
+            value_name="tensor",
+            value=GenericTensorConverterMixin.GenericType(np_array=buffer_content)
+          )
         }
       )
 
@@ -187,6 +310,9 @@ class TFLiteParser(Parser):
       input_tensor_names = [self.tensor_names_map[input_index] for input_index in op.InputsAsNumpy()]
       output_tensor_names = [self.tensor_names_map[output_index] for output_index in op.OutputsAsNumpy()]
 
+      op_attr = dict()
+      op_attr = op_data_func[op_type](op)
+
       OperationInfo(
         name=node_name,
         input_tensors=input_tensor_names,
@@ -194,7 +320,7 @@ class TFLiteParser(Parser):
         op_type=op_type,
         ugraph=ugraph,
         lib_name='tflm',
-        op_attr={}
+        op_attr=op_attr
       )
       
       for tensor_index in op.OutputsAsNumpy():
