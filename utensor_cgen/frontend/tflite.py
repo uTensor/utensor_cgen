@@ -214,7 +214,11 @@ class TFLiteParser(Parser):
       dtype=tensor_np_type[tensor.Type()]
 
       attributes = dict()
-      attributes['quantizationParam'] = tensor.Quantization()
+
+      quantParam = tensor.Quantization()
+      if quantParam != None:
+        attributes['quantizationZeros'] = list([quantParam.ZeroPointAsNumpy()])
+        attributes['quantizationScales'] = list([quantParam.ScaleAsNumpy()])
 
 
       if type(tensor.ShapeAsNumpy()) == np.ndarray:
