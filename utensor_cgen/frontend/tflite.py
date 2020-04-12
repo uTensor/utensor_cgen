@@ -98,7 +98,6 @@ def dequantize_op_data(op):
     else:
         custom_option = op.CustomOptionsAsNumpy()
         return [custom_option]
-        #print("custom option format: ", op.CustomOptionsFormat())
         
 def quantize_op_data(op):
     if(op.CustomOptionsLength() < 1):
@@ -112,7 +111,6 @@ def quantize_op_data(op):
     else:
         custom_option = op.CustomOptionsAsNumpy()
         return [custom_option]
-        #print("custom option format: ", op.CustomOptionsFormat())
         
 def pool2d_op_data(op):
     option_dict = {}
@@ -169,8 +167,6 @@ class TFLiteParser(Parser):
       lib_name='tflite',
       ops_info={},
     )
-
-    #print("TF Lite Parser")
 
     self._build_graph(fb_model, ugraph)
 
@@ -236,8 +232,7 @@ class TFLiteParser(Parser):
       )
 
   def _build_param_ops(self, fb_model, ugraph):
-    """Find all tensors in initialization list in onnx_graph, normally constants
-    Note that this method will update op_types_cnt and tensor_names_map **inplace**
+    """Const tensors are identified by buffer_index == 0. These tensors are converted to Const Op and added to ugraph
     """
     subgraph = self._get_tflm_get_subgraph(fb_model)
 
@@ -295,7 +290,7 @@ class TFLiteParser(Parser):
       )
 
   def _build_intermediate_ops(self, fb_model, ugraph):
-    """Build all intermediate nodes, the nodes that is not in neither initialization list nor input list
+    """Build all intermediate nodes
     """
     subgraphs_len = fb_model.SubgraphsLength()
     assert subgraphs_len == 1, "only 1 subgraph is supported"
