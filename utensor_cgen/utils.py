@@ -496,6 +496,7 @@ class Pipeline(object):
     cls = type(self)
     return cls(funcs=self._funcs[slice_obj])
 
+
 class Configuration(object):
   def __init__(self, defaults=None, user_config=None):
     """
@@ -563,3 +564,39 @@ class Configuration(object):
       '  user_config={} \n'
       ')'
     ).format(self._defaults, self._user_config)
+
+
+class must_return_type(object):
+
+  def __init__(self, type_):
+    self._expected_type = type_
+  
+  def __call__(self, func):
+    @wraps(func)
+    def wrapped(*args, **kwargs):
+      ret = func(*args, **kwargs)
+      ret_cls = type(ret)
+      if not issubclass(ret_cls, self._expected_type):
+        raise TypeError(
+          "expecting {} to return value of type {}, get {}".format(
+            func,
+            self._expected_type,
+            ret_cls
+          )
+        )
+      return ret
+    wrapped._has_return_type_check = True
+    wrapped._expecting = self._expected_type
+    return wrapped
+  
+  @staticmethod
+  def get_expect_type(wrapped):
+    if isinstance(wrapped, classmethod):
+      wrapped = wrapped.__func__
+    return wrapped._expecting
+
+  @staticmethod
+  def return_type_is_ensured(wrapped):
+    if isinstance(wrapped, classmethod):
+      wrapped = wrapped.__func__
+    return getattr(wrapped, '_has_return_type_check', False)
