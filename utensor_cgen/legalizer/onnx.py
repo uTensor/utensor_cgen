@@ -21,7 +21,11 @@ class OnnxLegalizer(LegalizerBase):
       visitor(op_info)
     topologic_order_graph(ugraph)
 
+  # _visit_<op_type> methods will be invoked when an op_info of
+  # type <op_type> is encountered during graph traversal
+  # ex: _visit_gemm -> will be invoked with an op_info with type Gemm
   def _visit_gemm(self, op_info):
+    # op_info.op_type == "Gemm"
     ugraph = op_info.ugraph
     op_info.op_type = 'MatMul'
     tensor_a, tensor_w, tensor_bias = op_info.input_tensors
@@ -53,5 +57,5 @@ class OnnxLegalizer(LegalizerBase):
     op_info.output_tensors[0].op_name = add_op.name
 
   def _visit_id(self, op_info):
-    # identity op should have op_type == 'Identity'
+    # identity op should be op_info.op_type == 'Identity'
     return op_info
