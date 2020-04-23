@@ -238,7 +238,7 @@ class TFLiteParser(Parser):
     for idx in range(0, subgraph.TensorsLength()):
       tensor = subgraph.Tensors(idx)
 
-      tensor_name = tensor.Name()
+      tensor_name = tensor.Name().decode('utf8')
       if tensor_name is "" or None:
         tensor_name = "tensor_" + str(idx)
 
