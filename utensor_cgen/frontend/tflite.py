@@ -281,7 +281,7 @@ class TFLiteParser(Parser):
       if buffer_index == 0:
         continue
 
-      node_name = self.tensor_names_map[idx].name + "_Const"
+      node_name = re.sub(r':\d+', '', self.tensor_names_map[idx].name) + "_Const"
       dtype = self.tensor_names_map[idx].dtype
 
       buffer_array = fb_model.Buffers(buffer_index).DataAsNumpy()
