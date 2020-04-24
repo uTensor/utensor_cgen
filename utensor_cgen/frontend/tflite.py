@@ -3,9 +3,6 @@ from __future__ import absolute_import
 import os
 import re
 
-import six
-
-import flatbuffers
 import numpy as np
 from utensor_cgen.frontend import FrontendSelector
 from utensor_cgen.frontend.base import Parser
@@ -27,7 +24,7 @@ tensor_np_type[1] = np.dtype("float16")
 tensor_np_type[2] = np.dtype("int32")
 tensor_np_type[3] = np.dtype("uint8")
 tensor_np_type[4] = np.dtype("uint64")
-tensor_np_type[5] = np.dtype("ubyte")  # FIXME: supposed to be string
+tensor_np_type[5] = np.dtype("str")
 tensor_np_type[6] = np.dtype("bool")
 tensor_np_type[7] = np.dtype("int16")
 tensor_np_type[8] = np.dtype("cdouble")
@@ -111,34 +108,40 @@ def reshape_op_data(op):
 
 
 def dequantize_op_data(op):
+  option_dict = {}
   if op.CustomOptionsLength() < 1:
     from .tflite_flatbuffer.DequantizeOptions import DequantizeOptions
 
     option = DequantizeOptions()
     builtin_data = op.BuiltinOptions()
     if builtin_data is None:
-      return builtin_data
+      return option_dict
     option.Init(builtin_data.Bytes, builtin_data.Pos)
-    return [option]
+    option_dict['builtin'] = option
   else:
-    custom_option = op.CustomOptionsAsNumpy()
-    return [custom_option]
+    option_dict[
+      customOptionFormat_lookup[op.CustomOptionsFormat()]
+    ] = op.CustomOptionsAsNumpy()
 
+  return option_dict
 
 def quantize_op_data(op):
+  option_dict = {}
   if op.CustomOptionsLength() < 1:
     from .tflite_flatbuffer.QuantizeOptions import QuantizeOptions
 
     option = QuantizeOptions()
     builtin_data = op.BuiltinOptions()
     if builtin_data is None:
-      return builtin_data
+      return option_dict
     option.Init(builtin_data.Bytes, builtin_data.Pos)
-    return [option]
+    option_dict['builtin'] = option
   else:
-    custom_option = op.CustomOptionsAsNumpy()
-    return [custom_option]
+    option_dict[
+      customOptionFormat_lookup[op.CustomOptionsFormat()]
+    ] = op.CustomOptionsAsNumpy()
 
+  return option_dict
 
 def pool2d_op_data(op):
   option_dict = {}
@@ -351,7 +354,6 @@ class TFLiteParser(Parser):
         for output_index in op.OutputsAsNumpy()
       ]
 
-      op_attr = dict()
       op_attr = op_data_func[op_type](op)
 
       OperationInfo(
