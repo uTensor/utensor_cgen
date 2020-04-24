@@ -190,8 +190,8 @@ class TFLiteParser(Parser):
     if output_nodes is None:
       output_nodes = []
     graph_name, _ = os.path.splitext(tflite_file)
-    buf = open(tflite_file, "rb").read()
-    buf = bytearray(buf)
+    with open(tflite_file, "rb") as fid:
+      buf = bytearray(fid.read())
     fb_model = Model.GetRootAsModel(buf, 0)
 
     ugraph = uTensorGraph(
