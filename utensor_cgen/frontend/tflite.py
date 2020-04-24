@@ -1,5 +1,3 @@
-from __future__ import absolute_import
-
 import os
 import re
 
@@ -18,30 +16,12 @@ from .tflite_flatbuffer.FullyConnectedOptionsWeightsFormat import \
     FullyConnectedOptionsWeightsFormat
 from .tflite_flatbuffer.Model import Model
 
-tensor_np_type = dict()
-tensor_np_type[0] = np.dtype("float32")
-tensor_np_type[1] = np.dtype("float16")
-tensor_np_type[2] = np.dtype("int32")
-tensor_np_type[3] = np.dtype("uint8")
-tensor_np_type[4] = np.dtype("uint64")
-tensor_np_type[5] = np.dtype("str")
-tensor_np_type[6] = np.dtype("bool")
-tensor_np_type[7] = np.dtype("int16")
-tensor_np_type[8] = np.dtype("cdouble")
-tensor_np_type[9] = np.dtype("int8")
-
-
-builtin_ops = {v: k for k, v in BuiltinOperator.__dict__.items()}
-
+_CUSTOM_OPTION_FORMAT_MAP = {v: k for k, v in CustomOptionsFormat.__dict__.items()}
 
 def class_option2str(obj, idx):
   names_lookup = {v: k for k, v in obj.__dict__.items()}
   name = names_lookup[idx]
   return str(idx) + " (" + name + ")"
-
-
-customOptionFormat_lookup = {v: k for k, v in CustomOptionsFormat.__dict__.items()}
-
 
 def fully_connected_op_data(op):
   option_dict = {}
@@ -59,10 +39,9 @@ def fully_connected_op_data(op):
     )
   else:
     option_dict[
-      customOptionFormat_lookup[op.CustomOptionsFormat()]
+      _CUSTOM_OPTION_FORMAT_MAP[op.CustomOptionsFormat()]
     ] = op.CustomOptionsAsNumpy()
   return option_dict
-
 
 def depthwise_conv2d_op_data(op):
   option_dict = {}
@@ -84,11 +63,10 @@ def depthwise_conv2d_op_data(op):
 
   else:
     option_dict[
-      customOptionFormat_lookup[op.CustomOptionsFormat()]
+      _CUSTOM_OPTION_FORMAT_MAP[op.CustomOptionsFormat()]
     ] = op.CustomOptionsAsNumpy()
 
   return option_dict
-
 
 def reshape_op_data(op):
   option_dict = {}
@@ -101,11 +79,10 @@ def reshape_op_data(op):
     option_dict["NewShape"] = option.NewShapeAsNumpy()
   else:
     option_dict[
-      customOptionFormat_lookup[op.CustomOptionsFormat()]
+      _CUSTOM_OPTION_FORMAT_MAP[op.CustomOptionsFormat()]
     ] = op.CustomOptionsAsNumpy()
 
   return option_dict
-
 
 def dequantize_op_data(op):
   option_dict = {}
@@ -120,7 +97,7 @@ def dequantize_op_data(op):
     option_dict['builtin'] = option
   else:
     option_dict[
-      customOptionFormat_lookup[op.CustomOptionsFormat()]
+      _CUSTOM_OPTION_FORMAT_MAP[op.CustomOptionsFormat()]
     ] = op.CustomOptionsAsNumpy()
 
   return option_dict
@@ -138,7 +115,7 @@ def quantize_op_data(op):
     option_dict['builtin'] = option
   else:
     option_dict[
-      customOptionFormat_lookup[op.CustomOptionsFormat()]
+      _CUSTOM_OPTION_FORMAT_MAP[op.CustomOptionsFormat()]
     ] = op.CustomOptionsAsNumpy()
 
   return option_dict
@@ -161,11 +138,10 @@ def pool2d_op_data(op):
     )
   else:
     option_dict[
-      customOptionFormat_lookup[op.CustomOptionsFormat()]
+      _CUSTOM_OPTION_FORMAT_MAP[op.CustomOptionsFormat()]
     ] = op.CustomOptionsAsNumpy()
 
   return option_dict
-
 
 def argmax_op_data(op):
   option_dict = {}
@@ -178,34 +154,52 @@ def argmax_op_data(op):
     option_dict["OutputType"] = option.OutputType()
   else:
     option_dict[
-      customOptionFormat_lookup[op.CustomOptionsFormat()]
+      _CUSTOM_OPTION_FORMAT_MAP[op.CustomOptionsFormat()]
     ] = op.CustomOptionsAsNumpy()
 
   return option_dict
 
 
-op_data_func = dict()
-op_data_func["QUANTIZE"] = quantize_op_data
-op_data_func["DEPTHWISE_CONV_2D"] = depthwise_conv2d_op_data
-op_data_func["MAX_POOL_2D"] = pool2d_op_data
-op_data_func["RESHAPE"] = reshape_op_data
-op_data_func["FULLY_CONNECTED"] = fully_connected_op_data
-op_data_func["DEQUANTIZE"] = dequantize_op_data
-op_data_func["ARG_MAX"] = argmax_op_data
+_OP_DATA_FUNC_MAP = dict()
+_OP_DATA_FUNC_MAP["QUANTIZE"] = quantize_op_data
+_OP_DATA_FUNC_MAP["DEPTHWISE_CONV_2D"] = depthwise_conv2d_op_data
+_OP_DATA_FUNC_MAP["MAX_POOL_2D"] = pool2d_op_data
+_OP_DATA_FUNC_MAP["RESHAPE"] = reshape_op_data
+_OP_DATA_FUNC_MAP["FULLY_CONNECTED"] = fully_connected_op_data
+_OP_DATA_FUNC_MAP["DEQUANTIZE"] = dequantize_op_data
+_OP_DATA_FUNC_MAP["ARG_MAX"] = argmax_op_data
 
 
 @FrontendSelector.register(target_exts=[".tflite"])
 class TFLiteParser(Parser):
+  _TENSOR_NP_TYPE = {
+    0:np.dtype("float32"),
+    1: np.dtype("float16"),
+    2: np.dtype("int32"),
+    3: np.dtype("uint8"),
+    4: np.dtype("uint64"),
+    5: np.dtype("str"),
+    6: np.dtype("bool"),
+    7: np.dtype("int16"),
+    8: np.dtype("cdouble"),
+    9: np.dtype("int8"),
+  }
+  _BUILTIN_OPS = {v: k for k, v in BuiltinOperator.__dict__.items()}
+
   def parse(self, tflite_file, output_nodes=None):
+    if output_nodes is None:
+      output_nodes = []
     graph_name, _ = os.path.splitext(tflite_file)
     buf = open(tflite_file, "rb").read()
     buf = bytearray(buf)
     fb_model = Model.GetRootAsModel(buf, 0)
 
     ugraph = uTensorGraph(
-      name=graph_name, output_nodes=[], lib_name="tflite", ops_info={},
+      name=graph_name,
+      output_nodes=output_nodes,
+      lib_name="tflite",
+      ops_info={},
     )
-
     self._build_graph(fb_model, ugraph)
 
     return ugraph
@@ -240,24 +234,21 @@ class TFLiteParser(Parser):
 
     for idx in range(0, subgraph.TensorsLength()):
       tensor = subgraph.Tensors(idx)
-
       tensor_name = tensor.Name().decode('utf8')
       if tensor_name is "" or None:
         tensor_name = "tensor_" + str(idx)
 
-      dtype = tensor_np_type[tensor.Type()]
-
+      dtype = self._TENSOR_NP_TYPE[tensor.Type()]
       attributes = dict()
-
       quantParam = tensor.Quantization()
-      if quantParam != None:
+      if quantParam is not None:
         attributes["quantizationZeros"] = list([quantParam.ZeroPointAsNumpy()])
         attributes["quantizationScales"] = list([quantParam.ScaleAsNumpy()])
 
-      if type(tensor.ShapeAsNumpy()) == np.ndarray:
+      if isinstance(tensor.ShapeAsNumpy(), np.ndarray):
         shape = tensor.ShapeAsNumpy().tolist()
       else:
-        shape = [d for d in fb_model.Buffers(12).DataAsNumpy().shape]
+        shape = list(fb_model.Buffers(12).DataAsNumpy().shape)
 
       self.tensor_names_map[idx] = TensorInfo(
         name=self._format_tensor_name("", tensor_name, 0),
@@ -285,8 +276,7 @@ class TFLiteParser(Parser):
       dtype = self.tensor_names_map[idx].dtype
 
       buffer_array = fb_model.Buffers(buffer_index).DataAsNumpy()
-      if type(buffer_array) == int:
-
+      if isinstance(buffer_array, int):
         continue  # somehow, sometimes, the buffer contains no data, likely to be an intermediate tensor
       buffer_content = fb_model.Buffers(buffer_index).DataAsNumpy().astype(dtype)
 
@@ -342,7 +332,7 @@ class TFLiteParser(Parser):
       local_op_code = op.OpcodeIndex()
       global_op_code = fb_model.OperatorCodes(local_op_code)
       builtinOperator_code = global_op_code.BuiltinCode()
-      op_type = builtin_ops[builtinOperator_code]
+      op_type = self._BUILTIN_OPS[builtinOperator_code]
 
       node_name = str(i) + "_" + op_type
 
@@ -354,7 +344,7 @@ class TFLiteParser(Parser):
         for output_index in op.OutputsAsNumpy()
       ]
 
-      op_attr = op_data_func[op_type](op)
+      op_attr = _OP_DATA_FUNC_MAP[op_type](op)
 
       OperationInfo(
         name=node_name,
