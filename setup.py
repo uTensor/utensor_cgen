@@ -61,6 +61,7 @@ setup(
         'graphviz',
         'matplotlib',
         'toml',
+        'flatbuffers',
         'ortools',
     ],
     extras_require={

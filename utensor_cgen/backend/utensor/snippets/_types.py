@@ -55,6 +55,8 @@ class NumpyTypesMap(object):
                                             tensor_type_str="uint16_t"),
         np.dtype('int8'): _TYPE_MAP_VALUE(importer_type_str="int8",
                                           tensor_type_str="q7_t"),
+        np.dtype('uint8'): _TYPE_MAP_VALUE(importer_type_str="uint8",
+                                          tensor_type_str="uint8_t"),
       }
       cls._inited = True
 
