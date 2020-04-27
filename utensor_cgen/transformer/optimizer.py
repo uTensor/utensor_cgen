@@ -1,7 +1,7 @@
 from collections import defaultdict
 from copy import deepcopy
 
-from .base import Transformer
+from .base import GENERIC_SENTINEL, Transformer
 from .pipeline import TransformerPipeline
 
 __all__ = ['RefCntOptimizer']
@@ -12,6 +12,7 @@ class RefCntOptimizer(Transformer):
   
   METHOD_NAME = 'refcnt'
   KWARGS_NAMESCOPE = '_utensor_refcnt'
+  APPLICABLE_LIBS = GENERIC_SENTINEL
 
   def __init__(self):
     super(RefCntOptimizer, self).__init__(prune_graph=False)
@@ -49,6 +50,7 @@ class IdOpRemoveOptimizer(Transformer):
 
   METHOD_NAME = 'remove_id_op'
   KWARGS_NAMESCOPE = '_utensor_remove_id_op'
+  APPLICABLE_LIBS = GENERIC_SENTINEL
 
   def transform(self, ugraph):
     return self._transform(ugraph)

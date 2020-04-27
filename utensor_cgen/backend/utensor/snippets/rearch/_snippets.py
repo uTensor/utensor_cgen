@@ -1,33 +1,75 @@
-from utensor_cgen.backend.utensor.snippets._types import UTENSOR_TYPES_MAP, NP_TYPES_MAP
-from utensor_cgen.backend.utensor.snippets._base import Snippet, SnippetBase
+import numpy as np
 
-__all__ = ['RomTensorSnippet', 'DeclareOpSnippet', 'AddOpEvalSnippet', 'SimpleContainer']
+from utensor_cgen.backend.utensor.snippets._base import Snippet, SnippetBase
+from utensor_cgen.backend.utensor.snippets._types import (NP_TYPES_MAP,
+                                                          UTENSOR_TYPES_MAP)
+
+__all__ = [
+  "DeclareRomTensorSnippet",
+  "DeclareRamTensorSnippet",
+  "DeclareOpSnippet",
+  "OpEvalSnippet",
+  "AddOpEvalSnippet",
+  "SimpleContainer"
+]
 
 class _SnippetBase(Snippet):
   __headers__ = set(['"uTensor/uTensor.hpp"'])
 
+  @staticmethod
+  def get_quant_param(tensor_info):
+    quant_params = {}
+    if 'quantization_zeros' in tensor_info.attributes:
+      zeros = tensor_info.attributes['quantization_zeros']
+      scales = tensor_info.attributes["quantization_scales"]
+      quant_params['zero_point'] = {
+        'value': zeros[0],
+        'type_str': ['uint8_t', 'int8_t'][zeros.dtype == np.dtype('int8')]
+      }
+      quant_params['scale'] = {
+        'value': scales[0],
+        'type_str': 'float'
+      }
+    return quant_params
 
-class RomTensorSnippet(_SnippetBase):
+
+class DeclareRomTensorSnippet(_SnippetBase):
   __template_name__ = 'snippets/rearch/declare_rom_tensor.cpp'
 
-  def __init__(self, tensor_var_name, buffer_var_name, tensor):
-    Snippet.__init__(self)
-    shape = tensor.shape or [1]
-    self.template_vars = {
-      'tensor_var_name': tensor_var_name,
-      'shape': shape,
-      'buffer_var_name': buffer_var_name,
-      'utensor_dtype': UTENSOR_TYPES_MAP[tensor.dtype]
-    }
+  def __init__(self, tensor_info, tensor_var, buffer_var, static=False):
+    _SnippetBase.__init__(self)
+    self.template_vars['tensor_var'] = tensor_var
+    self.template_vars['shape'] = tensor_info.shape or [1]
+    self.template_vars['buffer_var'] = buffer_var
+    self.template_vars['static'] = static
+    self.template_vars['utensor_dtype'] = UTENSOR_TYPES_MAP[tensor_info.dtype]
+    self.template_vars['quantize_params'] = self.get_quant_param(tensor_info)
+
+
+class DeclareRamTensorSnippet(_SnippetBase):
+  __template_name__ = 'snippets/rearch/declare_ram_tensor.cpp'
+
+  def __init__(self, tensor_info, tensor_var):
+    _SnippetBase.__init__(self)
+    self.template_vars['tensor_var'] = tensor_var
+    self.template_vars['shape'] = tensor_info.shape or [1]
+    self.template_vars['utensor_dtype'] = UTENSOR_TYPES_MAP[tensor_info.dtype]
+    self.template_vars['quantize_params'] = self.get_quant_param(tensor_info)
 
 
 class DeclareOpSnippet(_SnippetBase):
   __template_name__ = 'snippets/rearch/declare_op.cpp'
 
-  def __init__(self, op_type, dtypes, op_var_name):
-    Snippet.__init__(self)
+  def __init__(self, op, templ_dtypes, op_var_name):
+    _SnippetBase.__init__(self)
+    op_info = op.op_info
+    if templ_dtypes:
+      templ_params = ', '.join([NP_TYPES_MAP[dtype].tensor_type_str for dtype in templ_dtypes])
+      op_type = '{}<{}>'.format(op_info.op_type, templ_params)
+    else:
+      op_type = op_info.op_type
     self.template_vars['op_type'] = op_type
-    self.template_vars['dtypes'] = dtypes
+    self.template_vars['construct_params'] = op.construct_params
     self.template_vars['op_var_name'] = op_var_name
 
 
@@ -35,9 +77,8 @@ class OpEvalSnippet(_SnippetBase):
   __template_name__ = 'snippets/rearch/eval_op.cpp'
   __inputs__ = []
   __outputs__ = []
-  
 
-  def __init__(self, op_info, op_name, tensor_var_map, dtypes):
+  def __init__(self, op_info, templ_dtypes, op_name, tensor_var_map):
     Snippet.__init__(self)
     input_map = {
       name: tensor_var_map[tensor.name]
@@ -47,25 +88,22 @@ class OpEvalSnippet(_SnippetBase):
       name: tensor_var_map[tensor.name]
       for name, tensor in zip(self.__outputs__, op_info.output_tensors)
     }
-    out_shapes_map = {
-      tensor_var_map[tensor.name]: tensor.shape or [1]
-      for tensor in op_info.output_tensors
-    }
-    out_dtypes_map = {
-      tensor_var_map[tensor.name]: UTENSOR_TYPES_MAP[tensor.dtype]
-      for tensor in op_info.output_tensors
-    }
-    utensor_dtypes = [NP_TYPES_MAP[dtype].tensor_type_str for dtype in dtypes]
-    if utensor_dtypes:
-      op_type = '{}<{}>'.format(op_info.op_type, ', '.join(utensor_dtypes))
+    quantize_params_map = {}
+    for tensor_info in op_info.output_tensors:
+      quant_param = self.get_quant_param(tensor_info)
+      if quant_param:
+        tensor_var = tensor_var_map[tensor_info.name]
+        quantize_params_map[tensor_var] = quant_param
+    if templ_dtypes:
+      templ_params = ', '.join([NP_TYPES_MAP[dtype].tensor_type_str for dtype in templ_dtypes])
+      op_type = '{}<{}>'.format(op_info.op_type, templ_params)
     else:
       op_type = op_info.op_type
     self.template_vars['op_type'] = op_type
     self.template_vars['op_name'] = op_name
     self.template_vars['input_map'] = input_map
     self.template_vars['output_map'] = output_map
-    self.template_vars['out_shapes_map'] = out_shapes_map
-    self.template_vars['out_dtypes_map'] = out_dtypes_map
+    self.template_vars['quantize_params_map'] = quantize_params_map
 
 
 class AddOpEvalSnippet(OpEvalSnippet):
@@ -77,26 +115,26 @@ class SimpleContainer(SnippetBase):
   __headers__ = set(['"uTensor/uTensor.hpp"', "<vector>"])
   __template_name__ = 'containers/rearch/simple.cpp'
 
-  def __init__(self, declare_snippets=None, eval_snippests=None):
-    if declare_snippets is None:
-      declare_snippets = []
-    if eval_snippests is None:
-      eval_snippests = []
+  def __init__(self):
     SnippetBase.__init__(self)
-    self._declare_snippets = []
+    self._declare_local_snippets = []
+    self._declare_global_snippets = []
     self._eval_snippests = []
-    for snp in declare_snippets:
-      self.add_declare_snippet(snp)
-    for snp in eval_snippests:
-      self.add_eval_snippet(snp)
 
-  def add_declare_snippet(self, snippet):
-    self.__headers__.update(snippet.headers)
-    self._declare_snippets.append(snippet)
+  def add_declare_global_snippets(self, *snippets):
+    for snippet in snippets:
+      self.__headers__.update(snippet.headers)
+      self._declare_global_snippets.append(snippet)
   
-  def add_eval_snippet(self, snippet):
-    self.__headers__.update(snippet.headers)
-    self._eval_snippests.append(snippet)
+  def add_declare_local_snippets(self, *snippets):
+    for snippet in snippets:
+      self.__headers__.update(snippet.headers)
+      self._declare_local_snippets.append(snippet)
+
+  def add_eval_snippets(self, *snippets):
+    for snippet in snippets:
+      self.__headers__.update(snippet.headers)
+      self._eval_snippests.append(snippet)
   
   def add_header(self, header, *headers):
     self._add_header(header)
@@ -111,7 +149,8 @@ class SimpleContainer(SnippetBase):
   
   def render(self):
     return self.template.render(
-      declare_snippets=self._declare_snippets,
+      declare_global_snippets=self._declare_global_snippets,
+      declare_local_snippets=self._declare_local_snippets,
       eval_snippets=self._eval_snippests,
       **self.template_vars
     )

@@ -44,6 +44,10 @@ class uTensorRearchGraphLower(uTensorGraphLowerBase):
     @classmethod
     def get_new_optype(cls, op_type):
       return cls.NAME_MAP.get(op_type, op_type)
+  
+  @classmethod
+  def add_name_map(cls, generic_name, target_specific_name):
+    cls.OptypeRenameManager.NAME_MAP[generic_name] = target_specific_name
 
   def handle_tensorflow(self, ugraph):
     for op_info in ugraph.ops_info.values():

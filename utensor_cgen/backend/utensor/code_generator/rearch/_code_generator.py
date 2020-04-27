@@ -1,5 +1,3 @@
-import os
-import pickle
 import re
 from itertools import chain
 from pathlib import Path
@@ -8,9 +6,9 @@ from utensor_cgen.backend.base import BackendPart
 from utensor_cgen.backend.utensor.snippets.composer import Composer
 from utensor_cgen.backend.utensor.snippets.legacy import (
     ContextGlobalArrayContainer, WeightSnippet)
-from utensor_cgen.backend.utensor.snippets.rearch import SimpleContainer
+from utensor_cgen.backend.utensor.snippets.rearch import (
+    DeclareRamTensorSnippet, DeclareRomTensorSnippet, SimpleContainer)
 from utensor_cgen.backend.utensor.snippets.template_env import env
-from utensor_cgen.transformer.pipeline import TransformerPipeline
 from utensor_cgen.utils import Configuration, class_property
 
 from ._operators import OperatorFactory
@@ -40,25 +38,27 @@ class uTensorRearchCodeGenerator(BackendPart):
       src_fname = '{}.cpp'.format(ugraph.name)
     # find all required ops and the variable names for the tensors in the generate files
     (
-      ops,            # Set[OperationInfo]
-      placeholders,   # Set[OperationInfo]
+      ops,            # Set[Operator], no Placeholder or Inline ops
+      placeholders,   # Set[String], variable names of planceholder tensors
       tensor_var_map, # dict, tensor name -> var name
     ) = self._find_required_ops(ugraph)
     (
-      ops_map,          # dict, op_info -> variable name of op in the output files
-      declare_snippets, # list of Snippet objects, which will render code snippets for tensor declaration
-      weight_snippets,  # snippets for generating weights header file
-     ) = self._get_declare_snippets(ugraph, ops, tensor_var_map)
+      ops_map,                 # dict, op_info -> variable name of op in the output files
+      declare_global_snippets, # list of Snippet objects, which will rendered in global scop
+      declare_local_snippets,  # list of Snippet objects, which will rendered in local function scope
+      weight_snippets,         # snippets for generating weights header file
+    ) = self._get_declare_snippets(ugraph, ops, tensor_var_map)
     # eval_snippets: List of snippet objects, which will render code snippets for tensor evaluation
     eval_snippets = self._get_evaluation_snippets(ugraph, ops_map, tensor_var_map)
     # generate files
     self._generate_files(
       ugraph,
-      placeholders,
-      tensor_var_map,
-      weight_snippets,
-      declare_snippets,
-      eval_snippets
+      placeholders=placeholders,
+      tensor_var_map=tensor_var_map,
+      weight_snippets=weight_snippets,
+      declare_global_snippets=declare_global_snippets,
+      declare_local_snippets=declare_local_snippets,
+      eval_snippets=eval_snippets
     )
 
   def _find_required_ops(self, ugraph):
@@ -80,32 +80,40 @@ class uTensorRearchCodeGenerator(BackendPart):
   
   def _get_declare_snippets(self, ugraph, ops, tensor_var_map):
     # get ops/tensors declaration snippets
-    declare_snippets = []
+    declare_global_snippets = []
+    declare_local_snippets = []
     ops_map = {} # op -> op variable name
     weight_snippets = []
     for i, op in enumerate(ops):
       op_var_name = 'op_{:03d}'.format(i)
       ops_map[op] = op_var_name
-      declare_snippets.append(op.get_declare_snippet(op_var_name))
+      declare_local_snippets.append(op.get_declare_snippet(op_var_name, tensor_var_map))
+    for op_info in filter(lambda op_info: op_info.op_type not in ["Inline", "Placeholder"], ugraph.ops_info.values()):
+      for out_tensor in op_info.output_tensors:
+        declare_local_snippets.append(
+          DeclareRamTensorSnippet(out_tensor, tensor_var_map[out_tensor.name])
+        )
     for op_info in filter(lambda op_info: op_info.op_type == 'Inline', ugraph.ops_info.values()):
-      tensor = op_info.output_tensors[0]
-      buffer_name = 'data_{}'.format(tensor.name.replace(':', '_').replace('/', '_'))
+      tensor_info = op_info.output_tensors[0]
+      tensor_var = tensor_var_map[tensor_info.name]
+      buffer_name = 'data_{}'.format(tensor_info.name.replace(':', '_').replace('/', '_'))
       weight_snippets.append(
         WeightSnippet(
           buffer_name,
-          tensor.dtype,
-          tensor.shape,
+          tensor_info.dtype,
+          tensor_info.shape,
           op_info.op_attr['value'].value.np_array.ravel()
         )
       )
-      declare_snippets.append(
-        OperatorFactory.get_opertor(op_info).get_declare_snippet(
-          tensor_var_name=tensor_var_map[tensor.name],
-          buffer_var_name=buffer_name,
-          tensor=tensor
+      declare_global_snippets.append(
+        DeclareRomTensorSnippet(
+          tensor_info=tensor_info,
+          tensor_var=tensor_var,
+          buffer_var=buffer_name,
+          static=True,
         )
       )
-    return ops_map, declare_snippets, weight_snippets
+    return ops_map, declare_global_snippets, declare_local_snippets, weight_snippets
 
   def _get_evaluation_snippets(self, ugraph, ops_map, tensor_var_map):
     eval_snippets = []
@@ -116,11 +124,15 @@ class uTensorRearchCodeGenerator(BackendPart):
       op = OperatorFactory.get_opertor(op_info)
       op_name = ops_map[op]
       eval_snippets.append(
-        op.get_eval_snippet(op_info, op_name, tensor_var_map)
+        op.get_eval_snippet(op_name, op_info, tensor_var_map)
       )
     return eval_snippets
   
-  def _generate_files(self, ugraph, placeholders, tensor_var_map, weight_snippets, declare_snippets, eval_snippets):
+  def _generate_files(
+    self, ugraph, placeholders, tensor_var_map,
+    weight_snippets, declare_global_snippets, declare_local_snippets,
+    eval_snippets
+  ):
     template_vars = {}
     template_vars['model_name'] = ugraph.name
     template_vars['meta_data_pool_size'] = self._compute_meta_data_size(ugraph)
@@ -146,10 +158,10 @@ class uTensorRearchCodeGenerator(BackendPart):
     # generate the compute function
     model_file_dir = Path(self.model_dir)
     header_fname = self.header_fname == 'None' and '{}.hpp'.format(ugraph.name) or self.header_fname
-    container_snippet = SimpleContainer(
-      declare_snippets=declare_snippets,
-      eval_snippests=eval_snippets
-    )
+    container_snippet = SimpleContainer()
+    container_snippet.add_declare_global_snippets(*declare_global_snippets)
+    container_snippet.add_declare_local_snippets(*declare_local_snippets)
+    container_snippet.add_eval_snippets(*eval_snippets)
     container_snippet.template_vars.update(template_vars)
     (model_file_dir / ugraph.name).mkdir(parents=True, exist_ok=True)
     with (model_file_dir / ugraph.name / header_fname).open('w') as fid:

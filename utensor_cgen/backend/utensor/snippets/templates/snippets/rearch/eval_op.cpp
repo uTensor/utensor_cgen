@@ -1,6 +1,11 @@
-{%for tensor_var, shape in out_shapes_map.items()%}
-Tensor {{tensor_var}} = new RamTensor({ {%for s in shape[:-1]%}{{s}}, {%endfor%}{{shape[-1]}} }, {{out_dtypes_map[tensor_var]}});
+{%if quantize_params_map%}
+{%for tensor_var in output_map.values()%}
+{%if tensor_var in quantize_params_map%}
+{{tensor_var}}_zp = {{quantize_params_map[tensor_var]["zero_point"]["value"]}};
+{{tensor_var}}_scale = {{quantize_params_map[tensor_var]["scale"]["value"]}};
+{%endif%}
 {%endfor%}
+{%endif%}
     {{op_name}}
         .set_inputs({
 {%for name, tensor_var in input_map.items()%}

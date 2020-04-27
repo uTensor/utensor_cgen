@@ -5,7 +5,7 @@ Transformers that outputs a image file presenting the ugraph before the transfor
 """
 from utensor_cgen.ir.misc.graph_viz import viz_graph
 
-from .base import Transformer
+from .base import GENERIC_SENTINEL, Transformer
 from .pipeline import TransformerPipeline
 
 __all__ = ["GraphVizTransformer"]
@@ -15,6 +15,7 @@ __all__ = ["GraphVizTransformer"]
 class GraphVizTransformer(Transformer):
   METHOD_NAME = 'graph_viz'
   KWARGS_NAMESCOPE = '_utensor_graph_viz'
+  APPLICABLE_LIBS = GENERIC_SENTINEL # this transformer is generic
 
   def __init__(self, out_fname="graph.gv", view=False, cleanup=True):
     super(GraphVizTransformer, self).__init__(prune_graph=False)

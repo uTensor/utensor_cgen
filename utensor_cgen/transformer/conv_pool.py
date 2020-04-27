@@ -26,6 +26,7 @@ __all__ = ["ConvPoolTransformer"]
 class ConvPoolTransformer(Transformer):
   METHOD_NAME = 'conv_pool'
   KWARGS_NAMESCOPE = '_conv_pool'
+  APPLICABLE_LIBS = set(["tensorflow"])
 
   def __init__(self):
     super(ConvPoolTransformer, self).__init__(prune_graph=False)

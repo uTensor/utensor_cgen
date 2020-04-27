@@ -20,7 +20,7 @@ from utensor_cgen.matcher import uTensorGraphMatcher
 from utensor_cgen.utils import (parse_tensor_name, prune_graph,
                                 topologic_order_graph)
 
-from .base import Transformer
+from .base import GENERIC_SENTINEL, Transformer
 from .pipeline import TransformerPipeline
 
 __all__ = [
@@ -34,6 +34,7 @@ __all__ = [
 class BiasAddTransformer(Transformer):
   METHOD_NAME = 'biasAdd'
   KWARGS_NAMESCOPE = '_utensor_biasAdd'
+  APPLICABLE_LIBS = GENERIC_SENTINEL
 
   def transform(self, ugraph):
     for node_name in ugraph.topo_order:
@@ -51,6 +52,7 @@ class BiasAddTransformer(Transformer):
 class InlineTransformer(Transformer):
   METHOD_NAME = 'inline'
   KWARGS_NAMESCOPE = '_utensor_inline'
+  APPLICABLE_LIBS = GENERIC_SENTINEL
 
   def __init__(self):
     super(InlineTransformer, self).__init__(prune_graph=False)
@@ -82,7 +84,7 @@ class DropoutTransformer(Transformer):
   """
   METHOD_NAME = 'dropout'
   KWARGS_NAMESCOPE = '_utensor_dropout'
-  TARGET_NODENAME_PATTERN = re.compile(r'(dropout[_\w\d]*)/.*')
+  APPLICABLE_LIBS = GENERIC_SENTINEL
 
   def __init__(self, name_pattern=r'(dropout[_\w\d]*)/.*'):
     super(DropoutTransformer, self).__init__(prune_graph=True)
@@ -179,6 +181,7 @@ class DropoutTransformerV2(Transformer):
   """
   METHOD_NAME = 'dropout_v2'
   KWARGS_NAMESCOPE = '_utensor_dropout_v2'
+  APPLICABLE_LIBS = set(["tensorflow"])
 
   @property
   def pattern_ugraph(self):
@@ -249,6 +252,7 @@ class BatchNormTransformer(Transformer):
   """
   METHOD_NAME = 'batch_norm'
   KWARGS_NAMESCOPE = '_batch_norm'
+  APPLICABLE_LIBS = GENERIC_SENTINEL
 
   def transform(self, ugraph):
     # TODO: implement this!
@@ -261,6 +265,7 @@ class FakeGatherV2Transformer(Transformer):
   """
   METHOD_NAME = 'fake_gather_v2'
   KWARGS_NAMESCOPE = '_fake_gatherv2'
+  APPLICABLE_LIBS = GENERIC_SENTINEL
 
   def transform(self, ugraph):
     logger.warning(

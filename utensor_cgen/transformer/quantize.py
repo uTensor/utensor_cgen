@@ -10,6 +10,7 @@ __all__ = ['QuantizeTransformer']
 class QuantizeTransformer(Transformer):
   METHOD_NAME = 'quantize'
   KWARGS_NAMESCOPE = '_quantize'
+  APPLICABLE_LIBS = set(["tensorflow"])
 
   def transform(self, ugraph):
     if ugraph.lib_name != 'tensorflow':

@@ -240,10 +240,15 @@ class TFLiteParser(Parser):
 
       dtype = self._TENSOR_NP_TYPE[tensor.Type()]
       attributes = dict()
-      quantParam = tensor.Quantization()
-      if quantParam is not None:
-        attributes["quantizationZeros"] = list([quantParam.ZeroPointAsNumpy()])
-        attributes["quantizationScales"] = list([quantParam.ScaleAsNumpy()])
+      quant_params = tensor.Quantization()
+      if quant_params is not None:
+        zp = quant_params.ZeroPointAsNumpy()
+        if zp.dtype == np.dtype('<i8'):
+          zp = zp.astype('int8')
+        else:
+          zp = zp.astype('uint8')
+        attributes["quantization_zeros"] = zp
+        attributes["quantization_scales"] = quant_params.ScaleAsNumpy()
 
       if isinstance(tensor.ShapeAsNumpy(), np.ndarray):
         shape = tensor.ShapeAsNumpy().tolist()
@@ -350,7 +355,7 @@ class TFLiteParser(Parser):
         name=node_name,
         input_tensors=input_tensor_names,
         output_tensors=output_tensor_names,
-        op_type=op_type,
+        op_type=self._format_op_type(op_type),
         ugraph=ugraph,
         lib_name="tflm",
         op_attr=op_attr,
@@ -379,3 +384,6 @@ class TFLiteParser(Parser):
     if re.match(r"[a-zA-Z][a-zA-Z0-9]*:[0-9]+", name):
       return name
     return "{}:{}".format(node_name, offset)
+
+  def _format_op_type(self, op_type):
+    return ''.join(map(lambda s: s.capitalize(), op_type.split('_')))

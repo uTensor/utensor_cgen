@@ -12,7 +12,7 @@ from utensor_cgen.frontend.tensorflow import GraphDefParser
 from utensor_cgen.matcher import uTensorGraphMatcher
 from utensor_cgen.utils import prune_graph, topologic_order_graph
 
-from .base import Transformer
+from .base import GENERIC_SENTINEL, Transformer
 from .pipeline import TransformerPipeline
 
 __all__ = ["LinearReorderTransformerV2"]
@@ -22,6 +22,7 @@ __all__ = ["LinearReorderTransformerV2"]
 class LinearReorderTransformerV2(Transformer):
   METHOD_NAME = 'linear_reorder'
   KWARGS_NAMESCOPE = '_linear_reorder'
+  APPLICABLE_LIBS = GENERIC_SENTINEL
 
   def __init__(self):
     super(LinearReorderTransformerV2, self).__init__(prune_graph=False)
