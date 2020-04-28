@@ -1,7 +1,6 @@
 from utensor_cgen.backend.utensor.snippets._types import NP_TYPES_MAP
-from utensor_cgen.backend.utensor.snippets.rearch import (
-    AddOpEvalSnippet, DeclareOpSnippet, DeclareRamTensorSnippet,
-    DeclareRomTensorSnippet)
+from utensor_cgen.backend.utensor.snippets.rearch import (AddOpEvalSnippet,
+                                                          DeclareOpSnippet)
 
 from ._base import OperatorFactory, _Operator
 
@@ -39,21 +38,3 @@ class _MatmulOperator(_Operator):
 class _ConvOperator(_Operator):
 
   op_type = 'ConvOperator'
-
-
-# @OperatorFactory.register
-# class _InlineOperator(_Operator):
-
-#   op_type = 'Inline'
-
-#   def __init__(self, op_info):
-#     self._tensor = op_info.output_tensors[0]
-
-#   def get_declare_snippet(self, op_var_name, tensor_var_map, buffer_var_name):
-#     tensor_var_name = tensor_var_map[self._tensor.name]
-#     snippet = DeclareRomTensorSnippet(
-#       tensor_info=self._tensor,
-#       tensor_var=tensor_var_name,
-#       buffer_var=buffer_var_name,
-#     )
-#     return snippet
