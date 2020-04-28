@@ -10,7 +10,13 @@ __all__ = [
   "DeclareOpSnippet",
   "OpEvalSnippet",
   "AddOpEvalSnippet",
-  "SimpleContainer"
+  "ReshahpeEvalSnippet",
+  "MatrixMultEvalSnippet",
+  "ArgMaxEvalSnippet",
+  "ArgMinEvalSnippet",
+  "QuantizeEvalSnippet",
+  "DequantizeEvalSnippet",
+  "SimpleContainer",
 ]
 
 class _SnippetBase(Snippet):
@@ -109,6 +115,66 @@ class OpEvalSnippet(_SnippetBase):
 class AddOpEvalSnippet(OpEvalSnippet):
   __inputs__ = ['a', 'b']
   __outputs__ = ['c']
+
+
+class ReshahpeEvalSnippet(OpEvalSnippet):
+  __inputs__ = ["input"]
+  __outputs__ = ["output"]
+
+
+class QuantizeEvalSnippet(OpEvalSnippet):
+  __inputs__ = ["input"]
+  __outputs__ = ["output"]
+
+
+class MatrixMultEvalSnippet(OpEvalSnippet):
+  __inputs__ = ["a", "b"]
+  __outputs__ = ["c"]
+
+
+class ArgMaxEvalSnippet(OpEvalSnippet):
+  __inputs__ = ["input"]
+  __outputs__ = ["output"]
+
+
+class ArgMinEvalSnippet(OpEvalSnippet):
+  __inputs__ = ["input"]
+  __outputs__ = ["output"]
+
+
+class DequantizeEvalSnippet(OpEvalSnippet):
+  __inputs__ = ["a"]
+  __outputs__ = ["b"]
+
+
+class ReLUEvalSnippet(OpEvalSnippet):
+  __inputs__ = ["in"]
+  __outputs__ = ["out"]
+
+
+class ReLU6EvalSnippet(OpEvalSnippet):
+  __inputs__ = ["in"]
+  __outputs__ = ["out"]
+
+
+class MinEvalSnippet(OpEvalSnippet):
+  __inputs__ = ["in"]
+  __outputs__ = ["out"]
+
+
+class MaxEvalSnippet(OpEvalSnippet):
+  __inputs__ = ["in"]
+  __outputs__ = ["out"]
+
+
+class MaxPoolEvalSnippet(OpEvalSnippet):
+  __inputs__ = ["in"]
+  __outputs__ = ["out"]
+
+
+class MinPoolEvalSnippet(OpEvalSnippet):
+  __inputs__ = ["in"]
+  __outputs__ = ["out"]
 
 
 class SimpleContainer(SnippetBase):
