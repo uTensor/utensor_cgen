@@ -7,22 +7,25 @@
 {%endfor%}
 {%endif%}
 
-    {{op_var_name}}_params.padding = {{padding}};
-    {{op_var_name}}_params.stride_width = {{stride_width}};
-    {{op_var_name}}_params.stride_height = {{stride_height}};
-    {{op_var_name}}_params.depth_multiplier = {{depth_multiplier}};
-    {{op_var_name}}_params.activation = {{activation}};
-    {{op_var_name}}_params.dilation_width_factor = {{dilation_width_factor}};
-    {{op_var_name}}_params.dilation_height_factor = {{dilation_height_factor}};
+    {
+        dws_params.padding = {{padding}};
+        dws_params.stride_width = {{stride_width}};
+        dws_params.stride_height = {{stride_height}};
+        dws_params.depth_multiplier = {{depth_multiplier}};
+        dws_params.activation = {{activation}};
+        dws_params.dilation_width_factor = {{dilation_width_factor}};
+        dws_params.dilation_height_factor = {{dilation_height_factor}};
+        {{op_var_name}}.set_params(dws_params);
+    }
     {{op_var_name}}
-        .set_inputs({
+    ].set_inputs({
 {%for name, tensor_var in input_map.items()%}
-            { {{op_type}}::{{name}}, {{tensor_var}} },
+        { {{op_type}}::{{name}}, {{tensor_var}} },
 {%endfor%}
-        })
-        .set_outputs({
+    })
+    .set_outputs({
 {%for name, tensor_var in output_map.items()%}
-            { {{op_type}}::{{name}}, {{tensor_var}}}
+        { {{op_type}}::{{name}}, {{tensor_var}}}
 {%endfor%}
-        })
-        .eval();
+    })
+    .eval();

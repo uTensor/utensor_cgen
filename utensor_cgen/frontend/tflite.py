@@ -2,6 +2,7 @@ import os
 import re
 
 import numpy as np
+
 from utensor_cgen.frontend import FrontendSelector
 from utensor_cgen.frontend.base import Parser
 from utensor_cgen.ir.base import OperationInfo, TensorInfo, uTensorGraph
@@ -201,7 +202,7 @@ class TFLiteParser(Parser):
       ops_info={},
     )
     self._build_graph(fb_model, ugraph)
-
+    _OpRenaming.apply(ugraph)
     return ugraph
 
   def _build_graph(self, fb_model, ugraph):
@@ -387,3 +388,20 @@ class TFLiteParser(Parser):
 
   def _format_op_type(self, op_type):
     return ''.join(map(lambda s: s.capitalize(), op_type.split('_')))
+
+
+class _OpRenaming(object):
+  _OP_NAMES_MAP = {
+    "Quantize": "QuantizeOperator",
+    "DepthwiseConv2d": "DepthwiseSeparableConvOperator",
+    "MaxPool2d": "MaxPoolOperator",
+    "Dequantize": "DequantizeOperator",
+    "FullyConnected": "FullyConnectedOperator"
+  }
+
+  @classmethod
+  def apply(cls, ugraph):
+    for op_info in ugraph.ops_info.values():
+      op_info.op_type = cls._OP_NAMES_MAP.get(
+        op_info.op_type, op_info.op_type
+      )

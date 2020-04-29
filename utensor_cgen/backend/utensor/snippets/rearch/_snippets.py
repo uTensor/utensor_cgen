@@ -10,14 +10,20 @@ __all__ = [
   "DeclareRomTensorSnippet",
   "DeclareRamTensorSnippet",
   "DeclareOpSnippet",
-  "OpEvalSnippet",
+  "DepthwiseSeperateConvOpEvalSnippet",
   "AddOpEvalSnippet",
   "ReshahpeEvalSnippet",
+  "QuantizeEvalSnippet",
   "MatrixMultEvalSnippet",
   "ArgMaxEvalSnippet",
   "ArgMinEvalSnippet",
-  "QuantizeEvalSnippet",
   "DequantizeEvalSnippet",
+  "ReLUEvalSnippet",
+  "ReLU6EvalSnippet",
+  "MinEvalSnippet",
+  "MaxEvalSnippet",
+  "MinPoolEvalSnippet",
+  "MaxPoolEvalSnippet",
   "SimpleContainer",
 ]
 
@@ -68,21 +74,21 @@ class DeclareRamTensorSnippet(_SnippetBase):
 class DeclareOpSnippet(_SnippetBase):
   __template_name__ = 'snippets/rearch/declare_op.cpp'
 
-  def __init__(self, op, templ_dtypes, op_var_name):
+  def __init__(self, op, templ_dtypes, op_var_name, nested_namespaces=None):
     _SnippetBase.__init__(self)
+    if nested_namespaces is None:
+      nested_namespaces = []
     op_info = op.op_info
     if templ_dtypes:
       templ_params = ', '.join([NP_TYPES_MAP[dtype].tensor_type_str for dtype in templ_dtypes])
       op_type = '{}<{}>'.format(op_info.op_type, templ_params)
     else:
       op_type = op_info.op_type
+    if nested_namespaces:
+      op_type = "::".join(nested_namespaces + [op_type])
     self.template_vars['op_type'] = op_type
     self.template_vars['construct_params'] = op.construct_params
     self.template_vars['op_var_name'] = op_var_name
-
-
-class DepthwiseSeperateConvOpDeclareSnippet(DeclareOpSnippet):
-  __template_name__ = "snippets/rearch/declare_dws_conv_op.cpp"
 
 
 class OpEvalSnippet(_SnippetBase):
@@ -90,8 +96,10 @@ class OpEvalSnippet(_SnippetBase):
   __inputs__ = []
   __outputs__ = []
 
-  def __init__(self, op_info, templ_dtypes, op_name, tensor_var_map):
+  def __init__(self, op_info, templ_dtypes, op_name, tensor_var_map, nested_namespaces=None):
     Snippet.__init__(self)
+    if nested_namespaces is None:
+      nested_namespaces = []
     input_map = {
       name: tensor_var_map[tensor.name]
       for name, tensor in zip(self.__inputs__, op_info.input_tensors)
@@ -111,6 +119,8 @@ class OpEvalSnippet(_SnippetBase):
       op_type = '{}<{}>'.format(op_info.op_type, templ_params)
     else:
       op_type = op_info.op_type
+    if nested_namespaces:
+      op_type = "::".join(nested_namespaces + [op_type])
     self.template_vars['op_type'] = op_type
     self.template_vars['op_var_name'] = op_name
     self.template_vars['input_map'] = input_map
@@ -129,22 +139,22 @@ class DepthwiseSeperateConvOpEvalSnippet(OpEvalSnippet):
     2: "TFLM::TfLitePadding::kTfLitePaddingValid"
   }
   _ACTIVATION_MAP = {
-    0: 'kTfLiteActNone',
-    1: 'kTfLiteActRelu',
-    2: 'kTfLiteActRelu1',
-    3: 'kTfLiteActRelu6',
-    4: 'kTfLiteActTanh',
-    5: 'kTfLiteActSignBit',
-    6: 'kTfLiteActSigmoid',
+    '0': 'kTfLiteActNone',
+    '1': 'kTfLiteActRelu',
+    '2': 'kTfLiteActRelu1',
+    '3': 'kTfLiteActRelu6',
+    '4': 'kTfLiteActTanh',
+    '5': 'kTfLiteActSignBit',
+    '6': 'kTfLiteActSigmoid',
   }
   _ACTIVATION_STR_PATTERN = re.compile(r'^(\d+) \(\w+\)$')
 
-  def __init__(self, op_info, templ_dtypes, op_name, tensor_var_map):
-    OpEvalSnippet.__init__(self, op_info, templ_dtypes, op_name, tensor_var_map)
+  def __init__(self, op_info, templ_dtypes, op_name, tensor_var_map, nested_namespaces=None):
+    OpEvalSnippet.__init__(self, op_info, templ_dtypes, op_name, tensor_var_map, nested_namespaces)
     cls = type(self)
     self.template_vars['padding'] = cls._PADDING_MAP[op_info.op_attr['Padding']]
     self.template_vars['stride_width'] = op_info.op_attr['StrideW']
-    self.template_vars['stride+height'] = op_info.op_attr['StrideH']
+    self.template_vars['stride_height'] = op_info.op_attr['StrideH']
     self.template_vars['depth_multiplier'] = op_info.op_attr['DepthMultiplier']
     activation_idx = cls._ACTIVATION_STR_PATTERN.match(
       op_info.op_attr['FusedActivationFunction']
@@ -152,6 +162,7 @@ class DepthwiseSeperateConvOpEvalSnippet(OpEvalSnippet):
     self.template_vars['activation'] = cls._ACTIVATION_MAP[activation_idx]
     self.template_vars['dilation_width_factor'] = op_info.op_attr['DilationWFactor']
     self.template_vars['dilation_height_factor'] = op_info.op_attr['DilationHFactor']
+
 
 class AddOpEvalSnippet(OpEvalSnippet):
   __inputs__ = ['a', 'b']
@@ -208,12 +219,12 @@ class MaxEvalSnippet(OpEvalSnippet):
   __outputs__ = ["out"]
 
 
-class MaxPoolEvalSnippet(OpEvalSnippet):
+class MinPoolEvalSnippet(OpEvalSnippet):
   __inputs__ = ["in"]
   __outputs__ = ["out"]
 
 
-class MinPoolEvalSnippet(OpEvalSnippet):
+class MaxPoolEvalSnippet(OpEvalSnippet):
   __inputs__ = ["in"]
   __outputs__ = ["out"]
 

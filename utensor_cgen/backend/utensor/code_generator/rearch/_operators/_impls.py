@@ -116,6 +116,7 @@ class _QuantizeOperator(_Operator):
       op=self,
       templ_dtypes=[self.out_dtypes[0], self.in_dtypes[0]],
       op_var_name=op_var_name,
+      nested_namespaces=['TFLM'],
     )
 
   def get_eval_snippet(self, op_var_name, op_info, tensor_var_map):
@@ -124,6 +125,7 @@ class _QuantizeOperator(_Operator):
       templ_dtypes=[self.out_dtypes[0], self.in_dtypes[0]],
       op_name=op_var_name,
       tensor_var_map=tensor_var_map,
+      nested_namespaces=['TFLM'],
     )
 
 
@@ -136,6 +138,7 @@ class _DequantizeOperator(_Operator):
       op=self,
       templ_dtypes=[self.out_dtypes[0], self.in_dtypes[0]],
       op_var_name=op_var_name,
+      nested_namespaces=['TFLM'],
     )
 
   def get_eval_snippet(self, op_var_name, op_info, tensor_var_map):
@@ -144,6 +147,7 @@ class _DequantizeOperator(_Operator):
       templ_dtypes=[self.out_dtypes[0], self.in_dtypes[0]],
       op_name=op_var_name,
       tensor_var_map=tensor_var_map,
+      nested_namespaces=['TFLM'],
     )
 
 
@@ -226,6 +230,7 @@ class _MaxOperator(_Operator):
       tensor_var_map=tensor_var_map,
     )
 
+
 class _PoolingOperatorMixin(object):
 
   @classmethod
@@ -291,6 +296,28 @@ class _MinPoolOperator(_Operator, _PoolingOperatorMixin):
       templ_dtypes=[self.in_dtypes[0]],
       op_name=op_var_name,
       tensor_var_map=tensor_var_map,
+    )
+
+
+@OperatorFactory.register
+class _DWSConvOperator(_Operator):
+  op_type = "DepthwiseSeparableConvOperator"
+
+  def get_declare_snippet(self, op_var_name, tensor_var_map):
+    return DeclareOpSnippet(
+      op=self,
+      templ_dtypes=[self.out_dtypes[0]],
+      op_var_name=op_var_name,
+      nested_namespaces=['TFLM'],
+    )
+
+  def get_eval_snippet(self, op_var_name, op_info, tensor_var_map):
+    return DepthwiseSeperateConvOpEvalSnippet(
+      op_info=op_info,
+      templ_dtypes=[self.out_dtypes[0]],
+      op_name=op_var_name,
+      tensor_var_map=tensor_var_map,
+      nested_namespaces=['TFLM'],
     )
 
 
