@@ -1,0 +1,6 @@
+{%if construct_params%}
+{{op_type}} {{op_var_name}}({%for param in construct_params%}{{construct_params}}{%if not loop.last%}, {%endif%}{%endfor%});
+{%else%}
+{{op_type}} {{op_var_name}};
+{%endif%}
+TFLM::TfLiteDepthwiseConvParams {{op_var_name}}_params;

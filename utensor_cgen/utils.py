@@ -12,11 +12,11 @@ from string import ascii_letters, digits
 from time import time
 
 import attr
+import idx2numpy as idx2np
+import numpy as np
 from click.types import ParamType
 from toml import loads as _parse
 
-import idx2numpy as idx2np
-import numpy as np
 from utensor_cgen.logger import logger
 
 __all__ = ["save_idx", "save_consts", "save_graph", "log_graph",
@@ -395,7 +395,7 @@ def ops_bfs_queue(ugraph, init_nodes=None):
     bfs_deck.append(op)
   return bfs_deck
 
-def prune_graph(ugraph):
+def prune_graph(ugraph, output_nodes=None):
   """
   Remove nodes that is no longer needed *in-place*
 
@@ -405,11 +405,17 @@ def prune_graph(ugraph):
 
   :param ugraph: the graph to be pruned
   :type ugraph: :class:`.uTensorGraph`
+  :param output_nodes: the output nodes
+  :type output_nodes: List[String]
   """
   new_ugraph = deepcopy(ugraph)
+  if output_nodes is None:
+    output_nodes = ugraph.output_nodes[:]
+  else:
+    new_ugraph.output_nodes = output_nodes[:]
   # BFS to find all ops you need
-  ops_in_need = set(ugraph.output_nodes)
-  queue = [name for name in ugraph.output_nodes]
+  ops_in_need = set(output_nodes)
+  queue = [name for name in output_nodes]
   visited = set([])
   while queue:
     op_name = queue.pop(0)
@@ -436,6 +442,7 @@ def prune_graph(ugraph):
       ops_to_remove.add(op_name)
   for op_name in ops_to_remove:
     new_ugraph.ops_info.pop(op_name)
+  topologic_order_graph(new_ugraph)
   return new_ugraph
 
 def random_str(length=8):
