@@ -33,3 +33,34 @@ def check_integrity(ugraph):
           % (op_name, input_tensor_info.name, input_tensor_info.op_name)
         )
   assert len(ugraph.ops_info) == len(ugraph.topo_order)
+
+class _AttributesBase(object):
+
+  def __init__(self):
+    self.__attributes = {}
+    for key in self._ALLOWED_KEYS.keys():
+      if not isinstance(key, str):
+        raise TypeError("allowed keys should be all string")
+
+  def __setitem__(self, key, value):
+    if not isinstance(key, str):
+      raise TypeError("key must be string: {}".format(key))
+    if key not in self._ALLOWED_KEYS:
+      raise KeyError("{} is not allowed to added to {}".format(key, self))
+    expect_type = self._ALLOWED_KEYS[key]
+    if not isinstance(value, expect_type):
+      raise TypeError(
+        "expecting {} for {}, get {}".format(expect_type, key, type(value))
+      )
+    self.__attributes[key] = value
+
+  def __getattr__(self, attrib):
+    return getattr(self.__attributes, attrib)
+
+
+def declare_attrib_cls(cls_name, allowed_keys=None):
+  if allowed_keys is None:
+    allowed_keys = {}
+  else:
+    allowed_keys = dict(allowed_keys)
+  return type(cls_name, (_AttributesBase,), {"_ALLOWED_KEYS": allowed_keys})

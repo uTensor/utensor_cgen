@@ -1,0 +1,53 @@
+# utensor-cli version 0.4.2.a88eafa.dev
+# https://github.com/toml-lang/toml
+# <target_name>.<component>.<part>
+# we use string 'None' to represent python None value
+# you should convert the string to None if you try to write extension for utensor_cgen
+[utensor.backend]
+legacy-api = true
+
+[utensor.backend.tensor_alloc_planner]
+max_pool_size = 1048576
+include_inputs = false
+include_outputs = true
+out_fname = "None"
+enabled = true
+data_alignment = 2
+
+[utensor.backend.legacy_code_generator]
+src_fname = "None"
+params_dir = "data"
+embed_params_dir = "/fs/data"
+model_dir = "models"
+debug_cmt = false
+
+[utensor.backend.legacy_graph_lower]
+
+[utensor.backend.rearch_code_generator]
+src_fname = "None"
+header_fname = "None"
+params_dir = "data"
+model_dir = "models"
+meta_data_pool_size = "auto"
+ram_data_pool_size = "auto"
+
+[utensor.backend.rearch_graph_lower]
+
+[utensor.backend.pipeline_transformer]
+save_graph = false
+transform_methods = [ "dropout(name_pattern=r'(dropout[_\\w\\d]*)/.*')", "linear_reorder", "quantize", "conv_pool", "inline", "biasAdd", "remove_id_op", "fake_gather_v2", "refcnt",]
+
+[utensor.backend.tensor_alloc_planner.aesthetic_kwargs]
+split_on_large_graph = true
+num_tensors_per_split = 20
+figsize = "None"
+fontsize = 12
+lw = 12
+rand_seed = 1111
+
+[utensor.backend.tensor_alloc_planner.dtype_size_map]
+float = 4
+double = 8
+uint8 = 1
+int = 4
+long = 8
