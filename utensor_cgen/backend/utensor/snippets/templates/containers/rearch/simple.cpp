@@ -1,7 +1,7 @@
 using namespace uTensor;
 
-static localCircularArenaAllocator<{{meta_data_pool_size}}> meta_allocator;
-static localCircularArenaAllocator<{{ram_data_pool_size}}> ram_allocator;
+static const localCircularArenaAllocator<{{meta_data_pool_size}}> meta_allocator;
+static const localCircularArenaAllocator<{{ram_data_pool_size}}> ram_allocator;
 
 {#ex: rom tensors, ops..etc#}
 // start rendering global declare snippets
@@ -22,6 +22,7 @@ void compute_{{model_name}}({%for pl in placeholders%}Tensor& {{pl}}, {%endfor%}
     // start rendering eval snippets
     {%for snippet in eval_snippets%}
     {{snippet.render()}}
+
     {%endfor%}
     // end of rendering eval snippets
     {%for out_var in out_tensor_var_names%}

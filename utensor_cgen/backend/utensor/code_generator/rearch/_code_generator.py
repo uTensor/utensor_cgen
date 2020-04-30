@@ -105,12 +105,12 @@ class uTensorRearchCodeGenerator(BackendPart):
           op_info.op_attr['value'].value.np_array.ravel()
         )
       )
-      declare_global_snippets.append(
+      declare_local_snippets.append(
         DeclareRomTensorSnippet(
           tensor_info=tensor_info,
           tensor_var=tensor_var,
           buffer_var=buffer_name,
-          static=True,
+          # static=True,
         )
       )
     return ops_map, declare_global_snippets, declare_local_snippets, weight_snippets
