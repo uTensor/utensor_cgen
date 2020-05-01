@@ -81,7 +81,7 @@ class _Operator(with_metaclass(_OperatorMeta), object):
       self.in_dtypes = in_dtypes
       self.out_dtypes = out_dtypes
       self.construct_params = construct_signature
-      self.op_info = op_info
+      self.op_type = op_info.op_type
       cls._cache[full_signature] = self
     return cls._cache[full_signature]
 

@@ -81,12 +81,10 @@ class DeclareOpSnippet(_SnippetBase):
       nested_namespaces = []
     else:
       nested_namespaces = list(nested_namespaces)
-    op_info = op.op_info
+    op_type = op.op_type
     if templ_dtypes:
       templ_params = ', '.join([NP_TYPES_MAP[dtype].tensor_type_str for dtype in templ_dtypes])
-      op_type = '{}<{}>'.format(op_info.op_type, templ_params)
-    else:
-      op_type = op_info.op_type
+      op_type = '{}<{}>'.format(op_type, templ_params)
     if nested_namespaces:
       op_type = "::".join(nested_namespaces + [op_type])
     self.template_vars['op_type'] = op_type

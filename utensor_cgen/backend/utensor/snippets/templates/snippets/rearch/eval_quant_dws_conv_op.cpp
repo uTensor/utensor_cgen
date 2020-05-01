@@ -7,6 +7,7 @@
 {%endfor%}
 {%endif%}
 {
+        TFLM::TfLiteDepthwiseConvParams dws_params;
         dws_params.padding = {{padding}};
         dws_params.stride_width = {{stride_width}};
         dws_params.stride_height = {{stride_height}};
