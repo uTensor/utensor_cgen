@@ -12,7 +12,7 @@ Installation (Python 2 & 3)
 For Users
 ---------
 
--  with ``setup.py``
+-  with ``setup.py`` (recommended)
 
 .. code:: console
 
@@ -29,13 +29,7 @@ For Users
 For Developers
 --------------
 
--  with pip_
-
-.. code:: console
-
-    $ pip install -e .[dev]
-
--  with pipenv_
+-  with pipenv_ (recommended)
 
 .. code:: console
 
@@ -47,6 +41,12 @@ For Developers
 
     # get help message of `utensor-cli`
     $ utensor-cli -h
+
+-  with pip_
+
+.. code:: console
+
+    $ pip install -e .[dev]
 
 Troubleshooting with pipenv_
 ~~~~~~~~~~~~~~~~~~~~~~~~~~~~
