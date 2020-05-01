@@ -12,7 +12,7 @@
         dws_params.stride_width = {{stride_width}};
         dws_params.stride_height = {{stride_height}};
         dws_params.depth_multiplier = {{depth_multiplier}};
-        dws_params.activation = {{activation}};
+        dws_params.activation = TFLM::{{activation}};
         dws_params.dilation_width_factor = {{dilation_width_factor}};
         dws_params.dilation_height_factor = {{dilation_height_factor}};
         {{op_var_name}}.set_params(dws_params);

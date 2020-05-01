@@ -4,6 +4,6 @@
 #include <vector>
 #include "uTensor/core/tensor.hpp"
 
-void compute_{{model_name}}({%for pl in placeholders%}utensor::Tensor& {{pl}}, {%endfor%}std::vector<utensor::Tensor>& outputs);
+void compute_{{model_name}}({%for pl in placeholders%}uTensor::Tensor& {{pl}}, {%endfor%}std::vector<uTensor::Tensor>& outputs);
 
 #endif // __{{model_name.upper()}}_H

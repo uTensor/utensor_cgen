@@ -29,7 +29,7 @@ __all__ = [
 ]
 
 class _SnippetBase(Snippet):
-  __headers__ = set(['"uTensor/uTensor.hpp"'])
+  __headers__ = set(['"uTensor/uTensor.h"'])
 
   @staticmethod
   def get_quant_param(tensor_info):

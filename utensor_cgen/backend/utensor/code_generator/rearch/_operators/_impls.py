@@ -260,7 +260,7 @@ class _PoolingOperatorMixin(object):
 
 
 @OperatorFactory.register
-class _MaxPoolOperator(_Operator, _PoolingOperatorMixin):
+class _MaxPoolOperator(_PoolingOperatorMixin, _Operator):
   op_type = 'MaxPoolOperator'
 
   def get_declare_snippet(self, op_var_name, tensor_var_map):
@@ -280,7 +280,7 @@ class _MaxPoolOperator(_Operator, _PoolingOperatorMixin):
 
 
 @OperatorFactory.register
-class _MinPoolOperator(_Operator, _PoolingOperatorMixin):
+class _MinPoolOperator(_PoolingOperatorMixin, _Operator):
   op_type = 'MinPoolOperator'
 
   def get_declare_snippet(self, op_var_name, tensor_var_map):
