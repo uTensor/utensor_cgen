@@ -11,6 +11,7 @@ __all__ = [
   "DeclareRamTensorSnippet",
   "DeclareOpSnippet",
   "DepthwiseSeperateConvOpEvalSnippet",
+  "QuantDepthwiseSeperateConvOpEvalSnippet",
   "AddOpEvalSnippet",
   "ReshahpeEvalSnippet",
   "QuantizeEvalSnippet",
@@ -78,6 +79,8 @@ class DeclareOpSnippet(_SnippetBase):
     _SnippetBase.__init__(self)
     if nested_namespaces is None:
       nested_namespaces = []
+    else:
+      nested_namespaces = list(nested_namespaces)
     op_info = op.op_info
     if templ_dtypes:
       templ_params = ', '.join([NP_TYPES_MAP[dtype].tensor_type_str for dtype in templ_dtypes])
@@ -100,6 +103,8 @@ class OpEvalSnippet(_SnippetBase):
     Snippet.__init__(self)
     if nested_namespaces is None:
       nested_namespaces = []
+    else:
+      nested_namespaces = list(nested_namespaces)
     input_map = {
       name: tensor_var_map[tensor.name]
       for name, tensor in zip(self.__inputs__, op_info.input_tensors)
@@ -129,8 +134,13 @@ class OpEvalSnippet(_SnippetBase):
 
 
 class DepthwiseSeperateConvOpEvalSnippet(OpEvalSnippet):
-  __template_name__ = 'snippets/rearch/eval_dws_conv_op.cpp'
   __inputs__ = ["in", "depthwise_filter", "pointwise_filter"]
+  __outputs__ = ["out"]
+
+
+class QuantDepthwiseSeperateConvOpEvalSnippet(OpEvalSnippet):
+  __template_name__ = 'snippets/rearch/eval_quant_dws_conv_op.cpp'
+  __inputs__ = ["in", "filter", "bias"]
   __outputs__ = ["out"]
 
   _PADDING_MAP = {

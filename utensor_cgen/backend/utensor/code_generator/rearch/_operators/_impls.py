@@ -300,7 +300,8 @@ class _MinPoolOperator(_Operator, _PoolingOperatorMixin):
 
 
 @OperatorFactory.register
-class _DWSConvOperator(_Operator):
+class _QuantDWSConvOperator(_Operator):
+  namespaces = ('TFLM',)
   op_type = "DepthwiseSeparableConvOperator"
 
   def get_declare_snippet(self, op_var_name, tensor_var_map):
@@ -308,7 +309,41 @@ class _DWSConvOperator(_Operator):
       op=self,
       templ_dtypes=[self.out_dtypes[0]],
       op_var_name=op_var_name,
-      nested_namespaces=['TFLM'],
+      nested_namespaces=self.namespaces,
+    )
+
+  def get_eval_snippet(self, op_var_name, op_info, tensor_var_map):
+    return QuantDepthwiseSeperateConvOpEvalSnippet(
+      op_info=op_info,
+      templ_dtypes=[self.out_dtypes[0]],
+      op_name=op_var_name,
+      tensor_var_map=tensor_var_map,
+      nested_namespaces=self.namespaces,
+    )
+
+
+@OperatorFactory.register
+class _DWSConvOperator(_Operator):
+  op_type = "DepthwiseSeparableConvOperator"
+
+  @classmethod
+  @must_return_type(Hashable)
+  def get_constructor_signature(cls, op_info):
+    strides = [
+        1,
+        op_info.op_attr['StrideW'],
+        op_info.op_attr['StrideH'],
+        1,
+      ]
+    padding = op_info.op_attr['Padding'] == 1 and "VALID" or "SAME"
+    strides_str = ','.join(map(str, strides))
+    return ("{{ {} }}".format(strides_str), padding)
+
+  def get_declare_snippet(self, op_var_name, tensor_var_map):
+    return DeclareOpSnippet(
+      op=self,
+      templ_dtypes=[self.out_dtypes[0]],
+      op_var_name=op_var_name,
     )
 
   def get_eval_snippet(self, op_var_name, op_info, tensor_var_map):
@@ -317,7 +352,6 @@ class _DWSConvOperator(_Operator):
       templ_dtypes=[self.out_dtypes[0]],
       op_name=op_var_name,
       tensor_var_map=tensor_var_map,
-      nested_namespaces=['TFLM'],
     )
 
 

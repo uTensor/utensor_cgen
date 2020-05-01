@@ -4,11 +4,10 @@ from copy import deepcopy
 from functools import reduce
 
 import attr
-import six
-from attr.validators import instance_of
-
 import numpy as np
+import six
 import tensorflow as tf
+from attr.validators import instance_of
 from tensorflow.core.framework.attr_value_pb2 import AttrValue as _AttrValue
 from tensorflow.core.framework.attr_value_pb2 import \
     NameAttrList as _NameAttrList
@@ -16,6 +15,7 @@ from tensorflow.core.framework.tensor_pb2 import TensorProto as _TensorProto
 from tensorflow.core.framework.tensor_shape_pb2 import \
     TensorShapeProto as _TensorShapeProto
 from tensorflow.core.framework.types_pb2 import DataType as _DataType
+
 from utensor_cgen.logger import logger
 from utensor_cgen.utils import random_str, topologic_order_graph
 
@@ -271,6 +271,9 @@ class OperationInfo(IRBase, _NoShallowCopyMixin):
 
   op_attr = attr.ib(factory=dict, converter=dict)
 
+  # any codegen specific attributes goes to here
+  code_gen_attributes = attr.ib(factory=dict)
+
   n_inputs = attr.ib()
   @n_inputs.default
   def default_n_inputs(self):
@@ -474,7 +477,6 @@ class uTensorGraph(IRBase, _NoShallowCopyMixin, uTensorGraphBuilderMixin):
   ops_info = attr.ib(factory=dict)
   # non-init
   topo_order = attr.ib(factory=list, init=False)
-  _type_to_op_map = attr.ib(factory=dict, init=False, repr=False)
   attributes = attr.ib(factory=dict, init=False, repr=False)
 
   def __attrs_post_init__(self):
@@ -496,17 +498,11 @@ class uTensorGraph(IRBase, _NoShallowCopyMixin, uTensorGraphBuilderMixin):
 
     :rtype: List[:class:`.OperationInfo`]
     """
-    if not self._type_to_op_map:
-      for op_info in self.ops_info.values():
-        op_type = op_info.op_type
-        ops = self._type_to_op_map.get(
-          op_type,
-          []
-        ) + [op_info]
-        self._type_to_op_map.update(
-          [(op_type, ops),]
-        )
-    return self._type_to_op_map.get(given_op_type, [])
+    ops = []
+    for op_info in self.ops_info.values():
+      if op_info.op_type == given_op_type:
+        ops.append(op_info)
+    return ops
   
   @property
   def output_ops(self):
@@ -664,9 +660,6 @@ class uTensorGraph(IRBase, _NoShallowCopyMixin, uTensorGraphBuilderMixin):
     """
     for op in self.ops_info.values():
       op.move_into(other_ugraph)
-      if op.op_type not in self._type_to_op_map:
-        self._type_to_op_map[op.op_type] = []
-      self._type_to_op_map[op.op_type].append(op)
 
   def __deepcopy__(self, memo):
     new_graph = uTensorGraph(

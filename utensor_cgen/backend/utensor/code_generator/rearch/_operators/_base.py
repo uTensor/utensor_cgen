@@ -3,7 +3,7 @@ from typing import Hashable
 
 from six import with_metaclass
 
-from utensor_cgen.utils import must_return_type
+from utensor_cgen.utils import MUST_OVERWRITE, must_return_type
 
 __all__ = ["OperatorFactory", "OpNotSupportedError"]
 
@@ -19,16 +19,19 @@ class OperatorFactory(object):
   @classmethod
   def get_opertor(cls, op_info):
     op_type = op_info.op_type
-    op_cls = cls._operators.get(op_type)
+    namespaces = op_info.code_gen_attributes.get('namespaces', tuple())
+    op_cls = cls._operators.get((namespaces, op_type))
     if op_cls is None:
       raise OpNotSupportedError(
-        "{} not supported in utensor_cgen".format(op_type)
+        "{}::{} not supported in utensor_cgen".format("::".join(namespaces), op_type)
       )
     return op_cls(op_info)
 
   @classmethod
   def register(cls, op_cls):
-    cls._operators[op_cls.op_type] = op_cls
+    cls._operators[
+      (op_cls.namespaces, op_cls.op_type)
+    ] = op_cls
     return op_cls
 
   @classmethod
@@ -62,10 +65,16 @@ class _OperatorMeta(type):
 
 
 class _Operator(with_metaclass(_OperatorMeta), object):
+  namespaces = tuple()
+  op_type = MUST_OVERWRITE
+
   def __new__(cls, op_info):
+    if cls.op_type is MUST_OVERWRITE:
+      raise ValueError('op_type must be overwritten: {}'.format(cls))
+
     type_signature = cls.get_type_signature(op_info)
     construct_signature = cls.get_constructor_signature(op_info)
-    full_signature = (type_signature, construct_signature)
+    full_signature = (cls.namespaces, type_signature, construct_signature)
     in_dtypes, out_dtypes = type_signature
     if full_signature not in cls._cache:
       self = object.__new__(cls)
