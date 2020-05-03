@@ -235,7 +235,7 @@ class _PoolingOperatorMixin(object):
 
   @classmethod
   @must_return_type(Hashable)
-  def get_constructor_signature(cls, op_info):
+  def get_constructor_parameters(cls, op_info):
     if op_info.ugraph.lib_name == "tensorflow":
       strides = op_info.op_attr['strides'].value.ints_value
       ksize = op_info.op_attr['ksize'].value.ints_value[1:3]
@@ -328,7 +328,7 @@ class _DWSConvOperator(_Operator):
 
   @classmethod
   @must_return_type(Hashable)
-  def get_constructor_signature(cls, op_info):
+  def get_constructor_parameters(cls, op_info):
     strides = [
         1,
         op_info.op_attr['StrideW'],

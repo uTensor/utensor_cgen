@@ -50,7 +50,7 @@ class OperatorFactory(object):
 class _OperatorMeta(type):
   def __new__(mcls, name, bases, attrib):
     attrib["_cache"] = {}
-    for key in ["get_type_signature", "get_constructor_signature"]:
+    for key in ["get_type_signature", "get_constructor_parameters"]:
       func = attrib.get(key)
       if func is None:
         continue
@@ -73,14 +73,14 @@ class _Operator(with_metaclass(_OperatorMeta), object):
       raise ValueError('op_type must be overwritten: {}'.format(cls))
 
     type_signature = cls.get_type_signature(op_info)
-    construct_signature = cls.get_constructor_signature(op_info)
-    full_signature = (cls.namespaces, type_signature, construct_signature)
+    construct_params = cls.get_constructor_parameters(op_info)
+    full_signature = (cls.namespaces, type_signature, construct_params)
     in_dtypes, out_dtypes = type_signature
     if full_signature not in cls._cache:
       self = object.__new__(cls)
       self.in_dtypes = in_dtypes
       self.out_dtypes = out_dtypes
-      self.construct_params = construct_signature
+      self.construct_params = construct_params
       self.op_type = op_info.op_type
       cls._cache[full_signature] = self
     return cls._cache[full_signature]
@@ -94,7 +94,7 @@ class _Operator(with_metaclass(_OperatorMeta), object):
 
   @classmethod
   @must_return_type(Hashable)
-  def get_constructor_signature(cls, op_info):
+  def get_constructor_parameters(cls, op_info):
     return tuple()
 
   def get_declare_snippet(self, op_var_name, tensor_var_map, **kwargs):
