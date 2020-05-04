@@ -111,6 +111,7 @@ def convert_graph(model_file, output_nodes, config, target):
 @click.option('--verbose', is_flag=True)
 def list_trans_methods(verbose):
   from utensor_cgen.transformer import TransformerPipeline
+  from pprint import pformat
 
   if verbose:
     for name, trans_cls in TransformerPipeline.TRANSFORMER_MAP.items():
@@ -118,7 +119,7 @@ def list_trans_methods(verbose):
       click.secho(trans_cls.__doc__, fg='yellow', bold=True)
   else:
     click.secho(
-      str(TransformerPipeline.all_transform_methods()),
+      pformat(TransformerPipeline.all_transform_methods()),
       fg='white', bold=True
     )
   return 0
