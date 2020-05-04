@@ -1,7 +1,7 @@
 import numpy as np
 
 
-def test_op_argmax(ugraph, quant_trans):
+def test_op_argmax(ugraph):
     with ugraph.begin_construction():
         tensor_logits, = ugraph.add_op(
             np.random.rand(3, 5, 7).astype('float32'),
@@ -28,4 +28,3 @@ def test_op_argmax(ugraph, quant_trans):
     assert tensor_out1.dtype == np.dtype('int32')
     assert tensor_out2.shape == [3, 5]
     assert tensor_out2.dtype == np.dtype('int64')
-    quant_trans.transform(ugraph)

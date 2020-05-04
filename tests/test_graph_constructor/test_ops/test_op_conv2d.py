@@ -1,7 +1,7 @@
 import numpy as np
 
 
-def test_op_conv2d(ugraph, quant_trans):
+def test_op_conv2d(ugraph):
     with ugraph.begin_construction():
         tensor_x, = ugraph.add_op(
             np.random.rand(10, 512, 512, 5),
@@ -24,4 +24,3 @@ def test_op_conv2d(ugraph, quant_trans):
             is_output=True
         )
     assert out.shape == [10, 256, 256, 10]
-    quant_trans.transform(ugraph)

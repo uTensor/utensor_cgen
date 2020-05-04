@@ -1,5 +1,5 @@
 import numpy as np
-import tensorflow as tf
+import tensorflow.compat.v1 as tf
 from pytest import fixture
 
 from utensor_cgen.frontend.tensorflow import GraphDefParser

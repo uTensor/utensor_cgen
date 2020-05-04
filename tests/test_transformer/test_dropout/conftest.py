@@ -2,10 +2,12 @@ from random import sample
 
 import numpy as np
 import pytest
-import tensorflow as tf
 
-from utensor_cgen.frontend.tensorflow import GraphDefParser
-from utensor_cgen.utils import random_str
+import tensorflow.compat.v1 as tf # isort:skip
+tf.disable_v2_behavior() # isort:skip
+
+from utensor_cgen.frontend.tensorflow import GraphDefParser # isort:skip
+from utensor_cgen.utils import random_str # isort:skip
 
 
 @pytest.fixture(scope='session', name='droput_graph_tuple')

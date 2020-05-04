@@ -1,5 +1,5 @@
 import pytest
-from tensorflow import AttrValue, NameAttrList
+from tensorflow.compat.v1 import AttrValue, NameAttrList
 
 
 @pytest.fixture(scope='session')

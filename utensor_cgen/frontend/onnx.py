@@ -1,12 +1,14 @@
 import os
 import re
 from collections import Counter
+from numbers import Number
 
 import numpy as np
 import onnx
-import tensorflow as tf
+import tensorflow.compat.v1 as tf
+from onnx import mapping, numpy_helper
 from onnx.onnx_pb import TensorProto
-from onnx_tf.backend import TensorflowBackend, prepare
+
 from utensor_cgen.frontend import FrontendSelector
 from utensor_cgen.frontend.base import Parser
 from utensor_cgen.ir import OperationInfo, TensorInfo, uTensorGraph
@@ -26,7 +28,38 @@ def _convert_op_attribute(attrib_pb):
   elif attrib_pb.HasField('s'):
     return attrib_pb.s
   else:
-    raise ValueError('Unknown attribute value: {}'.format(attrib_pb)) 
+    raise ValueError('Unknown attribute value: {}'.format(attrib_pb))
+
+# I stole these code snippets from [onnx-tf](https://github.com/onnx/onnx-tensorflow)
+# I have to do so since TF2.0 fuck up onnx-tf's backend
+def _onnx_dtype(dtype):
+  if isinstance(dtype, Number):
+    onnx_dype = dtype
+  elif isinstance(dtype, str):
+    onnx_dype = TensorProto.DataType.Value(dtype)
+  else:
+    raise RuntimeError("dtype should be number or str.")
+  return onnx_dype
+
+def onnx2tf(dtype):
+  return tf.as_dtype(mapping.TENSOR_TYPE_TO_NP_TYPE[_onnx_dtype(dtype)])
+
+def _onnx_initializer_to_input_dict_items(initializer):
+  """ Convert ONNX graph initializer to input dict items.
+
+  :param initializer: ONNX graph initializer, list of TensorProto.
+  :return: List of input dict items.
+  """
+  def tensor2list(onnx_tensor):
+    # Use the onnx.numpy_helper because the data may be raw
+    return numpy_helper.to_array(onnx_tensor).flatten().tolist()
+
+  return [(init.name,
+            tf.constant(
+                tensor2list(init),
+                shape=init.dims,
+                dtype=onnx2tf(init.data_type)))
+          for init in initializer]
 
 
 @FrontendSelector.register(target_exts=['.onnx'])
@@ -81,7 +114,7 @@ class OnnxParser(Parser):
     # find Const ops
     params_dict = {}
     # FIXME: avoid using internal api of other library
-    dict_items = TensorflowBackend._onnx_initializer_to_input_dict_items(onnx_graph.initializer)
+    dict_items = _onnx_initializer_to_input_dict_items(onnx_graph.initializer)
     for name, tf_tensor in dict_items:
       params_dict[name] = AttrValueConverter.GenericType(
         value_name='value',

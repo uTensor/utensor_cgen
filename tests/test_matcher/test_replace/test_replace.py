@@ -1,4 +1,5 @@
-import tensorflow as tf
+import tensorflow.compat.v1 as tf
+
 # FIXME: remove uTensorOpEqualityDelegate import after we have generic op_eq_deleate
 from utensor_cgen.backend.utensor.code_generator.legacy._operators import \
     uTensorOpEqualityDelegate

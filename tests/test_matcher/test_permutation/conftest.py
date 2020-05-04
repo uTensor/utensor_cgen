@@ -1,5 +1,5 @@
 import pytest
-import tensorflow as tf
+import tensorflow.compat.v1 as tf
 
 from utensor_cgen.frontend.tensorflow import GraphDefParser
 
