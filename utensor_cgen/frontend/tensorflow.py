@@ -2,11 +2,11 @@ from __future__ import absolute_import
 
 import os
 
-import six
-
 import numpy as np
-import tensorflow as tf
+import six
+import tensorflow.compat.v1 as tf
 from google.protobuf import text_format
+
 from utensor_cgen.frontend import FrontendSelector
 from utensor_cgen.frontend.base import Parser
 from utensor_cgen.ir.base import OperationInfo, TensorInfo, uTensorGraph
@@ -17,6 +17,7 @@ from utensor_cgen.utils import random_str, topologic_order_graph
 
 @FrontendSelector.register(target_exts=[".pb", ".pbtxt"])
 class GraphDefParser(Parser):
+
   def parse(self, pb_file, output_nodes=None):
     graph_def, graph_name = self._load_graph_def(pb_file)
     if not self._is_freeze_graph(graph_def):

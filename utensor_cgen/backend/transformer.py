@@ -63,8 +63,9 @@ class PipelineTransformer(BackendPart):
       'transform_methods': [
         "dropout(name_pattern=r'(dropout[_\w\d]*)/.*')",
         "linear_reorder",
-        "quantize",
-        "conv_pool",
+        # these methods are deprecated
+        # "quantize",
+        # "conv_pool",
         "inline",
         "biasAdd",
         "remove_id_op",

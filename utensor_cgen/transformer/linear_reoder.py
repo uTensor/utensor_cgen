@@ -4,7 +4,8 @@ r"""Linear Re-ordering Transformer
 Linear Operation Legalizations
 
 """
-import tensorflow as tf
+import tensorflow.compat.v1 as tf
+
 # FIXME: remove uTensorOpEqualityDelegate import after we have generic ops
 from utensor_cgen.backend.utensor.code_generator.legacy._operators import \
     uTensorOpEqualityDelegate

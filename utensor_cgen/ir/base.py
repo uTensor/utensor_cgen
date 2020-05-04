@@ -6,15 +6,15 @@ from functools import reduce
 import attr
 import numpy as np
 import six
-import tensorflow as tf
+import tensorflow.compat.v1 as tf
 from attr.validators import instance_of
-from tensorflow.core.framework.attr_value_pb2 import AttrValue as _AttrValue
-from tensorflow.core.framework.attr_value_pb2 import \
-    NameAttrList as _NameAttrList
-from tensorflow.core.framework.tensor_pb2 import TensorProto as _TensorProto
-from tensorflow.core.framework.tensor_shape_pb2 import \
+from tensorflow.compat.v1 import AttrValue as _AttrValue
+from tensorflow.compat.v1 import NameAttrList as _NameAttrList
+from tensorflow_core.core.framework.tensor_pb2 import \
+    TensorProto as _TensorProto
+from tensorflow_core.core.framework.tensor_shape_pb2 import \
     TensorShapeProto as _TensorShapeProto
-from tensorflow.core.framework.types_pb2 import DataType as _DataType
+from tensorflow_core.core.framework.types_pb2 import DataType as _DataType
 
 from utensor_cgen.logger import logger
 from utensor_cgen.utils import random_str, topologic_order_graph

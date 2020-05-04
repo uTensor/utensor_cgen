@@ -66,7 +66,9 @@ class LazyAttrib(object):
 
 
 def log_graph(graph_or_graph_def, logdir):
-  if isinstance(graph_or_graph_def, tf.GraphDef):
+  from tensorflow.compat.v1 import GraphDef
+
+  if isinstance(graph_or_graph_def, GraphDef):
     graph = tf.Graph()
     with graph.as_default():
       tf.import_graph_def(graph_or_graph_def, name='')

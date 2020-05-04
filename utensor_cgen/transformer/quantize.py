@@ -1,8 +1,17 @@
-from tensorflow.tools.graph_transforms import TransformGraph
+"""Legacy, DON'T USE
+"""
 from utensor_cgen.frontend.tensorflow import GraphDefParser
+from utensor_cgen.logger import logger
 
 from .base import Transformer
 from .pipeline import TransformerPipeline
+
+try:
+  from tensorflow.tools.graph_transforms import TransformGraph
+except ImportError:
+  logger.warning("trying to import deprecated quantization transformer")
+  TransformGraph = None
+
 
 __all__ = ['QuantizeTransformer']
 
@@ -16,6 +25,8 @@ class QuantizeTransformer(Transformer):
     if ugraph.lib_name != 'tensorflow':
       raise ValueError('only support tensorflow graph')
     graph_def = ugraph.graph_def
+    if TransformGraph is None:
+      raise RuntimeError("quantization is temporary not supported")
     quant_graph_def = TransformGraph(input_graph_def=graph_def,
                                      inputs=[],
                                      outputs=ugraph.output_nodes,
