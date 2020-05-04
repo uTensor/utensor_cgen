@@ -92,75 +92,45 @@ class DropoutTransformer(Transformer):
     self._op_name_pattern = re.compile(name_pattern)
 
   def transform(self, ugraph):
-    new_graph = uTensorGraph(name=ugraph.name, output_nodes=ugraph.output_nodes)
-    dropout_input_map = self._find_input(ugraph)
-    new_ops_info = {}
-    for node_name in ugraph.ops_info:
-      match = self._op_name_pattern.match(node_name)
-      if match:
-        # ignore all dropout nodes
-        continue
-      # replace inputs with dropout inputs
-      op_info = ugraph.ops_info[node_name]
-      in_t_infos = [deepcopy(t_info, {'ugraph': new_graph}) 
-                    for t_info in op_info.input_tensors]
-      out_t_infos = [deepcopy(t_info, {'ugraph': new_graph}) 
-                    for t_info in op_info.output_tensors]
-      op_attr = deepcopy(op_info.op_attr)
-      for i, t_info in enumerate(in_t_infos):
-        op_name = parse_tensor_name(t_info.name)[0]
-        match = self._op_name_pattern.match(op_name)
-        if match:
-          name_scope = match.group(1)
-          # assume there should be only on input except keep_prob
-          dropout_in_tensor = dropout_input_map[name_scope]
-          in_t_infos.pop(i)
-          in_t_infos.insert(i, dropout_in_tensor)
-      new_op_info = OperationInfo(name=op_info.name,
-                                  input_tensors=in_t_infos,
-                                  n_inputs=len(in_t_infos),
-                                  output_tensors=out_t_infos,
-                                  n_outputs=len(out_t_infos),
-                                  op_type=op_info.op_type,
-                                  lib_name=op_info.lib_name,
-                                  op_attr=op_attr,
-                                  ugraph=new_graph)
-      new_ops_info[node_name] = new_op_info
-    new_graph.ops_info = new_ops_info
-    new_graph._lib_name = ugraph._lib_name
-    return new_graph
+    new_ugraph = deepcopy(ugraph)
+    (
+      dropout_input_map,
+      dropout_output_map,
+      clusters
+     ) = self._find_dropout_clusters(ugraph)
+    for name_scope, cluster in clusters.items():
+      input_tensor = list(dropout_input_map[name_scope])[0].output_tensors[0]
+      output_tensor = list(dropout_output_map[name_scope])[0].output_tensors[0]
+      for node in output_tensor.op.output_nodes:
+        new_input = new_ugraph.ops_info[input_tensor.op.name].output_tensors[0]
+        new_node = new_ugraph.ops_info[node.name]
+        for i, tensor in enumerate(new_node.input_tensors):
+          if tensor.name == output_tensor.name:
+            new_node.input_tensors[i] = new_input
+      for op_info in cluster:
+        if op_info.name in new_ugraph.ops_info:
+          del new_ugraph.ops_info[op_info.name]
+    return new_ugraph
 
   def _find_dropout_clusters(self, ugraph):
-    clusters = defaultdict(lambda: [])
-    for node_name in ugraph.topo_order:
-      match = self._op_name_pattern.match(node_name)
+    clusters = defaultdict(set)
+    for op_info in ugraph.ops_info.values():
+      match = self._op_name_pattern.match(op_info.name)
       if match:
         name_scope = match.group(1)
-        clusters[name_scope].append(node_name)
-    return dict(clusters)
-
-  def _find_input(self, ugraph):
-    """dropout_name --> input_tensor_info
-
-    input_tensor_info := the tensor info of a tensor which is not generated
-                         in the dropout namescope but is consumed by ops in
-                         dropout namescope with name not starts with 'keep_prob'
-    """
-    clusters = self._find_dropout_clusters(ugraph)
-    input_map = {}
-    for node_name in ugraph.topo_order:
-      match = self._op_name_pattern.match(node_name)
-      if match:
-        name_scope = match.group(1)
-        cluster = clusters[name_scope]
-        op_info = ugraph.ops_info[node_name]
-        for in_tensor_info in op_info.input_tensors:
-          in_op_name = in_tensor_info.op.name
-          if in_op_name not in cluster and not in_op_name.startswith('keep_prob'):
-            input_map[name_scope] = in_tensor_info
-            # assuming there is only one input for dropout
-            break
-    return input_map
+        clusters[name_scope].add(op_info)
+    clusters = dict(clusters)
+    input_map = defaultdict(set)
+    output_map = defaultdict(set)
+    for name_scope, cluster in clusters.items():
+      for op_info in cluster:
+        for tensor in op_info.input_tensors:
+          if not re.match(r"^(rate|keep_prob).*", tensor.op.name) and tensor.op not in cluster:
+            input_map[name_scope].add(tensor.op)
+        for out_node in op_info.output_nodes:
+          if out_node not in cluster:
+            output_map[name_scope].add(op_info)
+    return dict(input_map), dict(output_map), clusters
 
 
 @TransformerPipeline.register_transformer

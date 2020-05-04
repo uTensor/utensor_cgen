@@ -16,13 +16,12 @@ def dropout_graph_tuple():
     with graph.as_default():
         x = tf.constant(np.ones((5, 5)),
                         name='x', dtype=tf.float32)
-        keep_prob = tf.placeholder(dtype=tf.float32,
-                                   name='keep_prob')
-        dropout_x = tf.nn.dropout(x, rate=1-keep_prob, name='dropout_x')
+        rate = tf.placeholder(dtype=tf.float32, name='rate')
+        dropout_x = tf.nn.dropout(x, rate=rate, name='dropout_x')
         bias = tf.constant(0.5, name='bias', dtype=tf.float32)
         y = tf.add(dropout_x, bias, name='y')
     return (graph.as_graph_def(),
-            [keep_prob.name, dropout_x.name],
+            [rate.name, dropout_x.name],
             [y.op.name])
 
 @pytest.fixture(name='dropout_graph_tuple2')
