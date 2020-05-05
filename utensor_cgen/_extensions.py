@@ -1,7 +1,10 @@
-import sys
-import re
+"""Experimental, DON'T USE
+"""
 import importlib
+import re
+import sys
 from types import ModuleType
+
 
 class _ExtensionsLoader(ModuleType):
   _ext_cache = {}
