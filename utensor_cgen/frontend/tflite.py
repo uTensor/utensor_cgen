@@ -187,10 +187,15 @@ class TFLiteParser(Parser):
   }
   _BUILTIN_OPS = {v: k for k, v in BuiltinOperator.__dict__.items()}
 
-  def parse(self, tflite_file, output_nodes=None):
+  def parse(self, tflite_file, output_nodes=None, model_name=None):
     if output_nodes is None:
       output_nodes = []
-    graph_name, _ = os.path.splitext(tflite_file)
+    if model_name:
+      graph_name = model_name
+    else:
+      graph_name, _ = os.path.splitext(
+        os.path.basename(tflite_file)
+      )
     with open(tflite_file, "rb") as fid:
       buf = bytearray(fid.read())
     fb_model = Model.GetRootAsModel(buf, 0)

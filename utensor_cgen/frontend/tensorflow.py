@@ -18,8 +18,10 @@ from utensor_cgen.utils import random_str, topologic_order_graph
 @FrontendSelector.register(target_exts=[".pb", ".pbtxt"])
 class GraphDefParser(Parser):
 
-  def parse(self, pb_file, output_nodes=None):
+  def parse(self, pb_file, output_nodes=None, model_name=None):
     graph_def, graph_name = self._load_graph_def(pb_file)
+    if model_name:
+      graph_name = model_name
     if not self._is_freeze_graph(graph_def):
       raise ValueError("Given graph_def is not freezed")
     if output_nodes is None:

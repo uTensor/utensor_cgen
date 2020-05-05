@@ -67,8 +67,13 @@ class OnnxParser(Parser):
   # https://github.com/onnx/onnx/blob/master/onnx/onnx.proto
   # https://pytorch.org/docs/stable/onnx.html
 
-  def parse(self, onnx_file, output_nodes=None):
-    graph_name, _ = os.path.splitext(onnx_file)
+  def parse(self, onnx_file, output_nodes=None, model_name=None):
+    if model_name:
+      graph_name = model_name
+    else:
+      graph_name, _ = os.path.splitext(
+        os.path.basename(onnx_file)
+      )
     tf.reset_default_graph()
     model = onnx.load(onnx_file)
     onnx_graph = model.graph
