@@ -1,3 +1,5 @@
+import re
+
 from .base import Transformer
 
 
@@ -5,16 +7,25 @@ class TransformerPipeline(object):
 
   TRANSFORMER_MAP = {}
 
+  _trans_name_patrn = re.compile(r"(\w[\w]*)\(?")
+
   def __init__(self, methods):
     """
     methods : list
-      list of tuples, (transform_name, kwargs)
+      list of tuples of type Tuple[Type[Transformer], dict] or a string expression
+      of the transformer such as 'dropout(name_pattern=r"(dropout[_\w\d]*)/.*")'
     """
     self._pipeline = []
-    for method, kwargs in methods:
-      trans_cls = self.TRANSFORMER_MAP.get(method, None)
-      if trans_cls is None:
-        raise ValueError("Unknown transformation method: {}".format(method))
+    for method_or_str in methods:
+      if isinstance(method_or_str, str):
+        method, kwargs = self._parse_expr(method_or_str)
+        trans_cls = self.TRANSFORMER_MAP.get(method, None)
+        if trans_cls is None:
+          raise ValueError("Unknown transformation method: {}".format(method))
+      else:
+        trans_cls, kwargs = method_or_str
+      if not issubclass(trans_cls, Transformer):
+        raise TypeError("expecting subclass of {}, get {}".format(Transformer, trans_cls))
       transformer = trans_cls(**kwargs)
       self._pipeline.append(transformer)
   
@@ -44,3 +55,22 @@ class TransformerPipeline(object):
     if trans_cls is None:
       return register
     return register(trans_cls)
+  
+  @classmethod
+  def _parse_expr(cls, expr):
+    trans_match = cls._trans_name_patrn.match(expr)
+    if not trans_match:
+      raise ValueError("Invalid args detected: {}".format(expr))
+    trans_name = trans_match.group(1)
+    _, end = trans_match.span()
+    if end == len(expr):
+      kwargs = {}
+    else:
+      if not expr.endswith(")"):
+        raise ValueError("parentheses mismatch: {}".format(expr))
+      kwargs = cls._get_kwargs(expr[end:-1])
+    return trans_name, kwargs
+
+  @classmethod
+  def _get_kwargs(cls, kws_str):
+    return eval('dict({})'.format(kws_str), {}, {})

@@ -1,8 +1,13 @@
-from utensor_cgen.frontend import FrontendSelector, Parser as _Parser
+import pytest
+
+from utensor_cgen.frontend import FrontendSelector
+from utensor_cgen.frontend import Parser as _Parser
 
 
-def test_select_parser():
+def test_select_pb_parser():
     FrontendSelector.select_parser('.pb')
+
+def test_select_onnx_parser():
     FrontendSelector.select_parser('.onnx')
 
 def test_register():

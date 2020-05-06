@@ -5,6 +5,7 @@ from itertools import product
 import attr
 from attr.validators import instance_of
 from click import style
+from six import with_metaclass
 
 from utensor_cgen.ir import (MetaOperationInfo, OperationInfo, uTensorGraph,
                              uTensorGraphView)
@@ -15,16 +16,30 @@ from utensor_cgen.utils import (ops_bfs_queue, prune_graph, random_str,
 
 __all__ = ["uTensorGraphMatcher", "uTensorGraphMatch"]
 
-@attr.s(frozen=True, slots=True)
-class OpEqualityDelegate(object):
+class _OpEqualityDelegateMeta(type):
+  def __new__(mcls, name, bases, attribs):
+    if name != 'OpEqualityDelegateBase':
+      # op_type -> list[tuple] (permutations)
+      attribs['_association_map'] = {}
+      # op_type -> dict[op_type] -> morphism
+      attribs['_compatibility_map'] = {}
 
-  # op_type -> list[tuple] (permutations)
-  _association_map = {}
-  # op_type -> dict[op_type] -> morphism
-  _compatibility_map = {}
+    cls = type.__new__(mcls, name, bases, attribs)
+    return cls
+
+@attr.s(frozen=True, slots=True)
+class OpEqualityDelegateBase(with_metaclass(_OpEqualityDelegateMeta)):
+
+  def __new__(cls, *args, **kwargs):
+    if cls is OpEqualityDelegateBase:
+      raise RuntimeError('OpEqualityDelegateBase is abstract base class and should not be instantiated')
+    self = object.__new__(cls)
+    return self
 
   @classmethod
   def is_associative(cls, permutations):
+    if cls is OpEqualityDelegateBase:
+      raise RuntimeError('You should use OpEqualityDelegateBase directly, please create a subclass')
     def deco(op):
       if op.op_type in cls._association_map:
         raise ValueError(
@@ -40,6 +55,8 @@ class OpEqualityDelegate(object):
 
   @classmethod
   def is_compatible_with(cls, other_op_type, morphism_type, **kwargs):
+    if cls is OpEqualityDelegateBase:
+      raise RuntimeError('You should use OpEqualityDelegateBase directly, please create a subclass')
     if not issubclass(morphism_type, Morphism):
       raise ValueError(
         'expecting Morphism for `morphism`, get {}'.format(morphism_type)
@@ -73,9 +90,8 @@ class OpEqualityDelegate(object):
     equivalent_ops : List[OperationInfo]
       a list of equivalent ops derieved from `sub_op`
     """
-    # to activate all configurations
-    import utensor_cgen.backend.operators as _
-
+    if cls is OpEqualityDelegateBase:
+      raise RuntimeError('You should use OpEqualityDelegateBase directly, please create a subclass')
     is_eq = False
     equivalent_ops = []
     if sub_op is None or patrn_op is None:
@@ -91,7 +107,7 @@ class OpEqualityDelegate(object):
         equivalent_ops.append(
           OperationInfo(
             name=sub_op.name,
-            backend=sub_op.backend,
+            lib_name=sub_op.lib_name,
             ugraph=sub_op.ugraph,
             input_tensors=[sub_op.input_tensors[j] for j in perm],
             n_inputs=sub_op.n_inputs,
@@ -108,7 +124,6 @@ class OpEqualityDelegate(object):
 
     return is_eq, equivalent_ops
 
-
 @attr.s
 class uTensorGraphMatcher(object):
   """
@@ -124,7 +139,10 @@ class uTensorGraphMatcher(object):
     patrn_ugraph = ... # load the pattern uTensorGraph
     
     # create a matcher
-    matcher = uTensorGraphMatcher(pattern_ugraph=patrn_ugraph)
+    matcher = uTensorGraphMatcher(
+      pattern_ugraph=patrn_ugraph,
+      op_equality_delegate=delegate, # a subclass of :py:class:`OpEqualityDelegateBase`
+    )
 
     # define a callback
     def callback(match):
@@ -150,6 +168,11 @@ class uTensorGraphMatcher(object):
   """
 
   pattern_ugraph = attr.ib(validator=instance_of(uTensorGraph))
+  _op_equality_delegate = attr.ib()
+
+  def __attrs_post_init__(self):
+    assert issubclass(self._op_equality_delegate, OpEqualityDelegateBase), \
+      'expecting subclass of %s, get %s' % (OpEqualityDelegateBase, self._op_equality_delegate)
 
   def _match(self, other_ugraph):
     outputs_pool = []
@@ -225,7 +248,7 @@ class uTensorGraphMatcher(object):
       match = state.match
       sub_op = state.sub_bfs_queue.popleft()
       patrn_op = state.patrn_bfs_queue.popleft()
-      is_eq, eq_ops = OpEqualityDelegate.query(sub_op, patrn_op)
+      is_eq, eq_ops = self._op_equality_delegate.query(sub_op, patrn_op)
       if is_eq:
         for eq_op in eq_ops:
           new_sub_bfs_queue = deque(state.sub_bfs_queue)

@@ -3,9 +3,11 @@ from random import sample
 import numpy as np
 import pytest
 
-import tensorflow as tf
-from utensor_cgen.frontend.tensorflow import GraphDefParser
-from utensor_cgen.utils import random_str
+import tensorflow.compat.v1 as tf # isort:skip
+tf.disable_v2_behavior() # isort:skip
+
+from utensor_cgen.frontend.tensorflow import GraphDefParser # isort:skip
+from utensor_cgen.utils import random_str # isort:skip
 
 
 @pytest.fixture(scope='session', name='droput_graph_tuple')
@@ -14,13 +16,12 @@ def dropout_graph_tuple():
     with graph.as_default():
         x = tf.constant(np.ones((5, 5)),
                         name='x', dtype=tf.float32)
-        keep_prob = tf.placeholder(dtype=tf.float32,
-                                   name='keep_prob')
-        dropout_x = tf.nn.dropout(x, rate=1-keep_prob, name='dropout_x')
+        rate = tf.placeholder(dtype=tf.float32, name='rate')
+        dropout_x = tf.nn.dropout(x, rate=rate, name='dropout_x')
         bias = tf.constant(0.5, name='bias', dtype=tf.float32)
         y = tf.add(dropout_x, bias, name='y')
     return (graph.as_graph_def(),
-            [keep_prob.name, dropout_x.name],
+            [rate.name, dropout_x.name],
             [y.op.name])
 
 @pytest.fixture(name='dropout_graph_tuple2')
@@ -68,4 +69,4 @@ def gen_vgg_graph():
             )
             if i != num_layers:
                 in_feat = tf.nn.dropout(in_feat, rate=rate, name='dropout_{}'.format(i))   
-    return GraphDefParser.parse(graph.as_graph_def(), output_nodes=[in_feat.op.name])
+    return GraphDefParser(config={}).parse(graph.as_graph_def(), output_nodes=[in_feat.op.name])

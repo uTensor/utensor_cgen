@@ -3,7 +3,7 @@ from copy import deepcopy
 
 import attr
 
-from utensor_cgen.utils import MUST_OVERWRITEN
+from utensor_cgen.utils import MUST_OVERWRITE
 
 
 class Morphism(object):
@@ -16,10 +16,10 @@ class Morphism(object):
 
 @attr.s
 class TypedMorphism(Morphism):
-  from_op_type = MUST_OVERWRITEN
+  from_op_type = MUST_OVERWRITE
 
   def __attrs_post_init__(self):
-    if self.from_op_type is MUST_OVERWRITEN:
+    if self.from_op_type is MUST_OVERWRITE:
       raise ValueError(
         "must overwrite {}.from_op_type".format(type(self).__name__)
       )

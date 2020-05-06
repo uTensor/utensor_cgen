@@ -4,12 +4,16 @@ r"""Linear Re-ordering Transformer
 Linear Operation Legalizations
 
 """
-import tensorflow as tf
+import tensorflow.compat.v1 as tf
+
+# FIXME: remove uTensorOpEqualityDelegate import after we have generic ops
+from utensor_cgen.backend.utensor.code_generator.legacy._operators import \
+    uTensorOpEqualityDelegate
 from utensor_cgen.frontend.tensorflow import GraphDefParser
 from utensor_cgen.matcher import uTensorGraphMatcher
 from utensor_cgen.utils import prune_graph, topologic_order_graph
 
-from .base import Transformer
+from .base import GENERIC_SENTINEL, Transformer
 from .pipeline import TransformerPipeline
 
 __all__ = ["LinearReorderTransformerV2"]
@@ -19,9 +23,10 @@ __all__ = ["LinearReorderTransformerV2"]
 class LinearReorderTransformerV2(Transformer):
   METHOD_NAME = 'linear_reorder'
   KWARGS_NAMESCOPE = '_linear_reorder'
+  APPLICABLE_LIBS = GENERIC_SENTINEL
 
   def __init__(self):
-    self.prune_graph = False
+    super(LinearReorderTransformerV2, self).__init__(prune_graph=False)
 
   @property
   def pattern_ugraph(self):
@@ -30,14 +35,18 @@ class LinearReorderTransformerV2(Transformer):
       dummy_input = tf.placeholder(dtype=tf.float32, shape=[None, 128, 128, 3])
       relu = tf.nn.relu(dummy_input, name='relu')
       tf.nn.max_pool(relu, ksize=[1, 2, 2, 1], strides=[1, 2, 2, 1], padding='SAME', name='max_pool')
-    pattern_ugraph = GraphDefParser.parse(graph.as_graph_def(), output_nodes=['max_pool'])
+    pattern_ugraph = GraphDefParser(config={}).parse(graph.as_graph_def(), output_nodes=['max_pool'])
     pattern_ugraph['relu'].replace_with_null_input_tensor(0)
     pattern_ugraph = prune_graph(pattern_ugraph)
     topologic_order_graph(pattern_ugraph)
     return pattern_ugraph
 
   def transform(self, ugraph):
-    matcher = uTensorGraphMatcher(pattern_ugraph=self.pattern_ugraph)
+    # FIXME: should use a generic op_equality_delegate
+    matcher = uTensorGraphMatcher(
+      pattern_ugraph=self.pattern_ugraph,
+      op_equality_delegate=uTensorOpEqualityDelegate
+    )
     matches = matcher.match(ugraph, 1)
     while matches:
       match = matches[0]
@@ -56,7 +65,7 @@ class LinearReorderTransformerV2(Transformer):
       dummy_input = tf.placeholder(dtype=tf.float32, shape=[None, 128, 128, 3])
       max_pool = tf.nn.max_pool(dummy_input, ksize=ksize, strides=strides, padding=padding, name='max_pool')
       tf.nn.relu(max_pool, name='relu')
-    ugraph = GraphDefParser.parse(graph.as_graph_def(), output_nodes=['relu'])
+    ugraph = GraphDefParser(config={}).parse(graph.as_graph_def(), output_nodes=['relu'])
     ugraph['max_pool'].replace_with_null_input_tensor(0)
     ugraph = prune_graph(ugraph)
     topologic_order_graph(ugraph)

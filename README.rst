@@ -72,26 +72,22 @@ Overall Architecture
 
 ::
 
-      ============       +-----------------+       ===================
-    || model file || --> | frontend Parser | --> || uTensorGraph (IR) ||
-      ============       +-----------------+       ===================
-                                                               |
-                     +-------------------------------+         |
-                     |       graph transformer       |         |
-                     | (legalization & optimization) | <------/
-                     +-------------------------------+
-                                    |
-                                    v
-                         ===========================
-                       ||       uTensorGraph        ||
-                       || (legalized and optimized) ||
-                         ===========================
-                                       |
-    +--------------------------+       |
-    | backend (code generator) | <----/
+      ============       +-----------------+       ============================
+    || model file || --> | frontend Parser | --> || uTensorGraph (IR, generic) ||
+      ============       +-----------------+       ============================
+                                                                |
+                                                                v
+                                                     +---------------------+
+                        =======================      |  graph transformer  |
+                      ||     uTensorGraph     || <-- |    (optimization)   |
+                      || (generic, optimized) ||     +---------------------+
+                        =======================                                    
+                                     |
+    +--------------------------+     |
+    | backend (code generator) | <--/
     +--------------------------+
          |
-         `---> (target files, ex: model.cpp, model.hpp, weights.idx)
+         `---> (target files, ex: model.cpp, model.hpp, weights.idx, ...etc)
 
 Basic Usage
 ===========
@@ -114,7 +110,8 @@ Convert Model File to C/C++ Code
 .. code-block:: console
 
   $ utensor-cli convert <model.pb> \
-    --output-nodes=<node_name>[,<node_name>,...]
+    --output-nodes=<node name>[,<node name>,...] \
+    [--config=config.toml]
 
 Convert given pb file into cpp/hpp files.
 
@@ -122,6 +119,8 @@ Note that ``--output-nodes`` is required options. It's the names of
 nodes you want to output, seperated by comma for multiple values.
 
 In graph theory terminology, they are ``leaf`` nodes of your graph.
+
+Use ``--config`` to pass a configuration file to the cli, you can use ``generate-config`` command to generate one (see below).
 
 example
 ~~~~~~~
@@ -132,8 +131,34 @@ example
 
 Run ``utensor-cli convert --help`` for detailed information.
 
-:mod:`utensor_cgen` as Library
-==============================
+Configuration
+-------------
+
+``utensor-cli`` use ``toml`` as configuration format.
+
+You can generate configuration file of given target as following:
+
+.. code-block:: console
+
+  $ utensor-cli generate-config --target <target name> [-o filename.toml]
+
+This command will generate a ``toml`` file listing all configurable values with its defaults.
+
+You can modify the value and pass the file to cli with ``--config`` flag.
+
+example
+~~~~~~~
+
+.. code-block:: console
+
+  # generate config file
+  $ utensor-cli generate-config --target utensor -o myconfig.toml
+
+  # after editting myconfig.toml
+  $ utensor-cli convert mymodel.pb --config=myconfig.toml --output-nodes=output,...
+
+Use :mod:`utensor_cgen` as Library
+==================================
 
 .. subgraph-match-begine
 
@@ -201,11 +226,31 @@ Use Case: Dropout Layer Removal
 
 \ |cnn-dropout|
 
-.. subgraph-match-end
-
 We use mainly `Tensorflow`_ for declaring the pattern graph for matcher now.
 
 High-level graph builder is on its way, see `Future Works <#future-works>`_ for detail.
+
+.. subgraph-match-end
+
+.. offline-tensor-alloc-start
+
+Offline Tensor Memory Allocation
+--------------------------------
+
+Considering following simple multi layers perceptron (`simple_mnist.pb`_):
+
+\ |mlp-alloc-graph|
+
+Once enabled the optimization transformer, ``tensor_alloc``, an offline tensor memory allocation planner,
+``utensor-cli`` will generate ``uTensor`` runtime codes that use following optimized allocation plan:
+
+\ |mlp-alloc|
+
+- y-axis: tensor names ordered by topological sorting
+- x-axis: these are the memory span occupied by each tensor, that is, the memory address offset and
+the size of the tensor
+
+.. offline-tensor-alloc-end
 
 Tutorials
 =========
@@ -223,8 +268,8 @@ TensorFlow_
 
 1. Freeze your `tensorflow.Graph`
 
-  - please refer to the `official doc <https://www.tensorflow.org/guide/extend/model_files>`_
-    and read the `Freezing <https://www.tensorflow.org/guide/extend/model_files#freezing>`_ section
+  - please refer to this `issue track <https://github.com/tensorflow/tensorflow/issues/27614>`_ for detail
+  - especially this `comment <https://github.com/tensorflow/tensorflow/issues/27614#issuecomment-571889676>`_ by Robin2091
 
 2. Follow instructions in :ref:`install` section to install :mod:`utensor_cgen`
 
@@ -288,6 +333,7 @@ Future Works
 .. _Tensorflow: https://www.tensorflow.org
 .. _PyTorch: https://pytorch.org/
 .. _uTensor: https://github.com/uTensor/uTensor
+.. _simple_mnist.pb: https://github.com/uTensor/utensor_cgen/blob/develop/tests/deep_mlp/simple_mnist.pb
 
 .. readme_end
 
@@ -297,7 +343,10 @@ Future Works
     :alt: conv-pool-fuse
 .. |convert-example| image:: doc/source/_images/convert_example.png
     :alt: convert-example
-
+.. |mlp-alloc| image:: doc/source/_images/mlp_alloc.png
+    :alt: mlp-alloc
+.. |mlp-alloc-graph| image:: doc/source/_images/mlp_alloc_graph.png
+    :alt: mlp-alloc-graph
 
 .. TODOs
 .. =====

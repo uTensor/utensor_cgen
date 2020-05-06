@@ -6,24 +6,69 @@ import types
 from ast import literal_eval
 from collections import deque
 from copy import deepcopy
+from functools import wraps
 from random import choice
 from string import ascii_letters, digits
+from time import time
 
+import attr
+import idx2numpy as idx2np
 import numpy as np
 from click.types import ParamType
+from toml import loads as _parse
 
-import idx2numpy as idx2np
-import tensorflow as tf
-from tensorflow.python.framework import graph_util
-from tensorflow.tools.graph_transforms import TransformGraph
 from utensor_cgen.logger import logger
 
 __all__ = ["save_idx", "save_consts", "save_graph", "log_graph",
-           "NamescopedKWArgsParser", "NArgsParam", "MUST_OVERWRITEN"]
+           "NamescopedKWArgsParser", "NArgsParam", "MUST_OVERWRITE"]
+
+class LazyLoader(types.ModuleType):
+
+  def __init__(self, module_name='utensor_cgen', submod_name=None):
+    self._module_name = '{}{}'.format(
+      module_name,
+      submod_name and '.{}'.format(submod_name) or ''
+    )
+    self._mod = None
+    super(LazyLoader, self).__init__(self._module_name)
+
+  def _load(self):
+    if self._mod is None:
+      self._mod = importlib.import_module(
+        self._module_name
+      )
+    return self._mod
+
+  def __getattr__(self, attrb):
+    return getattr(self._load(), attrb)
+
+  def __dir__(self):
+    return dir(self._load())
+
+tf = LazyLoader('tensorflow')
+tf_python = LazyLoader('tensorflow', 'python.framework')
+
+class LazyAttrib(object):
+
+  def __init__(self, obj, attr_name):
+    self._obj = obj
+    self._attr_name = attr_name
+
+  def __getattr__(self, name):
+    return getattr(self.attrib, name)
+  
+  def __call__(self, *args, **kwargs):
+    return self.attrib(*args, **kwargs)
+
+  @property
+  def attrib(self):
+    return getattr(self._obj, self._attr_name)
 
 
 def log_graph(graph_or_graph_def, logdir):
-  if isinstance(graph_or_graph_def, tf.GraphDef):
+  from tensorflow.compat.v1 import GraphDef
+
+  if isinstance(graph_or_graph_def, GraphDef):
     graph = tf.Graph()
     with graph.as_default():
       tf.import_graph_def(graph_or_graph_def, name='')
@@ -96,8 +141,8 @@ def prepare_meta_graph(meta_graph_path, output_nodes, chkp_path=None):
     chkp_path = meta_graph_path.replace(".meta", "")
   with tf.Session(graph=graph) as sess:
     saver.restore(sess, chkp_path)
-    graph_def = graph_util.remove_training_nodes(sess.graph_def)
-    sub_graph_def = graph_util.convert_variables_to_constants(sess=sess,
+    graph_def = tf_python.graph_util.remove_training_nodes(sess.graph_def)
+    sub_graph_def = tf_python.graph_util.convert_variables_to_constants(sess=sess,
                                                               input_graph_def=graph_def,
                                                               output_node_names=output_nodes)
   return sub_graph_def
@@ -156,7 +201,7 @@ class NamescopedKWArgsParser:
 
   TODO: replace it with a better data manager
   """
-  def __init__(self, namespace, kwargs, data_manager=None, op_info=None):
+  def __init__(self, namespace, kwargs):
     ns_pattern = re.compile(r'^([^\d\W][\w\d_]*)__([^\d\W][\w\d_]*)')
     self._namespace = namespace
     self._private_kwargs = {}
@@ -170,17 +215,7 @@ class NamescopedKWArgsParser:
           self._private_kwargs[argname] = value
       else:
         self._shared_kwargs[key] = value
-    if op_info is not None and data_manager is not None:
-      outputs = [tensor_info.name for tensor_info in op_info.output_tensors]
-      for tensor in outputs:
-        values = data_manager.group(tensor)
-        for key, value in values.items():
-          if key not in self._private_kwargs:
-            self._private_kwargs[key] = []
-            self._private_kwargs[key].append(value)
-          else:
-            self._private_kwargs[key].append(value)
-  
+
   def get(self, argname, default=None):
     """
     Get value of given name in the namespace
@@ -273,38 +308,6 @@ class NArgsParam(ParamType):
     return final_args
 
 
-class NArgsKwargsParam(NArgsParam):
-
-  _trans_name_patrn = re.compile(r"(\w[\w]*)\(?")
-
-  def convert(self, value, param, ctx):
-    args = super(NArgsKwargsParam, self).convert(value, param, ctx)
-    return [self._parse_kwargs(arg) for arg in args]
-  
-  def _parse_kwargs(self, arg):
-    trans_match = self._trans_name_patrn.match(arg)
-    if not trans_match:
-      raise ValueError("Invalid args detected: {}".format(arg))
-    trans_name = trans_match.group(1)
-    _, end = trans_match.span()
-    if end == len(arg):
-      kwargs = {}
-    else:
-      if not arg.endswith(")"):
-        raise ValueError("parentheses mismatch: {}".format(arg))
-      kwargs = self._get_kwargs(arg[end:-1])
-    return trans_name, kwargs
-  
-  def _get_kwargs(self, kws_str):
-    kw_arg_strs = [s.strip() for s in kws_str.split(',')]
-    kwargs = {}
-    for kw_str in kw_arg_strs:
-      name, v_str = kw_str.split('=')
-      value = literal_eval(v_str)
-      kwargs[name] = value
-    return kwargs
-
-
 class _MustOverwrite(object):
   _obj = None
 
@@ -313,7 +316,8 @@ class _MustOverwrite(object):
       cls._obj = object.__new__(cls, *args, **kwargs)
     return cls._obj
 
-MUST_OVERWRITEN = _MustOverwrite()
+
+MUST_OVERWRITE = _MustOverwrite()
 
 
 def topologic_order_graph(ugraph):
@@ -326,7 +330,6 @@ def topologic_order_graph(ugraph):
   - `Topological Sorting (wiki) <https://en.wikipedia.org/wiki/Topological_sorting>`_
   """
   ugraph.topo_order = get_topologic_order(ugraph, ugraph.output_nodes)[::-1]
-
 
 def get_topologic_order(ugraph, init_nodes=None):
   """
@@ -342,10 +345,6 @@ def get_topologic_order(ugraph, init_nodes=None):
 
   - `Topological Sorting (wiki) <https://en.wikipedia.org/wiki/Topological_sorting>`_
   """
-  if ugraph.backend != "tensorflow":
-    raise ValueError(
-      "topologic_order_graph works only on tensorflow graph"
-    )
   if init_nodes is None:
     init_nodes = ugraph.output_nodes
   queue = deepcopy(init_nodes)
@@ -378,7 +377,6 @@ def get_topologic_order(ugraph, init_nodes=None):
     visit(node_name)
   return ops_torder
 
-
 def ops_bfs_queue(ugraph, init_nodes=None):
   if init_nodes is None:
     init_nodes = [
@@ -399,8 +397,7 @@ def ops_bfs_queue(ugraph, init_nodes=None):
     bfs_deck.append(op)
   return bfs_deck
 
-
-def prune_graph(ugraph):
+def prune_graph(ugraph, output_nodes=None):
   """
   Remove nodes that is no longer needed *in-place*
 
@@ -410,11 +407,17 @@ def prune_graph(ugraph):
 
   :param ugraph: the graph to be pruned
   :type ugraph: :class:`.uTensorGraph`
+  :param output_nodes: the output nodes
+  :type output_nodes: List[String]
   """
   new_ugraph = deepcopy(ugraph)
+  if output_nodes is None:
+    output_nodes = ugraph.output_nodes[:]
+  else:
+    new_ugraph.output_nodes = output_nodes[:]
   # BFS to find all ops you need
-  ops_in_need = set(ugraph.output_nodes)
-  queue = [name for name in ugraph.output_nodes]
+  ops_in_need = set(output_nodes)
+  queue = [name for name in output_nodes]
   visited = set([])
   while queue:
     op_name = queue.pop(0)
@@ -441,29 +444,168 @@ def prune_graph(ugraph):
       ops_to_remove.add(op_name)
   for op_name in ops_to_remove:
     new_ugraph.ops_info.pop(op_name)
+  topologic_order_graph(new_ugraph)
   return new_ugraph
-
 
 def random_str(length=8):
   letters = ascii_letters+digits
   chars = [choice(letters) for _ in range(length)]
   return ''.join(chars)
 
+def parse_toml(file_or_path):
+  if isinstance(file_or_path, str):
+    fid = open(file_or_path, 'r')
+  doc = _parse(fid.read())
+  fid.close()
+  return doc
 
-class LazyLoader(types.ModuleType):
+def timed(func):
 
-  def __init__(self, submod_name):
-    self._submod_name = submod_name
-    self._submod = None
-    super(LazyLoader, self).__init__(submod_name)
+  @wraps(func)
+  def wrapped(*args, **kwargs):
+    start_time = time()
+    ret = func(*args, **kwargs)
+    end_time = time()
+    logger.info('collapsed time of calling %s: %0.4f seconds', func.__name__, end_time - start_time)
+    return ret
+  
+  return wrapped
 
-  def _load(self):
-    if self._submod is None:
-      self._submod = importlib.import_module('utensor_cgen.{}'.format(self._submod_name))
-    return self._submod
+def is_abstract(func):
+  if isinstance(func, types.MethodType):
+    func = func.__func__
+  return getattr(func, '__isabstractmethod__', False)
 
-  def __getattr__(self, attrb):
-    return getattr(self._load(), attrb)
 
-  def __dir__(self):
-    return dir(self._load())
+class class_property(object):
+    
+  def __init__(self, getter):
+    self._getter = getter
+      
+  def __get__(self, obj, objtype=None):
+    if objtype is None:
+      return self._getter(obj)
+    return self._getter(objtype)
+
+
+@attr.s
+class Pipeline(object):
+  _funcs = attr.ib(factory=list)
+
+  def __call__(self, *args, **kwargs):
+    result = None
+    for func in self._funcs:
+      if result is None:
+        result = func(*args, **kwargs)
+      else:
+        result = func(*result)
+    return result
+
+  def __getitem__(self, slice_obj):
+    cls = type(self)
+    return cls(funcs=self._funcs[slice_obj])
+
+
+class Configuration(object):
+  def __init__(self, defaults=None, user_config=None):
+    """
+    Note
+    ----
+    - any value that is in user_config should be in defaults
+    - any value that is not in defaults should not be in user_config 
+    """
+    # TODO: write a check on the inputs?
+    if defaults is None:
+      defaults = {}
+    if user_config is None:
+      user_config = {}
+    self._defaults = defaults
+    self._user_config = user_config
+
+  @property
+  def defaults(self):
+    return self._defaults
+  
+  @property
+  def user_config(self):
+    return self._user_config
+  
+  def get(self, key, default=None):
+    value = default
+    if key in self._user_config:
+      value = self._user_config[key]
+    elif key in self._defaults:
+      value = self._defaults[key]
+    return value
+
+  def keys(self):
+    return self.to_dict().keys()
+  
+  def values(self):
+    return self.to_dict().values()
+
+  def items(self):
+    config = self.to_dict()
+    return config.items()
+  
+  def to_dict(self):
+    config = deepcopy(self._defaults)
+    config.update(self._user_config)
+    return config
+
+  def __getitem__(self, key):
+    if key not in self:
+      raise KeyError('invalid key: {}'.format(key))
+    value = self._user_config.get(
+      key, self._defaults[key]
+    )       
+    if isinstance(value, dict):
+      value = type(self)(self._defaults[key], value)
+    return value
+
+  def __contains__(self, key):
+    return key in self._user_config or key in self._defaults
+
+  def __repr__(self):
+    return (
+      'Configuration(\n'
+      '  defaults={},\n'
+      '  user_config={} \n'
+      ')'
+    ).format(self._defaults, self._user_config)
+
+
+class must_return_type(object):
+
+  def __init__(self, type_):
+    self._expected_type = type_
+  
+  def __call__(self, func):
+    @wraps(func)
+    def wrapped(*args, **kwargs):
+      ret = func(*args, **kwargs)
+      ret_cls = type(ret)
+      if not issubclass(ret_cls, self._expected_type):
+        raise TypeError(
+          "expecting {} to return value of type {}, get {}".format(
+            func,
+            self._expected_type,
+            ret_cls
+          )
+        )
+      return ret
+    wrapped._has_return_type_check = True
+    wrapped._expecting = self._expected_type
+    return wrapped
+  
+  @staticmethod
+  def get_expect_type(wrapped):
+    if isinstance(wrapped, classmethod):
+      wrapped = wrapped.__func__
+    return wrapped._expecting
+
+  @staticmethod
+  def return_type_is_ensured(wrapped):
+    if isinstance(wrapped, classmethod):
+      wrapped = wrapped.__func__
+    return getattr(wrapped, '_has_return_type_check', False)

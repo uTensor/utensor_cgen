@@ -1,8 +1,8 @@
 from copy import deepcopy
 
 import numpy as np
-
 import tensorflow as tf
+
 from utensor_cgen.frontend.tensorflow import GraphDefParser
 from utensor_cgen.ir import OperationInfo, uTensorGraph
 from utensor_cgen.ir.converter import TensorProtoConverter
@@ -10,7 +10,7 @@ from utensor_cgen.ir.converter import TensorProtoConverter
 
 def test_ugraph_topo_order(graph_tuple):
     graph_def, output_nodes = graph_tuple
-    ugraph = GraphDefParser.parse(graph_def, output_nodes)
+    ugraph = GraphDefParser(config={}).parse(graph_def, output_nodes)
     first_out, second_out = output_nodes
     meet_first = False
     for node_name in ugraph.topo_order:
@@ -21,7 +21,7 @@ def test_ugraph_topo_order(graph_tuple):
 
 def test_ugraph_copy(graph_tuple):
     graph_def, output_nodes = graph_tuple
-    ugraph_1 = GraphDefParser.parse(graph_def, output_nodes)
+    ugraph_1 = GraphDefParser(config={}).parse(graph_def, output_nodes)
     ugraph_2 = deepcopy(ugraph_1)
     assert ugraph_1 is not ugraph_2
     assert ugraph_1.graph_def == ugraph_2.graph_def
@@ -36,7 +36,7 @@ def test_op_info():
                             output_tensors=[],
                             n_outputs=0,
                             op_type='no_op',
-                            backend='tensorflow',
+                            lib_name='tensorflow',
                             op_attr={
                                 '_utensor_to_skip': [1, 2, 3],
                                 '_utensor_skip_this_too': None,
@@ -53,7 +53,7 @@ def test_op_info():
 
 def test_in_out_nodes(graph_tuple):
     graph_def, output_nodes = graph_tuple
-    ugraph = GraphDefParser.parse(graph_def, output_nodes)
+    ugraph = GraphDefParser(config={}).parse(graph_def, output_nodes)
     x3 = ugraph.ops_info['x3']
     assert x3.ugraph is ugraph
     assert len(x3.input_nodes) == len(set([op.name for op in x3.input_nodes]))
@@ -65,7 +65,7 @@ def test_in_out_nodes(graph_tuple):
 
 def test_tensor_ops(graph_tuple):
     graph_def, output_nodes = graph_tuple
-    ugraph = GraphDefParser.parse(graph_def, output_nodes)
+    ugraph = GraphDefParser(config={}).parse(graph_def, output_nodes)
     for op in ugraph.ops_info.values():
         for tensor in op.output_tensors:
             assert tensor.op is op

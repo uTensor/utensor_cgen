@@ -1,7 +1,7 @@
 import numpy as np
 
 
-def test_op_maxpool(ugraph, quant_trans):
+def test_op_maxpool(ugraph):
     with ugraph.begin_construction():
         tensor_x, = ugraph.add_op(
             np.random.rand(10, 256, 256, 5),
@@ -20,4 +20,3 @@ def test_op_maxpool(ugraph, quant_trans):
             is_output=True
         )
     assert tensor_out.shape == [10, 128, 128, 5]
-    quant_trans.transform(ugraph)

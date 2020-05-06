@@ -5,7 +5,7 @@ from utensor_cgen.ir.converter import TensorProtoConverter
 
 def test_generic_array(generic_array):
     tf_value = TensorProtoConverter.get_tf_value(generic_array)
-    assert isinstance(tf_value, TensorProtoConverter.__tfproto_type__)
+    assert type(tf_value).__name__ == TensorProtoConverter.__tfproto_type__.__name__
     generic = TensorProtoConverter.get_generic_value(tf_value)
     assert isinstance(generic, type(generic_array))
     assert (generic.np_array == generic_array.np_array).all()
