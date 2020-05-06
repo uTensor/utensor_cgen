@@ -8,14 +8,15 @@ from utensor_cgen.frontend.base import Parser
 from utensor_cgen.ir.base import OperationInfo, TensorInfo, uTensorGraph
 from utensor_cgen.ir.converter import (AttrValueConverter,
                                        GenericTensorConverterMixin)
-from utensor_cgen.utils import topologic_order_graph
-
-from .tflite_flatbuffer.ActivationFunctionType import ActivationFunctionType
-from .tflite_flatbuffer.BuiltinOperator import BuiltinOperator
-from .tflite_flatbuffer.CustomOptionsFormat import CustomOptionsFormat
-from .tflite_flatbuffer.FullyConnectedOptionsWeightsFormat import \
+from utensor_cgen.third_party.tflite.ActivationFunctionType import \
+    ActivationFunctionType
+from utensor_cgen.third_party.tflite.BuiltinOperator import BuiltinOperator
+from utensor_cgen.third_party.tflite.CustomOptionsFormat import \
+    CustomOptionsFormat
+from utensor_cgen.third_party.tflite.FullyConnectedOptionsWeightsFormat import \
     FullyConnectedOptionsWeightsFormat
-from .tflite_flatbuffer.Model import Model
+from utensor_cgen.third_party.tflite.Model import Model
+from utensor_cgen.utils import topologic_order_graph
 
 _CUSTOM_OPTION_FORMAT_MAP = {v: k for k, v in CustomOptionsFormat.__dict__.items()}
 
@@ -27,7 +28,7 @@ def class_option2str(obj, idx):
 def fully_connected_op_data(op):
   option_dict = {}
   if op.CustomOptionsLength() < 1:
-    from .tflite_flatbuffer.FullyConnectedOptions import FullyConnectedOptions
+    from utensor_cgen.third_party.tflite.FullyConnectedOptions import FullyConnectedOptions
 
     option = FullyConnectedOptions()
     builtin_data = op.BuiltinOptions()
@@ -47,7 +48,7 @@ def fully_connected_op_data(op):
 def depthwise_conv2d_op_data(op):
   option_dict = {}
   if op.CustomOptionsLength() < 1:
-    from .tflite_flatbuffer.DepthwiseConv2DOptions import DepthwiseConv2DOptions
+    from utensor_cgen.third_party.tflite.DepthwiseConv2DOptions import DepthwiseConv2DOptions
 
     option = DepthwiseConv2DOptions()
     builtin_data = op.BuiltinOptions()
@@ -72,7 +73,7 @@ def depthwise_conv2d_op_data(op):
 def reshape_op_data(op):
   option_dict = {}
   if op.CustomOptionsLength() < 1:
-    from .tflite_flatbuffer.ReshapeOptions import ReshapeOptions
+    from utensor_cgen.third_party.tflite.ReshapeOptions import ReshapeOptions
 
     option = ReshapeOptions()
     builtin_data = op.BuiltinOptions()
@@ -88,7 +89,7 @@ def reshape_op_data(op):
 def dequantize_op_data(op):
   option_dict = {}
   if op.CustomOptionsLength() < 1:
-    from .tflite_flatbuffer.DequantizeOptions import DequantizeOptions
+    from utensor_cgen.third_party.tflite.DequantizeOptions import DequantizeOptions
 
     option = DequantizeOptions()
     builtin_data = op.BuiltinOptions()
@@ -106,7 +107,7 @@ def dequantize_op_data(op):
 def quantize_op_data(op):
   option_dict = {}
   if op.CustomOptionsLength() < 1:
-    from .tflite_flatbuffer.QuantizeOptions import QuantizeOptions
+    from utensor_cgen.third_party.tflite.QuantizeOptions import QuantizeOptions
 
     option = QuantizeOptions()
     builtin_data = op.BuiltinOptions()
@@ -124,7 +125,7 @@ def quantize_op_data(op):
 def pool2d_op_data(op):
   option_dict = {}
   if op.CustomOptionsLength() < 1:
-    from .tflite_flatbuffer.Pool2DOptions import Pool2DOptions
+    from utensor_cgen.third_party.tflite.Pool2DOptions import Pool2DOptions
 
     option = Pool2DOptions()
     builtin_data = op.BuiltinOptions()
@@ -147,7 +148,7 @@ def pool2d_op_data(op):
 def argmax_op_data(op):
   option_dict = {}
   if op.CustomOptionsLength() < 1:
-    from .tflite_flatbuffer.ArgMaxOptions import ArgMaxOptions
+    from utensor_cgen.third_party.tflite.ArgMaxOptions import ArgMaxOptions
 
     option = ArgMaxOptions()
     builtin_data = op.BuiltinOptions()
