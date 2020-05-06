@@ -1,17 +1,14 @@
 import numpy as np
 from pytest import fixture
 
-import tensorflow as tf
-from utensor_cgen.ir import TensorInfo, OperationInfo, uTensorGraph
-from utensor_cgen.ir.converter import (AttrValueConverter, DataTypeConverter,
-                                       GenericTensorConverterMixin)
-from utensor_cgen.utils import prune_graph, topologic_order_graph
-from utensor_cgen.backend.operators import OperatorFactory, _Operator
-from utensor_cgen.matcher import OpEqualityDelegate, _morphism
+from utensor_cgen.backend.utensor.code_generator.legacy._operators import (
+    OperatorFactory, _Operator, uTensorOpEqualityDelegate)
+from utensor_cgen.ir import OperationInfo, TensorInfo, uTensorGraph
+from utensor_cgen.ir.converter import AttrValueConverter, DataTypeConverter
 
 
 @OperatorFactory.register
-@OpEqualityDelegate.is_associative(
+@uTensorOpEqualityDelegate.is_associative(
   permutations=((0, 1), (1, 0))
 )
 class _TFLM_AddOperator(_Operator):
@@ -51,7 +48,7 @@ class _TFLM_AddOperator(_Operator):
         )
       },
       ugraph=ugraph,
-      backend=kwargs.get('backend', 'TFLM')
+      lib_name=kwargs.get('lib_name', 'tflite')
     )
 
 
@@ -93,7 +90,7 @@ class _TFLM_FULLY_CONNECTED_Operator(_Operator):
         )
       },
       ugraph=ugraph,
-      backend=kwargs.get('backend', 'TFLM')
+      lib_name=kwargs.get('lib_name', 'tflite')
     )
 
 @fixture(name='hybrid_quant_output')
