@@ -11,7 +11,8 @@ def tflm_keras_export(
   representive_dataset,
   model_name=None,
   optimizations=None,
-  config_file='utensor_cli.toml'
+  config_file='utensor_cli.toml',
+  target='utensor',
 ):
   with tempfile.TemporaryDirectory(prefix='utensor_') as tmp_dir:
     dir_path = Path(tmp_dir)
@@ -36,4 +37,4 @@ def tflm_keras_export(
     with (dir_path / 'tflm_model.tflite').open('wb') as fid:
       fid.write(tflm_model_content)
       fid.flush()
-      convert_graph(fid.name, config=config_file, model_name=model_name)
+      convert_graph(fid.name, config=config_file, model_name=model_name, target=target)
