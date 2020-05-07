@@ -25,6 +25,7 @@ __all__ = [
   "MaxEvalSnippet",
   "MinPoolEvalSnippet",
   "MaxPoolEvalSnippet",
+  "QuantizedFullyConnectedSnippet",
   "SimpleContainer",
 ]
 
@@ -235,6 +236,11 @@ class MinPoolEvalSnippet(OpEvalSnippet):
 class MaxPoolEvalSnippet(OpEvalSnippet):
   __inputs__ = ["in"]
   __outputs__ = ["out"]
+
+
+class QuantizedFullyConnectedSnippet(OpEvalSnippet):
+  __inputs__ = ["input", "filter", "bias"]
+  __outputs__ = ["output"]
 
 
 class SimpleContainer(SnippetBase):

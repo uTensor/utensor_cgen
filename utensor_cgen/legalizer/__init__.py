@@ -1,6 +1,7 @@
 from .base import LegalizerBase
-from .tensorflow import GraphDefLegalizer
 from .onnx import OnnxLegalizer
+from .tensorflow import GraphDefLegalizer
+from .tflite import TFLiteLegalizer
 
 
 class Legalizer(object):
@@ -34,3 +35,4 @@ class Legalizer(object):
 
 Legalizer.register(GraphDefLegalizer)
 Legalizer.register(OnnxLegalizer)
+Legalizer.register(TFLiteLegalizer)

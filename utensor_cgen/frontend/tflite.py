@@ -8,6 +8,7 @@ from utensor_cgen.frontend.base import Parser
 from utensor_cgen.ir.base import OperationInfo, TensorInfo, uTensorGraph
 from utensor_cgen.ir.converter import (AttrValueConverter,
                                        GenericTensorConverterMixin)
+from utensor_cgen.legalizer import Legalizer
 from utensor_cgen.utils import topologic_order_graph
 
 from .tflite_flatbuffer.ActivationFunctionType import ActivationFunctionType
@@ -207,7 +208,7 @@ class TFLiteParser(Parser):
       ops_info={},
     )
     self._build_graph(fb_model, ugraph)
-    _OpRenaming.apply(ugraph)
+    ugraph = Legalizer.legalize(ugraph)
     return ugraph
 
   def _build_graph(self, fb_model, ugraph):
@@ -393,20 +394,3 @@ class TFLiteParser(Parser):
 
   def _format_op_type(self, op_type):
     return ''.join(map(lambda s: s.capitalize(), op_type.split('_')))
-
-
-class _OpRenaming(object):
-  _OP_NAMES_MAP = {
-    "Quantize": "QuantizeOperator",
-    "DepthwiseConv2d": "DepthwiseSeparableConvOperator",
-    "MaxPool2d": "MaxPoolOperator",
-    "Dequantize": "DequantizeOperator",
-    "FullyConnected": "FullyConnectedOperator"
-  }
-
-  @classmethod
-  def apply(cls, ugraph):
-    for op_info in ugraph.ops_info.values():
-      op_info.op_type = cls._OP_NAMES_MAP.get(
-        op_info.op_type, op_info.op_type
-      )

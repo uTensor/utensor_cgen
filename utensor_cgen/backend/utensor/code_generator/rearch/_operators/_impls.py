@@ -356,6 +356,20 @@ class _DWSConvOperator(_Operator):
 
 
 @OperatorFactory.register
-class _ConvOperator(_Operator):
+class _QuantizedFullyConnectedOperator(_Operator):
+  op_type = "QuantizedFullyConnectedOperator"
 
-  op_type = 'ConvOperator'
+  def get_declare_snippet(self, op_var_name, tensor_var_map):
+    return DeclareOpSnippet(
+      op=self,
+      templ_dtypes=[self.out_dtypes[0]],
+      op_var_name=op_var_name,
+    )
+
+  def get_eval_snippet(self, op_var_name, op_info, tensor_var_map):
+    return QuantizedFullyConnectedSnippet(
+      op_info=op_info,
+      templ_dtypes=[self.out_dtypes[0]],
+      op_name=op_var_name,
+      tensor_var_map=tensor_var_map,
+    )
