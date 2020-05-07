@@ -30,7 +30,7 @@ __all__ = [
 ]
 
 class _SnippetBase(Snippet):
-  __headers__ = set(['"uTensor/uTensor.h"'])
+  __headers__ = set(['"uTensor.h"'])
 
   @staticmethod
   def get_quant_param(tensor_info):
@@ -244,7 +244,7 @@ class QuantizedFullyConnectedSnippet(OpEvalSnippet):
 
 
 class SimpleContainer(SnippetBase):
-  __headers__ = set(['"uTensor/uTensor.hpp"', "<vector>"])
+  __headers__ = set(['"uTensor.h"', "<vector>"])
   __template_name__ = 'containers/rearch/simple.cpp'
 
   def __init__(self):
