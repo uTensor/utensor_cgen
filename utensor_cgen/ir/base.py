@@ -191,7 +191,8 @@ class TensorInfo(IRBase, _NoShallowCopyMixin):
       ugraph=memo['ugraph'],
       op_name=self.op_name,
       dtype=self.dtype,
-      shape=deepcopy(self.shape, memo)
+      shape=deepcopy(self.shape, memo),
+      attributes=deepcopy(self.attributes, memo),
     )
     return new_tensor
   

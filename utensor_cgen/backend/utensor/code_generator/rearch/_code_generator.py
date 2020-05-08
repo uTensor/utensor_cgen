@@ -192,7 +192,7 @@ class uTensorRearchCodeGenerator(BackendPart):
     config = {}
     config['src_fname'] = 'None'
     config['header_fname'] = 'None'
-    config['params_dir'] = 'data'
+    config['params_dir'] = 'constants'
     config['model_dir'] = 'models'
     config['meta_data_pool_size'] = 'auto'
     config['ram_data_pool_size'] = 'auto'

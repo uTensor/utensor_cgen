@@ -32,6 +32,14 @@ __all__ = [
 class _SnippetBase(Snippet):
   __headers__ = set(['"uTensor.h"'])
 
+
+class _DeclareTensorBase(_SnippetBase):
+
+  def __init__(self, tensor_info, tensor_var):
+    _SnippetBase.__init__(self)
+    quant_params = self.get_quant_param(tensor_info)
+    self.template_vars['quant_params'] = quant_params
+
   @staticmethod
   def get_quant_param(tensor_info):
     quant_params = {}
@@ -49,28 +57,26 @@ class _SnippetBase(Snippet):
     return quant_params
 
 
-class DeclareRomTensorSnippet(_SnippetBase):
+class DeclareRomTensorSnippet(_DeclareTensorBase):
   __template_name__ = 'snippets/rearch/declare_rom_tensor.cpp'
 
   def __init__(self, tensor_info, tensor_var, buffer_var, static=False):
-    _SnippetBase.__init__(self)
+    _DeclareTensorBase.__init__(self, tensor_info, tensor_var)
     self.template_vars['tensor_var'] = tensor_var
     self.template_vars['shape'] = tensor_info.shape or [1]
     self.template_vars['buffer_var'] = buffer_var
     self.template_vars['static'] = static
     self.template_vars['utensor_dtype'] = UTENSOR_TYPES_MAP[tensor_info.dtype]
-    self.template_vars['quantize_params'] = self.get_quant_param(tensor_info)
 
 
-class DeclareRamTensorSnippet(_SnippetBase):
+class DeclareRamTensorSnippet(_DeclareTensorBase):
   __template_name__ = 'snippets/rearch/declare_ram_tensor.cpp'
 
   def __init__(self, tensor_info, tensor_var):
-    _SnippetBase.__init__(self)
+    _DeclareTensorBase.__init__(self, tensor_info, tensor_var)
     self.template_vars['tensor_var'] = tensor_var
     self.template_vars['shape'] = tensor_info.shape or [1]
     self.template_vars['utensor_dtype'] = UTENSOR_TYPES_MAP[tensor_info.dtype]
-    self.template_vars['quantize_params'] = self.get_quant_param(tensor_info)
 
 
 class DeclareOpSnippet(_SnippetBase):
@@ -112,12 +118,6 @@ class OpEvalSnippet(_SnippetBase):
       name: tensor_var_map[tensor.name]
       for name, tensor in zip(self.__outputs__, op_info.output_tensors)
     }
-    quantize_params_map = {}
-    for tensor_info in op_info.output_tensors:
-      quant_param = self.get_quant_param(tensor_info)
-      if quant_param:
-        tensor_var = tensor_var_map[tensor_info.name]
-        quantize_params_map[tensor_var] = quant_param
     if templ_dtypes:
       templ_params = ', '.join([NP_TYPES_MAP[dtype].tensor_type_str for dtype in templ_dtypes])
       op_type = '{}<{}>'.format(op_info.op_type, templ_params)
@@ -129,7 +129,6 @@ class OpEvalSnippet(_SnippetBase):
     self.template_vars['op_var_name'] = op_name
     self.template_vars['input_map'] = input_map
     self.template_vars['output_map'] = output_map
-    self.template_vars['quantize_params_map'] = quantize_params_map
 
 
 class DepthwiseSeperateConvOpEvalSnippet(OpEvalSnippet):

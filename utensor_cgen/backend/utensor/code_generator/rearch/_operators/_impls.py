@@ -257,7 +257,7 @@ class _PoolingOperatorMixin(object):
       raise RuntimeError("dont know to to get constructor signature")
     stride_str = "{{ {} }}".format(", ".join(map(str, strides)))
     ksize_str = "{{ {} }}".format(", ".join(map(str, ksize)))
-    return (stride_str, ksize_str, padding)
+    return (ksize_str, stride_str, padding)
 
 
 @OperatorFactory.register
@@ -302,8 +302,7 @@ class _MinPoolOperator(_PoolingOperatorMixin, _Operator):
 
 @OperatorFactory.register
 class _QuantDWSConvOperator(_Operator):
-  namespaces = ('TFLM',)
-  op_type = "DepthwiseSeparableConvOperator"
+  op_type = "QuantizedDepthwiseSeparableConvOperator"
 
   _PADDING_MAP = {
     0: "TFLM::TfLitePadding::kTfLitePaddingUnknown",
