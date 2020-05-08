@@ -1,3 +1,4 @@
+import re
 from typing import Hashable
 
 from utensor_cgen.backend.utensor.snippets._types import NP_TYPES_MAP
@@ -303,6 +304,44 @@ class _MinPoolOperator(_PoolingOperatorMixin, _Operator):
 class _QuantDWSConvOperator(_Operator):
   namespaces = ('TFLM',)
   op_type = "DepthwiseSeparableConvOperator"
+
+  _PADDING_MAP = {
+    0: "TFLM::TfLitePadding::kTfLitePaddingUnknown",
+    1: "TFLM::TfLitePadding::kTfLitePaddingSame",
+    2: "TFLM::TfLitePadding::kTfLitePaddingValid"
+  }
+  _ACTIVATION_MAP = {
+    '0': 'TFLM::TfLiteFusedActivation::kTfLiteActNone',
+    '1': 'TFLM::TfLiteFusedActivation::kTfLiteActRelu',
+    '2': 'TFLM::TfLiteFusedActivation::kTfLiteActRelu1',
+    '3': 'TFLM::TfLiteFusedActivation::kTfLiteActRelu6',
+    '4': 'TFLM::TfLiteFusedActivation::kTfLiteActTanh',
+    '5': 'TFLM::TfLiteFusedActivation::kTfLiteActSignBit',
+    '6': 'TFLM::TfLiteFusedActivation::kTfLiteActSigmoid',
+  }
+  _ACTIVATION_STR_PATTERN = re.compile(r'^(\d+) \(\w+\)$')
+
+  @classmethod
+  @must_return_type(Hashable)
+  def get_constructor_parameters(cls, op_info):
+    padding = cls._PADDING_MAP[op_info.op_attr['Padding']]
+    stride_width = op_info.op_attr['StrideW']
+    stride_hight = op_info.op_attr['StrideH']
+    depth_multiplier = op_info.op_attr['DepthMultiplier']
+    activation_idx = cls._ACTIVATION_STR_PATTERN.match(
+      op_info.op_attr['FusedActivationFunction']
+    ).group(1)
+    activation = cls._ACTIVATION_MAP[activation_idx]
+    dilation_width_factor = op_info.op_attr['DilationWFactor']
+    dilation_height_factor = op_info.op_attr['DilationHFactor']
+    return (
+      padding,
+      stride_width, stride_hight,
+      depth_multiplier,
+      activation,
+      dilation_width_factor,
+      dilation_height_factor,
+    )
 
   def get_declare_snippet(self, op_var_name, tensor_var_map):
     return DeclareOpSnippet(

@@ -138,39 +138,8 @@ class DepthwiseSeperateConvOpEvalSnippet(OpEvalSnippet):
 
 
 class QuantDepthwiseSeperateConvOpEvalSnippet(OpEvalSnippet):
-  __template_name__ = 'snippets/rearch/eval_quant_dws_conv_op.cpp'
   __inputs__ = ["in", "filter", "bias"]
   __outputs__ = ["out"]
-
-  _PADDING_MAP = {
-    0: "TFLM::TfLitePadding::kTfLitePaddingUnknown",
-    1: "TFLM::TfLitePadding::kTfLitePaddingSame",
-    2: "TFLM::TfLitePadding::kTfLitePaddingValid"
-  }
-  _ACTIVATION_MAP = {
-    '0': 'kTfLiteActNone',
-    '1': 'kTfLiteActRelu',
-    '2': 'kTfLiteActRelu1',
-    '3': 'kTfLiteActRelu6',
-    '4': 'kTfLiteActTanh',
-    '5': 'kTfLiteActSignBit',
-    '6': 'kTfLiteActSigmoid',
-  }
-  _ACTIVATION_STR_PATTERN = re.compile(r'^(\d+) \(\w+\)$')
-
-  def __init__(self, op_info, templ_dtypes, op_name, tensor_var_map, nested_namespaces=None):
-    OpEvalSnippet.__init__(self, op_info, templ_dtypes, op_name, tensor_var_map, nested_namespaces)
-    cls = type(self)
-    self.template_vars['padding'] = cls._PADDING_MAP[op_info.op_attr['Padding']]
-    self.template_vars['stride_width'] = op_info.op_attr['StrideW']
-    self.template_vars['stride_height'] = op_info.op_attr['StrideH']
-    self.template_vars['depth_multiplier'] = op_info.op_attr['DepthMultiplier']
-    activation_idx = cls._ACTIVATION_STR_PATTERN.match(
-      op_info.op_attr['FusedActivationFunction']
-    ).group(1)
-    self.template_vars['activation'] = cls._ACTIVATION_MAP[activation_idx]
-    self.template_vars['dilation_width_factor'] = op_info.op_attr['DilationWFactor']
-    self.template_vars['dilation_height_factor'] = op_info.op_attr['DilationHFactor']
 
 
 class AddOpEvalSnippet(OpEvalSnippet):
