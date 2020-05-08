@@ -702,7 +702,6 @@ class QuantizedFusedConv2DMaxpoolOpSnippet(Snippet):
                in_dtype, filter_dtype, out_dtypes,
                ref_counts=None,
                to_eval=False):
-    # import pdb; pdb.set_trace()
     Snippet.__init__(self)
     if ref_counts:
       self.template_vars["ref_counts"] = ref_counts

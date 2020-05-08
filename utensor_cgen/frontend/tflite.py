@@ -290,7 +290,7 @@ class TFLiteParser(Parser):
       buffer_array = fb_model.Buffers(buffer_index).DataAsNumpy()
       if isinstance(buffer_array, int):
         continue  # somehow, sometimes, the buffer contains no data, likely to be an intermediate tensor
-      buffer_content = fb_model.Buffers(buffer_index).DataAsNumpy().astype(dtype)
+      buffer_content = fb_model.Buffers(buffer_index).DataAsNumpy().view(dtype)
 
       OperationInfo(
         name=node_name,

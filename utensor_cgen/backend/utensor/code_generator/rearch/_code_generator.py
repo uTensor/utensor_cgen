@@ -45,6 +45,7 @@ class uTensorRearchCodeGenerator(BackendPart):
     ) = self._find_required_ops(ugraph)
     (
       ops_map,                 # dict, op_info -> variable name of op in the output files
+      out_tensor_var_names,    # list of tensor variable names, which are the variable names of the output tensors of the graph
       declare_global_snippets, # list of Snippet objects, which will rendered in global scop
       declare_local_snippets,  # list of Snippet objects, which will rendered in local function scope
       weight_snippets,         # snippets for generating weights header file
@@ -56,6 +57,7 @@ class uTensorRearchCodeGenerator(BackendPart):
       ugraph,
       placeholders=placeholders,
       tensor_var_map=tensor_var_map,
+      out_tensor_var_names=out_tensor_var_names,
       weight_snippets=weight_snippets,
       declare_global_snippets=declare_global_snippets,
       declare_local_snippets=declare_local_snippets,
@@ -85,11 +87,19 @@ class uTensorRearchCodeGenerator(BackendPart):
     declare_local_snippets = []
     ops_map = {} # op -> op variable name
     weight_snippets = []
+    out_tensor_var_names = [
+      tensor_var_map[tensor.name] for tensor in chain(*[
+        ugraph.ops_info[op_name].output_tensors
+        for op_name in ugraph.output_nodes
+      ])
+    ]
     for i, op in enumerate(ops):
       op_var_name = 'op_{:03d}'.format(i)
       ops_map[op] = op_var_name
       declare_local_snippets.append(op.get_declare_snippet(op_var_name, tensor_var_map))
     for op_info in filter(lambda op_info: op_info.op_type not in ["Inline", "Placeholder"], ugraph.ops_info.values()):
+      if op_info.name in ugraph.output_nodes:
+        continue
       for out_tensor in op_info.output_tensors:
         declare_local_snippets.append(
           DeclareRamTensorSnippet(out_tensor, tensor_var_map[out_tensor.name])
@@ -114,7 +124,7 @@ class uTensorRearchCodeGenerator(BackendPart):
           # static=True,
         )
       )
-    return ops_map, declare_global_snippets, declare_local_snippets, weight_snippets
+    return ops_map, out_tensor_var_names, declare_global_snippets, declare_local_snippets, weight_snippets
 
   def _get_evaluation_snippets(self, ugraph, ops_map, tensor_var_map):
     eval_snippets = []
@@ -130,7 +140,7 @@ class uTensorRearchCodeGenerator(BackendPart):
     return eval_snippets
   
   def _generate_files(
-    self, ugraph, placeholders, tensor_var_map,
+    self, ugraph, placeholders, out_tensor_var_names, tensor_var_map,
     weight_snippets, declare_global_snippets, declare_local_snippets,
     eval_snippets
   ):
@@ -139,12 +149,7 @@ class uTensorRearchCodeGenerator(BackendPart):
     template_vars['meta_data_pool_size'] = self._compute_meta_data_size(ugraph)
     template_vars['ram_data_pool_size'] = self._compute_ram_data_size(ugraph)
     template_vars['placeholders'] = placeholders
-    template_vars['out_tensor_var_names'] = [
-      tensor_var_map[tensor.name] for tensor in chain(*[
-        ugraph.ops_info[op_name].output_tensors
-        for op_name in ugraph.output_nodes
-      ])
-    ]
+    template_vars['out_tensor_var_names'] = out_tensor_var_names
     params_dir = Path(self.params_dir) / ugraph.name
     params_dir.mkdir(parents=True, exist_ok=True)
     weight_header_fname = None
@@ -193,7 +198,7 @@ class uTensorRearchCodeGenerator(BackendPart):
     config['ram_data_pool_size'] = 'auto'
     return config
 
-  def _compute_meta_data_size(self, ugraph, mem_optimizer=None):
+  def _compute_meta_data_size(self, ugraph):
     # TODO: if mem_optimizer is None, use a default mem optimizer
     if self.meta_data_pool_size == 'auto':
       # TODO: compute actual meta data size with ugraph
@@ -202,11 +207,14 @@ class uTensorRearchCodeGenerator(BackendPart):
       size = self.meta_data_pool_size
     return size
 
-  def _compute_ram_data_size(self, ugraph, mem_optimizer=None):
+  def _compute_ram_data_size(self, ugraph):
     # TODO: if mem_optimizer is None, use a default mem optimizer
     if self.ram_data_pool_size == 'auto':
       # TODO: compute actual ram data size with ugraph
-      size = 256
+      if '_tensor_alloc' in ugraph.attributes:
+        size = ugraph.attributes['_tensor_alloc'].total_size + 500
+      else:
+        size = 256
     else:
       size = self.ram_data_pool_size
     return size
