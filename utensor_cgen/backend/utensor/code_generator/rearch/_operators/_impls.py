@@ -312,14 +312,11 @@ class _MinPoolOperator(_PoolingOperatorMixin, _Operator):
     )
 
 
-@OperatorFactory.register
-class _QuantDWSConvOperator(_Operator):
-  op_type = "QuantizedDepthwiseSeparableConvOperator"
-
+class _DWSConvOps(_Operator):
   _PADDING_MAP = {
     0: "UNKNOWN",
-    1: "SAME",
-    2: "VALID"
+    1: "VALID",
+    2: "SAME"
   }
   _ACTIVATION_MAP = {
     '0': 'TFLM::TfLiteFusedActivation::kTfLiteActNone',
@@ -331,6 +328,11 @@ class _QuantDWSConvOperator(_Operator):
     '6': 'TFLM::TfLiteFusedActivation::kTfLiteActSigmoid',
   }
   _ACTIVATION_STR_PATTERN = re.compile(r'^(\d+) \(\w+\)$')
+
+
+@OperatorFactory.register
+class _QuantDWSConvOperator(_DWSConvOps):
+  op_type = "QuantizedDepthwiseSeparableConvOperator"
 
   @classmethod
   @must_return_type(Hashable)
@@ -372,7 +374,7 @@ class _QuantDWSConvOperator(_Operator):
 
 
 @OperatorFactory.register
-class _DWSConvOperator(_Operator):
+class _DWSConvOperator(_DWSConvOps):
   op_type = "DepthwiseSeparableConvOperator"
 
   @classmethod
@@ -384,7 +386,7 @@ class _DWSConvOperator(_Operator):
         op_info.op_attr['StrideH'],
         1,
       ]
-    padding = op_info.op_attr['Padding'] == 1 and "VALID" or "SAME"
+    padding = cls._PADDING_MAP[op_info.op_attr['Padding']]
     strides_str = ','.join(map(str, strides))
     return ("{{ {} }}".format(strides_str), padding)
 
