@@ -294,7 +294,11 @@ class OperationInfo(IRBase, _NoShallowCopyMixin):
         if match:
           op_attr[k] = v
         else:
-          op_attr[k] = ConverterDispatcher.get_generic_value(v)
+          try:
+            op_attr[k] = ConverterDispatcher.get_generic_value(v)
+          except ValueError:
+            logger.warning('cannot convert %s to generic value: %s(%s)', k, v, type(v))
+            op_attr[k] = v
       self.op_attr = op_attr
     self._ugraph.ops_info[self.name] = self
     if not self.n_inputs == len(self.input_tensors):

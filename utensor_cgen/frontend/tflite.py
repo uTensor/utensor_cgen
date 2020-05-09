@@ -78,7 +78,7 @@ def reshape_op_data(op):
     option = ReshapeOptions()
     builtin_data = op.BuiltinOptions()
     option.Init(builtin_data.Bytes, builtin_data.Pos)
-    option_dict["NewShape"] = option.NewShapeAsNumpy()
+    option_dict["new_shape"] = list(option.NewShapeAsNumpy())
   else:
     option_dict[
       _CUSTOM_OPTION_FORMAT_MAP[op.CustomOptionsFormat()]

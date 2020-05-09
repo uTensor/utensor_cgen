@@ -8,6 +8,12 @@ from utensor_cgen.utils import must_return_type
 from ._base import OperatorFactory, _Operator
 
 
+def _c_arr_str(iterable):
+  return "{{ {} }}".format(
+    ", ".join(map(str, iterable))
+  )
+
+
 @OperatorFactory.register
 class _AddOperator(_Operator):
   op_type = 'AddOperator'
@@ -31,6 +37,12 @@ class _AddOperator(_Operator):
 @OperatorFactory.register
 class _ReshapeOperator(_Operator):
   op_type = "ReshapeOperator"
+
+  @classmethod
+  @must_return_type(Hashable)
+  def get_constructor_parameters(cls, op_info):
+    new_shape = op_info.op_attr['new_shape']
+    return (_c_arr_str(new_shape),)
 
   def get_declare_snippet(self, op_var_name, tensor_var_map):
     return DeclareOpSnippet(
@@ -255,8 +267,8 @@ class _PoolingOperatorMixin(object):
       padding = op_info.op_attr['Padding'] == 1 and "VALID" or "SAME"
     else:
       raise RuntimeError("dont know to to get constructor signature")
-    stride_str = "{{ {} }}".format(", ".join(map(str, strides)))
-    ksize_str = "{{ {} }}".format(", ".join(map(str, ksize)))
+    stride_str = _c_arr_str(strides)
+    ksize_str = _c_arr_str(ksize)
     return (ksize_str, stride_str, padding)
 
 
@@ -305,9 +317,9 @@ class _QuantDWSConvOperator(_Operator):
   op_type = "QuantizedDepthwiseSeparableConvOperator"
 
   _PADDING_MAP = {
-    0: "TFLM::TfLitePadding::kTfLitePaddingUnknown",
-    1: "TFLM::TfLitePadding::kTfLitePaddingSame",
-    2: "TFLM::TfLitePadding::kTfLitePaddingValid"
+    0: "UNKNOWN",
+    1: "SAME",
+    2: "VALID"
   }
   _ACTIVATION_MAP = {
     '0': 'TFLM::TfLiteFusedActivation::kTfLiteActNone',
@@ -334,12 +346,11 @@ class _QuantDWSConvOperator(_Operator):
     dilation_width_factor = op_info.op_attr['DilationWFactor']
     dilation_height_factor = op_info.op_attr['DilationHFactor']
     return (
+      _c_arr_str([stride_width, stride_hight]),
       padding,
-      stride_width, stride_hight,
       depth_multiplier,
+      _c_arr_str([dilation_width_factor, dilation_height_factor]),
       activation,
-      dilation_width_factor,
-      dilation_height_factor,
     )
 
   def get_declare_snippet(self, op_var_name, tensor_var_map):

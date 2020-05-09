@@ -1,6 +1,8 @@
+from .api import Legalizer
 from .base import LegalizerBase
 
 
+@Legalizer.register
 class GraphDefLegalizer(LegalizerBase):
   TARGET = 'tensorflow'
 

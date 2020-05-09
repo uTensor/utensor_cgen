@@ -1,9 +1,11 @@
 from utensor_cgen.ir import OperationInfo, TensorInfo
 from utensor_cgen.utils import topologic_order_graph
 
+from .api import Legalizer
 from .base import LegalizerBase
 
 
+@Legalizer.register
 class OnnxLegalizer(LegalizerBase):
   TARGET = 'onnx'
 
