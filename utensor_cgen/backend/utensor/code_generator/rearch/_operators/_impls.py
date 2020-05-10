@@ -312,7 +312,7 @@ class _MinPoolOperator(_PoolingOperatorMixin, _Operator):
     )
 
 
-class _DWSConvOps(_Operator):
+class _CommonParams(_Operator):
   _PADDING_MAP = {
     0: "UNKNOWN",
     1: "VALID",
@@ -331,7 +331,7 @@ class _DWSConvOps(_Operator):
 
 
 @OperatorFactory.register
-class _QuantDWSConvOperator(_DWSConvOps):
+class _QuantDWSConvOperator(_CommonParams):
   op_type = "QuantizedDepthwiseSeparableConvOperator"
 
   @classmethod
@@ -374,7 +374,7 @@ class _QuantDWSConvOperator(_DWSConvOps):
 
 
 @OperatorFactory.register
-class _DWSConvOperator(_DWSConvOps):
+class _DWSConvOperator(_CommonParams):
   op_type = "DepthwiseSeparableConvOperator"
 
   @classmethod
@@ -407,8 +407,17 @@ class _DWSConvOperator(_DWSConvOps):
 
 
 @OperatorFactory.register
-class _QuantizedFullyConnectedOperator(_Operator):
+class _QuantizedFullyConnectedOperator(_CommonParams):
   op_type = "QuantizedFullyConnectedOperator"
+
+  @classmethod
+  @must_return_type(Hashable)
+  def get_constructor_parameters(cls, op_info):
+    activation_idx = cls._ACTIVATION_STR_PATTERN.match(
+      op_info.op_attr['FusedActivationFunction']
+    ).group(1)
+    activation = cls._ACTIVATION_MAP[activation_idx]
+    return (activation,)
 
   def get_declare_snippet(self, op_var_name, tensor_var_map):
     return DeclareOpSnippet(

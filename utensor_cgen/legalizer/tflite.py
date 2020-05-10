@@ -50,7 +50,7 @@ class _GraphRewrite(object):
     for op_info in ugraph.get_ops_by_type('FullyConnected'):
       filter_tensor = op_info.input_tensors[1]
       filter_op = filter_tensor.op
-      np_arr = filter_op.op_attr['value'].value.np_array.reshape(filter_tensor.shape)
+      np_arr = filter_op.op_attr['value'].value.np_array
       filter_op.op_attr['value'].value.np_array = np_arr.T
       filter_tensor.shape = list(np_arr.T.shape)
       filter_op.output_tensors[0].shape = list(np_arr.T.shape)

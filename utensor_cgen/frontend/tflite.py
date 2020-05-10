@@ -290,7 +290,9 @@ class TFLiteParser(Parser):
       buffer_array = fb_model.Buffers(buffer_index).DataAsNumpy()
       if isinstance(buffer_array, int):
         continue  # somehow, sometimes, the buffer contains no data, likely to be an intermediate tensor
-      buffer_content = fb_model.Buffers(buffer_index).DataAsNumpy().view(dtype)
+      buffer_content = fb_model.Buffers(buffer_index).DataAsNumpy().view(dtype).reshape(
+        self.tensor_names_map[idx].shape
+      )
 
       OperationInfo(
         name=node_name,
@@ -343,8 +345,8 @@ class TFLiteParser(Parser):
       op = subgraph.Operators(i)
       local_op_code = op.OpcodeIndex()
       global_op_code = fb_model.OperatorCodes(local_op_code)
-      builtinOperator_code = global_op_code.BuiltinCode()
-      op_type = self._BUILTIN_OPS[builtinOperator_code]
+      builtin_op_code = global_op_code.BuiltinCode()
+      op_type = self._BUILTIN_OPS[builtin_op_code]
 
       node_name = str(i) + "_" + op_type
 
