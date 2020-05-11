@@ -8,3 +8,9 @@
   :height: 300
 .. |convert-example| image:: /_images/convert_example.png
   :alt: convert-example
+.. |mlp-alloc| image:: /_images/mlp_alloc.png
+    :alt: mlp-alloc
+.. |mlp-alloc-graph| image:: /_images/mlp_alloc_graph.png
+    :alt: mlp-alloc-graph
+    :width: 300
+    :height: 450

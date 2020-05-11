@@ -1,6 +1,8 @@
-import numpy as np
+import tensorflow.compat.v1 as tf
 
-import tensorflow as tf
+# FIXME: remove uTensorOpEqualityDelegate import after we have generic op_eq_deleate
+from utensor_cgen.backend.utensor.code_generator.legacy._operators import \
+    uTensorOpEqualityDelegate
 from utensor_cgen.frontend.tensorflow import GraphDefParser
 from utensor_cgen.matcher import uTensorGraphMatcher
 from utensor_cgen.utils import prune_graph, topologic_order_graph
@@ -13,7 +15,7 @@ def test_replace_fc_with_add(subj_graph_1, patrn_fc_1):
             a = tf.placeholder(dtype=tf.float32, name='a')
             b = tf.placeholder(dtype=tf.float32, name='b')
             out = tf.add(a, b, name='fused_node')
-        ugraph = GraphDefParser.parse(graph.as_graph_def(), output_nodes=[out.op.name])
+        ugraph = GraphDefParser(config={}).parse(graph.as_graph_def(), output_nodes=[out.op.name])
         ugraph.ops_info['fused_node'].replace_with_null_input_tensor(0)
         ugraph.ops_info['fused_node'].replace_with_null_input_tensor(1)
         topologic_order_graph(ugraph)
@@ -28,7 +30,7 @@ def test_replace_fc_with_add(subj_graph_1, patrn_fc_1):
             patrn_ugraph.ops_info['r_prime'].output_tensors[0]: ugraph.ops_info['fused_node'].output_tensors[0]
         }
         return ugraph, input_map, output_map
-    matcher = uTensorGraphMatcher(patrn_fc_1)
+    matcher = uTensorGraphMatcher(patrn_fc_1, op_equality_delegate=uTensorOpEqualityDelegate)
     matches = matcher.match(subj_graph_1)
     assert matches, 'no match found'
     match = matches[0]

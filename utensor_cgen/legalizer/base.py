@@ -1,9 +1,9 @@
-from utensor_cgen.utils import MUST_OVERWRITEN
+from utensor_cgen.utils import MUST_OVERWRITE
 
 
 class LegalizerBase(object):
 
-  TARGET = MUST_OVERWRITEN
+  TARGET = MUST_OVERWRITE
   COMPONET = 'legalizer'
 
   def __new__(cls, config):
@@ -11,7 +11,7 @@ class LegalizerBase(object):
       raise TypeError(
         'expecting dict as config, get {}'.format(type(config))
       )
-    if cls.TARGET is MUST_OVERWRITEN:
+    if cls.TARGET is MUST_OVERWRITE:
       raise ValueError('cls.TARGET must be overwriten')
     self = object.__new__(cls)
     self._config = config

@@ -1,7 +1,10 @@
+import pytest
+
 from utensor_cgen.transformer.pipeline import TransformerPipeline
 
 
 def factory():
+    @pytest.mark.deprecated
     def test(vgg_ugraph):
         trans = TransformerPipeline([
             'linear_reorder',

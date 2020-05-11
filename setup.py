@@ -51,15 +51,18 @@ setup(
         ]},
     install_requires=[
         'Jinja2',
-        'tensorflow==1.13.1',
+        'tensorflow==2.1.0',
+        'onnx',
         'idx2numpy',
         'attrs',
         'click',
         'torch',
         'torchvision',
-        'onnx-tf==1.2.1',
         'graphviz',
+        'matplotlib',
         'toml',
+        'flatbuffers',
+        'ortools',
     ],
     extras_require={
         'dev': ['pytest']

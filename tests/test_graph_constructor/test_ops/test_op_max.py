@@ -1,7 +1,7 @@
 import numpy as np
 
 
-def test_op_max(ugraph, quant_trans):
+def test_op_max(ugraph):
     with ugraph.begin_construction():
         tensor_x, = ugraph.add_op(
             np.random.rand(3, 5, 9, 2).astype('float32'),
@@ -35,4 +35,3 @@ def test_op_max(ugraph, quant_trans):
     assert tensor_out1.shape == [1, 5, 9, 2]
     assert tensor_out2.shape == [3, 1, 9, 2]
     assert tensor_out3.shape == [3, 5, 9]
-    quant_trans.transform(ugraph)

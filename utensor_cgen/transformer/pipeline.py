@@ -1,5 +1,4 @@
 import re
-from ast import literal_eval
 
 from .base import Transformer
 
@@ -74,10 +73,4 @@ class TransformerPipeline(object):
 
   @classmethod
   def _get_kwargs(cls, kws_str):
-    kw_arg_strs = [s.strip() for s in kws_str.split(',')]
-    kwargs = {}
-    for kw_str in kw_arg_strs:
-      name, v_str = kw_str.split('=')
-      value = literal_eval(v_str)
-      kwargs[name] = value
-    return kwargs
+    return eval('dict({})'.format(kws_str), {}, {})

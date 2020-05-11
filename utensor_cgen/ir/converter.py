@@ -17,7 +17,7 @@ from tensorflow.core.framework.tensor_pb2 import TensorProto as _TensorProto
 from tensorflow.core.framework.tensor_shape_pb2 import \
     TensorShapeProto as _TensorShapeProto
 from tensorflow.core.framework.types_pb2 import DataType as _DataType
-from tensorflow.python.framework import tensor_shape
+from tensorflow_core.python.framework import tensor_shape
 
 from .utils import is_list_of
 
@@ -70,17 +70,17 @@ class ConverterDispatcher(object):
       raise ValueError('__utensor_generic_type__ cannot be None: %s' % converter_cls)
     if converter_cls.__tfproto_type__ is None:
       raise ValueError('__tfproto_type__ cannot be None: %s' % converter_cls)
-    cls._TF2GENERIC_MAP[converter_cls.__tfproto_type__] = converter_cls
-    cls._GENERIC2TF_MAP[converter_cls.__utensor_generic_type__] = converter_cls
+    cls._TF2GENERIC_MAP[converter_cls.__tfproto_type__.__name__] = converter_cls
+    cls._GENERIC2TF_MAP[converter_cls.__utensor_generic_type__.__qualname__] = converter_cls
     return converter_cls
 
   @classmethod
   def get_generic_value(cls, tf_value):
     value_type = type(tf_value)
-    if value_type in cls._GENERIC2TF_MAP:
+    if value_type.__qualname__ in cls._GENERIC2TF_MAP:
       # already generic type
       return tf_value
-    cvt = cls._TF2GENERIC_MAP.get(value_type, None)
+    cvt = cls._TF2GENERIC_MAP.get(value_type.__name__, None)
     if not cvt:
       raise ValueError('Unknown tf value type: %s' % value_type)
     return cvt.get_generic_value(tf_value)
@@ -88,10 +88,10 @@ class ConverterDispatcher(object):
   @classmethod
   def get_tf_value(cls, generic):
     value_type = type(generic)
-    if value_type in cls._TF2GENERIC_MAP:
+    if value_type.__name__ in cls._TF2GENERIC_MAP:
       # already tf type
       return generic
-    cvt = cls._GENERIC2TF_MAP.get(value_type, None)
+    cvt = cls._GENERIC2TF_MAP.get(value_type.__qualname__, None)
     if not cvt:
       raise ValueError('Unknown generic type: %s' % value_type)
     return cvt.get_tf_value(generic)
@@ -114,7 +114,7 @@ class ConverterDispatcher(object):
   def TF2GENERIC_MAP(cls):
     type_map = {}
     for converter in cls._TF2GENERIC_MAP.values():
-      type_map[converter.__tfproto_type__] = converter.__utensor_generic_type__
+      type_map[converter.__tfproto_type__.__name__] = converter.__utensor_generic_type__
     return type_map
 
 
@@ -218,8 +218,9 @@ class GenericTensorShapeMixin(GenericConverterMixin):
 def _check_tf_type(conv_func):
   @wraps(conv_func)
   def wrap(cls, value):
-    assert isinstance(value, cls.__tfproto_type__), \
-      "Expecting %s, get %s" % (cls.__tfproto_type__, type(value))
+    value_type = type(value)
+    assert value_type.__name__ == cls.__tfproto_type__.__name__, \
+      "Expecting %s, get %s" % (cls.__tfproto_type__, value_type)
     return conv_func(cls, value)
   return wrap
 
@@ -249,7 +250,7 @@ class BuiltinConverter(GenericConverterMixin, TFConverterMixin):
   def get_tf_value(cls, value):
     return value
 
-ConverterDispatcher._BUILTIN_MAP = dict((t, BuiltinConverter) for t in BuiltinConverter.__tfproto_type__)
+ConverterDispatcher._BUILTIN_MAP = dict((t.__name__, BuiltinConverter) for t in BuiltinConverter.__tfproto_type__)
 ConverterDispatcher._GENERIC2TF_MAP.update(ConverterDispatcher._BUILTIN_MAP)
 ConverterDispatcher._TF2GENERIC_MAP.update(ConverterDispatcher._BUILTIN_MAP)
 
@@ -327,6 +328,11 @@ class TensorShapeConverter(GenericTensorShapeMixin, TFConverterMixin):
   @_check_tf_type
   def get_generic_value(cls, value):
     try:
+      value_type = type(value)
+      if value_type.__name__ == cls.__tfproto_type__.__name__:
+        value = [
+          value.dim[i].size if value.dim[i].size > 0 else None for i in range(len(value.dim))
+        ]
       list_view = tensor_shape.TensorShape(value).as_list()
     except ValueError:
       # unknown shape

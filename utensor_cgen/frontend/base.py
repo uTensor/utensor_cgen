@@ -11,7 +11,11 @@ class Parser(object):
     self._config = config
     return self
 
+  @property
+  def config(self):
+    return self._config
+
   @classmethod
   @abstractmethod
-  def parse(cls, fname, outupt_nodes):
+  def parse(cls, fname, outupt_nodes, model_name=None):
       raise RuntimeError('abstract parse method involded')
