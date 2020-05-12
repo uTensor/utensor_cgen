@@ -43,7 +43,6 @@ class _DeclareTensorBase(_SnippetBase):
   @staticmethod
   def get_quant_param(tensor_info):
     quant_params = {}
-    import pdb; pdb.set_trace()
     if 'quantization_zeros' in tensor_info.attributes:
       zeros = tensor_info.attributes['quantization_zeros']
       scales = tensor_info.attributes["quantization_scales"]
