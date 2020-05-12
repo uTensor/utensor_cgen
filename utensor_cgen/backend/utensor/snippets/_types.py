@@ -49,7 +49,7 @@ class NumpyTypesMap(object):
         ),
         np.dtype(tf.int32.as_numpy_dtype): _TYPE_MAP_VALUE(
           importer_type_str="int",
-          tensor_type_str="int"
+          tensor_type_str="int32_t"
         ),
         np.dtype(tf.int64.as_numpy_dtype): _TYPE_MAP_VALUE(
           importer_type_str="int",

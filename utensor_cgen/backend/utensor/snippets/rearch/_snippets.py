@@ -43,12 +43,13 @@ class _DeclareTensorBase(_SnippetBase):
   @staticmethod
   def get_quant_param(tensor_info):
     quant_params = {}
+    import pdb; pdb.set_trace()
     if 'quantization_zeros' in tensor_info.attributes:
       zeros = tensor_info.attributes['quantization_zeros']
       scales = tensor_info.attributes["quantization_scales"]
       quant_params['zero_point'] = {
         'value': zeros[0],
-        'type_str': ['uint8_t', 'int8_t'][zeros.dtype == np.dtype('int8')]
+        'type_str': NP_TYPES_MAP[zeros.dtype].tensor_type_str
       }
       quant_params['scale'] = {
         'value': scales[0],
