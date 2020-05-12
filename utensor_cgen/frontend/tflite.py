@@ -82,14 +82,17 @@ class TFLiteParser(Parser):
       tensor_name = tensor.Name().decode('utf8')
       if tensor_name is "" or None:
         tensor_name = "tensor_" + str(idx)
-
+      
       dtype = self._TENSOR_NP_TYPE[tensor.Type()]
       attributes = dict()
       quant_params = tensor.Quantization()
-      if quant_params is not None and \
-        quant_params.ZeroPointLength() and \
-        quant_params.ScaleLength():
-        attributes["quantization_zeros"] = quant_params.ZeroPointAsNumpy()
+      if quant_params is not None and quant_params.ZeroPointAsNumpy() and quant_params.ScaleAsNumpy():
+        zp = quant_params.ZeroPointAsNumpy()
+        if zp.dtype == np.dtype('<i8'):
+          zp = zp.astype('int8')
+        else:
+          zp = zp.astype('uint8')
+        attributes["quantization_zeros"] = zp
         attributes["quantization_scales"] = quant_params.ScaleAsNumpy()
 
       if isinstance(tensor.ShapeAsNumpy(), np.ndarray):
@@ -427,20 +430,161 @@ def argmax_op_data(op, fb_mdel):
 
   return option_dict
 
+def reducer_op_data(op, fb_mdel):
+  option_dict = {}
+  if op.CustomOptionsLength() < 1:
+    from .tflite_flatbuffer.ReducerOptions import ReducerOptions
+
+    option = ReducerOptions()
+    builtin_data = op.BuiltinOptions()
+    option.Init(builtin_data.Bytes, builtin_data.Pos)
+    option_dict["keep_dims"] = option.KeepDims()
+  else:
+    option_dict[
+      _CUSTOM_OPTION_FORMAT_MAP[op.CustomOptionsFormat()]
+    ] = op.CustomOptionsAsNumpy()
+
+  return option_dict
+def softmax_op_data(op, fb_mdel):
+  option_dict = {}
+  if op.CustomOptionsLength() < 1:
+    from .tflite_flatbuffer.SoftmaxOptions import SoftmaxOptions
+
+    option = SoftmaxOptions()
+    builtin_data = op.BuiltinOptions()
+    option.Init(builtin_data.Bytes, builtin_data.Pos)
+    option_dict["Beta"] = option.Beta()
+    #option_dict["OutputType"] = option.OutputType()
+  else:
+    option_dict[
+      _CUSTOM_OPTION_FORMAT_MAP[op.CustomOptionsFormat()]
+    ] = op.CustomOptionsAsNumpy()
+
+  return option_dict
+
+
 def default_op_data(op, fb_mdel):
   op_type = _get_op_type(op, fb_mdel)
   logger.warning('the op data parser is missing for %s', op_type)
   return {}
 
 _OP_DATA_FUNC_MAP = defaultdict(lambda: default_op_data)
-_OP_DATA_FUNC_MAP["QUANTIZE"] = quantize_op_data
-_OP_DATA_FUNC_MAP["DEPTHWISE_CONV_2D"] = depthwise_conv2d_op_data
-_OP_DATA_FUNC_MAP["CONV_2D"] = conv_2d_op_data
-_OP_DATA_FUNC_MAP["MAX_POOL_2D"] = pool2d_op_data
-_OP_DATA_FUNC_MAP["RESHAPE"] = reshape_op_data
-_OP_DATA_FUNC_MAP["FULLY_CONNECTED"] = fully_connected_op_data
-_OP_DATA_FUNC_MAP["DEQUANTIZE"] = dequantize_op_data
-_OP_DATA_FUNC_MAP["ARG_MAX"] = argmax_op_data
+#_OP_DATA_FUNC_MAP["ADD"]                          = None
+#_OP_DATA_FUNC_MAP["AVERAGE_POOL_2D"]              = None
+#_OP_DATA_FUNC_MAP["CONCATENATION"]                = None
+_OP_DATA_FUNC_MAP["CONV_2D"]                      = conv2d_op_data
+_OP_DATA_FUNC_MAP["DEPTHWISE_CONV_2D"]            = depthwise_conv2d_op_data
+_OP_DATA_FUNC_MAP["DEQUANTIZE"]                   = dequantize_op_data
+#_OP_DATA_FUNC_MAP["EMBEDDING_LOOKUP"]             = None
+#_OP_DATA_FUNC_MAP["FLOOR"]                        = None
+_OP_DATA_FUNC_MAP["FULLY_CONNECTED"]              = fully_connected_op_data
+#_OP_DATA_FUNC_MAP["HASHTABLE_LOOKUP"]             = None
+#_OP_DATA_FUNC_MAP["L2_NORMALIZATION"]             = None
+#_OP_DATA_FUNC_MAP["L2_POOL_2D"]                   = None
+#_OP_DATA_FUNC_MAP["LOCAL_RESPONSE_NORMALIZATION"] = None
+#_OP_DATA_FUNC_MAP["LOGISTIC"]                     = None
+#_OP_DATA_FUNC_MAP["LSH_PROJECTION"]               = None
+#_OP_DATA_FUNC_MAP["LSTM"]                         = None
+_OP_DATA_FUNC_MAP["MAX_POOL_2D"]                  = pool2d_op_data
+#_OP_DATA_FUNC_MAP["MUL"]                          = None
+#_OP_DATA_FUNC_MAP["RELU"]                         = None
+#_OP_DATA_FUNC_MAP["RELU_N1_TO_1"]                 = None
+#_OP_DATA_FUNC_MAP["RELU6"]                        = None
+_OP_DATA_FUNC_MAP["RESHAPE"]                      = reshape_op_data
+#_OP_DATA_FUNC_MAP["RESIZE_BILINEAR"]              = None
+#_OP_DATA_FUNC_MAP["RNN"]                          = None
+_OP_DATA_FUNC_MAP["SOFTMAX"]                      = softmax_op_data
+#_OP_DATA_FUNC_MAP["SPACE_TO_DEPTH"]               = None
+#_OP_DATA_FUNC_MAP["SVDF"]                         = None
+#_OP_DATA_FUNC_MAP["TANH"]                         = None
+#_OP_DATA_FUNC_MAP["CONCAT_EMBEDDINGS"]            = None
+#_OP_DATA_FUNC_MAP["SKIP_GRAM"]                    = None
+#_OP_DATA_FUNC_MAP["CALL"]                         = None
+#_OP_DATA_FUNC_MAP["CUSTOM"]                       = None
+#_OP_DATA_FUNC_MAP["EMBEDDING_LOOKUP_SPARSE"]      = None
+#_OP_DATA_FUNC_MAP["PAD"]                          = None
+#_OP_DATA_FUNC_MAP["UNIDIRECTIONAL_SEQUENCE_RNN"]  = None
+#_OP_DATA_FUNC_MAP["GATHER"]                       = None
+#_OP_DATA_FUNC_MAP["BATCH_TO_SPACE_ND"]            = None
+#_OP_DATA_FUNC_MAP["SPACE_TO_BATCH_ND"]            = None
+#_OP_DATA_FUNC_MAP["TRANSPOSE"]                    = None
+_OP_DATA_FUNC_MAP["MEAN"]                         = reducer_op_data
+#_OP_DATA_FUNC_MAP["SUB"]                          = None
+#_OP_DATA_FUNC_MAP["DIV"]                          = None
+#_OP_DATA_FUNC_MAP["SQUEEZE"]                      = None
+#_OP_DATA_FUNC_MAP["UNIDIRECTIONAL_SEQUENCE_LSTM"] = None
+#_OP_DATA_FUNC_MAP["STRIDED_SLICE"]                = None
+#_OP_DATA_FUNC_MAP["BIDIRECTIONAL_SEQUENCE_RNN"]   = None
+#_OP_DATA_FUNC_MAP["EXP"]                          = None
+#_OP_DATA_FUNC_MAP["TOPK_V2"]                      = None
+#_OP_DATA_FUNC_MAP["SPLIT"]                        = None
+#_OP_DATA_FUNC_MAP["LOG_SOFTMAX"]                  = None
+#_OP_DATA_FUNC_MAP["DELEGATE"]                     = None
+#_OP_DATA_FUNC_MAP["BIDIRECTIONAL_SEQUENCE_LSTM"]  = None
+#_OP_DATA_FUNC_MAP["CAST"]                         = None
+#_OP_DATA_FUNC_MAP["PRELU"]                        = None
+#_OP_DATA_FUNC_MAP["MAXIMUM"]                      = None
+_OP_DATA_FUNC_MAP["ARG_MAX"]                      = argmax_op_data
+#_OP_DATA_FUNC_MAP["MINIMUM"]                      = None
+#_OP_DATA_FUNC_MAP["LESS"]                         = None
+#_OP_DATA_FUNC_MAP["NEG"]                          = None
+#_OP_DATA_FUNC_MAP["PADV2"]                        = None
+#_OP_DATA_FUNC_MAP["GREATER"]                      = None
+#_OP_DATA_FUNC_MAP["GREATER_EQUAL"]                = None
+#_OP_DATA_FUNC_MAP["LESS_EQUAL"]                   = None
+#_OP_DATA_FUNC_MAP["SELECT"]                       = None
+#_OP_DATA_FUNC_MAP["SLICE"]                        = None
+#_OP_DATA_FUNC_MAP["SIN"]                          = None
+#_OP_DATA_FUNC_MAP["TRANSPOSE_CONV"]               = None
+#_OP_DATA_FUNC_MAP["SPARSE_TO_DENSE"]              = None
+#_OP_DATA_FUNC_MAP["TILE"]                         = None
+#_OP_DATA_FUNC_MAP["EXPAND_DIMS"]                  = None
+#_OP_DATA_FUNC_MAP["EQUAL"]                        = None
+#_OP_DATA_FUNC_MAP["NOT_EQUAL"]                    = None
+#_OP_DATA_FUNC_MAP["LOG"]                          = None
+#_OP_DATA_FUNC_MAP["SUM"]                          = None
+#_OP_DATA_FUNC_MAP["SQRT"]                         = None
+#_OP_DATA_FUNC_MAP["RSQRT"]                        = None
+#_OP_DATA_FUNC_MAP["SHAPE"]                        = None
+#_OP_DATA_FUNC_MAP["POW"]                          = None
+#_OP_DATA_FUNC_MAP["ARG_MIN"]                      = None
+#_OP_DATA_FUNC_MAP["FAKE_QUANT"]                   = None
+#_OP_DATA_FUNC_MAP["REDUCE_PROD"]                  = None
+#_OP_DATA_FUNC_MAP["REDUCE_MAX"]                   = None
+#_OP_DATA_FUNC_MAP["PACK"]                         = None
+#_OP_DATA_FUNC_MAP["LOGICAL_OR"]                   = None
+#_OP_DATA_FUNC_MAP["ONE_HOT"]                      = None
+#_OP_DATA_FUNC_MAP["LOGICAL_AND"]                  = None
+#_OP_DATA_FUNC_MAP["LOGICAL_NOT"]                  = None
+#_OP_DATA_FUNC_MAP["UNPACK"]                       = None
+#_OP_DATA_FUNC_MAP["REDUCE_MIN"]                   = None
+#_OP_DATA_FUNC_MAP["FLOOR_DIV"]                    = None
+#_OP_DATA_FUNC_MAP["REDUCE_ANY"]                   = None
+#_OP_DATA_FUNC_MAP["SQUARE"]                       = None
+#_OP_DATA_FUNC_MAP["ZEROS_LIKE"]                   = None
+#_OP_DATA_FUNC_MAP["FILL"]                         = None
+#_OP_DATA_FUNC_MAP["FLOOR_MOD"]                    = None
+#_OP_DATA_FUNC_MAP["RANGE"]                        = None
+#_OP_DATA_FUNC_MAP["RESIZE_NEAREST_NEIGHBOR"]      = None
+#_OP_DATA_FUNC_MAP["LEAKY_RELU"]                   = None
+#_OP_DATA_FUNC_MAP["SQUARED_DIFFERENCE"]           = None
+#_OP_DATA_FUNC_MAP["MIRROR_PAD"]                   = None
+#_OP_DATA_FUNC_MAP["ABS"]                          = None
+#_OP_DATA_FUNC_MAP["SPLIT_V"]                      = None
+#_OP_DATA_FUNC_MAP["UNIQUE"]                       = None
+#_OP_DATA_FUNC_MAP["CEIL"]                         = None
+#_OP_DATA_FUNC_MAP["REVERSE_V2"]                   = None
+#_OP_DATA_FUNC_MAP["ADD_N"]                        = None
+#_OP_DATA_FUNC_MAP["GATHER_ND"]                    = None
+#_OP_DATA_FUNC_MAP["COS"]                          = None
+#_OP_DATA_FUNC_MAP["WHERE"]                        = None
+#_OP_DATA_FUNC_MAP["RANK"]                         = None
+#_OP_DATA_FUNC_MAP["ELU"]                          = None
+#_OP_DATA_FUNC_MAP["REVERSE_SEQUENCE"]             = None
+#_OP_DATA_FUNC_MAP["MATRIX_DIAG"]                  = None
+_OP_DATA_FUNC_MAP["QUANTIZE"]                     = quantize_op_data
+#_OP_DATA_FUNC_MAP["MATRIX_SET_DIAG"]              = None
+
 
 def _get_op_type(op, fb_model):
   local_op_code = op.OpcodeIndex()
