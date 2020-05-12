@@ -29,6 +29,12 @@ class _OpTypeRename(object):
     "MaxPool2d": "MaxPoolOperator",
     "Dequantize": "DequantizeOperator",
     "Reshape": "ReshapeOperator",
+    "Mul": "MulOperator",
+    "Add": "AddOperator",
+    "Sub": "SubOperator",
+    "Conv2d": "ConvOperator",
+    "Mean": "MeanOperator",
+    "Softmax": "SoftmaxOperator",
   }
   
   @classmethod
