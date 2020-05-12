@@ -30,7 +30,6 @@ __all__ = [
   "QuantizedFullyConnectedSnippet",
   "MissingOpEvalSnippet",
   "TimeSlotContainer",
-  "BatchNormSnippet",
   "MulOpEvalSnippet",
   "SubOpEvalSnippet",
   "ConvOpEvalSnippet",
