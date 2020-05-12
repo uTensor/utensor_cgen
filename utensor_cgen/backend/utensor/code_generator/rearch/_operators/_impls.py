@@ -436,6 +436,39 @@ class _DWSConvOperator(_CommonParams):
       tensor_var_map=tensor_var_map,
     )
 
+@OperatorFactory.register
+class _ConvOperator(_CommonParams):
+  op_type = "ConvOperator"
+
+  @classmethod
+  @must_return_type(Hashable)
+  def get_constructor_parameters(cls, op_info):
+
+    strides = [
+        1,
+        op_info.op_attr['StrideW'],
+        op_info.op_attr['StrideH'],
+        1,
+      ]
+    padding = cls._PADDING_MAP[op_info.op_attr['Padding']]
+    strides_str = ','.join(map(str, strides))
+    return ("{{ {} }}".format(strides_str), padding)
+
+  def get_declare_snippet(self, op_var_name, tensor_var_map):
+    return DeclareOpSnippet(
+      op=self,
+      templ_dtypes=[self.out_dtypes[0]],
+      op_var_name=op_var_name,
+    )
+
+  def get_eval_snippet(self, op_var_name, op_info, tensor_var_map):
+    return ConvOpEvalSnippet(
+      op_info=op_info,
+      templ_dtypes=[self.out_dtypes[0]],
+      op_name=op_var_name,
+      tensor_var_map=tensor_var_map,
+    )
+
 
 @OperatorFactory.register
 class _QuantizedFullyConnectedOperator(_CommonParams):
@@ -461,6 +494,126 @@ class _QuantizedFullyConnectedOperator(_CommonParams):
     return QuantizedFullyConnectedSnippet(
       op_info=op_info,
       templ_dtypes=[self.out_dtypes[0]],
+      op_name=op_var_name,
+      tensor_var_map=tensor_var_map,
+    )
+
+@OperatorFactory.register
+class _BatchNormOperator(_CommonParams):
+  op_type = "BatchNormOperator"
+
+  @classmethod
+  @must_return_type(Hashable)
+  def get_constructor_parameters(cls, op_info):
+    strides = [
+        1,
+        op_info.op_attr['StrideW'],
+        op_info.op_attr['StrideH'],
+        1,
+      ]
+    padding = cls._PADDING_MAP[op_info.op_attr['Padding']]
+    strides_str = ','.join(map(str, strides))
+    return ("{{ {} }}".format(strides_str), padding)
+
+  def get_declare_snippet(self, op_var_name, tensor_var_map):
+    return DeclareOpSnippet(
+      op=self,
+      templ_dtypes=[self.out_dtypes[0]],
+      op_var_name=op_var_name,
+    )
+
+  def get_eval_snippet(self, op_var_name, op_info, tensor_var_map):
+    return BatchNormSnippet(
+      op_info=op_info,
+      templ_dtypes=[self.out_dtypes[0]],
+      op_name=op_var_name,
+      tensor_var_map=tensor_var_map,
+    )
+
+@OperatorFactory.register
+class _MeanOperator(_CommonParams):
+  op_type = "MeanOperator"
+
+  @classmethod
+  @must_return_type(Hashable)
+  def get_constructor_parameters(cls, op_info):
+    keep_dims = str(op_info.op_attr["keep_dims"])
+    return (" {} ".format(keep_dims), )
+
+  def get_declare_snippet(self, op_var_name, tensor_var_map):
+    return DeclareOpSnippet(
+      op=self,
+      templ_dtypes=[self.out_dtypes[0]],
+      op_var_name=op_var_name,
+    )
+
+  def get_eval_snippet(self, op_var_name, op_info, tensor_var_map):
+    return BatchNormSnippet(
+      op_info=op_info,
+      templ_dtypes=[self.out_dtypes[0]],
+      op_name=op_var_name,
+      tensor_var_map=tensor_var_map,
+    )
+
+@OperatorFactory.register
+class _SoftmaxOperator(_CommonParams):
+  op_type = "SoftmaxOperator"
+
+  @classmethod
+  @must_return_type(Hashable)
+  def get_constructor_parameters(cls, op_info):
+    Beta = op_info.op_attr["Beta"]
+    return (" %f " % Beta,)
+
+  def get_declare_snippet(self, op_var_name, tensor_var_map):
+    return DeclareOpSnippet(
+      op=self,
+      templ_dtypes=[self.out_dtypes[0]],
+      op_var_name=op_var_name,
+    )
+
+  def get_eval_snippet(self, op_var_name, op_info, tensor_var_map):
+    return BatchNormSnippet(
+      op_info=op_info,
+      templ_dtypes=[self.out_dtypes[0]],
+      op_name=op_var_name,
+      tensor_var_map=tensor_var_map,
+    )
+
+@OperatorFactory.register
+class _MulOperator(_Operator):
+  op_type = 'MulOperator'
+
+  def get_declare_snippet(self, op_var_name, tensor_var_map):
+    return DeclareOpSnippet(
+      op=self,
+      templ_dtypes=[self.in_dtypes[0]],
+      op_var_name=op_var_name,
+    )
+
+  def get_eval_snippet(self, op_var_name, op_info, tensor_var_map):
+    return MulOpEvalSnippet(
+      op_info=op_info,
+      templ_dtypes=[self.in_dtypes[0]],
+      op_name=op_var_name,
+      tensor_var_map=tensor_var_map,
+    )
+
+@OperatorFactory.register
+class _SubOperator(_Operator):
+  op_type = 'SubOperator'
+
+  def get_declare_snippet(self, op_var_name, tensor_var_map):
+    return DeclareOpSnippet(
+      op=self,
+      templ_dtypes=[self.in_dtypes[0]],
+      op_var_name=op_var_name,
+    )
+
+  def get_eval_snippet(self, op_var_name, op_info, tensor_var_map):
+    return SubOpEvalSnippet(
+      op_info=op_info,
+      templ_dtypes=[self.in_dtypes[0]],
       op_name=op_var_name,
       tensor_var_map=tensor_var_map,
     )

@@ -27,6 +27,12 @@ __all__ = [
   "MinPoolEvalSnippet",
   "MaxPoolEvalSnippet",
   "QuantizedFullyConnectedSnippet",
+  "BatchNormSnippet",
+  "MulOpEvalSnippet",
+  "SubOpEvalSnippet",
+  "ConvOpEvalSnippet",
+  "MeanOpEvalSnippet",
+  "SoftmaxOpEvalSnippet",
   "SimpleContainer",
 ]
 
@@ -143,6 +149,9 @@ class DepthwiseSeperateConvOpEvalSnippet(OpEvalSnippet):
   __inputs__ = ["in", "depthwise_filter", "pointwise_filter"]
   __outputs__ = ["out"]
 
+class ConvOpEvalSnippet(OpEvalSnippet):
+  __inputs__ = ["in", "filter"]
+  __outputs__ = ["out"]
 
 class QuantDepthwiseSeperateConvOpEvalSnippet(OpEvalSnippet):
   __inputs__ = ["in", "filter", "bias"]
@@ -217,6 +226,23 @@ class MaxPoolEvalSnippet(OpEvalSnippet):
 class QuantizedFullyConnectedSnippet(OpEvalSnippet):
   __inputs__ = ["input", "filter", "bias"]
   __outputs__ = ["output"]
+
+class BatchNormSnippet(OpEvalSnippet):
+  __inputs__ = ["x", "mean", "variance", "offset", "scale"]
+  __outputs__ = ["output"]
+
+class MulOpEvalSnippet(OpEvalSnippet):
+  __inputs__ = ['a', 'b']
+  __outputs__ = ['c']
+class SubOpEvalSnippet(OpEvalSnippet):
+  __inputs__ = ['a', 'b']
+  __outputs__ = ['c']
+class MeanOpEvalSnippet(OpEvalSnippet):
+  __inputs__ = ['input', 'axis']
+  __outputs__ = ['output']
+class SoftmaxOpEvalSnippet(OpEvalSnippet):
+  __inputs__ = ['input']
+  __outputs__ = ['output']
 
 
 class SimpleContainer(SnippetBase):

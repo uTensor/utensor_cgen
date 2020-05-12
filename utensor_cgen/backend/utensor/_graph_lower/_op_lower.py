@@ -41,6 +41,8 @@ class uTensorRearchGraphLower(uTensorGraphLowerBase):
   class OptypeRenameManager(object):
     NAME_MAP = {
       'Add': 'AddOperator',
+      'Mul': 'MulOperator',
+      'Sub': 'SubOperator',
       'Conv2D': 'ConvOperator',
       'MatMul': 'MatrixMultOperator'
     }
