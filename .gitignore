@@ -7,7 +7,7 @@ venv
 # dev
 dev_notes
 *.ipynb
-!tutorials/*.ipynb
+!tutorials/**/*.ipynb
 !tests/test_cases.ipynb
 !tests/deep_mlp/end_to_end.ipynb
 *.egg*
