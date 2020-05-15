@@ -20,6 +20,7 @@ class BackendManager(object):
         'can only register subclass of %s: get %s' % (Backend, backend_cls)
       )
     cls.BACKENDS[backend_cls.TARGET] = backend_cls
+    return backend_cls
 
   @class_property
   def backends(cls):
