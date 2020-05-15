@@ -110,8 +110,8 @@ class uTensorLegacyCodeGenerator(BackendPart):
   def default_config(cls):
     config = {}
     config['src_fname'] = 'None'
-    config['params_dir'] = 'data'
-    config['embed_params_dir'] = '/fs/data'
+    config['params_dir'] = 'constants'
+    config['embed_params_dir'] = '/fs/constants'
     config['model_dir'] = 'models'
     config['debug_cmt'] = False
     return config
