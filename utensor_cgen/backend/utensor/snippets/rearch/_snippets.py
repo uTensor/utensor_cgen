@@ -46,12 +46,13 @@ class _DeclareTensorBase(_SnippetBase):
     if 'quantization_zeros' in tensor_info.attributes:
       zeros = tensor_info.attributes['quantization_zeros']
       scales = tensor_info.attributes["quantization_scales"]
+      quant_params['is_per_tensor'] = zeros.size == 1
       quant_params['zero_point'] = {
-        'value': zeros[0],
+        'value': zeros,
         'type_str': NP_TYPES_MAP[zeros.dtype].tensor_type_str
       }
       quant_params['scale'] = {
-        'value': scales[0],
+        'value': scales,
         'type_str': 'float'
       }
     return quant_params

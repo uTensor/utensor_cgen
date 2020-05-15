@@ -212,31 +212,19 @@ class TFLiteParser(Parser):
     return ugraph
 
   def _build_graph(self, fb_model, ugraph):
-    self.tensor_names_map = {}  # addresseed by indexi
-    self._build_tensor_map(fb_model, ugraph)
+    # addresseed by index
+    tensor_names_map = self._build_tensor_map(fb_model, ugraph)
 
-    self._build_param_ops(fb_model, ugraph)
+    self._build_param_ops(fb_model, ugraph, tensor_names_map)
     # find and set input nodes
-    self._build_input_ops(fb_model, ugraph)
-    self._build_intermediate_ops(fb_model, ugraph)
-    self._set_output_ops(fb_model, ugraph)
-
+    self._build_input_ops(fb_model, ugraph, tensor_names_map)
+    self._build_intermediate_ops(fb_model, ugraph, tensor_names_map)
+    self._set_output_ops(fb_model, ugraph, tensor_names_map)
+    self._prepare_quant_params(ugraph)
     topologic_order_graph(ugraph)
 
-  def _set_output_ops(self, fb_model, ugraph):
-    """identfy output nodes in fb_mdel
-    sets output_nodes in ugraph
-    Note this method will update ugraph **inplace**
-    """
-    subgraph = self._get_tflm_get_subgraph(fb_model)
-    subgraph_outputs_indexi = subgraph.OutputsAsNumpy()  # tensor indexi
-    output_node_names = set()
-    for index in subgraph_outputs_indexi:
-      output_node_names.add(self.tensor_names_map[index].op_name)
-
-    ugraph.output_nodes = list(output_node_names)
-
   def _build_tensor_map(self, fb_model, ugraph):
+    tensor_names_map = {}
     subgraph = self._get_tflm_get_subgraph(fb_model)
 
     for idx in range(0, subgraph.TensorsLength()):
@@ -249,12 +237,7 @@ class TFLiteParser(Parser):
       attributes = dict()
       quant_params = tensor.Quantization()
       if quant_params is not None:
-        zp = quant_params.ZeroPointAsNumpy()
-        if zp.dtype == np.dtype('<i8'):
-          zp = zp.astype('int8')
-        else:
-          zp = zp.astype('uint8')
-        attributes["quantization_zeros"] = zp
+        attributes["quantization_zeros"] = quant_params.ZeroPointAsNumpy()
         attributes["quantization_scales"] = quant_params.ScaleAsNumpy()
 
       if isinstance(tensor.ShapeAsNumpy(), np.ndarray):
@@ -262,7 +245,7 @@ class TFLiteParser(Parser):
       else:
         shape = list(fb_model.Buffers(12).DataAsNumpy().shape)
 
-      self.tensor_names_map[idx] = TensorInfo(
+      tensor_names_map[idx] = TensorInfo(
         name=self._format_tensor_name("", tensor_name, 0),
         op_name="",
         dtype=dtype,
@@ -270,8 +253,9 @@ class TFLiteParser(Parser):
         attributes=attributes,
         ugraph=ugraph,
       )
+    return tensor_names_map
 
-  def _build_param_ops(self, fb_model, ugraph):
+  def _build_param_ops(self, fb_model, ugraph, tensor_names_map):
     """Const tensors are identified by buffer_index == 0. These tensors are converted to Const Op and added to ugraph
     """
     subgraph = self._get_tflm_get_subgraph(fb_model)
@@ -284,20 +268,20 @@ class TFLiteParser(Parser):
       if buffer_index == 0:
         continue
 
-      node_name = re.sub(r':\d+', '', self.tensor_names_map[idx].name) + "_Const"
-      dtype = self.tensor_names_map[idx].dtype
+      node_name = re.sub(r':\d+', '', tensor_names_map[idx].name) + "_Const"
+      dtype = tensor_names_map[idx].dtype
 
       buffer_array = fb_model.Buffers(buffer_index).DataAsNumpy()
       if isinstance(buffer_array, int):
         continue  # somehow, sometimes, the buffer contains no data, likely to be an intermediate tensor
       buffer_content = fb_model.Buffers(buffer_index).DataAsNumpy().view(dtype).reshape(
-        self.tensor_names_map[idx].shape
+        tensor_names_map[idx].shape
       )
 
       OperationInfo(
         name=node_name,
         input_tensors=[],
-        output_tensors=[self.tensor_names_map[idx]],
+        output_tensors=[tensor_names_map[idx]],
         op_type="Const",
         lib_name="tflm",
         ugraph=ugraph,
@@ -311,9 +295,9 @@ class TFLiteParser(Parser):
         },
       )
 
-      self._set_tensor_node(idx, node_name)
+      self._set_tensor_node(idx, node_name, tensor_names_map)
 
-  def _build_input_ops(self, fb_model, ugraph):
+  def _build_input_ops(self, fb_model, ugraph, tensor_names_map):
     """Find placeholders
     Attach placeholders to input tensors
     Note this method will update inputs **inplace**
@@ -321,19 +305,19 @@ class TFLiteParser(Parser):
     subgraph = self._get_tflm_get_subgraph(fb_model)
     subgraph_inputs_indexi = subgraph.InputsAsNumpy()
     for index in subgraph_inputs_indexi:
-      node_name = self.tensor_names_map[index].name + "_Placeholder"
-      self._set_tensor_node(index, node_name)
+      node_name = tensor_names_map[index].name + "_Placeholder"
+      self._set_tensor_node(index, node_name, tensor_names_map)
       OperationInfo(
         name=node_name,
         input_tensors=[],
-        output_tensors=[self.tensor_names_map[index]],
+        output_tensors=[tensor_names_map[index]],
         op_type="Placeholder",
         ugraph=ugraph,
         lib_name="tflm",
         op_attr={},
       )
 
-  def _build_intermediate_ops(self, fb_model, ugraph):
+  def _build_intermediate_ops(self, fb_model, ugraph, tensor_names_map):
     """Build all intermediate nodes
     """
     subgraphs_len = fb_model.SubgraphsLength()
@@ -351,10 +335,10 @@ class TFLiteParser(Parser):
       node_name = str(i) + "_" + op_type
 
       input_tensor_names = [
-        self.tensor_names_map[input_index] for input_index in op.InputsAsNumpy()
+        tensor_names_map[input_index] for input_index in op.InputsAsNumpy()
       ]
       output_tensor_names = [
-        self.tensor_names_map[output_index]
+        tensor_names_map[output_index]
         for output_index in op.OutputsAsNumpy()
       ]
 
@@ -371,7 +355,20 @@ class TFLiteParser(Parser):
       )
 
       for tensor_index in op.OutputsAsNumpy():
-        self._set_tensor_node(tensor_index, node_name)
+        self._set_tensor_node(tensor_index, node_name, tensor_names_map)
+  
+  def _set_output_ops(self, fb_model, ugraph, tensor_names_map):
+    """identfy output nodes in fb_mdel
+    sets output_nodes in ugraph
+    Note this method will update ugraph **inplace**
+    """
+    subgraph = self._get_tflm_get_subgraph(fb_model)
+    subgraph_outputs_indexi = subgraph.OutputsAsNumpy()  # tensor indexi
+    output_node_names = set()
+    for index in subgraph_outputs_indexi:
+      output_node_names.add(tensor_names_map[index].op_name)
+
+    ugraph.output_nodes = list(output_node_names)
 
   def _get_tflm_get_subgraph(self, fb_model):
     subgraphs_len = fb_model.SubgraphsLength()
@@ -380,9 +377,25 @@ class TFLiteParser(Parser):
 
     return subgraph
 
-  def _set_tensor_node(self, idx, name):
-    assert self.tensor_names_map[idx].op_name == ""
-    self.tensor_names_map[idx].op_name = name
+  def _set_tensor_node(self, idx, name, tensor_names_map):
+    assert tensor_names_map[idx].op_name == ""
+    tensor_names_map[idx].op_name = name
+
+  @staticmethod
+  def _prepare_quant_params(ugraph):
+    # spec: https://www.tensorflow.org/lite/performance/quantization_spec
+    for op_info in ugraph.get_ops_by_type('DepthwiseConv2d'):
+      bias = op_info.input_tensors[2]
+      zp = bias.attributes['quantization_zeros']
+      bias.attributes['quantization_zeros'] = zp.astype(np.dtype('int32'))
+    for op_info in ugraph.get_ops_by_type('FullyConnected'):
+      bias = op_info.input_tensors[2]
+      zp = bias.attributes['quantization_zeros']
+      bias.attributes['quantization_zeros'] = zp.astype(np.dtype('int32'))
+    for op_info in ugraph.get_ops_by_type('Conv2d'):
+      bias = op_info.input_tensors[2]
+      zp = bias.attributes['quantization_zeros']
+      bias.attributes['quantization_zeros'] = zp.astype(np.dtype('int32'))
 
   def _format_node_name(self, node_name, op_type, op_cnt):
     if node_name == "":
