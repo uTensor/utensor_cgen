@@ -49,7 +49,8 @@ class _DeclareTensorBase(_SnippetBase):
       quant_params['is_per_tensor'] = zeros.size == 1
       quant_params['zero_point'] = {
         'value': zeros,
-        'type_str': NP_TYPES_MAP[zeros.dtype].tensor_type_str
+        # fixing the type to int32_t for the design of runtime
+        'type_str': 'int32_t', #NP_TYPES_MAP[zeros.dtype].tensor_type_str
       }
       quant_params['scale'] = {
         'value': scales,

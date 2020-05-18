@@ -236,7 +236,9 @@ class TFLiteParser(Parser):
       dtype = self._TENSOR_NP_TYPE[tensor.Type()]
       attributes = dict()
       quant_params = tensor.Quantization()
-      if quant_params is not None:
+      if quant_params is not None and \
+        quant_params.ZeroPointLength() and \
+        quant_params.ScaleLength():
         attributes["quantization_zeros"] = quant_params.ZeroPointAsNumpy()
         attributes["quantization_scales"] = quant_params.ScaleAsNumpy()
 
