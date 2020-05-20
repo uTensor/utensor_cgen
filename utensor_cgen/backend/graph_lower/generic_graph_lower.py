@@ -37,22 +37,22 @@ class TopoOrderTensorTimeslotPlanner(BackendPart):
     life_span = defaultdict(lambda: [None, None])
     for op_info in ugraph.ops_info.values():
       for tensor in op_info.input_tensors:
-        ref_cnts[tensor.name] += 1
+        ref_cnts[tensor] += 1
     for time_slot, op_name in enumerate(ugraph.topo_order):
       op_info = ugraph.ops_info[op_name]
       for tensor in op_info.output_tensors:
-        life_span[tensor.name][0] = time_slot
+        life_span[tensor][0] = time_slot
       for tensor in op_info.input_tensors:
-        ref_cnts[tensor.name] -= 1
-        if ref_cnts[tensor.name] == 0:
-          life_span[tensor.name][1] = time_slot
+        ref_cnts[tensor] -= 1
+        if ref_cnts[tensor] == 0:
+          life_span[tensor][1] = time_slot
     time_alloc_plan = {}
-    for tensor_name, (start, end) in life_span.items():
+    for tensor_info, (start, end) in life_span.items():
       time_alloc = TimeslotAllocation(
         time_slot_start=start,
         time_slot_end=end
       )
-      time_alloc_plan[tensor_name] = time_alloc
+      time_alloc_plan[tensor_info] = time_alloc
     logger.info('topo ordered tensor life span analysis done')
     ugraph.attributes[self.KWARGS_NAMESCOPE] = time_alloc_plan
 
@@ -126,7 +126,7 @@ class TensorAllocationPlanner(BackendPart):
         continue
       # all output tensor should not overlap with tensors that's still alive
       for out_tensor, known_tensor in product(op_info.output_tensors, tensors_to_schedule):
-        time_alloc = time_alloc_plan[known_tensor.name]
+        time_alloc = time_alloc_plan[known_tensor]
         if time_slot in time_alloc:
           nonoverlap_map[out_tensor].add(known_tensor)
       # all output tensors should not overlap with each other
@@ -178,11 +178,11 @@ class TensorAllocationPlanner(BackendPart):
       var_end = model.NewIntVar(0, self.max_pool_size, '{}_end'.format(tensor.name))
       size = self._compute_tensor_bytes_size(tensor)
       intv_var = model.NewIntervalVar(var_start, size, var_end, '{}_alloc'.format(tensor.name))
-      inter_vars[tensor.name] = intv_var
-      tensor_allocs[tensor.name] = _VarMemorySpan(var_start, var_end, size)
+      inter_vars[tensor] = intv_var
+      tensor_allocs[tensor] = _VarMemorySpan(var_start, var_end, size)
     for tensor in tensors_to_schedule:
-      inter_var = inter_vars[tensor.name]
-      nonoverlap_vars = [inter_vars[t.name] for t in nonoverlap_map[tensor]]
+      inter_var = inter_vars[tensor]
+      nonoverlap_vars = [inter_vars[t] for t in nonoverlap_map[tensor]]
       for other in nonoverlap_vars:
           model.AddNoOverlap([inter_var, other])
     var_mempool_size = model.NewIntVar(0, self.max_pool_size, 'mempool_size')
@@ -195,8 +195,8 @@ class TensorAllocationPlanner(BackendPart):
     opt_mempool_size = None
     if status == cp_model.OPTIMAL:
       opt_mempool_size = solver.Value(var_mempool_size)
-      for name, alloc in tensor_allocs.items():
-        alloc_plan[name] = SpaceAllocation(
+      for entity, alloc in tensor_allocs.items():
+        alloc_plan[entity] = SpaceAllocation(
           offset_start=solver.Value(alloc.start),
           size=alloc.size,
           data_alignment=self.data_alignment,
@@ -307,7 +307,7 @@ class BrutalForceMemoryPlanner(BackendPart):
               max_offset_end = allocate_table[in_o.name]['offsetend']
             allocs.append(
               TimeSpaceAllocation(
-                entity_name=in_o.name,
+                entity=in_o,
                 time_alloc=time_alloc,
                 space_alloc=space_alloc,
               )
@@ -328,7 +328,8 @@ class BrutalForceMemoryPlanner(BackendPart):
               max_offset_end = allocate_table[out_o.name]['offsetend']
             allocs.append(
               TimeSpaceAllocation(
-                entity_name=out_o.name,
+                entity=out_o
+                ,
                 time_alloc=time_alloc,
                 space_alloc=space_alloc,
               )
