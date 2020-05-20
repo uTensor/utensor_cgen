@@ -352,7 +352,7 @@ class uTensorRearchCodeGenerator(BackendPart):
     # TODO: if mem_optimizer is None, use a default mem optimizer
     if self.meta_data_pool_size == 'auto':
       # TODO: compute actual meta data size with ugraph
-      size = 256
+      size = 2048
     else:
       size = self.meta_data_pool_size
     return size
@@ -362,7 +362,7 @@ class uTensorRearchCodeGenerator(BackendPart):
     if self.ram_data_pool_size == 'auto':
       # TODO: compute actual ram data size with ugraph
       if '_tensor_alloc' in ugraph.attributes:
-        size = ugraph.attributes['_tensor_alloc'].total_size + 500
+        size = ugraph.attributes['_tensor_alloc'].total_size + 3000
       else:
         size = 256
     else:
