@@ -225,7 +225,7 @@ class QuantizedFullyConnectedSnippet(OpEvalSnippet):
 
 class TimeSlotContainer(SnippetBase):
   __template_name__ = 'containers/rearch/time_slot.cpp'
-  __headers__ = set(['"uTensor.h"', "<vector>"])
+  __headers__ = set(['"uTensor.h"'])
 
   def __init__(self ):
     SnippetBase.__init__(self)
@@ -247,7 +247,7 @@ class TimeSlotContainer(SnippetBase):
 
 class SimpleContainer(SnippetBase):
   __template_name__ = 'containers/rearch/simple.cpp'
-  __headers__ = set(['"uTensor.h"', "<vector>"])
+  __headers__ = set(['"uTensor.h"'])
 
   def __init__(self):
     SnippetBase.__init__(self)

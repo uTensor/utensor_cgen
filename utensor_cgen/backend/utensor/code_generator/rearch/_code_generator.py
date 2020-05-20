@@ -150,14 +150,15 @@ class uTensorRearchCodeGenerator(BackendPart):
           )
           visited_tensors.add(tensor_info)
         else:
-          for tensor_info in op_info.output_tensors:
-            local_snippets.append(
-              DeclareRamTensorSnippet(
-                tensor_info=tensor_info,
-                tensor_var=tensor_var_map[tensor_info.name]
+          if op_info.name not in ugraph.output_nodes:
+            for tensor_info in op_info.output_tensors:
+              local_snippets.append(
+                DeclareRamTensorSnippet(
+                  tensor_info=tensor_info,
+                  tensor_var=tensor_var_map[tensor_info.name]
+                )
               )
-            )
-            visited_tensors.add(tensor_info)
+              visited_tensors.add(tensor_info)
           op = OperatorFactory.get_opertor(op_info)
           op_name = ops_map[op]
           local_snippets.append(
