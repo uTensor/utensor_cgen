@@ -1,7 +1,8 @@
+import re
 from copy import deepcopy
 from functools import reduce
 
-from utensor_cgen.ir.base import OperationInfo
+from utensor_cgen.ir.base import OperationInfo, TensorInfo
 from utensor_cgen.utils import topologic_order_graph
 
 from .api import Legalizer
@@ -45,6 +46,11 @@ class _GraphRewrite(object):
 
   @classmethod
   def apply(cls, ugraph):
+    cls._handle_fully_connected(ugraph)
+    cls._handle_conv_2d(ugraph)
+
+  @classmethod
+  def _handle_fully_connected(cls, ugraph):
     # 1. transpose the filter to make a right mulitiplication: fc = x @ filter + bias
     # 2. if the input is not flatten, inject a reshape op
     reshape_cnt = 0
@@ -77,4 +83,56 @@ class _GraphRewrite(object):
         )
         reshape_cnt += 1
         op_info.input_tensors[0] = out_tensor
+    topologic_order_graph(ugraph)
+  
+  @classmethod
+  def _handle_conv_2d(cls, ugraph):
+    activation_pattern = re.compile(r'^(\d+) \(\w+\)$')
+    activation_map = {
+      '0': 'None',
+      '1': 'ReLUOperator',
+      # '2': 'TFLM::TfLiteFusedActivation::kTfLiteActRelu1',
+      '3': 'ReLU6Operator',
+      # '4': 'TFLM::TfLiteFusedActivation::kTfLiteActTanh',
+      # '5': 'TFLM::TfLiteFusedActivation::kTfLiteActSignBit',
+      # '6': 'TFLM::TfLiteFusedActivation::kTfLiteActSigmoid',
+    }
+    for i, op_info in enumerate(ugraph.get_ops_by_type('Conv2d')):
+      act_idx = activation_pattern.match(
+        op_info.op_attr['FusedActivationFunction']
+      ).group(1)
+      act_op_type = activation_map.get(act_idx)
+      if act_op_type is None:
+        raise ValueError(
+          'legalization fail, unknown activation: {}'.format(
+            op_info.op_attr['FusedActivationFunction']
+            )
+        )
+      elif act_op_type is 'None':
+        # no activation is set, ignore
+        continue
+      else:
+        ori_out_tensor = op_info.output_tensors[0]
+        act_op_name = '{}/{}'.format(op_info.name, act_op_type.replace('Operator', ''))
+        act_tensor = TensorInfo(
+          name='{}:0'.format(act_op_name),
+          op_name=act_op_name,
+          dtype=ori_out_tensor.dtype,
+          shape=ori_out_tensor.shape[:],
+          ugraph=ugraph,
+          attributes=dict(ori_out_tensor.attributes),
+        )
+        OperationInfo(
+          name=act_op_name,
+          input_tensors=[ori_out_tensor],
+          output_tensors=[act_tensor],
+          op_type=act_op_type,
+          lib_name=ugraph.lib_name,
+          ugraph=ugraph,
+          op_attr={}
+        )
+        for consumer_op in ori_out_tensor.op.output_nodes:
+          for i, input_tensor in enumerate(consumer_op.input_tensors):
+            if input_tensor.name == ori_out_tensor.name:
+              consumer_op.input_tensors[i] = act_tensor
     topologic_order_graph(ugraph)

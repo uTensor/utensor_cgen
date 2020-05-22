@@ -352,11 +352,11 @@ class OperationInfo(IRBase, _NoShallowCopyMixin):
 
     :rtype: List[:class:`OperationInfo`]
     """
-    out_ops = []
+    out_ops = set()
     for op in self._ugraph.ops:
       for in_tensor in op.input_tensors:
         if in_tensor.op_name == self.name and op.name not in out_ops:
-          out_ops.append(op.name)
+          out_ops.add(op.name)
           break
     return [self._ugraph.ops_info[name] for name in out_ops]
 
