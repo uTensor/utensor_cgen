@@ -23,7 +23,7 @@ class OperatorFactory(object):
     op_cls = cls._operators.get((namespaces, op_type))
     if op_cls is None:
       raise OpNotSupportedError(
-        "{}::{} not supported in utensor_cgen".format("::".join(namespaces), op_type)
+        "{} not supported in utensor_cgen".format("::".join(list(namespaces) + [op_type]))
       )
     return op_cls(op_info)
 
@@ -37,8 +37,11 @@ class OperatorFactory(object):
   @classmethod
   def support_op_types(cls):
     """Return the set of all supported ops
-  """
-    return set(cls._operators.keys())
+    """
+    return set([
+      "::".join(list(namespaces) + [op_type])
+      for namespaces, op_type in cls._operators.keys()
+    ])
 
   @classmethod
   def is_supported(cls, op_type):

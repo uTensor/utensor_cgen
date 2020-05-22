@@ -329,6 +329,37 @@ class _CommonParams(_Operator):
   }
   _ACTIVATION_STR_PATTERN = re.compile(r'^(\d+) \(\w+\)$')
 
+@OperatorFactory.register
+class _Conv2dOperator(_CommonParams):
+  op_type = 'Conv2dOperator'
+
+  @classmethod
+  @must_return_type(Hashable)
+  def get_constructor_parameters(cls, op_info):
+    padding = cls._PADDING_MAP[op_info.op_attr['Padding']]
+    stride_width = op_info.op_attr['StrideW']
+    stride_hight = op_info.op_attr['StrideH']
+    return (
+      _c_arr_str([1, stride_hight, stride_width, 1]),
+      padding,
+    )
+
+  def get_declare_snippet(self, op_var_name, tensor_var_map):
+    return DeclareOpSnippet(
+      op=self,
+      templ_dtypes=[self.out_dtypes[0]],
+      op_var_name=op_var_name,
+      nested_namespaces=self.namespaces,
+    )
+
+  def get_eval_snippet(self, op_var_name, op_info, tensor_var_map):
+    return Conv2dOpEvalSnippet(
+      op_info=op_info,
+      templ_dtypes=[self.out_dtypes[0]],
+      op_name=op_var_name,
+      tensor_var_map=tensor_var_map,
+      nested_namespaces=self.namespaces,
+    )
 
 @OperatorFactory.register
 class _QuantDWSConvOperator(_CommonParams):

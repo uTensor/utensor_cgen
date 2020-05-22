@@ -37,6 +37,7 @@ class uTensorBackend(Backend):
       graph_op_lower = graph_op_lower or uTensorRearchGraphLower(config=config[uTensorRearchGraphLower.PART].to_dict())
       graph_alloc_lower = TensorAllocationPlanner(config=config[TensorAllocationPlanner.PART].to_dict())
     graph_transformer = graph_transformer or PipelineTransformer(config=config[PipelineTransformer.PART].to_dict())
+    self._legacy_api = config['legacy-api']
     self._graph_op_lower = graph_op_lower
     self._graph_transformer = graph_transformer
     self._graph_alloc_lower = graph_alloc_lower
@@ -73,3 +74,11 @@ class uTensorBackend(Backend):
   def from_file(cls, path_or_file):
     config = parse_toml(path_or_file)
     return cls(config=config)
+
+  @property
+  def support_ops(self):
+    if self._legacy_api:
+      from .code_generator.legacy._operators import OperatorFactory
+    else:
+      from .code_generator.rearch._operators import OperatorFactory
+    return OperatorFactory.support_op_types()

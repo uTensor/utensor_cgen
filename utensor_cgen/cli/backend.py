@@ -1,3 +1,6 @@
+import os
+from pprint import pformat
+
 import click
 
 from utensor_cgen import __version__
@@ -37,6 +40,22 @@ def list_trans_methods(verbose):
       fg='white', bold=True
     )
   return 0
+
+@cli.command(name='list-support-ops', help='list all supported op in the backend')
+@click.help_option('-h', '--help')
+@click.option('--target', default='utensor')
+@click.option('--config', default='utensor_cli.toml')
+def list_support_ops(target, config):
+  from utensor_cgen.backend.api import BackendManager
+  if os.path.exists(config):
+    backend = BackendManager.get_backend(target).from_file(config)
+  else:
+    backend = BackendManager.get_backend(target)({})
+  click.secho(
+    pformat(backend.support_ops),
+    fg='white',
+    bold=True
+  )
 
 @cli.command(name='generate-config', help='generate config toml file')
 @click.help_option('-h', '--help')

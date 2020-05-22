@@ -118,3 +118,7 @@ class BackendPart(Backend):
   def from_file(cls, file_or_path, *args, **kwargs):
     config = parse_toml(file_or_path)[cls.TARGET][cls.COMPONENT][cls.PART]
     return cls(config, *args, **kwargs)
+  
+  @property
+  def support_ops(self):
+    return []

@@ -10,6 +10,7 @@ __all__ = [
   "DeclareRomTensorSnippet",
   "DeclareRamTensorSnippet",
   "DeclareOpSnippet",
+  "Conv2dOpEvalSnippet",
   "DepthwiseSeperateConvOpEvalSnippet",
   "QuantDepthwiseSeperateConvOpEvalSnippet",
   "AddOpEvalSnippet",
@@ -131,6 +132,11 @@ class OpEvalSnippet(_SnippetBase):
     self.template_vars['op_var_name'] = op_name
     self.template_vars['input_map'] = input_map
     self.template_vars['output_map'] = output_map
+
+
+class Conv2dOpEvalSnippet(OpEvalSnippet):
+  __inputs__ = ["in", "filter"]
+  __outputs__ = ["out"]
 
 
 class DepthwiseSeperateConvOpEvalSnippet(OpEvalSnippet):
