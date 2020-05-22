@@ -344,7 +344,7 @@ class TFLiteParser(Parser):
         for output_index in op.OutputsAsNumpy()
       ]
 
-      op_attr = _OP_DATA_FUNC_MAP[op_type](op)
+      op_attr = _OP_DATA_FUNC_MAP.get(op_type, lambda op: {})(op)
 
       OperationInfo(
         name=node_name,
@@ -388,16 +388,19 @@ class TFLiteParser(Parser):
     # spec: https://www.tensorflow.org/lite/performance/quantization_spec
     for op_info in ugraph.get_ops_by_type('DepthwiseConv2d'):
       bias = op_info.input_tensors[2]
-      zp = bias.attributes['quantization_zeros']
-      bias.attributes['quantization_zeros'] = zp.astype(np.dtype('int32'))
+      if 'quantization_zeros' in bias.attributes:
+        zp = bias.attributes['quantization_zeros']
+        bias.attributes['quantization_zeros'] = zp.astype(np.dtype('int32'))
     for op_info in ugraph.get_ops_by_type('FullyConnected'):
       bias = op_info.input_tensors[2]
-      zp = bias.attributes['quantization_zeros']
-      bias.attributes['quantization_zeros'] = zp.astype(np.dtype('int32'))
+      if 'quantization_zeros' in bias.attributes:
+        zp = bias.attributes['quantization_zeros']
+        bias.attributes['quantization_zeros'] = zp.astype(np.dtype('int32'))
     for op_info in ugraph.get_ops_by_type('Conv2d'):
       bias = op_info.input_tensors[2]
-      zp = bias.attributes['quantization_zeros']
-      bias.attributes['quantization_zeros'] = zp.astype(np.dtype('int32'))
+      if 'quantization_zeros' in bias.attributes:
+        zp = bias.attributes['quantization_zeros']
+        bias.attributes['quantization_zeros'] = zp.astype(np.dtype('int32'))
 
   def _format_node_name(self, node_name, op_type, op_cnt):
     if node_name == "":
