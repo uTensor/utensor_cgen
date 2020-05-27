@@ -86,13 +86,18 @@ class TFLiteParser(Parser):
       dtype = self._TENSOR_NP_TYPE[tensor.Type()]
       attributes = dict()
       quant_params = tensor.Quantization()
-      if quant_params is not None and quant_params.ZeroPointAsNumpy() and quant_params.ScaleAsNumpy():
-        zp = quant_params.ZeroPointAsNumpy()
-        if zp.dtype == np.dtype('<i8'):
-          zp = zp.astype('int8')
-        else:
-          zp = zp.astype('uint8')
-        attributes["quantization_zeros"] = zp
+#      if quant_params is not None and quant_params.ZeroPointAsNumpy() and quant_params.ScaleAsNumpy():
+#        zp = quant_params.ZeroPointAsNumpy()
+#        if zp.dtype == np.dtype('<i8'):
+#          zp = zp.astype('int8')
+#        else:
+#          zp = zp.astype('uint8')
+#        attributes["quantization_zeros"] = zp
+#        attributes["quantization_scales"] = quant_params.ScaleAsNumpy()
+      if quant_params is not None and \
+        quant_params.ZeroPointLength() and \
+        quant_params.ScaleLength():
+        attributes["quantization_zeros"] = quant_params.ZeroPointAsNumpy()
         attributes["quantization_scales"] = quant_params.ScaleAsNumpy()
 
       if isinstance(tensor.ShapeAsNumpy(), np.ndarray):
@@ -472,7 +477,7 @@ _OP_DATA_FUNC_MAP = defaultdict(lambda: default_op_data)
 #_OP_DATA_FUNC_MAP["ADD"]                          = None
 #_OP_DATA_FUNC_MAP["AVERAGE_POOL_2D"]              = None
 #_OP_DATA_FUNC_MAP["CONCATENATION"]                = None
-_OP_DATA_FUNC_MAP["CONV_2D"]                      = conv2d_op_data
+_OP_DATA_FUNC_MAP["CONV_2D"]                      = conv_2d_op_data
 _OP_DATA_FUNC_MAP["DEPTHWISE_CONV_2D"]            = depthwise_conv2d_op_data
 _OP_DATA_FUNC_MAP["DEQUANTIZE"]                   = dequantize_op_data
 #_OP_DATA_FUNC_MAP["EMBEDDING_LOOKUP"]             = None
