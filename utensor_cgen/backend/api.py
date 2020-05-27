@@ -19,6 +19,8 @@ class BackendManager(object):
       raise TypeError(
         'can only register subclass of %s: get %s' % (Backend, backend_cls)
       )
+    if backend_cls.TARGET in cls.BACKENDS:
+      raise ValueError('duplicate TARGET detected: %s' % backend_cls.TARGET)
     cls.BACKENDS[backend_cls.TARGET] = backend_cls
     return backend_cls
 
