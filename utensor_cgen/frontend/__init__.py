@@ -9,12 +9,12 @@ class FrontendSelector(object):
   _setuped = False
 
   @classmethod
-  def register(cls, target_exts):
+  def register(cls, target_exts, overwrite=False):
     def _register(parser_cls):
       if not issubclass(parser_cls, Parser):
         raise TypeError('incorrect parser type for registration')
       for ext in target_exts:
-        if ext in cls._parser_map:
+        if not overwrite and ext in cls._parser_map:
           raise ValueError("duplicate file ext detected: %s" % ext)
         cls._parser_map[ext] = parser_cls
       return parser_cls

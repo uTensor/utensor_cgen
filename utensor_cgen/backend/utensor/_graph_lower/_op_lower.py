@@ -24,6 +24,8 @@ class uTensorLegacyGraphLower(uTensorGraphLowerBase):
   PART = 'legacy_graph_lower'
 
   def handle_tensorflow(self, ugraph):
+    for op_info in ugraph.get_ops_by_type('AddOperator'):
+      op_info.op_type = 'Add'
     return ugraph
 
   @class_property
