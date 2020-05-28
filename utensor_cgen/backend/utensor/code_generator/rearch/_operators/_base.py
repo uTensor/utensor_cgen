@@ -19,11 +19,11 @@ class OperatorFactory(object):
   @classmethod
   def get_opertor(cls, op_info):
     op_type = op_info.op_type
-    namespaces = op_info.code_gen_attributes.get('namespaces', tuple())
-    op_cls = cls._operators.get((namespaces, op_type))
+    codegen_namespaces = op_info.code_gen_attributes.get('namespaces', tuple())
+    op_cls = cls._operators.get((codegen_namespaces, op_type))
     if op_cls is None:
       raise OpNotSupportedError(
-        "{} not supported in utensor_cgen".format("::".join(list(namespaces) + [op_type]))
+        "{} not supported in utensor_cgen".format("::".join(list(codegen_namespaces) + [op_type]))
       )
     return op_cls(op_info)
 
