@@ -53,7 +53,7 @@ class SpaceAllocation(object):
 
 @attr.s
 class TimeSpaceAllocation(object):
-  entity_name = attr.ib(validator=instance_of(six.string_types))
+  entity = attr.ib()
   _time_alloc = attr.ib(validator=instance_of(TimeslotAllocation), repr=False)
   _space_alloc = attr.ib(validator=instance_of(SpaceAllocation), repr=False)
   time_slot_start = attr.ib(init=False)
@@ -70,11 +70,11 @@ class TimeSpaceAllocation(object):
     self.size = self._space_alloc.size
 
   @classmethod
-  def init(cls, entity_name, time_slot_start, time_slot_end, offset_start, size):
+  def init(cls, entity, time_slot_start, time_slot_end, offset_start, size):
     time_alloc = TimeslotAllocation(time_slot_start, time_slot_end)
     space_alloc = SpaceAllocation(offset_start, size)
     return cls(
-      entity_name=entity_name,
+      entity=entity,
       time_alloc=time_alloc,
       space_alloc=space_alloc
     )
@@ -94,30 +94,30 @@ class AllocationPlan(object):
         raise ValueError(
           'expecting value of {} of type {}, get {}'.format(k, TimeSpaceAllocation, type(v))
         )
-    self.plan = {alloc.entity_name: alloc for alloc in allocs}
+    self.plan = {alloc.entity: alloc for alloc in allocs}
     self.total_size = total_size
 
-  def __setitem__(self, entity_name, alloc):
+  def __setitem__(self, entity, alloc):
     if not isinstance(alloc, TimeSpaceAllocation):
       raise ValueError(
         'the value should be of type {}, get {}'.format(TimeSpaceAllocation, type(alloc))
       )
-    if entity_name in self._plan:
+    if entity in self._plan:
       logger.warning(
-        'duplicate entity_name detected: {}'.format(entity_name)
+        'duplicate entity detected: {}'.format(entity)
       )
-    self._plan[entity_name] = alloc
+    self._plan[entity] = alloc
 
-  def __getitem__(self, entity_name):
-    if entity_name not in self.plan:
-      raise KeyError('%s not found' % entity_name)
-    return self.plan[entity_name]
+  def __getitem__(self, entity):
+    if entity not in self.plan:
+      raise KeyError('%s not found' % entity)
+    return self.plan[entity]
   
-  def __contains__(self, entity_name):
-    return entity_name in self.plan
+  def __contains__(self, entity):
+    return entity in self.plan
   
-  def __delitem__(self, entity_name):
-    del self.plan[entity_name]
+  def __delitem__(self, entity):
+    del self.plan[entity]
   
   def __getattr__(self, attr_name):
     return getattr(self.plan, attr_name)
