@@ -9,6 +9,7 @@ from utensor_cgen.backend.utensor.snippets._types import (NP_TYPES_MAP,
 __all__ = [
   "DeclareRomTensorSnippet",
   "DeclareRamTensorSnippet",
+  "FreeTensorSnippet",
   "DeclareOpSnippet",
   "Conv2dOpEvalSnippet",
   "DepthwiseSeperateConvOpEvalSnippet",
@@ -33,6 +34,8 @@ __all__ = [
   "ConvOpEvalSnippet",
   "MeanOpEvalSnippet",
   "SoftmaxOpEvalSnippet",
+  "SigmoidOpEvalSnippet",
+  "TimeSlotContainer",
   "SimpleContainer",
 ]
 
@@ -86,6 +89,14 @@ class DeclareRamTensorSnippet(_DeclareTensorBase):
     self.template_vars['tensor_var'] = tensor_var
     self.template_vars['shape'] = tensor_info.shape or [1]
     self.template_vars['utensor_dtype'] = UTENSOR_TYPES_MAP[tensor_info.dtype]
+
+
+class FreeTensorSnippet(_SnippetBase):
+  __template_name__ = 'snippets/rearch/tensor_free.cpp'
+
+  def __init__(self, tensor_var):
+    _SnippetBase.__init__(self)
+    self.template_vars['tensor_var'] = tensor_var
 
 
 class DeclareOpSnippet(_SnippetBase):
@@ -244,13 +255,40 @@ class SoftmaxOpEvalSnippet(OpEvalSnippet):
   __inputs__ = ['input']
   __outputs__ = ['output']
 
+class SigmoidOpEvalSnippet(OpEvalSnippet):
+  __inputs__ = ['in']
+  __outputs__ = ['out']
+
+
+class TimeSlotContainer(SnippetBase):
+  __template_name__ = 'containers/rearch/time_slot.cpp'
+  __headers__ = set(['"uTensor.h"'])
+
+  def __init__(self ):
+    SnippetBase.__init__(self)
+    self.__headers__ = set(type(self).__headers__)
+    self._local_snippets = []
+
+  def add_local_snippets(self, *local_snippets):
+    for snippet in local_snippets:
+      self._local_snippets.append(snippet)
+      self.__headers__.update(
+        snippet.__headers__
+      )
+
+  def render(self):
+    return self.template.render(
+      local_snippets=self._local_snippets,
+      **self.template_vars
+    )
 
 class SimpleContainer(SnippetBase):
-  __headers__ = set(['"uTensor.h"', "<vector>"])
   __template_name__ = 'containers/rearch/simple.cpp'
+  __headers__ = set(['"uTensor.h"'])
 
   def __init__(self):
     SnippetBase.__init__(self)
+    self.__headers__ = set(type(self).__headers__)
     self._declare_local_snippets = []
     self._declare_global_snippets = []
     self._eval_snippests = []
