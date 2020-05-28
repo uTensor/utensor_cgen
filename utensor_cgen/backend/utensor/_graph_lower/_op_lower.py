@@ -36,10 +36,6 @@ class uTensorLegacyGraphLower(uTensorGraphLowerBase):
 class uTensorRearchGraphLower(uTensorGraphLowerBase):
   PART = 'rearch_graph_lower'
 
-  def __init__(self, config):
-    final_config = Configuration(self.default_config, config)
-    self.tflite_use_quant_dws_conv = final_config['tflite_use_quant_dws_conv']
-
   class OptypeRenameManager(object):
     NAME_MAP = {
       'Add': 'AddOperator',
@@ -51,12 +47,23 @@ class uTensorRearchGraphLower(uTensorGraphLowerBase):
     def get_new_optype(cls, op_type):
       return cls.NAME_MAP.get(op_type, op_type)
   
-  class AddCodegenAttributes(object):
+  class CheckQuantization(object):
 
     @classmethod
-    def add_attributes(cls, ugraph):
-      for op_info in ugraph.get_ops_by_type('DepthwiseSeparableConvOperator'):
-        op_info.code_gen_attributes['namespaces'] = ('TFLM',)
+    def apply(cls, ugraph):
+      if cls._check_quantized(ugraph):
+        for op_info in ugraph.get_ops_by_type('DepthwiseSeparableConvOperator'):
+          op_info.op_type = 'QuantizedDepthwiseSeparableConvOperator'
+        for op_info in ugraph.get_ops_by_type('FullyConnectedOperator'):
+          op_info.op_type = 'QuantizedFullyConnectedOperator'
+    
+    @classmethod
+    def _check_quantized(cls, ugraph):
+      for op_info in ugraph.ops_info.values():
+        for tensor_info in op_info.output_tensors:
+          # FIXME: better way to check quantization
+          if 'quantization_zeros' in tensor_info.attributes:
+            return True
   
   @classmethod
   def add_name_map(cls, generic_name, target_specific_name):
@@ -67,11 +74,8 @@ class uTensorRearchGraphLower(uTensorGraphLowerBase):
       op_info.op_type = self.OptypeRenameManager.get_new_optype(op_info.op_type)
  
   def handle_tflite(self, ugraph):
-    if self.tflite_use_quant_dws_conv:
-      self.AddCodegenAttributes.add_attributes(ugraph)
+    self.CheckQuantization.apply(ugraph)
   
   @class_property
   def default_config(cls):
-    return {
-      'tflite_use_quant_dws_conv': True,
-    }
+    return {}
