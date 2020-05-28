@@ -43,8 +43,8 @@ def list_trans_methods(verbose):
 
 @cli.command(name='list-support-ops', help='list all supported op in the backend')
 @click.help_option('-h', '--help')
-@click.option('--target', default='utensor')
-@click.option('--config', default='utensor_cli.toml')
+@click.option('--target', default='utensor', show_default=True)
+@click.option('--config', default='utensor_cli.toml', show_default=True)
 def list_support_ops(target, config):
   from utensor_cgen.backend.api import BackendManager
   if os.path.exists(config):

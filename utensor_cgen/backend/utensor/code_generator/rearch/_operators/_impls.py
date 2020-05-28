@@ -123,13 +123,14 @@ class _ArgMaxOperator(_Operator):
 @OperatorFactory.register
 class _QuantizeOperator(_Operator):
   op_type = "QuantizeOperator"
+  namespaces = ('TFLM',)
 
   def get_declare_snippet(self, op_var_name, tensor_var_map):
     return DeclareOpSnippet(
       op=self,
       templ_dtypes=[self.out_dtypes[0], self.in_dtypes[0]],
       op_var_name=op_var_name,
-      nested_namespaces=['TFLM'],
+      nested_namespaces=self.namespaces,
     )
 
   def get_eval_snippet(self, op_var_name, op_info, tensor_var_map):
@@ -138,20 +139,21 @@ class _QuantizeOperator(_Operator):
       templ_dtypes=[self.out_dtypes[0], self.in_dtypes[0]],
       op_name=op_var_name,
       tensor_var_map=tensor_var_map,
-      nested_namespaces=['TFLM'],
+      nested_namespaces=self.namespaces,
     )
 
 
 @OperatorFactory.register
 class _DequantizeOperator(_Operator):
   op_type = "DequantizeOperator"
+  namespaces = ('TFLM',)
 
   def get_declare_snippet(self, op_var_name, tensor_var_map):
     return DeclareOpSnippet(
       op=self,
       templ_dtypes=[self.out_dtypes[0], self.in_dtypes[0]],
       op_var_name=op_var_name,
-      nested_namespaces=['TFLM'],
+      nested_namespaces=self.namespaces,
     )
 
   def get_eval_snippet(self, op_var_name, op_info, tensor_var_map):
@@ -160,7 +162,7 @@ class _DequantizeOperator(_Operator):
       templ_dtypes=[self.out_dtypes[0], self.in_dtypes[0]],
       op_name=op_var_name,
       tensor_var_map=tensor_var_map,
-      nested_namespaces=['TFLM'],
+      nested_namespaces=self.namespaces,
     )
 
 
