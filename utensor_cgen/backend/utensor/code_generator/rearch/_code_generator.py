@@ -71,7 +71,7 @@ class uTensorRearchCodeGenerator(BackendPart):
     tensor_var_map = {} # tensor name -> var name
     for op_info in ugraph.ops_info.values():
       for tensor in op_info.output_tensors:
-        tensor_var_name = re.sub(r'[:/]', '', tensor.name)
+        tensor_var_name = 't_{}'.format(re.sub(r'[:/]', '', tensor.name))
         tensor_var_map[tensor.name] = tensor_var_name
         if op_info.op_type == 'Placeholder':
           placeholders.add(tensor_var_name)
