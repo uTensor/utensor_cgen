@@ -22,7 +22,10 @@ class PipelineTransformer(BackendPart):
   def transform(self, ugraph):
     logger.info("Transforming graph: %s", ugraph.name)
     logger.info("Transform pipeline: %s", ' -> '.join(self.trans_methods))
-    self._check_non_quantized(ugraph)
+    if not self._check_generic(ugraph):
+      raise ValueError(
+        'the given graph is not generic:\n{}'.format(ugraph)
+      )
     new_ugraph = self.transformer.transform(ugraph)
     new_ugraph.name = ugraph.name
     logger.info('Graph transormation done')
@@ -35,26 +38,9 @@ class PipelineTransformer(BackendPart):
     return new_ugraph
   
   @classmethod
-  def _check_non_quantized(cls, ugraph):
-    is_quantized = False
-    quant_ops = set([
-      "Dequantize", "QuantizedMaxPool",
-      "QuantizeV2", "QuantizedMatMul",
-      "QuantizedRelu", "QuantizedAdd",
-      "RequantizationRange",
-      "Requantize",
-      "QuantizedReshape",
-      "QuantizedConv2D"
-    ])
-    for op_info in ugraph.ops_info.values():
-      if op_info.op_type in quant_ops:
-        is_quantized = True
-        break
-    if is_quantized:
-      logger.warning((
-        "Expecting non-quantized graph, "
-        "graph transformation/optimization might not work properly"
-      ))
+  def _check_generic(cls, ugraph):
+    # TODO: do the real check once we have full list of generic ops
+    return True
 
   @class_property
   def default_config(cls):
