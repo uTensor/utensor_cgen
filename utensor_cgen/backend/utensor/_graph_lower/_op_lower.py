@@ -1,4 +1,5 @@
 from copy import deepcopy
+from itertools import chain
 
 from utensor_cgen.backend.base import BackendPart
 from utensor_cgen.logger import logger
@@ -49,10 +50,11 @@ class uTensorRearchGraphLower(uTensorGraphLowerBase):
 
     @classmethod
     def apply(cls, ugraph):
-      if cls._check_quantized(ugraph):
-        for op_info in ugraph.get_ops_by_type('DepthwiseSeparableConvOperator'):
+      for op_info in ugraph.get_ops_by_type('DepthwiseSeparableConvOperator'):
+        if cls._check_quantized(op_info):
           op_info.op_type = 'QuantizedDepthwiseSeparableConvOperator'
-        for op_info in ugraph.get_ops_by_type('FullyConnectedOperator'):
+      for op_info in ugraph.get_ops_by_type('FullyConnectedOperator'):
+        if cls._check_quantized(op_info):
           op_info.op_type = 'QuantizedFullyConnectedOperator'
       for op_info in ugraph.get_ops_by_type('DequantizeOperator'):
         op_info.code_gen_attributes['namespaces'] = ('TFLM',)
@@ -60,12 +62,15 @@ class uTensorRearchGraphLower(uTensorGraphLowerBase):
         op_info.code_gen_attributes['namespaces'] = ('TFLM',)
     
     @classmethod
-    def _check_quantized(cls, ugraph):
-      for op_info in ugraph.ops_info.values():
-        for tensor_info in op_info.output_tensors:
-          # FIXME: better way to check quantization
-          if 'quantization_zeros' in tensor_info.attributes:
-            return True
+    def _check_quantized(cls, op_info):
+      for tensor_info in chain(
+        op_info.output_tensors,
+        op_info.input_tensors
+      ):
+        # FIXME: better way to check quantization
+        if 'quantization_zeros' in tensor_info.attributes:
+          return True
+      return False
   
   @classmethod
   def add_name_map(cls, generic_name, target_specific_name):
