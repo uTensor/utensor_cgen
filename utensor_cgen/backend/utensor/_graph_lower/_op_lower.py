@@ -56,6 +56,10 @@ class uTensorRearchGraphLower(uTensorGraphLowerBase):
           op_info.op_type = 'QuantizedDepthwiseSeparableConvOperator'
         for op_info in ugraph.get_ops_by_type('FullyConnectedOperator'):
           op_info.op_type = 'QuantizedFullyConnectedOperator'
+      for op_info in ugraph.get_ops_by_type('DequantizeOperator'):
+        op_info.code_gen_attributes['namespaces'] = ('TFLM',)
+      for op_info in ugraph.get_ops_by_type('QuantizeOperator'):
+        op_info.code_gen_attributes['namespaces'] = ('TFLM',)
     
     @classmethod
     def _check_quantized(cls, ugraph):
