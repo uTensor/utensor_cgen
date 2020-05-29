@@ -62,7 +62,7 @@ setup(
         'matplotlib',
         'toml',
         'flatbuffers',
-        'ortools',
+        'ortools==7.6.7691',
     ],
     extras_require={
         'dev': ['pytest']
