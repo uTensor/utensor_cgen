@@ -8,7 +8,9 @@ class GraphDefLegalizer(LegalizerBase):
 
   class _OpTypeRenamePostProcessing(object):
     _RENAME_MAP = {
-      'BatchMatMulV2': 'MatMul'
+      'BatchMatMulV2': 'MatMul',
+      # FIXME: need to update matcher before adding this line
+      # 'Add': 'AddOperator',
     }
 
     @classmethod
