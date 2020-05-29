@@ -1,18 +1,18 @@
 import re
+from collections import defaultdict
 from itertools import chain
 from pathlib import Path
-from collections import defaultdict
 
 from utensor_cgen.backend.base import BackendPart
+from utensor_cgen.backend.graph_lower.generic_graph_lower import \
+    TopoOrderTensorTimeslotPlanner
 from utensor_cgen.backend.utensor.snippets.composer import Composer
 from utensor_cgen.backend.utensor.snippets.legacy import (
     ContextGlobalArrayContainer, WeightSnippet)
 from utensor_cgen.backend.utensor.snippets.rearch import (
-    DeclareRamTensorSnippet, DeclareRomTensorSnippet, 
-    FreeTensorSnippet, SimpleContainer, TimeSlotContainer
-)
+    DeclareRamTensorSnippet, DeclareRomTensorSnippet, FreeTensorSnippet,
+    SimpleContainer, TimeSlotContainer)
 from utensor_cgen.backend.utensor.snippets.template_env import env
-from utensor_cgen.backend.graph_lower.generic_graph_lower import TopoOrderTensorTimeslotPlanner
 from utensor_cgen.logger import logger
 from utensor_cgen.utils import Configuration, class_property
 
@@ -73,7 +73,7 @@ class uTensorRearchCodeGenerator(BackendPart):
     tensor_var_map = {} # tensor name -> var name
     for op_info in ugraph.ops_info.values():
       for tensor in op_info.output_tensors:
-        tensor_var_name = re.sub(r'[:/]', '', tensor.name)
+        tensor_var_name = 't_{}'.format(re.sub(r'[:/]', '', tensor.name))
         tensor_var_map[tensor.name] = tensor_var_name
         if op_info.op_type == 'Placeholder':
           placeholders.add(tensor_var_name)
@@ -183,8 +183,10 @@ class uTensorRearchCodeGenerator(BackendPart):
   ):
     template_vars = {}
     template_vars['model_name'] = ugraph.name
-    template_vars['meta_data_pool_size'] = self._compute_meta_data_size(ugraph)
-    template_vars['ram_data_pool_size'] = self._compute_ram_data_size(ugraph)
+    (template_vars['meta_data_pool_size'],
+     template_vars['meta_dtype']) = self._compute_meta_data_size(ugraph)
+    (template_vars['ram_data_pool_size'],
+     template_vars['ram_dtype']) = self._compute_ram_data_size(ugraph)
     template_vars['placeholders'] = placeholders
     template_vars['out_tensor_var_names'] = [
       tensor_var_map[tensor.name] for tensor in chain(*[
@@ -349,16 +351,23 @@ class uTensorRearchCodeGenerator(BackendPart):
     return config
 
   def _compute_meta_data_size(self, ugraph):
-    # TODO: if mem_optimizer is None, use a default mem optimizer
     if self.meta_data_pool_size == 'auto':
-      # TODO: compute actual meta data size with ugraph
-      size = 2048
+      # NOTE: simple heuristic, num of tensors * 64, maybe more or less depending on target platform
+      # NOTE: assuming user is using localCircularArenaAllocator
+      # TODO: target aware estimation
+      tensors = set()
+      for op_info in ugraph.ops_info.values():
+        tensors.update(op_info.input_tensors)
+        tensors.update(op_info.output_tensors)
+      size = len(tensors) * 64
     else:
       size = self.meta_data_pool_size
-    return size
+    dtype_str = self._get_mem_pool_dtype_str(size)
+    return size, dtype_str
 
   def _compute_ram_data_size(self, ugraph):
-    # TODO: if mem_optimizer is None, use a default mem optimizer
+    # TODO: if tensor alloc plan is None, use a default mem estimator
+    # NOTE: assuming user is using localCircularArenaAllocator
     if self.ram_data_pool_size == 'auto':
       # TODO: compute actual ram data size with ugraph
       if '_tensor_alloc' in ugraph.attributes:
@@ -367,4 +376,12 @@ class uTensorRearchCodeGenerator(BackendPart):
         size = 256
     else:
       size = self.ram_data_pool_size
-    return size
+    dtype_str = self._get_mem_pool_dtype_str(size)
+    return size, dtype_str
+
+  @staticmethod
+  def _get_mem_pool_dtype_str(size):
+    # NOTE: assuming user is using localCircularArenaAllocator
+    if size > 2**15:
+      return 'uint32_t'
+    return 'uint16_t'

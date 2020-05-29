@@ -68,6 +68,7 @@ class OnnxParser(Parser):
   # https://pytorch.org/docs/stable/onnx.html
 
   def parse(self, onnx_file, output_nodes=None, model_name=None):
+    tf.disable_eager_execution()
     if model_name:
       graph_name = model_name
     else:

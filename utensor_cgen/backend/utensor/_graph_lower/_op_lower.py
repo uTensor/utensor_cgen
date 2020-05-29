@@ -1,4 +1,5 @@
 from copy import deepcopy
+from itertools import chain
 
 from utensor_cgen.backend.base import BackendPart
 from utensor_cgen.logger import logger
@@ -24,6 +25,8 @@ class uTensorLegacyGraphLower(uTensorGraphLowerBase):
   PART = 'legacy_graph_lower'
 
   def handle_tensorflow(self, ugraph):
+    for op_info in ugraph.get_ops_by_type('AddOperator'):
+      op_info.op_type = 'Add'
     return ugraph
 
   @class_property
@@ -33,10 +36,6 @@ class uTensorLegacyGraphLower(uTensorGraphLowerBase):
 
 class uTensorRearchGraphLower(uTensorGraphLowerBase):
   PART = 'rearch_graph_lower'
-
-  def __init__(self, config):
-    final_config = Configuration(self.default_config, config)
-    self.tflite_use_quant_dws_conv = final_config['tflite_use_quant_dws_conv']
 
   class OptypeRenameManager(object):
     NAME_MAP = {
@@ -51,12 +50,31 @@ class uTensorRearchGraphLower(uTensorGraphLowerBase):
     def get_new_optype(cls, op_type):
       return cls.NAME_MAP.get(op_type, op_type)
   
-  class AddCodegenAttributes(object):
+  class CheckQuantization(object):
 
     @classmethod
-    def add_attributes(cls, ugraph):
+    def apply(cls, ugraph):
       for op_info in ugraph.get_ops_by_type('DepthwiseSeparableConvOperator'):
+        if cls._check_quantized(op_info):
+          op_info.op_type = 'QuantizedDepthwiseSeparableConvOperator'
+      for op_info in ugraph.get_ops_by_type('FullyConnectedOperator'):
+        if cls._check_quantized(op_info):
+          op_info.op_type = 'QuantizedFullyConnectedOperator'
+      for op_info in ugraph.get_ops_by_type('DequantizeOperator'):
         op_info.code_gen_attributes['namespaces'] = ('TFLM',)
+      for op_info in ugraph.get_ops_by_type('QuantizeOperator'):
+        op_info.code_gen_attributes['namespaces'] = ('TFLM',)
+    
+    @classmethod
+    def _check_quantized(cls, op_info):
+      for tensor_info in chain(
+        op_info.output_tensors,
+        op_info.input_tensors
+      ):
+        # FIXME: better way to check quantization
+        if 'quantization_zeros' in tensor_info.attributes:
+          return True
+      return False
   
   @classmethod
   def add_name_map(cls, generic_name, target_specific_name):
@@ -67,11 +85,8 @@ class uTensorRearchGraphLower(uTensorGraphLowerBase):
       op_info.op_type = self.OptypeRenameManager.get_new_optype(op_info.op_type)
  
   def handle_tflite(self, ugraph):
-    if self.tflite_use_quant_dws_conv:
-      self.AddCodegenAttributes.add_attributes(ugraph)
+    self.CheckQuantization.apply(ugraph)
   
   @class_property
   def default_config(cls):
-    return {
-      'tflite_use_quant_dws_conv': True,
-    }
+    return {}

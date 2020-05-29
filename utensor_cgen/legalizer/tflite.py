@@ -24,9 +24,9 @@ class TFLiteLegalizer(LegalizerBase):
 
 class _OpTypeRename(object):
   _OPTYPE_RENAME_MAP = {
-    "FullyConnected": "QuantizedFullyConnectedOperator",
+    "FullyConnected": "FullyConnectedOperator",
     "Quantize": "QuantizeOperator",
-    "DepthwiseConv2d": "QuantizedDepthwiseSeparableConvOperator",
+    "DepthwiseConv2d": "DepthwiseSeparableConvOperator",
     "MaxPool2d": "MaxPoolOperator",
     "Dequantize": "DequantizeOperator",
     "Reshape": "ReshapeOperator",
