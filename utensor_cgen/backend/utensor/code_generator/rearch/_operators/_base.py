@@ -104,6 +104,7 @@ class _Operator(with_metaclass(_OperatorMeta), object):
     raise NotImplementedError(
       "base get_declare_snippet invoked: {}".format(type(self))
     )
+
   def get_eval_snippet(self, op_var_name, op_info, tensor_var_map, **kwargs):
     raise NotImplementedError(
       "base get_eval_snippet invoked: {}".format(type(self))

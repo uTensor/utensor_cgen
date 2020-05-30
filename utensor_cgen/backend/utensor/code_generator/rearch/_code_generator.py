@@ -297,7 +297,9 @@ class uTensorRearchCodeGenerator(BackendPart):
     for i, op in enumerate(ops):
       op_var_name = 'op_{:03d}'.format(i)
       ops_map[op] = op_var_name
-      declare_local_snippets.append(op.get_declare_snippet(op_var_name, tensor_var_map))
+      declare_snippet = op.get_declare_snippet(op_var_name, tensor_var_map)
+      if declare_snippet is not None
+        declare_local_snippets.append(declare_snippet)
     for op_info in filter(lambda op_info: op_info.op_type not in ["Inline", "Placeholder"], ugraph.ops_info.values()):
       if op_info.name in ugraph.output_nodes:
         continue
