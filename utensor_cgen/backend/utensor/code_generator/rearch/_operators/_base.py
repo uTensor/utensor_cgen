@@ -3,18 +3,16 @@ from typing import Hashable
 
 from six import with_metaclass
 
+from utensor_cgen.logger import logger
 from utensor_cgen.utils import MUST_OVERWRITE, must_return_type
 
-__all__ = ["OperatorFactory", "OpNotSupportedError"]
-
-
-class OpNotSupportedError(Exception):
-  pass
+__all__ = ["OperatorFactory"]
 
 
 class OperatorFactory(object):
 
   _operators = {}
+  _warned_missing_ops = set()
 
   @classmethod
   def get_opertor(cls, op_info):
@@ -22,9 +20,11 @@ class OperatorFactory(object):
     codegen_namespaces = op_info.code_gen_attributes.get('namespaces', tuple())
     op_cls = cls._operators.get((codegen_namespaces, op_type))
     if op_cls is None:
-      raise OpNotSupportedError(
-        "{} not supported in utensor_cgen".format("::".join(list(codegen_namespaces) + [op_type]))
-      )
+      missing_op_cls = cls._operators['_MissingOperator']
+      if op_info.op_type not in cls._warned_missing_ops:
+        logger.warning('{} is missing, no code will be generated for it'.format(op_info.op_type))
+        cls._warned_missing_ops.add(op_info.op_type)
+      return missing_op_cls(op_info)
     return op_cls(op_info)
 
   @classmethod

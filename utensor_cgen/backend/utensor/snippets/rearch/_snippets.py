@@ -28,20 +28,13 @@ __all__ = [
   "MinPoolEvalSnippet",
   "MaxPoolEvalSnippet",
   "QuantizedFullyConnectedSnippet",
+  "MissingOpEvalSnippet",
   "TimeSlotContainer",
   "SimpleContainer",
 ]
 
 class _SnippetBase(Snippet):
   __headers__ = set(['"uTensor.h"'])
-
-
-class _DeclareTensorBase(_SnippetBase):
-
-  def __init__(self, tensor_info, tensor_var):
-    _SnippetBase.__init__(self)
-    quant_params = self.get_quant_param(tensor_info)
-    self.template_vars['quant_params'] = quant_params
 
   @staticmethod
   def get_quant_param(tensor_info):
@@ -60,6 +53,15 @@ class _DeclareTensorBase(_SnippetBase):
         'type_str': 'float'
       }
     return quant_params
+
+
+# op declare snippets
+class _DeclareTensorBase(_SnippetBase):
+
+  def __init__(self, tensor_info, tensor_var):
+    _SnippetBase.__init__(self)
+    quant_params = self.get_quant_param(tensor_info)
+    self.template_vars['quant_params'] = quant_params
 
 
 class DeclareRomTensorSnippet(_DeclareTensorBase):
@@ -112,6 +114,7 @@ class DeclareOpSnippet(_SnippetBase):
     self.template_vars['op_var_name'] = op_var_name
 
 
+# op eval snippets
 class OpEvalSnippet(_SnippetBase):
   __template_name__ = 'snippets/rearch/eval_op.cpp'
   __inputs__ = []
@@ -229,6 +232,25 @@ class QuantizedFullyConnectedSnippet(OpEvalSnippet):
   __outputs__ = ["output"]
 
 
+class MissingOpEvalSnippet(OpEvalSnippet):
+  __template_name__ = "snippets/rearch/op_missing.cpp"
+
+  def __init__(self, op_info, tensor_var_map):
+    Snippet.__init__(self)
+    input_var_names = [tensor_var_map[tensor.name] for tensor in op_info.input_tensors]
+    out_tensor_names = [tensor.name for tensor in op_info.output_tensors]
+    out_var_names = [tensor_var_map[tensor.name] for tensor in op_info.output_tensors]
+    quant_params_map = {}
+    for out_tensor in op_info.output_tensors:
+      quant_params = self.get_quant_param(out_tensor)
+      quant_params_map[out_tensor.name] = quant_params
+    self.template_vars['op_type'] = op_info.op_type
+    self.template_vars['input_var_names'] = input_var_names
+    self.template_vars['out_var_names'] = out_var_names
+    self.template_vars['out_tensor_names'] = out_tensor_names
+    self.template_vars['quant_params_map'] = quant_params_map
+
+
 class TimeSlotContainer(SnippetBase):
   __template_name__ = 'containers/rearch/time_slot.cpp'
   __headers__ = set(['"uTensor.h"'])
@@ -250,6 +272,7 @@ class TimeSlotContainer(SnippetBase):
       local_snippets=self._local_snippets,
       **self.template_vars
     )
+
 
 class SimpleContainer(SnippetBase):
   __template_name__ = 'containers/rearch/simple.cpp'

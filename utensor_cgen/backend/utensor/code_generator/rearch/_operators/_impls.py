@@ -331,6 +331,7 @@ class _CommonParams(_Operator):
   }
   _ACTIVATION_STR_PATTERN = re.compile(r'^(\d+) \(\w+\)$')
 
+
 @OperatorFactory.register
 class _Conv2dOperator(_CommonParams):
   op_type = 'Conv2dOperator'
@@ -362,6 +363,7 @@ class _Conv2dOperator(_CommonParams):
       tensor_var_map=tensor_var_map,
       nested_namespaces=self.namespaces,
     )
+
 
 @OperatorFactory.register
 class _QuantDWSConvOperator(_CommonParams):
@@ -466,3 +468,15 @@ class _QuantizedFullyConnectedOperator(_CommonParams):
       op_name=op_var_name,
       tensor_var_map=tensor_var_map,
     )
+
+
+class _MissingOperator(_Operator):
+  op_type = "_MissingOperator"
+
+  def get_declare_snippet(self, op_var_name, tensor_var_map):
+    return None
+  
+  def get_eval_snippet(self, op_var_name, op_info, tensor_var_map):
+    return MissingOpEvalSnippet(op_info, tensor_var_map)
+
+OperatorFactory._operators[_MissingOperator.op_type] = _MissingOperator
