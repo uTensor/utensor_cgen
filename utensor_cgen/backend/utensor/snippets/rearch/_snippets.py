@@ -243,6 +243,9 @@ class MissingOpEvalSnippet(OpEvalSnippet):
       quant_params = self.get_quant_param(out_tensor)
       quant_params_map[out_tensor.name] = quant_params
     self.template_vars['op_type'] = op_info.op_type
+    self.template_vars['input_var_names'] = [
+      tensor_var_map[tensor.name] for tensor in op_info.input_tensors
+    ]
     self.template_vars['input_tensors'] = op_info.input_tensors[:]
     self.template_vars['out_var_names'] = [
       tensor_var_map[tensor.name] for tensor in op_info.output_tensors

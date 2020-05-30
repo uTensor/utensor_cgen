@@ -2,8 +2,8 @@
     FIXME: {{op_type}} currently not supported, you have to fill up this section or it won't compile
 
     Input Tensors:
-    {%for tensor in input_tensors%}
-        - {{tensor.name}}, of type {{tensor.dtype}}
+    {%for tensor, var_name in zip(input_tensors, input_var_names)%}
+        - {{tensor.name}}, of type {{tensor.dtype}} and is named as {{var_name}} in this file
     {%endfor%}
 
     Output Tensors:
