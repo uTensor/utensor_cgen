@@ -349,7 +349,7 @@ class _MinPoolOperator(_PoolingOperatorMixin, _Operator):
 
 class _CommonParams(_Operator):
   _PADDING_MAP = {
-    0: "UNKNOWN",
+    0: "SAME", # "UNKNOWN",
     1: "VALID",
     2: "SAME"
   }
