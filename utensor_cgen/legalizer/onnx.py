@@ -29,7 +29,7 @@ class OnnxLegalizer(LegalizerBase):
   def _visit_gemm(self, op_info):
     # op_info.op_type == "Gemm"
     ugraph = op_info.ugraph
-    op_info.op_type = 'MatMul'
+    op_info.op_type = 'MatrixMultOperator'
     tensor_a, tensor_w, tensor_bias = op_info.input_tensors
     out_tensor = TensorInfo(
       name='{}_MatMul:0'.format(op_info.name),
@@ -42,7 +42,7 @@ class OnnxLegalizer(LegalizerBase):
       name='{}_MatMul'.format(op_info.name),
       input_tensors=[tensor_a, tensor_w],
       output_tensors=[out_tensor],
-      op_type='MatMul',
+      op_type='MatrixMultOperator',
       lib_name=op_info.lib_name,
       ugraph=ugraph,
       op_attr=op_info.op_attr
@@ -51,7 +51,7 @@ class OnnxLegalizer(LegalizerBase):
       name='{}_AddBias'.format(op_info.name),
       input_tensors=[out_tensor, tensor_bias],
       output_tensors=op_info.output_tensors[:],
-      op_type='Add',
+      op_type='AddOperator',
       lib_name=op_info.lib_name,
       ugraph=ugraph,
       op_attr={}

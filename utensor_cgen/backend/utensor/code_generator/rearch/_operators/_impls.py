@@ -16,6 +16,7 @@ def _c_arr_str(iterable):
 
 @OperatorFactory.register
 class _AddOperator(_Operator):
+  namespaces = ('ReferenceOperators',)
   op_type = 'AddOperator'
 
   def get_declare_snippet(self, op_var_name, tensor_var_map):
@@ -23,6 +24,7 @@ class _AddOperator(_Operator):
       op=self,
       templ_dtypes=[self.in_dtypes[0]],
       op_var_name=op_var_name,
+      nested_namespaces=type(self).namespaces,
     )
 
   def get_eval_snippet(self, op_var_name, op_info, tensor_var_map):
@@ -31,11 +33,13 @@ class _AddOperator(_Operator):
       templ_dtypes=[self.in_dtypes[0]],
       op_name=op_var_name,
       tensor_var_map=tensor_var_map,
+      nested_namespaces=type(self).namespaces,
     )
 
 
 @OperatorFactory.register
 class _ReshapeOperator(_Operator):
+  namespaces = ('ReferenceOperators',)
   op_type = "ReshapeOperator"
 
   @classmethod
@@ -49,6 +53,7 @@ class _ReshapeOperator(_Operator):
       op=self,
       templ_dtypes=[self.in_dtypes[0]],
       op_var_name=op_var_name,
+      nested_namespaces=type(self).namespaces,
     )
 
   def get_eval_snippet(self, op_var_name, op_info, tensor_var_map):
@@ -57,11 +62,13 @@ class _ReshapeOperator(_Operator):
       templ_dtypes=[self.in_dtypes[0]],
       op_name=op_var_name,
       tensor_var_map=tensor_var_map,
+      nested_namespaces=type(self).namespaces,
     )
 
 
 @OperatorFactory.register
 class _MatmulOperator(_Operator):
+  namespaces = ('ReferenceOperators',)
   op_type = 'MatrixMultOperator'
 
   def get_declare_snippet(self, op_var_name, tensor_var_map):
@@ -69,6 +76,7 @@ class _MatmulOperator(_Operator):
       op=self,
       templ_dtypes=[self.in_dtypes[0]],
       op_var_name=op_var_name,
+      nested_namespaces=type(self).namespaces,
     )
 
   def get_eval_snippet(self, op_var_name, op_info, tensor_var_map):
@@ -77,11 +85,13 @@ class _MatmulOperator(_Operator):
       templ_dtypes=[self.in_dtypes[0]],
       op_name=op_var_name,
       tensor_var_map=tensor_var_map,
+      nested_namespaces=type(self).namespaces,
     )
 
 
 @OperatorFactory.register
 class _ArgMinOperator(_Operator):
+  namespaces = ('ReferenceOperators',)
   op_type = "ArgMinOperator"
 
   def get_declare_snippet(self, op_var_name, tensor_var_map):
@@ -89,6 +99,7 @@ class _ArgMinOperator(_Operator):
       op=self,
       templ_dtypes=[self.in_dtypes[0]],
       op_var_name=op_var_name,
+      nested_namespaces=type(self).namespaces,
     )
 
   def get_eval_snippet(self, op_var_name, op_info, tensor_var_map):
@@ -97,11 +108,13 @@ class _ArgMinOperator(_Operator):
       templ_dtypes=[self.in_dtypes[0]],
       op_name=op_var_name,
       tensor_var_map=tensor_var_map,
+      nested_namespaces=type(self).namespaces,
     )
 
 
 @OperatorFactory.register
 class _ArgMaxOperator(_Operator):
+  namespaces = ('ReferenceOperators',)
   op_type = "ArgMaxOperator"
 
   def get_declare_snippet(self, op_var_name, tensor_var_map):
@@ -109,6 +122,7 @@ class _ArgMaxOperator(_Operator):
       op=self,
       templ_dtypes=[self.in_dtypes[0]],
       op_var_name=op_var_name,
+      nested_namespaces=type(self).namespaces,
     )
 
   def get_eval_snippet(self, op_var_name, op_info, tensor_var_map):
@@ -117,20 +131,21 @@ class _ArgMaxOperator(_Operator):
       templ_dtypes=[self.in_dtypes[0]],
       op_name=op_var_name,
       tensor_var_map=tensor_var_map,
+      nested_namespaces=type(self).namespaces,
     )
 
 
 @OperatorFactory.register
 class _QuantizeOperator(_Operator):
+  namespaces = ('TflmSymQuantOps',)
   op_type = "QuantizeOperator"
-  namespaces = ('TFLM',)
 
   def get_declare_snippet(self, op_var_name, tensor_var_map):
     return DeclareOpSnippet(
       op=self,
       templ_dtypes=[self.out_dtypes[0], self.in_dtypes[0]],
       op_var_name=op_var_name,
-      nested_namespaces=self.namespaces,
+      nested_namespaces=type(self).namespaces,
     )
 
   def get_eval_snippet(self, op_var_name, op_info, tensor_var_map):
@@ -139,21 +154,21 @@ class _QuantizeOperator(_Operator):
       templ_dtypes=[self.out_dtypes[0], self.in_dtypes[0]],
       op_name=op_var_name,
       tensor_var_map=tensor_var_map,
-      nested_namespaces=self.namespaces,
+      nested_namespaces=type(self).namespaces,
     )
 
 
 @OperatorFactory.register
 class _DequantizeOperator(_Operator):
+  namespaces = ('TflmSymQuantOps',)
   op_type = "DequantizeOperator"
-  namespaces = ('TFLM',)
 
   def get_declare_snippet(self, op_var_name, tensor_var_map):
     return DeclareOpSnippet(
       op=self,
       templ_dtypes=[self.out_dtypes[0], self.in_dtypes[0]],
       op_var_name=op_var_name,
-      nested_namespaces=self.namespaces,
+      nested_namespaces=type(self).namespaces,
     )
 
   def get_eval_snippet(self, op_var_name, op_info, tensor_var_map):
@@ -162,12 +177,13 @@ class _DequantizeOperator(_Operator):
       templ_dtypes=[self.out_dtypes[0], self.in_dtypes[0]],
       op_name=op_var_name,
       tensor_var_map=tensor_var_map,
-      nested_namespaces=self.namespaces,
+      nested_namespaces=type(self).namespaces,
     )
 
 
 @OperatorFactory.register
 class _ReLUOperator(_Operator):
+  namespaces = ('ReferenceOperators',)
   op_type = "ReLUOperator"
 
   def get_declare_snippet(self, op_var_name, tensor_var_map):
@@ -175,6 +191,7 @@ class _ReLUOperator(_Operator):
       op=self,
       templ_dtypes=[self.in_dtypes[0]],
       op_var_name=op_var_name,
+      nested_namespaces=type(self).namespaces,
     )
 
   def get_eval_snippet(self, op_var_name, op_info, tensor_var_map):
@@ -183,11 +200,13 @@ class _ReLUOperator(_Operator):
       templ_dtypes=[self.in_dtypes[0]],
       op_name=op_var_name,
       tensor_var_map=tensor_var_map,
+      nested_namespaces=type(self).namespaces,
     )
 
 
 @OperatorFactory.register
 class _ReLU6Operator(_Operator):
+  namespaces = ('ReferenceOperators',)
   op_type = "ReLU6Operator"
 
   def get_declare_snippet(self, op_var_name, tensor_var_map):
@@ -195,6 +214,7 @@ class _ReLU6Operator(_Operator):
       op=self,
       templ_dtypes=[self.in_dtypes[0]],
       op_var_name=op_var_name,
+      nested_namespaces=type(self).namespaces,
     )
 
   def get_eval_snippet(self, op_var_name, op_info, tensor_var_map):
@@ -203,11 +223,13 @@ class _ReLU6Operator(_Operator):
       templ_dtypes=[self.in_dtypes[0]],
       op_name=op_var_name,
       tensor_var_map=tensor_var_map,
+      nested_namespaces=type(self).namespaces,
     )
 
 
 @OperatorFactory.register
 class _MinOperator(_Operator):
+  namespaces = ('ReferenceOperators',)
   op_type = 'MinOperator'
 
   def get_declare_snippet(self, op_var_name, tensor_var_map):
@@ -215,6 +237,7 @@ class _MinOperator(_Operator):
       op=self,
       templ_dtypes=[self.in_dtypes[0]],
       op_var_name=op_var_name,
+      nested_namespaces=type(self).namespaces,
     )
 
   def get_eval_snippet(self, op_var_name, op_info, tensor_var_map):
@@ -223,11 +246,13 @@ class _MinOperator(_Operator):
       templ_dtypes=[self.in_dtypes[0]],
       op_name=op_var_name,
       tensor_var_map=tensor_var_map,
+      nested_namespaces=type(self).namespaces,
     )
 
 
 @OperatorFactory.register
 class _MaxOperator(_Operator):
+  namespaces = ('ReferenceOperators',)
   op_type = 'MaxOperator'
 
   def get_declare_snippet(self, op_var_name, tensor_var_map):
@@ -235,6 +260,7 @@ class _MaxOperator(_Operator):
       op=self,
       templ_dtypes=[self.in_dtypes[0]],
       op_var_name=op_var_name,
+      nested_namespaces=type(self).namespaces,
     )
 
   def get_eval_snippet(self, op_var_name, op_info, tensor_var_map):
@@ -243,6 +269,7 @@ class _MaxOperator(_Operator):
       templ_dtypes=[self.in_dtypes[0]],
       op_name=op_var_name,
       tensor_var_map=tensor_var_map,
+      nested_namespaces=type(self).namespaces,
     )
 
 
@@ -276,6 +303,7 @@ class _PoolingOperatorMixin(object):
 
 @OperatorFactory.register
 class _MaxPoolOperator(_PoolingOperatorMixin, _Operator):
+  namespaces = ('ReferenceOperators',)
   op_type = 'MaxPoolOperator'
 
   def get_declare_snippet(self, op_var_name, tensor_var_map):
@@ -283,6 +311,7 @@ class _MaxPoolOperator(_PoolingOperatorMixin, _Operator):
       op=self,
       templ_dtypes=[self.in_dtypes[0]],
       op_var_name=op_var_name,
+      nested_namespaces=type(self).namespaces,
     )
   
   def get_eval_snippet(self, op_var_name, op_info, tensor_var_map):
@@ -291,11 +320,13 @@ class _MaxPoolOperator(_PoolingOperatorMixin, _Operator):
       templ_dtypes=[self.in_dtypes[0]],
       op_name=op_var_name,
       tensor_var_map=tensor_var_map,
+      nested_namespaces=type(self).namespaces,
     )
 
 
 @OperatorFactory.register
 class _MinPoolOperator(_PoolingOperatorMixin, _Operator):
+  namespaces = ('ReferenceOperators',)
   op_type = 'MinPoolOperator'
 
   def get_declare_snippet(self, op_var_name, tensor_var_map):
@@ -303,6 +334,7 @@ class _MinPoolOperator(_PoolingOperatorMixin, _Operator):
       op=self,
       templ_dtypes=[self.in_dtypes[0]],
       op_var_name=op_var_name,
+      nested_namespaces=type(self).namespaces,
     )
   
   def get_eval_snippet(self, op_var_name, op_info, tensor_var_map):
@@ -311,6 +343,7 @@ class _MinPoolOperator(_PoolingOperatorMixin, _Operator):
       templ_dtypes=[self.in_dtypes[0]],
       op_name=op_var_name,
       tensor_var_map=tensor_var_map,
+      nested_namespaces=type(self).namespaces,
     )
 
 
@@ -334,6 +367,7 @@ class _CommonParams(_Operator):
 
 @OperatorFactory.register
 class _Conv2dOperator(_CommonParams):
+  namespaces = ('ReferenceOperators',)
   op_type = 'Conv2dOperator'
 
   @classmethod
@@ -352,7 +386,7 @@ class _Conv2dOperator(_CommonParams):
       op=self,
       templ_dtypes=[self.out_dtypes[0]],
       op_var_name=op_var_name,
-      nested_namespaces=self.namespaces,
+      nested_namespaces=type(self).namespaces,
     )
 
   def get_eval_snippet(self, op_var_name, op_info, tensor_var_map):
@@ -361,13 +395,14 @@ class _Conv2dOperator(_CommonParams):
       templ_dtypes=[self.out_dtypes[0]],
       op_name=op_var_name,
       tensor_var_map=tensor_var_map,
-      nested_namespaces=self.namespaces,
+      nested_namespaces=type(self).namespaces,
     )
 
 
 @OperatorFactory.register
 class _QuantDWSConvOperator(_CommonParams):
-  op_type = "QuantizedDepthwiseSeparableConvOperator"
+  namespaces = ('TflmSymQuantOps',)
+  op_type = "DepthwiseSeparableConvOperator"
 
   @classmethod
   @must_return_type(Hashable)
@@ -395,7 +430,7 @@ class _QuantDWSConvOperator(_CommonParams):
       op=self,
       templ_dtypes=[self.out_dtypes[0]],
       op_var_name=op_var_name,
-      nested_namespaces=self.namespaces,
+      nested_namespaces=type(self).namespaces,
     )
 
   def get_eval_snippet(self, op_var_name, op_info, tensor_var_map):
@@ -404,12 +439,13 @@ class _QuantDWSConvOperator(_CommonParams):
       templ_dtypes=[self.out_dtypes[0]],
       op_name=op_var_name,
       tensor_var_map=tensor_var_map,
-      nested_namespaces=self.namespaces,
+      nested_namespaces=type(self).namespaces,
     )
 
 
 @OperatorFactory.register
 class _DWSConvOperator(_CommonParams):
+  namespaces = ('ReferenceOperators',)
   op_type = "DepthwiseSeparableConvOperator"
 
   @classmethod
@@ -430,6 +466,7 @@ class _DWSConvOperator(_CommonParams):
       op=self,
       templ_dtypes=[self.out_dtypes[0]],
       op_var_name=op_var_name,
+      nested_namespaces=type(self).namespaces,
     )
 
   def get_eval_snippet(self, op_var_name, op_info, tensor_var_map):
@@ -438,12 +475,14 @@ class _DWSConvOperator(_CommonParams):
       templ_dtypes=[self.out_dtypes[0]],
       op_name=op_var_name,
       tensor_var_map=tensor_var_map,
+      nested_namespaces=type(self).namespaces,
     )
 
 
 @OperatorFactory.register
 class _QuantizedFullyConnectedOperator(_CommonParams):
-  op_type = "QuantizedFullyConnectedOperator"
+  namespaces = ('TflmSymQuantOps',)
+  op_type = "FullyConnectedOperator"
 
   @classmethod
   @must_return_type(Hashable)
@@ -459,6 +498,7 @@ class _QuantizedFullyConnectedOperator(_CommonParams):
       op=self,
       templ_dtypes=[self.out_dtypes[0]],
       op_var_name=op_var_name,
+      nested_namespaces=type(self).namespaces,
     )
 
   def get_eval_snippet(self, op_var_name, op_info, tensor_var_map):
@@ -467,6 +507,7 @@ class _QuantizedFullyConnectedOperator(_CommonParams):
       templ_dtypes=[self.out_dtypes[0]],
       op_name=op_var_name,
       tensor_var_map=tensor_var_map,
+      nested_namespaces=type(self).namespaces,
     )
 
 
