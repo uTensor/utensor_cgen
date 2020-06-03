@@ -52,6 +52,7 @@ class uTensorRearchGraphLower(uTensorGraphLowerBase):
 
     @classmethod
     def apply(cls, ugraph):
+      # TODO: better abstraction, sth like lowering strategy
       for op_info in ugraph.get_ops_by_type("AddOperator"):
         op_info.code_gen_attributes['namespaces'] = ('ReferenceOperators',)
       for op_info in ugraph.get_ops_by_type("ReshapeOperator"):
