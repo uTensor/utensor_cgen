@@ -2,11 +2,11 @@
     FIXME: {{op_type}} currently not supported, you have to fill up this section or it won't compile
 
     1. Declare the operators of type {{op_type}}
-    2. Declare input tensors:
+    2. Set input tensors:
     {%for tensor, var_name in zip(input_tensors, input_var_names)%}
         - {{tensor.name}}, of type {{tensor.dtype}} and is named as {{var_name}} in this file
     {%endfor%}
-    3. Declare output Tensors:
+    3. Declare and set output Tensors:
     {%for tensor, var_name in zip(output_tensors, out_var_names)%}
         - {{tensor.name}} is of type {{tensor.dtype}}, shape {{tensor.shape}} and should be named as {{var_name}}
         {%if quant_params_map[tensor.name]%}
