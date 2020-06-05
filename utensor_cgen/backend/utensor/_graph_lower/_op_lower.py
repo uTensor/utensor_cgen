@@ -48,21 +48,48 @@ class uTensorRearchGraphLower(uTensorGraphLowerBase):
     def get_new_optype(cls, op_type):
       return cls.NAME_MAP.get(op_type, op_type)
   
-  class CheckQuantization(object):
+  class CodgenAttributes(object):
 
     @classmethod
     def apply(cls, ugraph):
+      # TODO: better abstraction, sth like lowering strategy
+      for op_info in ugraph.get_ops_by_type("AddOperator"):
+        op_info.code_gen_attributes['namespaces'] = ('ReferenceOperators',)
+      for op_info in ugraph.get_ops_by_type("ReshapeOperator"):
+        op_info.code_gen_attributes['namespaces'] = ('ReferenceOperators',)
+      for op_info in ugraph.get_ops_by_type("MatrixMultOperator"):
+        op_info.code_gen_attributes['namespaces'] = ('ReferenceOperators',)
+      for op_info in ugraph.get_ops_by_type('ArgMinOperator'):
+        op_info.code_gen_attributes['namespaces'] = ('ReferenceOperators',)
+      for op_info in ugraph.get_ops_by_type('ArgMaxOperator'):
+        op_info.code_gen_attributes['namespaces'] = ('ReferenceOperators',)
+      for op_info in ugraph.get_ops_by_type('QuantizeOperator'):
+        op_info.code_gen_attributes['namespaces'] = ('TflmSymQuantOps',)
+      for op_info in ugraph.get_ops_by_type('DequantizeOperator'):
+        op_info.code_gen_attributes['namespaces'] = ('TflmSymQuantOps',)
+      for op_info in ugraph.get_ops_by_type('ReLUOperator'):
+        op_info.code_gen_attributes['namespaces'] = ('ReferenceOperators',)
+      for op_info in ugraph.get_ops_by_type('ReLU6Operator'):
+        op_info.code_gen_attributes['namespaces'] = ('ReferenceOperators',)
+      for op_info in ugraph.get_ops_by_type('MinOperator'):
+        op_info.code_gen_attributes['namespaces'] = ('ReferenceOperators',)
+      for op_info in ugraph.get_ops_by_type('MaxOperator'):
+        op_info.code_gen_attributes['namespaces'] = ('ReferenceOperators',)
+      for op_info in ugraph.get_ops_by_type('MaxPoolOperator'):
+        op_info.code_gen_attributes['namespaces'] = ('ReferenceOperators',)
+      for op_info in ugraph.get_ops_by_type('MinPoolOperator'):
+        op_info.code_gen_attributes['namespaces'] = ('ReferenceOperators',)
+      for op_info in ugraph.get_ops_by_type('Conv2dOperator'):
+        op_info.code_gen_attributes['namespaces'] = ('ReferenceOperators',)
       for op_info in ugraph.get_ops_by_type('DepthwiseSeparableConvOperator'):
         if cls._check_quantized(op_info):
-          op_info.op_type = 'QuantizedDepthwiseSeparableConvOperator'
+          op_info.code_gen_attributes['namespaces'] = ('TflmSymQuantOps',)
+        else:
+          op_info.code_gen_attributes['namespaces'] = ('ReferenceOperators',)
       for op_info in ugraph.get_ops_by_type('FullyConnectedOperator'):
         if cls._check_quantized(op_info):
-          op_info.op_type = 'QuantizedFullyConnectedOperator'
-      for op_info in ugraph.get_ops_by_type('DequantizeOperator'):
-        op_info.code_gen_attributes['namespaces'] = ('TFLM',)
-      for op_info in ugraph.get_ops_by_type('QuantizeOperator'):
-        op_info.code_gen_attributes['namespaces'] = ('TFLM',)
-    
+          op_info.code_gen_attributes['namespaces'] = ('TflmSymQuantOps',)
+
     @classmethod
     def _check_quantized(cls, op_info):
       for tensor_info in chain(
@@ -83,7 +110,7 @@ class uTensorRearchGraphLower(uTensorGraphLowerBase):
       op_info.op_type = self.OptypeRenameManager.get_new_optype(op_info.op_type)
  
   def handle_tflite(self, ugraph):
-    self.CheckQuantization.apply(ugraph)
+    self.CodgenAttributes.apply(ugraph)
   
   @class_property
   def default_config(cls):
