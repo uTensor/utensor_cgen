@@ -1,7 +1,6 @@
 {{model_name.capitalize()}}::{{model_name.capitalize()}} () :
 {%for snp in construct_op_snippets%}
-{{snp.render()}}{%if not loop.last%}, {%endif%}
-{%endfor%}
+{%if not loop.first%}, {%endif%}{{snp.render()}}{%endfor%}
 {
   Context::get_default_context()->set_ram_data_allocator(&ram_allocator);
   Context::get_default_context()->set_metadata_allocator(&metadata_allocator);
