@@ -105,7 +105,7 @@ class uTensorRearchCodeGenerator(BackendPart):
     # op -> op variable name
     ops_map = {}
     for i, op in enumerate(ops):
-      op_var_name = 'op_{:03d}'.format(i)
+      op_var_name = 'op_{}_{:03d}'.format(op.op_type, i)
       ops_map[op] = op_var_name
       # all ops will be declared first
       declare_snippet = op.get_declare_snippet(op_var_name, with_const_params=not self.use_model_api)
@@ -351,7 +351,7 @@ class uTensorRearchCodeGenerator(BackendPart):
       tensor_var_map[tensor.name] for tensor in ugraph.output_tensors
     ]
     for i, op in enumerate(ops):
-      op_var_name = 'op_{:03d}'.format(i)
+      op_var_name = 'op_{}_{:03d}'.format(op.op_type, i)
       ops_map[op] = op_var_name
       declare_snippet = op.get_declare_snippet(op_var_name)
       if declare_snippet is not None:
