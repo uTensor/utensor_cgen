@@ -3,7 +3,12 @@ from typing import Hashable
 from utensor_cgen.backend.utensor.code_generator.rearch._code_generator import OperatorFactory
 from utensor_cgen.backend.utensor.code_generator.rearch._operators._base import _Operator
 from utensor_cgen.backend.utensor.snippets.rearch import *
+from utensor_cgen.backend.utensor.snippets.rearch import OpEvalSnippet
 from utensor_cgen.utils import must_return_type
+
+class ReductionMeanEvalSnippet(OpEvalSnippet):
+  __inputs__ = ["in"]
+  __outputs__ = ["out"]
 
 @OperatorFactory.register
 class _ReductionMeanOperator(_Operator):
@@ -24,7 +29,7 @@ class _ReductionMeanOperator(_Operator):
     )
 
   def get_eval_snippet(self, op_var_name, op_info, tensor_var_map):
-    return AddOpEvalSnippet(
+    return ReductionMeanEvalSnippet(
       op_info=op_info,
       templ_dtypes=[self.in_dtypes[0]],
       op_name=op_var_name,
