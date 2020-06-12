@@ -31,6 +31,14 @@ class _OpTypeRename(object):
     "Dequantize": "DequantizeOperator",
     "Reshape": "ReshapeOperator",
     "Conv2d": "Conv2dOperator",
+    "Mul": "MulOperator",
+    "Add": "AddOperator",
+    "Sub": "SubOperator",
+    "Conv2d": "ConvOperator",
+    "Mean": "MeanOperator",
+    "Softmax": "SoftmaxOperator",
+    "Sigmoid": "SigmoidOperator",
+    "Logistic": "SigmoidOperator",
   }
   
   @classmethod
