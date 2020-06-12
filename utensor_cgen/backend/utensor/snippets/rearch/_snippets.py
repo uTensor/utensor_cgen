@@ -29,12 +29,14 @@ __all__ = [
   "MaxPoolEvalSnippet",
   "QuantizedFullyConnectedSnippet",
   "MissingOpEvalSnippet",
+  "BatchNormSnippet",
   "TimeSlotContainer",
   "MulOpEvalSnippet",
   "SubOpEvalSnippet",
   "ConvOpEvalSnippet",
   "MeanOpEvalSnippet",
   "SoftmaxOpEvalSnippet",
+  "SigmoidOpEvalSnippet",
   "SimpleContainer",
 ]
 
@@ -277,6 +279,9 @@ class MissingOpEvalSnippet(OpEvalSnippet):
     ]
     self.template_vars['output_tensors'] = op_info.output_tensors[:]
     self.template_vars['quant_params_map'] = quant_params_map
+class SigmoidOpEvalSnippet(OpEvalSnippet):
+  __inputs__ = ['in']
+  __outputs__ = ['out']
 
 
 class TimeSlotContainer(SnippetBase):

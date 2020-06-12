@@ -38,6 +38,7 @@ class _OpTypeRename(object):
     "Mean": "MeanOperator",
     "Softmax": "SoftmaxOperator",
     "Sigmoid": "SigmoidOperator",
+    "Logistic": "SigmoidOperator",
   }
   
   @classmethod
