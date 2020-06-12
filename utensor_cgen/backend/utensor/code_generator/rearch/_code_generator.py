@@ -137,6 +137,8 @@ class uTensorRearchCodeGenerator(BackendPart):
       }
       output_enums = sorted(output_enum_map.values())
       # update tensor_var_map
+      # placeholders are updated according to the input enums
+      # output tensors are updated according to the output enums
       for op in ugraph.get_ops_by_type("Placeholder"):
         tensor = op.output_tensors[0]
         var_name = tensor_var_map[tensor.name]
