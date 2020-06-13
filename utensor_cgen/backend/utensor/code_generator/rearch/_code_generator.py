@@ -1,6 +1,6 @@
 import re
 from collections import defaultdict
-from itertools import chain
+from copy import deepcopy
 from pathlib import Path
 
 from utensor_cgen.backend.base import BackendPart
@@ -11,7 +11,7 @@ from utensor_cgen.backend.utensor.snippets.legacy import (
     ContextGlobalArrayContainer, WeightSnippet)
 from utensor_cgen.backend.utensor.snippets.rearch import (
     DeclareRamTensorSnippet, DeclareRomTensorSnippet, FreeTensorSnippet,
-    SimpleContainer, TimeSlotContainer)
+    ModelApiContainer, SimpleContainer, TimeSlotContainer)
 from utensor_cgen.backend.utensor.snippets.template_env import env
 from utensor_cgen.logger import logger
 from utensor_cgen.utils import Configuration, class_property
@@ -32,6 +32,7 @@ class uTensorRearchCodeGenerator(BackendPart):
     self.meta_data_pool_size = final_config['meta_data_pool_size']
     self.ram_data_pool_size = final_config['ram_data_pool_size']
     self.model_dir = final_config['model_dir'].rstrip('/')
+    self.use_model_api = final_config['use_model_api']
 
   def apply(self, ugraph):
     # take a look of template file "simple.cpp", which is under templates/container/rearch/ directory
@@ -47,7 +48,10 @@ class uTensorRearchCodeGenerator(BackendPart):
       placeholders,   # Set[String], variable names of planceholder tensors
       tensor_var_map, # dict, tensor name -> var name
     ) = self._find_required_ops(ugraph)
-    is_success, weight_snippets, local_snippets = self._try_get_opt_snippets(ugraph, ops, tensor_var_map)
+    (
+      is_success, weight_snippets, local_snippets, declare_op_snippets, construct_op_snippets,
+      input_enums, output_enums,
+    ) = self._try_get_opt_snippets(ugraph, ops, tensor_var_map, placeholders)
     # if user disable tensor life cycle analysis, such optimized snippets is not available
     if not is_success:
       # generate files
@@ -63,7 +67,11 @@ class uTensorRearchCodeGenerator(BackendPart):
         placeholders=placeholders,
         tensor_var_map=tensor_var_map,
         weight_snippets=weight_snippets,
-        local_snippets=local_snippets
+        local_snippets=local_snippets,
+        declare_op_snippets=declare_op_snippets,
+        construct_op_snippets=construct_op_snippets,
+        input_enums=input_enums,
+        output_enums=output_enums,
       )
 
   def _find_required_ops(self, ugraph):
@@ -83,33 +91,62 @@ class uTensorRearchCodeGenerator(BackendPart):
         )
     return ops, placeholders, tensor_var_map
 
-  def _try_get_opt_snippets(self, ugraph, ops, tensor_var_map):
+  def _try_get_opt_snippets(self, ugraph, ops, tensor_var_map, placeholders):
+    # snippets for declaring ops
+    declare_op_snippets = []
+    construct_op_snippets = []
     # snippets to be rendered in the generated function body
     local_snippets = []
     # snippets to be rendered in the weight header file
     weight_snippets = []
+    # inputs/outputs enum names
+    input_enums = []
+    output_enums = []
     # op -> op variable name
     ops_map = {}
     for i, op in enumerate(ops):
-      op_var_name = 'op_{:03d}'.format(i)
+      op_var_name = 'op_{}_{:03d}'.format(op.op_type, i)
       ops_map[op] = op_var_name
       # all ops will be declared first
-      declare_snippet = op.get_declare_snippet(op_var_name, tensor_var_map)
+      declare_snippet = op.get_declare_snippet(op_var_name, with_const_params=not self.use_model_api)
       if declare_snippet is not None:
-        local_snippets.append(
+        declare_op_snippets.append(
           declare_snippet
         )
+      construct_snippet = op.get_construct_snippet(op_var_name)
+      if construct_snippet is not None:
+        construct_op_snippets.append(construct_snippet)
     out_tensor_var_names = [
-      tensor_var_map[tensor.name] for tensor in chain(*[
-        ugraph.ops_info[op_name].output_tensors
-        for op_name in ugraph.output_nodes
-      ])
+      tensor_var_map[tensor.name] for tensor in ugraph.output_tensors
     ]
-
-    # dict: tensor name -> TimeslotAllocation
+    # tensor_timeslots: <dict>, tensor name -> TimeslotAllocation
     tensor_timeslots = ugraph.attributes.get(TopoOrderTensorTimeslotPlanner.KWARGS_NAMESCOPE)
     if tensor_timeslots is None:
-      return False, weight_snippets, local_snippets
+      return False, weight_snippets, local_snippets, declare_op_snippets, construct_op_snippets, input_enums, output_enums
+    # TODO: refactor model api code generation
+    if self.use_model_api:
+      # setup enum names
+      input_enum_map = {
+        pl: 'input_{}'.format(i)
+        for i, pl in enumerate(placeholders)
+      }
+      input_enums = sorted(input_enum_map.values())
+      output_enum_map = {
+        tensor.name: 'output_{}'.format(i)
+        for i, tensor in enumerate(ugraph.output_tensors)
+      }
+      output_enums = sorted(output_enum_map.values())
+      # update tensor_var_map
+      # placeholders are updated according to the input enums
+      # output tensors are updated according to the output enums
+      for op in ugraph.get_ops_by_type("Placeholder"):
+        tensor = op.output_tensors[0]
+        var_name = tensor_var_map[tensor.name]
+        input_enum = input_enum_map[var_name]
+        tensor_var_map[tensor.name] = 'inputs[{}].tensor()'.format(input_enum)
+      for tensor in ugraph.output_tensors:
+        output_enum = output_enum_map[tensor.name]
+        tensor_var_map[tensor.name] = "outputs[{}].tensor()".format(output_enum)
     time_slot_max = max(
       alloc.time_slot_start for alloc in tensor_timeslots.values()
     )
@@ -178,11 +215,14 @@ class uTensorRearchCodeGenerator(BackendPart):
             FreeTensorSnippet(tensor_var)
           )
           freed_tensors.add(tensor_info)
-    return True, weight_snippets, local_snippets
+    return True, weight_snippets, local_snippets, declare_op_snippets, construct_op_snippets, input_enums, output_enums
   
   def _time_slot_generate_files(
-    self, ugraph, placeholders, tensor_var_map, weight_snippets, local_snippets
+    self, ugraph, placeholders, tensor_var_map,
+    weight_snippets, local_snippets, declare_op_snippets, construct_op_snippets,
+    input_enums, output_enums,
   ):
+    # prepare template variables
     template_vars = {}
     template_vars['model_name'] = ugraph.name
     (template_vars['meta_data_pool_size'],
@@ -191,10 +231,10 @@ class uTensorRearchCodeGenerator(BackendPart):
      template_vars['ram_dtype']) = self._compute_ram_data_size(ugraph)
     template_vars['placeholders'] = placeholders
     template_vars['out_tensor_var_names'] = [
-      tensor_var_map[tensor.name] for tensor in chain(*[
-        op_info.output_tensors for op_info in ugraph.output_ops
-      ])
+      tensor_var_map[tensor.name] for tensor in ugraph.output_tensors
     ]
+    template_vars['input_enums'] = input_enums
+    template_vars['output_enums'] = output_enums
   
     params_dir = Path(self.params_dir) / ugraph.name
     params_dir.mkdir(parents=True, exist_ok=True)
@@ -209,16 +249,35 @@ class uTensorRearchCodeGenerator(BackendPart):
     model_file_dir = Path(self.model_dir)
     header_fname = self.header_fname == 'None' and '{}.hpp'.format(ugraph.name) or self.header_fname
     (model_file_dir / ugraph.name).mkdir(parents=True, exist_ok=True)
-    container_snippet = TimeSlotContainer()
-    container_snippet.add_local_snippets(*local_snippets)
-    container_snippet.template_vars.update(template_vars)
-    container_snippet.add_header('"{}"'.format(weight_header_fname))
-    with (model_file_dir / ugraph.name / header_fname).open('w') as fid:
-      fid.write("/* Auto-generated by utensor cli */\n")
-      template = env.get_template('snippets/rearch/simple.hpp')
-      fid.write(template.render(**template_vars))
-      container_snippet.add_header('"{}"'.format(fid.name))
-      logger.info("model header file generated: %s", fid.name)
+    if self.use_model_api:
+      container_snippet = ModelApiContainer()
+      container_snippet.add_local_snippets(*local_snippets)
+      container_snippet.add_construct_op_snippets(*construct_op_snippets)
+      container_snippet.template_vars.update(template_vars)
+      container_snippet.add_header('"{}"'.format(weight_header_fname))
+      with (model_file_dir / ugraph.name / header_fname).open("w") as fid:
+        fid.write("/* Auto-generated by utensor cli */\n")
+        template = env.get_template('snippets/rearch/model_api.hpp')
+        fid.write(
+          template.render(
+            declare_op_snippets=declare_op_snippets,
+            **template_vars
+          )
+        )
+        container_snippet.add_header('"{}"'.format(fid.name))
+        logger.info("model header file generated: %s", fid.name)
+    else:
+      container_snippet = TimeSlotContainer()
+      container_snippet.add_local_snippets(*declare_op_snippets)
+      container_snippet.add_local_snippets(*local_snippets)
+      container_snippet.template_vars.update(template_vars)
+      container_snippet.add_header('"{}"'.format(weight_header_fname))
+      with (model_file_dir / ugraph.name / header_fname).open('w') as fid:
+        fid.write("/* Auto-generated by utensor cli */\n")
+        template = env.get_template('snippets/rearch/simple.hpp')
+        fid.write(template.render(**template_vars))
+        container_snippet.add_header('"{}"'.format(fid.name))
+        logger.info("model header file generated: %s", fid.name)
 
     composer = Composer(snippets=[container_snippet])
     src_fname = self.src_fname == 'None' and '{}.cpp'.format(ugraph.name) or self.src_fname
@@ -289,15 +348,12 @@ class uTensorRearchCodeGenerator(BackendPart):
     ops_map = {} # op -> op variable name
     weight_snippets = []
     out_tensor_var_names = [
-      tensor_var_map[tensor.name] for tensor in chain(*[
-        ugraph.ops_info[op_name].output_tensors
-        for op_name in ugraph.output_nodes
-      ])
+      tensor_var_map[tensor.name] for tensor in ugraph.output_tensors
     ]
     for i, op in enumerate(ops):
-      op_var_name = 'op_{:03d}'.format(i)
+      op_var_name = 'op_{}_{:03d}'.format(op.op_type, i)
       ops_map[op] = op_var_name
-      declare_snippet = op.get_declare_snippet(op_var_name, tensor_var_map)
+      declare_snippet = op.get_declare_snippet(op_var_name)
       if declare_snippet is not None:
         declare_local_snippets.append(declare_snippet)
     for op_info in filter(lambda op_info: op_info.op_type not in ["Inline", "Placeholder"], ugraph.ops_info.values()):
@@ -346,6 +402,7 @@ class uTensorRearchCodeGenerator(BackendPart):
   @class_property
   def default_config(cls):
     config = {}
+    config['use_model_api'] = True
     config['src_fname'] = 'None'
     config['header_fname'] = 'None'
     config['params_dir'] = 'constants'

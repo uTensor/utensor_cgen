@@ -100,7 +100,7 @@ class _Operator(with_metaclass(_OperatorMeta), object):
   def get_constructor_parameters(cls, op_info):
     return tuple()
 
-  def get_declare_snippet(self, op_var_name, tensor_var_map, **kwargs):
+  def get_declare_snippet(self, op_var_name, **kwargs):
     raise NotImplementedError(
       "base get_declare_snippet invoked: {}".format(type(self))
     )
@@ -108,4 +108,9 @@ class _Operator(with_metaclass(_OperatorMeta), object):
   def get_eval_snippet(self, op_var_name, op_info, tensor_var_map, **kwargs):
     raise NotImplementedError(
       "base get_eval_snippet invoked: {}".format(type(self))
+    )
+  
+  def get_construct_snippet(self, op_var_name):
+    raise NotImplementedError(
+      "base get_construct_snippet invoked: {}".format(type(self))
     )

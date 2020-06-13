@@ -2,6 +2,7 @@
     FIXME: {{op_type}} currently not supported, you have to fill up this section or it won't compile
 
     1. Declare the operators of type {{op_type}}
+        - If you're using the ModelInterface, make sure you also initialize the operator in the constructor
     2. Set input tensors:
     {%for tensor, var_name in zip(input_tensors, input_var_names)%}
         - {{tensor.name}}, of type {{tensor.dtype}} and is named as {{var_name}} in this file
