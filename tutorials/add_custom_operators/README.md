@@ -1,4 +1,7 @@
+## The Model Graph
 
-```
-utensor-cli --plugin custom_operators convert --output-nodes Identity tf_models/reduceModel.tflite
+![reduce-model](images/reduceModel.svg)
+
+```bash
+$ utensor-cli --plugin custom_operators convert tf_models/reduceModel.tflite
 ```
