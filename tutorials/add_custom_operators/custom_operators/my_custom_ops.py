@@ -10,9 +10,11 @@ from utensor_cgen.backend.utensor.snippets.rearch import OpEvalSnippet
 from utensor_cgen.legalizer.tflite import TFLiteLegalizer
 from utensor_cgen.utils import must_return_type
 
+# legalize all `Mean` to `MeanOperator`
 TFLiteLegalizer.register_op_rename(old_name="Mean", new_name="MeanOperator")
 
 
+# We will lowering all `MeanOperator` to `ReferenceOperators::MeanOperator`
 @uTensorRearchGraphLower.CodgenAttributes.register("MeanOperator")
 def handler(op_info):
     op_info.code_gen_attributes["namespaces"] = ("ReferenceOperators",)
@@ -28,10 +30,14 @@ class _ReductionMeanOperator(_Operator):
     namespaces = ("ReferenceOperators",)
     op_type = "MeanOperator"
 
-    # @classmethod
-    # @must_return_type(Hashable)
-    # def get_constructor_parameters(cls, op_info):
-    #    pass
+    # the value returned by this method will be used as
+    # the constrcutor parameters as is.
+    # In utensor backend, it should return a tuple of string.
+    # Since there is no parameters for `MeanOperator`, an empty tuple is returned
+    @classmethod
+    @must_return_type(Hashable)
+    def get_constructor_parameters(cls, op_info):
+        return tuple()
 
     def get_declare_snippet(self, op_var_name, tensor_var_map):
         return DeclareOpSnippet(
