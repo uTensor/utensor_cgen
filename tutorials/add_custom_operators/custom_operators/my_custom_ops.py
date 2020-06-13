@@ -21,6 +21,11 @@ def handler(op_info):
 
 
 class ReductionMeanEvalSnippet(OpEvalSnippet):
+    """
+    This class describes the names of inputs and outputs used in the operator eval snippets.
+    For example.
+    `reduceMeanOp.set_inputs({{MeanOperator<float>::in, my_tensor_5}});`
+    """
     __inputs__ = ["in"]
     __outputs__ = ["out"]
 
