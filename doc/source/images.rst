@@ -14,3 +14,5 @@
     :alt: mlp-alloc-graph
     :width: 300
     :height: 450
+.. |utensor-cli-components| image:: /_images/utensor-cli-components.drawio.svg
+    :alt: utensor-cli-components

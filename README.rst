@@ -70,24 +70,7 @@ Troubleshooting with pipenv_
 Overall Architecture
 ====================
 
-::
-
-      ============       +-----------------+       ============================
-    || model file || --> | frontend Parser | --> || uTensorGraph (IR, generic) ||
-      ============       +-----------------+       ============================
-                                                                |
-                                                                v
-                                                     +---------------------+
-                        =======================      |  graph transformer  |
-                      ||     uTensorGraph     || <-- |    (optimization)   |
-                      || (generic, optimized) ||     +---------------------+
-                        =======================                                    
-                                     |
-    +--------------------------+     |
-    | backend (code generator) | <--/
-    +--------------------------+
-         |
-         `---> (target files, ex: model.cpp, model.hpp, weights.idx, ...etc)
+\ |utensor-cli-components|
 
 Basic Usage
 ===========
@@ -347,6 +330,8 @@ Future Works
     :alt: mlp-alloc
 .. |mlp-alloc-graph| image:: doc/source/_images/mlp_alloc_graph.png
     :alt: mlp-alloc-graph
+.. |utensor-cli-components| image:: doc/source/_images/utensor-cli-components.drawio.svg
+    :alt: utensor-cli-components
 
 .. TODOs
 .. =====
