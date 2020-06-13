@@ -39,14 +39,27 @@ class _ReductionMeanOperator(_Operator):
     def get_constructor_parameters(cls, op_info):
         return tuple()
 
-    def get_declare_snippet(self, op_var_name, tensor_var_map):
-        return DeclareOpSnippet(
+    # snippet that calls op's constructor and will be placed in the
+    # the initializer list of the model class
+    def get_construct_snippet(self, op_var_name):
+        return OpConstructSnippet(
             op=self,
             templ_dtypes=[self.in_dtypes[0]],
             op_var_name=op_var_name,
             nested_namespaces=type(self).namespaces,
         )
 
+    # snippet which declares the op
+    def get_declare_snippet(self, op_var_name, with_const_params=True):
+        return DeclareOpSnippet(
+            op=self,
+            templ_dtypes=[self.in_dtypes[0]],
+            op_var_name=op_var_name,
+            nested_namespaces=type(self).namespaces,
+            with_const_params=with_const_params,
+        )
+
+    # snippet that eval the op
     def get_eval_snippet(self, op_var_name, op_info, tensor_var_map):
         return ReductionMeanEvalSnippet(
             op_info=op_info,
