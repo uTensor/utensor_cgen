@@ -35,8 +35,7 @@ class _BackendBase(object):
     """Transform Graph
 
     transform should not create side-effect on the given graph and should
-    return a new ugraph that is the result of transformation applied to the
-    given ugraph.
+    return a new ugraph with transformation applied to the given ugraph.
     """
     raise NotImplementedError('base transform method invoked: %s' % self)
 

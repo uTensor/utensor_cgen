@@ -7,6 +7,7 @@ from utensor_cgen.backend.utensor.snippets._types import (NP_TYPES_MAP,
                                                           UTENSOR_TYPES_MAP)
 
 __all__ = [
+  "OpConstructSnippet",
   "DeclareRomTensorSnippet",
   "DeclareRamTensorSnippet",
   "FreeTensorSnippet",
@@ -29,6 +30,7 @@ __all__ = [
   "MaxPoolEvalSnippet",
   "QuantizedFullyConnectedSnippet",
   "MissingOpEvalSnippet",
+  "ModelApiContainer",
   "TimeSlotContainer",
   "SimpleContainer",
 ]
@@ -97,7 +99,7 @@ class FreeTensorSnippet(_SnippetBase):
 class DeclareOpSnippet(_SnippetBase):
   __template_name__ = 'snippets/rearch/declare_op.cpp'
 
-  def __init__(self, op, templ_dtypes, op_var_name, nested_namespaces=None):
+  def __init__(self, op, templ_dtypes, op_var_name, nested_namespaces=None, with_const_params=True):
     _SnippetBase.__init__(self)
     if nested_namespaces is None:
       nested_namespaces = []
@@ -110,8 +112,31 @@ class DeclareOpSnippet(_SnippetBase):
     if nested_namespaces:
       op_type = "::".join(nested_namespaces + [op_type])
     self.template_vars['op_type'] = op_type
-    self.template_vars['construct_params'] = op.construct_params
+    if with_const_params:
+      self.template_vars['construct_params'] = op.construct_params
+    else:
+      self.template_vars['construct_params'] = ''
     self.template_vars['op_var_name'] = op_var_name
+
+
+class OpConstructSnippet(_SnippetBase):
+  __template_name__ = "snippets/rearch/construct_op.cpp"
+
+  def __init__(self, op, templ_dtypes, op_var_name, nested_namespaces=None):
+    _SnippetBase.__init__(self)
+    if nested_namespaces is None:
+      nested_namespaces = []
+    else:
+      nested_namespaces = list(nested_namespaces)
+    op_type = op.op_type
+    if templ_dtypes:
+      templ_params = ', '.join([NP_TYPES_MAP[dtype].tensor_type_str for dtype in templ_dtypes])
+      op_type = '{}<{}>'.format(op_type, templ_params)
+    if nested_namespaces:
+      op_type = "::".join(nested_namespaces + [op_type])
+    self.template_vars['op_var_name'] = op_var_name
+    self.template_vars['construct_params'] = op.construct_params
+    self.template_vars['op_type'] = op_type
 
 
 # op eval snippets
@@ -258,7 +283,7 @@ class TimeSlotContainer(SnippetBase):
   __template_name__ = 'containers/rearch/time_slot.cpp'
   __headers__ = set(['"uTensor.h"'])
 
-  def __init__(self ):
+  def __init__(self):
     SnippetBase.__init__(self)
     self.__headers__ = set(type(self).__headers__)
     self._local_snippets = []
@@ -273,6 +298,25 @@ class TimeSlotContainer(SnippetBase):
   def render(self):
     return self.template.render(
       local_snippets=self._local_snippets,
+      **self.template_vars
+    )
+
+
+class ModelApiContainer(TimeSlotContainer):
+  __template_name__ = 'containers/rearch/model_api.cpp'
+  __headers__ = set(['"uTensor.h"'])
+
+  def __init__(self):
+    TimeSlotContainer.__init__(self)
+    self._construct_op_snippets = []
+  
+  def add_construct_op_snippets(self, *snippets):
+    self._construct_op_snippets.extend(snippets)
+  
+  def render(self):
+    return self.template.render(
+      local_snippets=self._local_snippets,
+      construct_op_snippets=self._construct_op_snippets,
       **self.template_vars
     )
 
