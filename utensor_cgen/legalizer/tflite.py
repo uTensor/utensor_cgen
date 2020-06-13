@@ -21,6 +21,9 @@ class TFLiteLegalizer(LegalizerBase):
   def legalize_dtype(self, ugraph):
     return ugraph
 
+  @classmethod
+  def register_op_rename(cls, old_name, new_name):
+    _OpTypeRename._OPTYPE_RENAME_MAP[old_name] = new_name
 
 class _OpTypeRename(object):
   _OPTYPE_RENAME_MAP = {
