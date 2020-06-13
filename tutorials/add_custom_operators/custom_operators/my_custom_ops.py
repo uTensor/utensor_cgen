@@ -10,30 +10,33 @@ from utensor_cgen.backend.utensor.snippets.rearch import OpEvalSnippet
 from utensor_cgen.legalizer.tflite import TFLiteLegalizer
 from utensor_cgen.utils import must_return_type
 
-# legalize all `Mean` to `MeanOperator`
-TFLiteLegalizer.register_op_rename(old_name="Mean", new_name="MeanOperator")
+# legalize all `Mean` to `ReductionMeanOperator`
+TFLiteLegalizer.register_op_rename(old_name="Mean", new_name="ReductionMeanOperator")
 
 
-# We will lowering all `MeanOperator` to `ReferenceOperators::MeanOperator`
-@uTensorRearchGraphLower.CodgenAttributes.register("MeanOperator")
+# We will lowering all `MeanOperator` to `MyCustomOpNamespace::ReductionMeanOperator`
+@uTensorRearchGraphLower.CodgenAttributes.register("ReductionMeanOperator")
 def handler(op_info):
-    op_info.code_gen_attributes["namespaces"] = ("ReferenceOperators",)
+    op_info.code_gen_attributes["namespaces"] = ("MyCustomOpNamespace",)
 
 
 class ReductionMeanEvalSnippet(OpEvalSnippet):
     """
     This class describes the names of inputs and outputs used in the operator eval snippets.
     For example.
-    `reduceMeanOp.set_inputs({{MeanOperator<float>::in, my_tensor_5}});`
+    `reduceMeanOp.set_inputs({
+        {ReductionMeanOperator<float>::in, my_tensor_5},
+        {ReductionMeanOperator<float>::axis, axis_tensor}
+     });`
     """
-    __inputs__ = ["in"]
+    __inputs__ = ["in", "axis"]
     __outputs__ = ["out"]
 
 
 @OperatorFactory.register
 class _ReductionMeanOperator(_Operator):
-    namespaces = ("ReferenceOperators",)
-    op_type = "MeanOperator"
+    namespaces = ("MyCustomOpNamespace",)
+    op_type = "ReductionMeanOperator"
 
     # the value returned by this method will be used as
     # the constrcutor parameters as is.

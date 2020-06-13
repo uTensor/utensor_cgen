@@ -21,8 +21,109 @@ This means there are a total of 5 locations where we might want to register our 
 4. Backend Component
 5. Backend Snippet
 
+## Adding custom operators workflow
 
-## The Model Graph
+To keep things from being tied to a particular frontend, we will work with an op that is already present in TFLite, but targets a custom runtime operator in uTensor. Suppose the runtime interface for this operator is fixed and looks something like:
+
+```c++
+namespace MyCustomOpNamespace {
+
+template <typename T>
+class ReductionMeanOperator : public OperatorInterface<2, 1> {
+ public:
+  enum names_in : uint8_t { in, axis };
+  enum names_out : uint8_t { out };
+
+ protected:
+  virtual void compute() {
+    //...
+  }
+};
+
+} // MyCustomOpNamespace
+```
+
+### Adding an Operator Eval Snippet
+
+The first thing we will want to do is make sure the generated code maps the correct input and output tensors to their associated names in the runtime op. We start by declaring these names in an `OpEvalSnippet`. From the op description above this looks like "in", "axis", and "out", and can be done with the following code snippet:
+
+```python
+class ReductionMeanEvalSnippet(OpEvalSnippet):
+    __inputs__ = ["in", "axis"]
+    __outputs__ = ["out"]
+```
+
+### Writing a Backend Component
+
+The backend component is the meat of the operator code generation process. For the uTensor backend, this can be creating custom constructor parameters, overriding the default declaration in code, and describing the evaluation code for this operator. Once this is done, we just need to register the component in the global OperatorFactory:
+
+```python
+@OperatorFactory.register
+class _ReductionMeanOperator(_Operator):
+    namespaces = ("MyCustomOpNamespace",)
+    op_type = "ReductionMeanOperator"
+
+    # the value returned by this method will be used as
+    # the constrcutor parameters as is.
+    # In utensor backend, it should return a tuple of string.
+    # Since there is no parameters for `MeanOperator`, an empty tuple is returned
+    @classmethod
+    @must_return_type(Hashable)
+    def get_constructor_parameters(cls, op_info):
+        return tuple()
+
+    # snippet that calls op's constructor and will be placed in the
+    # the initializer list of the model class
+    def get_construct_snippet(self, op_var_name):
+        return OpConstructSnippet(
+            op=self,
+            templ_dtypes=[self.in_dtypes[0]],
+            op_var_name=op_var_name,
+            nested_namespaces=type(self).namespaces,
+        )
+
+    # snippet which declares the op
+    def get_declare_snippet(self, op_var_name, with_const_params=True):
+        return DeclareOpSnippet(
+            op=self,
+            templ_dtypes=[self.in_dtypes[0]],
+            op_var_name=op_var_name,
+            nested_namespaces=type(self).namespaces,
+            with_const_params=with_const_params,
+        )
+
+    # snippet that eval the op
+    def get_eval_snippet(self, op_var_name, op_info, tensor_var_map):
+        return ReductionMeanEvalSnippet(
+            op_info=op_info,
+            templ_dtypes=[self.in_dtypes[0]],
+            op_name=op_var_name,
+            tensor_var_map=tensor_var_map,
+            nested_namespaces=type(self).namespaces,
+        )
+
+```
+
+### Lowering an Operator to our Backend Component
+
+After registering the operator backend component in the OperatorFactory, we need to notify the graph lowering engine to make this target available. Right now, this is a simple registry of operator names and namespaces, but will soon be a proper lowering strategy engine:
+
+```python
+@uTensorRearchGraphLower.CodgenAttributes.register("ReductionMeanOperator")
+def handler(op_info):
+    op_info.code_gen_attributes["namespaces"] = ("MyCustomOpNamespace",)
+```
+
+### Legalizing at the Frontend
+
+It turns out there was a disconnect between the original custom operator naming, `ReductionMeanOperator` and the naming present in the TFLite file `Mean`, so we need to indicate to the Legalizer that these ops need to be renamed:
+
+```python
+# legalize all `Mean` to `ReductionMeanOperator`
+TFLiteLegalizer.register_op_rename(old_name="Mean", new_name="ReductionMeanOperator")
+```
+
+### Registering the new Operator in uTensor CLI
 
 ![reduce-model](images/reduceModel.svg)
 
