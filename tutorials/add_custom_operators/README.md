@@ -20,7 +20,7 @@ This means there are a total of 4 locations where we might want to register our 
 3. Backend Lowering
 4. Backend Component
 
-For `utensor` backend, there is one more abstraction:
+For `utensor` backend, there is one more abstraction in the Backend Component for handling code snippet composition:
 1. Backend Snippet, code generator in `utensor` is snippet-based.
 
 ## Adding custom operators workflow
