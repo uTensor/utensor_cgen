@@ -19,7 +19,9 @@ This means there are a total of 4 locations where we might want to register our 
 2. Legalization
 3. Backend Lowering
 4. Backend Component
-5. Backend Snippet
+
+For `utensor` backend, there is one more abstraction:
+1. Backend Snippet, code generator in `utensor` is snippet-based.
 
 ## Adding custom operators workflow
 
