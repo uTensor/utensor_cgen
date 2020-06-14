@@ -29,7 +29,7 @@ To keep things from being tied to a particular frontend, we will work with an op
 namespace MyCustomOpNamespace {
 
 template <typename T>
-class ReductionMeanOperator : public OperatorInterface<2, 1> {
+class ReductionMeanOperator : public uTensor::OperatorInterface<2, 1> {
  public:
   enum names_in : uint8_t { in, axis };
   enum names_out : uint8_t { out };
@@ -134,3 +134,5 @@ We can load as many custom modules as we want with `--plugin` flag in `utensor-c
 ```bash
 $ utensor-cli --plugin custom_operators convert tf_models/reduceModel.tflite
 ```
+
+Now that a model is generated, all that is left to do is add the necessary `#include`s for the target custom runtime operators into the generated model header file.
