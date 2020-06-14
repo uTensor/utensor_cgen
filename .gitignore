@@ -25,3 +25,6 @@ tests/deep_mlp/data
 # docs
 doc/build
 doc/source/_build
+#vim
+.*.swp
+.*.swo

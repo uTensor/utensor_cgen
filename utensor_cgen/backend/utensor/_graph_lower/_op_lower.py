@@ -50,6 +50,15 @@ class uTensorRearchGraphLower(uTensorGraphLowerBase):
   
   class CodgenAttributes(object):
 
+    _HANDLERS = {}
+
+    @classmethod
+    def register(cls, op_type):
+      def regist_handle(handler):
+        cls._HANDLERS[op_type] = handler
+        return handler
+      return regist_handle
+
     @classmethod
     def apply(cls, ugraph):
       # TODO: better abstraction, sth like lowering strategy
@@ -89,6 +98,9 @@ class uTensorRearchGraphLower(uTensorGraphLowerBase):
       for op_info in ugraph.get_ops_by_type('FullyConnectedOperator'):
         if cls._check_quantized(op_info):
           op_info.code_gen_attributes['namespaces'] = ('TflmSymQuantOps',)
+      for op_type, handler in cls._HANDLERS.items():
+        for op_info in ugraph.get_ops_by_type(op_type):
+          handler(op_info)
 
     @classmethod
     def _check_quantized(cls, op_info):

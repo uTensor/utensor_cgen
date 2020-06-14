@@ -12,6 +12,7 @@ __all__ = [
   "DeclareRamTensorSnippet",
   "FreeTensorSnippet",
   "DeclareOpSnippet",
+  "OpEvalSnippet",
   "Conv2dOpEvalSnippet",
   "DepthwiseSeperateConvOpEvalSnippet",
   "QuantDepthwiseSeperateConvOpEvalSnippet",
