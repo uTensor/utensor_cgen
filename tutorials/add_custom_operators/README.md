@@ -13,7 +13,7 @@ The operator lifecycle loosely falls into 3 categories, the Frontend, the Transf
 - The goal of the `Backend` is to do the final lowering of an optimized IR into either code or binary forms. At the end of the transformation pipeline, the final graph is then *lowered* into a target `Backend`. This lowering process is Backend specific and allows the backend to inject additional attributes into the IR before finalizing a strategy for mapping IR components to their respective backend handlers. For example, in the uTensor backened we can inject namespace information to prioritize CMSIS handlers over reference floating point depending on if the operator in question is quantized. Next, the uTensor backend can use these respective handlers to compose a set of code snippets, which ultimately becomes the output model code.
 
 
-This means there are a total of 5 locations where we might want to register our custom operator, but some of them may be optional based on use-case:
+This means there are a total of 4 locations where we might want to register our custom operator, but some of them may be optional based on use-case:
 
 1. Frontend parsing
 2. Legalization
