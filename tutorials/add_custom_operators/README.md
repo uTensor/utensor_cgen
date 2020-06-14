@@ -126,6 +126,9 @@ TFLiteLegalizer.register_op_rename(old_name="Mean", new_name="ReductionMeanOpera
 ### Registering the new Operator in uTensor CLI
 
 ![reduce-model](images/reduceModel.svg)
+
+*Fig: Image of the custom Reduction Mean Model generated in the [Reduction Mean Generation Ipython Notebook](generate_rmean_model.ipynb)*
+
 Our custom op registration is implemented as a normal python module.
 We can load as many custom modules as we want with `--plugin` flag in `utensor-cli`. For example, the following shows how to load our custom operators:
 ```bash
