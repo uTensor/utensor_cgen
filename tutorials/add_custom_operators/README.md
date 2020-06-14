@@ -127,7 +127,7 @@ TFLiteLegalizer.register_op_rename(old_name="Mean", new_name="ReductionMeanOpera
 
 ![reduce-model](images/reduceModel.svg)
 Our custom op registration is implemented as a normal python module.
-We can load the module with `--plugin` flag in `utensor-cli` as following:
+We can load as many custom modules as we want with `--plugin` flag in `utensor-cli`. For example, the following shows how to load our custom operators:
 ```bash
 $ utensor-cli --plugin custom_operators convert tf_models/reduceModel.tflite
 ```
