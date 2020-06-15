@@ -28,6 +28,7 @@ __all__ = [
   "MinPoolEvalSnippet",
   "MaxPoolEvalSnippet",
   "QuantizedFullyConnectedSnippet",
+  "FullyConnectedSnippet",
   "MissingOpEvalSnippet",
   "BatchNormSnippet",
   "TimeSlotContainer",
@@ -236,6 +237,9 @@ class MaxPoolEvalSnippet(OpEvalSnippet):
   __inputs__ = ["in"]
   __outputs__ = ["out"]
 
+class FullyConnectedSnippet(OpEvalSnippet):
+  __inputs__ = ["input", "filter", "bias"]
+  __outputs__ = ["output"]
 
 class QuantizedFullyConnectedSnippet(OpEvalSnippet):
   __inputs__ = ["input", "filter", "bias"]
