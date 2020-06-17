@@ -17,6 +17,7 @@ scipy = "*"
 graphviz = "*"
 sphinx = "*"
 sphinx-autoapi = "*"
+twine = "*"
 
 [pipenv]
 allow_prereleases = true

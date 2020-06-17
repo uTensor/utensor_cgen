@@ -29,12 +29,6 @@ For Users
 For Developers
 --------------
 
--  with pip_
-
-.. code:: console
-
-    $ pip install -e .[dev]
-
 -  with pipenv_
 
 .. code:: console
