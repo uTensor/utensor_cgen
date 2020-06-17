@@ -1,6 +1,8 @@
 import re
 from typing import Hashable
 
+from jinja2 import Template
+
 from utensor_cgen.backend.utensor.snippets._types import NP_TYPES_MAP
 from utensor_cgen.backend.utensor.snippets.rearch import *
 from utensor_cgen.utils import must_return_type
@@ -470,16 +472,26 @@ class _CommonParams(_Operator):
     1: "VALID",
     2: "SAME"
   }
-  _ACTIVATION_MAP = {
-    '0': 'TFLM::TfLiteFusedActivation::kTfLiteActNone',
-    '1': 'TFLM::TfLiteFusedActivation::kTfLiteActRelu',
-    '2': 'TFLM::TfLiteFusedActivation::kTfLiteActRelu1',
-    '3': 'TFLM::TfLiteFusedActivation::kTfLiteActRelu6',
-    '4': 'TFLM::TfLiteFusedActivation::kTfLiteActTanh',
-    '5': 'TFLM::TfLiteFusedActivation::kTfLiteActSignBit',
-    '6': 'TFLM::TfLiteFusedActivation::kTfLiteActSigmoid',
-  }
   _ACTIVATION_STR_PATTERN = re.compile(r'^(\d+) \(\w+\)$')
+  _TFLM_ACTIVATION_MAP = {
+    "0": "TFLM::TfLiteFusedActivation::kTfLiteActNone",
+    "1": "TFLM::TfLiteFusedActivation::kTfLiteActRelu",
+    "2": "TFLM::TfLiteFusedActivation::kTfLiteActRelu1",
+    "3": "TFLM::TfLiteFusedActivation::kTfLiteActRelu6",
+    "4": "TFLM::TfLiteFusedActivation::kTfLiteActTanh",
+    "5": "TFLM::TfLiteFusedActivation::kTfLiteActSignBit",
+    "6": "TFLM::TfLiteFusedActivation::kTfLiteActSigmoid",
+  }
+  # activations for ops under ReferenceOperators namespace
+  _REFOP_ACTIVATION_MAP = {
+      "0": Template("Fuseable::NoActivation<{{ dtype_str }}>"),
+      "1": Template("Fuseable::ReLU<{{ dtype_str }}>"),
+      "2": Template("Fuseable::ReLU1<{{ dtype_str }}>"),  # missing in runtime
+      "3": Template("Fuseable::ReLU6<{{ dtype_str }}>"),
+      "4": Template("Fuseable::Tanh<{{ dtype_str }}>"),  # missing in runtime
+      "5": Template("Fuseable::SignBit<{{ dtype_str }}>"),  # missing in runtime
+      "6": Template("Fuseable::Sigmoid<{{ dtype_str }}>"),
+  }
 
 
 @OperatorFactory.register
@@ -540,7 +552,7 @@ class _QuantDWSConvOperator(_CommonParams):
     activation_idx = cls._ACTIVATION_STR_PATTERN.match(
       op_info.op_attr['FusedActivationFunction']
     ).group(1)
-    activation = cls._ACTIVATION_MAP[activation_idx]
+    activation = cls._TFLM_ACTIVATION_MAP[activation_idx]
     dilation_width_factor = op_info.op_attr['DilationWFactor']
     dilation_height_factor = op_info.op_attr['DilationHFactor']
     return (
@@ -634,7 +646,7 @@ class _QuantizedFullyConnectedOperator(_CommonParams):
     activation_idx = cls._ACTIVATION_STR_PATTERN.match(
       op_info.op_attr['FusedActivationFunction']
     ).group(1)
-    activation = cls._ACTIVATION_MAP[activation_idx]
+    activation = cls._TFLM_ACTIVATION_MAP[activation_idx]
     return (activation,)
 
   def get_declare_snippet(self, op_var_name, with_const_params=True):
@@ -664,6 +676,49 @@ class _QuantizedFullyConnectedOperator(_CommonParams):
     )
 
 
+@OperatorFactory.register
+class _FullyConnectedOperator(_CommonParams):
+  namespaces = ("ReferenceOperators",)
+  op_type = "FullyConnectedOperator"
+
+  @classmethod
+  @must_return_type(Hashable)
+  def get_constructor_parameters(cls, op_info):
+    activation_idx = cls._ACTIVATION_STR_PATTERN.match(
+      op_info.op_attr['FusedActivationFunction']
+    ).group(1)
+    activation_tmpl = cls._REFOP_ACTIVATION_MAP[activation_idx]
+    in_dtype = op_info.output_tensors[0].dtype
+    activation = activation_tmpl.render(dtype_str=NP_TYPES_MAP[in_dtype].tensor_type_str)
+    return (activation,)
+  
+  def get_declare_snippet(self, op_var_name, with_const_params=True):
+    return DeclareOpSnippet(
+      op=self,
+      templ_dtypes=[self.out_dtypes[0]],
+      op_var_name=op_var_name,
+      nested_namespaces=type(self).namespaces,
+      with_const_params=with_const_params,
+    )
+
+  def get_eval_snippet(self, op_var_name, op_info, tensor_var_map):
+    return FullyConnectedSnippet(
+      op_info=op_info,
+      templ_dtypes=[self.out_dtypes[0]],
+      op_name=op_var_name,
+      tensor_var_map=tensor_var_map,
+      nested_namespaces=type(self).namespaces,
+    )
+
+  def get_construct_snippet(self, op_var_name):
+    return OpConstructSnippet(
+      op=self,
+      templ_dtypes=[self.out_dtypes[0]],
+      op_var_name=op_var_name,
+      nested_namespaces=type(self).namespaces,
+    )
+
+
 class _MissingOperator(_Operator):
   op_type = "_MissingOperator"
 
@@ -675,5 +730,6 @@ class _MissingOperator(_Operator):
 
   def get_construct_snippet(self, op_var_name):
     return None
+
 
 OperatorFactory._operators[_MissingOperator.op_type] = _MissingOperator

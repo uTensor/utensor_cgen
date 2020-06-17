@@ -98,6 +98,8 @@ class uTensorRearchGraphLower(uTensorGraphLowerBase):
       for op_info in ugraph.get_ops_by_type('FullyConnectedOperator'):
         if cls._check_quantized(op_info):
           op_info.code_gen_attributes['namespaces'] = ('TflmSymQuantOps',)
+        else:
+          op_info.code_gen_attributes['namespaces'] = ('ReferenceOperators',)
       for op_type, handler in cls._HANDLERS.items():
         for op_info in ugraph.get_ops_by_type(op_type):
           handler(op_info)
