@@ -29,12 +29,6 @@ For Users
 For Developers
 --------------
 
--  with pip_
-
-.. code:: console
-
-    $ pip install -e .[dev]
-
 -  with pipenv_
 
 .. code:: console
@@ -70,24 +64,7 @@ Troubleshooting with pipenv_
 Overall Architecture
 ====================
 
-::
-
-      ============       +-----------------+       ============================
-    || model file || --> | frontend Parser | --> || uTensorGraph (IR, generic) ||
-      ============       +-----------------+       ============================
-                                                                |
-                                                                v
-                                                     +---------------------+
-                        =======================      |  graph transformer  |
-                      ||     uTensorGraph     || <-- |    (optimization)   |
-                      || (generic, optimized) ||     +---------------------+
-                        =======================                                    
-                                     |
-    +--------------------------+     |
-    | backend (code generator) | <--/
-    +--------------------------+
-         |
-         `---> (target files, ex: model.cpp, model.hpp, weights.idx, ...etc)
+\ |utensor-cli-components|
 
 Basic Usage
 ===========
@@ -226,11 +203,31 @@ Use Case: Dropout Layer Removal
 
 \ |cnn-dropout|
 
-.. subgraph-match-end
-
 We use mainly `Tensorflow`_ for declaring the pattern graph for matcher now.
 
 High-level graph builder is on its way, see `Future Works <#future-works>`_ for detail.
+
+.. subgraph-match-end
+
+.. offline-tensor-alloc-start
+
+Offline Tensor Memory Allocation
+--------------------------------
+
+Considering following simple multi layers perceptron (`simple_mnist.pb`_):
+
+\ |mlp-alloc-graph|
+
+Once enabled the optimization transformer, ``tensor_alloc``, an offline tensor memory allocation planner,
+``utensor-cli`` will generate ``uTensor`` runtime codes that use following optimized allocation plan:
+
+\ |mlp-alloc|
+
+- y-axis: tensor names ordered by topological sorting
+- x-axis: these are the memory span occupied by each tensor, that is, the memory address offset and
+the size of the tensor
+
+.. offline-tensor-alloc-end
 
 Tutorials
 =========
@@ -313,6 +310,7 @@ Future Works
 .. _Tensorflow: https://www.tensorflow.org
 .. _PyTorch: https://pytorch.org/
 .. _uTensor: https://github.com/uTensor/uTensor
+.. _simple_mnist.pb: https://github.com/uTensor/utensor_cgen/blob/develop/tests/deep_mlp/simple_mnist.pb
 
 .. readme_end
 
@@ -322,7 +320,12 @@ Future Works
     :alt: conv-pool-fuse
 .. |convert-example| image:: doc/source/_images/convert_example.png
     :alt: convert-example
-
+.. |mlp-alloc| image:: doc/source/_images/mlp_alloc.png
+    :alt: mlp-alloc
+.. |mlp-alloc-graph| image:: doc/source/_images/mlp_alloc_graph.png
+    :alt: mlp-alloc-graph
+.. |utensor-cli-components| image:: doc/source/_images/utensor-cli-components.drawio.svg
+    :alt: utensor-cli-components
 
 .. TODOs
 .. =====

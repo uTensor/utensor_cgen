@@ -2,7 +2,7 @@
 from abc import ABCMeta
 from copy import deepcopy
 
-from utensor_cgen.utils import MUST_OVERWRITEN
+from utensor_cgen.utils import MUST_OVERWRITE
 
 from .template_env import env as _env
 
@@ -11,13 +11,13 @@ __all__ = ["Snippet", "SnippetContainerBase"]
 
 class SnippetBase(object):
   __metaclass__ = ABCMeta
-  __template_name__ = MUST_OVERWRITEN
-  __headers__ = MUST_OVERWRITEN
+  __template_name__ = MUST_OVERWRITE
+  __headers__ = MUST_OVERWRITE
 
   def __init__(self):
-    if self.__template_name__ is MUST_OVERWRITEN:
+    if self.__template_name__ is MUST_OVERWRITE:
       raise ValueError('must overwrite {}.__template_name__'.format(type(self)))
-    if self.__headers__ is MUST_OVERWRITEN:
+    if self.__headers__ is MUST_OVERWRITE:
       raise ValueError('must overwrite {}.__headers__'.format(type(self)))
     if not isinstance(self.__headers__, set):
       raise ValueError('__headers__ should be of type set, get {}'.format(type(self.__headers__)))
@@ -62,6 +62,10 @@ class SnippetContainerBase(SnippetBase):
     self._snippets = snippets
     for snp in self._snippets:
       self.__headers__.update(snp.headers)
+  
+  @property
+  def snippets(self):
+    return self._snippets
 
   def add_snippet(self, snippet):
     """Add snippet into containers

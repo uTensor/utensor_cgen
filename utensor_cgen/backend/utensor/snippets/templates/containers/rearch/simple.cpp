@@ -1,20 +1,25 @@
 using namespace uTensor;
 
-{%for snippet in declare_snippets%}
+{#ex: rom tensors, ops..etc#}
+// start rendering global declare snippets
+{%for snippet in declare_global_snippets%}
 {{snippet.render()}}
 {%endfor%}
-localCircularArenaAllocator<{{meta_data_pool_size}}> meta_allocator;
-localCircularArenaAllocator<{{ram_data_pool_size}}> ram_allocator;
+// end of rendering global declare snippets
 
-void compute_{{model_name}}({%for pl in placeholders%}Tensor& {{pl}}, {%endfor%}std::vector<Tensor>& outputs){
-    Context::get_default_context()->set_metadata_allocator(&meta_allocator);
-    Context::get_default_context()->set_ram_data_allocator(&ram_allocator);
-
+void compute_{{model_name}}({%for pl in placeholders%}Tensor& {{pl}}, {%endfor%}{%for out_tensor in out_tensor_var_names%}Tensor& {{out_tensor}}{%if not loop.last%}, {%endif%}{%endfor%}){
+    {#ex: ram tensors#}
+    // start rendering local declare snippets
+    {%for snippet in declare_local_snippets%}
+    {{snippet.render()}}
+    {%endfor%}
+    // end of rendering local declare snippets
+    // start rendering eval snippets
     {%for snippet in eval_snippets%}
     {{snippet.render()}}
+    {%if not loop.last%}
 
+    {%endif%}
     {%endfor%}
-    {%for out_var in out_tensor_var_names%}
-    outputs.push_back({{out_var}});
-    {%endfor%}
+    // end of rendering eval snippets
 }

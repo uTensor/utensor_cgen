@@ -451,6 +451,7 @@ class ReluOpSnippet(Snippet):
     self.template_vars["out_dtype"] = NP_TYPES_MAP[out_dtype].tensor_type_str
     self.template_vars["to_eval"] = to_eval
 
+
 class QuantizedReluOpSnippet(Snippet):
   __template_name__ = "snippets/legacy/qrelu_op.cpp"
   __headers__ = set(['"uTensor/ops/NnOps.hpp"'])
@@ -475,6 +476,7 @@ class QuantizedReluOpSnippet(Snippet):
     self.template_vars["to_eval"] = to_eval
     self.template_vars["address"] = address
 
+
 class RequantizationRangeOpSnippet(Snippet):
   __template_name__ = "snippets/legacy/requant_range_op.cpp"
   __headers__ = set(['"uTensor/ops/MathOps.hpp"'])
@@ -490,6 +492,8 @@ class RequantizationRangeOpSnippet(Snippet):
       err_msg = ("incorrect number of ref_counts and outputs: {}, {}"
                  .format(ref_counts, outputs))
       assert len(ref_counts) == len(outputs), err_msg
+    if address is None:
+      address = []
     self.template_vars["inputs"] = inputs
     self.template_vars["outputs"] = outputs
     self.template_vars["out_dtype"] = NP_TYPES_MAP[out_dtype].tensor_type_str
@@ -698,7 +702,6 @@ class QuantizedFusedConv2DMaxpoolOpSnippet(Snippet):
                in_dtype, filter_dtype, out_dtypes,
                ref_counts=None,
                to_eval=False):
-    # import pdb; pdb.set_trace()
     Snippet.__init__(self)
     if ref_counts:
       self.template_vars["ref_counts"] = ref_counts

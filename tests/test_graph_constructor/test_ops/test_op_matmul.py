@@ -1,7 +1,7 @@
 import numpy as np
 
 
-def test_op_matmul(ugraph, quant_trans):
+def test_op_matmul(ugraph):
     with ugraph.begin_construction():
         tensor_x, = ugraph.add_op(
             op_type='Const',
@@ -21,4 +21,3 @@ def test_op_matmul(ugraph, quant_trans):
         )
 
     assert tensor_z.shape == [3, 4]
-    quant_trans.transform(ugraph)

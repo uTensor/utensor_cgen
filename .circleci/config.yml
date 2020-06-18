@@ -9,7 +9,7 @@ jobs:
       - run: pip3 install .
       - run: 
           name: Test
-          command: pytest -vv tests
+          command: LC_ALL=C.UTF-8 LANG=C.UTF-8 pytest -vv tests -m 'not slow_test and not deprecated'
           #- run: genhtml main_coverage.info --output-directory /tmp/coverage
           #- store_test_results:
           #    path: /tmp/test_results

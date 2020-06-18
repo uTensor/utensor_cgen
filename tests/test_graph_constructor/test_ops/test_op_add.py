@@ -1,7 +1,7 @@
 import numpy as np
 
 
-def test_op_add(ugraph, quant_trans):
+def test_op_add(ugraph):
     with ugraph.begin_construction():
         tensor_x, = ugraph.add_op(
             op_type='Const',
@@ -22,4 +22,3 @@ def test_op_add(ugraph, quant_trans):
         )
 
     assert tensor_z.shape == [1, 3, 5]
-    quant_trans.transform(ugraph)

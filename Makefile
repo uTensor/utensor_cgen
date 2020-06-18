@@ -7,9 +7,9 @@ tests:
 
 test_%:
 	@if [ -d .venv ]; then \
-		 pipenv run pytest tests/$@ -vv -s | tee -a tests_log.txt; \
+		 pipenv run pytest tests/$@ -m 'not slow_test and not deprecated' -vv -s | tee -a tests_log.txt; \
 	 else \
-	 	 pytest tests/$@ -vv -s | tee -a tests_log.txt; \
+	 	 pytest tests/$@ -vv -s -m 'not slow_test and not deprecated' | tee -a tests_log.txt; \
 	 fi;
 
 package:

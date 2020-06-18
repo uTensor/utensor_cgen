@@ -1,8 +1,13 @@
 from utensor_cgen.frontend.tensorflow import GraphDefParser
 from utensor_cgen.transformer.optimizer import IdOpRemoveOptimizer
 
+
+def test_id_rm_prune_graph():
+    optimizer = IdOpRemoveOptimizer()
+    assert optimizer.prune_graph
+
 def test_id_rm_transform_1(id_graph_def_1):
-    ugraph = GraphDefParser.parse(id_graph_def_1, output_nodes=['z'])
+    ugraph = GraphDefParser(config={}).parse(id_graph_def_1, output_nodes=['z'])
     optimizer = IdOpRemoveOptimizer()
     new_ugraph = optimizer.transform(ugraph)
     for op in new_ugraph.ops_info.values():
@@ -12,7 +17,7 @@ def test_id_rm_transform_1(id_graph_def_1):
     assert set(['x', 'y']) == in_op_names
 
 def test_id_rm_transform_2(id_graph_def_2):
-    ugraph = GraphDefParser.parse(id_graph_def_2, output_nodes=['z'])
+    ugraph = GraphDefParser(config={}).parse(id_graph_def_2, output_nodes=['z'])
     optimizer = IdOpRemoveOptimizer()
     new_ugraph = optimizer.transform(ugraph)
     for op in new_ugraph.ops_info.values():

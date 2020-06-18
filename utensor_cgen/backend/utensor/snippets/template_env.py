@@ -1,12 +1,13 @@
 # -*- coding:utf8 -*-
 import os
+
 from jinja2 import Environment, FileSystemLoader
 
 _dir = os.path.join(os.path.dirname(os.path.abspath(__file__)), 'templates/')
 _loader = FileSystemLoader(searchpath=_dir)
 
 env = Environment(loader=_loader, trim_blocks=True, lstrip_blocks=True)
-env.globals.update(zip=zip)
+env.globals.update(zip=zip, len=len)
 
 del _loader, _dir
 

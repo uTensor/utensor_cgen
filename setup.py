@@ -12,7 +12,6 @@ with open(os.path.join(root_dir, "LICENSE")) as rf:
 
 
 class _CompileFlatbuffMixin(object):
-
     def run(self):
         super(_CompileFlatbuffMixin, self).run()
         self._build_flatbuffer()
@@ -20,23 +19,25 @@ class _CompileFlatbuffMixin(object):
     def _build_flatbuffer(self):
         install_dir = self.install_platlib
         if install_dir is None:
-            install_dir = os.path.abspath('utensor')
+            install_dir = os.path.abspath("utensor")
 
 
-class _Install(_CompileFlatbuffMixin, _install): pass
+class _Install(_CompileFlatbuffMixin, _install):
+    pass
 
 
-class _Develop(_CompileFlatbuffMixin, _develop): pass
+class _Develop(_CompileFlatbuffMixin, _develop):
+    pass
 
 
 setup(
-    name='utensor_cgen',
+    name="utensor_cgen",
     version_config={
         "starting_version": "0.0.0",
-        "version_format": "{tag}.{sha:.7s}.dev"
+        "version_format": "{tag}.{sha:.7s}.dev",
     },
-    setup_requires=['better-setuptools-git-version'],
-    cmdclass={'install': _Install, 'develop': _Develop},
+    setup_requires=["better-setuptools-git-version"],
+    cmdclass={"install": _Install, "develop": _Develop},
     description="C code generation program for uTensor",
     long_description="please go to [doc](https://utensor-cgen.readthedocs.io/en/latest/) page for more information",
     url="https://github.com/uTensor/utensor_cgen",
@@ -44,26 +45,23 @@ setup(
     author_email="qmalliao@gmail.com",
     license=license,
     packages=find_packages(),
-    package_data={'utensor_cgen.backend.utensor.snippets': ["templates/*/*/*"]},
-    entry_points={
-        "console_scripts": [
-            "utensor-cli=utensor_cgen.cli:cli"
-        ]},
+    package_data={"utensor_cgen.backend.utensor.snippets": ["templates/*/*/*"]},
+    entry_points={"console_scripts": ["utensor-cli=utensor_cgen.cli:cli"]},
     install_requires=[
-        'Jinja2',
-        'tensorflow==1.13.1',
-        'idx2numpy',
-        'attrs',
-        'click',
-        'torch',
-        'torchvision',
-        'onnx-tf==1.2.1',
-        'graphviz',
-        'toml',
+        "Jinja2",
+        "tensorflow==2.1.0",
+        "onnx",
+        "idx2numpy",
+        "attrs",
+        "click",
+        "torch",
+        "torchvision",
+        "graphviz",
+        "matplotlib",
+        "toml",
+        "flatbuffers",
+        "ortools==7.6.7691",
     ],
-    extras_require={
-        'dev': ['pytest']
-    },
     zip_safe=False,
     classifiers=[
         "Development Status :: 4 - Beta",
@@ -75,6 +73,6 @@ setup(
         "Programming Language :: Python",
         "Topic :: Scientific/Engineering",
         "Topic :: Scientific/Engineering :: Artificial Intelligence",
-        "Topic :: Utilities"
-    ]
+        "Topic :: Utilities",
+    ],
 )

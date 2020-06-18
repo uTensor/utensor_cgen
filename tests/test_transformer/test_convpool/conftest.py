@@ -1,9 +1,9 @@
 from random import sample
 
 import numpy as np
+import tensorflow.compat.v1 as tf
 from pytest import fixture
 
-import tensorflow as tf
 from utensor_cgen.frontend.tensorflow import GraphDefParser
 
 
@@ -39,5 +39,5 @@ def gen_vgg_graph():
                 name='pool_{}'.format(i),
                 padding='SAME',
             )        
-        ugraph = GraphDefParser.parse(graph.as_graph_def(), output_nodes=[in_feat.op.name])
+        ugraph = GraphDefParser(config={}).parse(graph.as_graph_def(), output_nodes=[in_feat.op.name])
     return ugraph

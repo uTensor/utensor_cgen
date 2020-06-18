@@ -1,9 +1,13 @@
+#system files
+__pycache__
+.DS_Store
 # virtual env
 .venv
 venv
 # dev
 dev_notes
 *.ipynb
+!tutorials/**/*.ipynb
 !tests/test_cases.ipynb
 !tests/deep_mlp/end_to_end.ipynb
 *.egg*
@@ -21,3 +25,6 @@ tests/deep_mlp/data
 # docs
 doc/build
 doc/source/_build
+#vim
+.*.swp
+.*.swo

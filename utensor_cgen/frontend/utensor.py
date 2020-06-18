@@ -10,11 +10,13 @@ from utensor_cgen.utils import topologic_order_graph
 class PickleParser(Parser):
 
   @classmethod
-  def parse(cls, pkl_file, output_nodes=None):
+  def parse(cls, pkl_file, output_nodes=None, model_name=None):
     with open(pkl_file, 'rb') as fid:
       ugraph = pickle.load(fid)
       if not isinstance(ugraph, uTensorGraph):
         raise ValueError('expecting uTensorGraph object, get %s' % type(ugraph))
+    if model_name:
+      ugraph.name = model_name
     if output_nodes is not None:
       ugraph.output_nodes = output_nodes
       topologic_order_graph(ugraph)
