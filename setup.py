@@ -32,11 +32,7 @@ class _Develop(_CompileFlatbuffMixin, _develop):
 
 setup(
     name="utensor_cgen",
-    version_config={
-        "starting_version": "0.0.0",
-        "version_format": "{tag}.{sha:.7s}.dev",
-    },
-    setup_requires=["better-setuptools-git-version"],
+    version='1.0.0',
     cmdclass={"install": _Install, "develop": _Develop},
     description="C code generation program for uTensor",
     long_description="please go to [doc](https://utensor-cgen.readthedocs.io/en/latest/) page for more information",
