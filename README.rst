@@ -232,13 +232,18 @@ the size of the tensor
 Tutorials
 =========
 
--  `Deep Multilayer
-   Perceptron <https://github.com/uTensor/utensor_cgen/tree/develop/tests/deep_mlp>`_
--  `End-to-End Convolution
-   NN <https://github.com/uTensor/simple_cnn_tutorial>`_
+-  `End-to-End Training with Keras <https://github.com/uTensor/utensor_cgen/tree/master/tutorials/end2end_training>`_
+-  `Extending uTensor Backend by Adding Custom Operators <https://github.com/uTensor/utensor_cgen/tree/master/tutorials/add_custom_operators>`_
+-  `Wrighting Plugins: Component Registration <https://github.com/uTensor/utensor_cgen/tree/master/tutorials/component_registration>`_
 
 How to Serve Your Model on uTenosr
 ==================================
+
+Keras_ (Recommended)
+--------------------
+
+Please refer to `End-to-End Training with Keras <https://github.com/uTensor/utensor_cgen/tree/master/tutorials/end2end_training>`_ for detail
+
 
 TensorFlow_
 -----------
@@ -289,7 +294,7 @@ Testing
     $ make tests
 
     # run with `pipenv`
-    $ pipenv run pytest tests
+    $ pipenv run pytest -m 'not slow_test and not deprecated' tests
 
 .. design philosophy
 ..     `12 Factor CLI App <https://medium.com/@jdxcode/12-factor-cli-apps-dd3c227a0e46?fbclid=IwAR1Gfq0D7oh3b-mXaIMV3RwYu39TAPrPXfz5sBKC4Rz1t-cckvC8WjBVl_w>`_
@@ -308,6 +313,7 @@ Future Works
 .. _pip: https://pip.pypa.io/en/stable/
 .. _pipenv: https://github.com/pypa/pipenv
 .. _Tensorflow: https://www.tensorflow.org
+.. _Keras: https://keras.io/
 .. _PyTorch: https://pytorch.org/
 .. _uTensor: https://github.com/uTensor/uTensor
 .. _simple_mnist.pb: https://github.com/uTensor/utensor_cgen/blob/develop/tests/deep_mlp/simple_mnist.pb
