@@ -7,6 +7,7 @@ jobs:
       - checkout
         #- run: apt update
       - run: mkdir -p /tmp/coverage && mkdir -p /tmp/test_results
+      - run: pip3 install pytest
       - run: pip3 install .
       - run: 
           name: Test
