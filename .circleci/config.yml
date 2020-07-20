@@ -2,9 +2,10 @@ version: 2
 jobs:
   build:
     docker:
-      - image: mbartling/utensor_cgen_ci
+      - image: python:3.6
     steps:
       - checkout
+        #- run: apt update
       - run: mkdir -p /tmp/coverage && mkdir -p /tmp/test_results
       - run: pip3 install .
       - run: 
