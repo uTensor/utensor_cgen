@@ -17,7 +17,7 @@ from tensorflow.core.framework.tensor_pb2 import TensorProto as _TensorProto
 from tensorflow.core.framework.tensor_shape_pb2 import \
     TensorShapeProto as _TensorShapeProto
 from tensorflow.core.framework.types_pb2 import DataType as _DataType
-from tensorflow_core.python.framework import tensor_shape
+from tensorflow.python.framework import tensor_shape
 
 from .utils import is_list_of
 
