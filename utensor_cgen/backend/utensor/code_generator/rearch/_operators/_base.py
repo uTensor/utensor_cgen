@@ -53,17 +53,17 @@ class OperatorFactory(object):
 class _OperatorMeta(type):
   def __new__(mcls, name, bases, attrib):
     attrib["_cache"] = {}
+    cls = type.__new__(mcls, name, bases, attrib)
     for key in ["get_type_signature", "get_constructor_parameters"]:
-      func = attrib.get(key)
+      func = getattr(cls, key)
       if func is None:
         continue
       if not must_return_type.return_type_is_ensured(func):
-        attrib[key] = must_return_type(Hashable)(func)
+        setattr(cls, key, must_return_type(Hashable)(func))
       elif not issubclass(must_return_type.get_expect_type(func), Hashable):
         raise RuntimeError(
           "{}.{} must be ensured to return {}".format(name, key, Hashable)
         )
-    cls = type.__new__(mcls, name, bases, attrib)
     return cls
 
 
