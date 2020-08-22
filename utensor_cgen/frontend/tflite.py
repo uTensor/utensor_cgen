@@ -10,8 +10,8 @@ from utensor_cgen.ir.base import OperationInfo, TensorInfo, uTensorGraph
 from utensor_cgen.ir.converter import (AttrValueConverter,
                                        GenericTensorConverterMixin)
 from utensor_cgen.legalizer import Legalizer
-from utensor_cgen.utils import topologic_order_graph
 from utensor_cgen.logger import logger
+from utensor_cgen.utils import topologic_order_graph
 
 from .tflite_flatbuffer.ActivationFunctionType import ActivationFunctionType
 from .tflite_flatbuffer.BuiltinOperator import BuiltinOperator
@@ -95,7 +95,7 @@ class TFLiteParser(Parser):
       if isinstance(tensor.ShapeAsNumpy(), np.ndarray):
         shape = tensor.ShapeAsNumpy().tolist()
       else:
-        shape = list(fb_model.Buffers(12).DataAsNumpy().shape)
+        shape = list(fb_model.Buffers(12).DataAsNumpy().view(dtype).shape)
 
       tensor_names_map[idx] = TensorInfo(
         name=self._format_tensor_name("", tensor_name, 0),
