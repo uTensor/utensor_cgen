@@ -267,7 +267,7 @@ class FullyConnectedSnippet(OpEvalSnippet):
 class MissingOpEvalSnippet(OpEvalSnippet):
   __template_name__ = "snippets/rearch/op_missing.cpp"
 
-  def __init__(self, op_info, tensor_var_map):
+  def __init__(self, op_info, op_var_name, tensor_var_map):
     Snippet.__init__(self)
 
     quant_params_map = {}
@@ -275,6 +275,7 @@ class MissingOpEvalSnippet(OpEvalSnippet):
       quant_params = self.get_quant_param(out_tensor)
       quant_params_map[out_tensor.name] = quant_params
     self.template_vars['op_type'] = op_info.op_type
+    self.template_vars['op_var_name'] = op_var_name
     self.template_vars['input_var_names'] = [
       tensor_var_map[tensor.name] for tensor in op_info.input_tensors
     ]

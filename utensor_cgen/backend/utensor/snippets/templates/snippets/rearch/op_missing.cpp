@@ -3,6 +3,7 @@
 
     1. Declare the operators of type {{op_type}}
         - If you're using the ModelInterface, make sure you also initialize the operator in the constructor
+        - You may delare this operator as {{op_var_name}} in the ModelInterface header file
     2. Set input tensors:
     {%for tensor, var_name in zip(input_tensors, input_var_names)%}
         - {{tensor.name}}, of type {{tensor.dtype}} and is named as {{var_name}} in this file

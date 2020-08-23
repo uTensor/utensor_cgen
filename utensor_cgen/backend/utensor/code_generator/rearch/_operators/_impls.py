@@ -726,7 +726,7 @@ class _MissingOperator(_Operator):
     return None
 
   def get_eval_snippet(self, op_var_name, op_info, tensor_var_map):
-    return MissingOpEvalSnippet(op_info, tensor_var_map)
+    return MissingOpEvalSnippet(op_info, op_var_name, tensor_var_map)
 
   def get_construct_snippet(self, op_var_name):
     return None

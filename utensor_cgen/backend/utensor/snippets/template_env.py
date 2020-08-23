@@ -9,6 +9,12 @@ _loader = FileSystemLoader(searchpath=_dir)
 env = Environment(loader=_loader, trim_blocks=True, lstrip_blocks=True)
 env.globals.update(zip=zip, len=len)
 
+def model_name_filter(graph_name):
+    return "".join(
+        map(lambda s: s.capitalize(), graph_name.split("_"))
+    )
+env.filters['model_name_filter'] = model_name_filter
+
 del _loader, _dir
 
 # useful references
