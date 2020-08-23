@@ -21,6 +21,7 @@ class uTensorGraphLowerBase(BackendPart):
     handler = self.get_handler(ugraph)
     return handler(ugraph)
 
+
 class uTensorLegacyGraphLower(uTensorGraphLowerBase):
   PART = 'legacy_graph_lower'
 
@@ -63,35 +64,6 @@ class uTensorRearchGraphLower(uTensorGraphLowerBase):
 
     @classmethod
     def apply(cls, ugraph):
-      # TODO: better abstraction, sth like lowering strategy
-      for op_info in ugraph.get_ops_by_type("AddOperator"):
-        op_info.code_gen_attributes['namespaces'] = ('ReferenceOperators',)
-      for op_info in ugraph.get_ops_by_type("ReshapeOperator"):
-        op_info.code_gen_attributes['namespaces'] = ('ReferenceOperators',)
-      for op_info in ugraph.get_ops_by_type("MatrixMultOperator"):
-        op_info.code_gen_attributes['namespaces'] = ('ReferenceOperators',)
-      for op_info in ugraph.get_ops_by_type('ArgMinOperator'):
-        op_info.code_gen_attributes['namespaces'] = ('ReferenceOperators',)
-      for op_info in ugraph.get_ops_by_type('ArgMaxOperator'):
-        op_info.code_gen_attributes['namespaces'] = ('ReferenceOperators',)
-      for op_info in ugraph.get_ops_by_type('QuantizeOperator'):
-        op_info.code_gen_attributes['namespaces'] = ('TflmSymQuantOps',)
-      for op_info in ugraph.get_ops_by_type('DequantizeOperator'):
-        op_info.code_gen_attributes['namespaces'] = ('TflmSymQuantOps',)
-      for op_info in ugraph.get_ops_by_type('ReLUOperator'):
-        op_info.code_gen_attributes['namespaces'] = ('ReferenceOperators',)
-      for op_info in ugraph.get_ops_by_type('ReLU6Operator'):
-        op_info.code_gen_attributes['namespaces'] = ('ReferenceOperators',)
-      for op_info in ugraph.get_ops_by_type('MinOperator'):
-        op_info.code_gen_attributes['namespaces'] = ('ReferenceOperators',)
-      for op_info in ugraph.get_ops_by_type('MaxOperator'):
-        op_info.code_gen_attributes['namespaces'] = ('ReferenceOperators',)
-      for op_info in ugraph.get_ops_by_type('MaxPoolOperator'):
-        op_info.code_gen_attributes['namespaces'] = ('ReferenceOperators',)
-      for op_info in ugraph.get_ops_by_type('MinPoolOperator'):
-        op_info.code_gen_attributes['namespaces'] = ('ReferenceOperators',)
-      for op_info in ugraph.get_ops_by_type('Conv2dOperator'):
-        op_info.code_gen_attributes['namespaces'] = ('ReferenceOperators',)
       for op_info in ugraph.get_ops_by_type('DepthwiseSeparableConvOperator'):
         if cls._check_quantized(op_info):
           op_info.code_gen_attributes['namespaces'] = ('TflmSymQuantOps',)
@@ -131,3 +103,22 @@ class uTensorRearchGraphLower(uTensorGraphLowerBase):
   @class_property
   def default_config(cls):
     return {}
+
+
+def reference_op_namespace_handle(op_info):
+  op_info.code_gen_attributes['namespaces'] = ('ReferenceOperators',)
+
+uTensorRearchGraphLower.CodgenAttributes.register("AddOperator", reference_op_namespace_handle)
+uTensorRearchGraphLower.CodgenAttributes.register("ReshapeOperator", reference_op_namespace_handle)
+uTensorRearchGraphLower.CodgenAttributes.register("MatrixMultOperator", reference_op_namespace_handle)
+uTensorRearchGraphLower.CodgenAttributes.register("ArgMinOperator", reference_op_namespace_handle)
+uTensorRearchGraphLower.CodgenAttributes.register("ArgMaxOperator", reference_op_namespace_handle)
+uTensorRearchGraphLower.CodgenAttributes.register("QuantizeOperator", reference_op_namespace_handle)
+uTensorRearchGraphLower.CodgenAttributes.register("DequantizeOperator", reference_op_namespace_handle)
+uTensorRearchGraphLower.CodgenAttributes.register("ReLUOperator", reference_op_namespace_handle)
+uTensorRearchGraphLower.CodgenAttributes.register("ReLU6Operator", reference_op_namespace_handle)
+uTensorRearchGraphLower.CodgenAttributes.register("MinOperator", reference_op_namespace_handle)
+uTensorRearchGraphLower.CodgenAttributes.register("MaxOperator", reference_op_namespace_handle)
+uTensorRearchGraphLower.CodgenAttributes.register("MaxPoolOperator", reference_op_namespace_handle)
+uTensorRearchGraphLower.CodgenAttributes.register("MinPoolOperator", reference_op_namespace_handle)
+uTensorRearchGraphLower.CodgenAttributes.register("Conv2dOperator", reference_op_namespace_handle)
