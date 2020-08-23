@@ -104,17 +104,14 @@ class uTensorRearchGraphLower(uTensorGraphLowerBase):
   def default_config(cls):
     return {}
 
-
+@uTensorRearchGraphLower.CodgenAttributes.register("AddOperator")
 def reference_op_namespace_handle(op_info):
   op_info.code_gen_attributes['namespaces'] = ('ReferenceOperators',)
 
-uTensorRearchGraphLower.CodgenAttributes.register("AddOperator", reference_op_namespace_handle)
 uTensorRearchGraphLower.CodgenAttributes.register("ReshapeOperator", reference_op_namespace_handle)
 uTensorRearchGraphLower.CodgenAttributes.register("MatrixMultOperator", reference_op_namespace_handle)
 uTensorRearchGraphLower.CodgenAttributes.register("ArgMinOperator", reference_op_namespace_handle)
 uTensorRearchGraphLower.CodgenAttributes.register("ArgMaxOperator", reference_op_namespace_handle)
-uTensorRearchGraphLower.CodgenAttributes.register("QuantizeOperator", reference_op_namespace_handle)
-uTensorRearchGraphLower.CodgenAttributes.register("DequantizeOperator", reference_op_namespace_handle)
 uTensorRearchGraphLower.CodgenAttributes.register("ReLUOperator", reference_op_namespace_handle)
 uTensorRearchGraphLower.CodgenAttributes.register("ReLU6Operator", reference_op_namespace_handle)
 uTensorRearchGraphLower.CodgenAttributes.register("MinOperator", reference_op_namespace_handle)
@@ -122,3 +119,9 @@ uTensorRearchGraphLower.CodgenAttributes.register("MaxOperator", reference_op_na
 uTensorRearchGraphLower.CodgenAttributes.register("MaxPoolOperator", reference_op_namespace_handle)
 uTensorRearchGraphLower.CodgenAttributes.register("MinPoolOperator", reference_op_namespace_handle)
 uTensorRearchGraphLower.CodgenAttributes.register("Conv2dOperator", reference_op_namespace_handle)
+
+@uTensorRearchGraphLower.CodgenAttributes.register("QuantizeOperator")
+def tflm_op_namespace_handle(op_info):
+  op_info.code_gen_attributes['namespaces'] = ('TflmSymQuantOps',)
+
+uTensorRearchGraphLower.CodgenAttributes.register("DequantizeOperator", tflm_op_namespace_handle)
