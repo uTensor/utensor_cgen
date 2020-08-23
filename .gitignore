@@ -10,6 +10,7 @@ dev_notes
 !tutorials/**/*.ipynb
 !tests/test_cases.ipynb
 !tests/deep_mlp/end_to_end.ipynb
+!sciwork-sprint/*.ipynb
 *.egg*
 worktree/
 build/

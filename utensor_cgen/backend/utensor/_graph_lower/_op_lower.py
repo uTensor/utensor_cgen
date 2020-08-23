@@ -53,10 +53,12 @@ class uTensorRearchGraphLower(uTensorGraphLowerBase):
     _HANDLERS = {}
 
     @classmethod
-    def register(cls, op_type):
+    def register(cls, op_type, func=None):
       def regist_handle(handler):
         cls._HANDLERS[op_type] = handler
         return handler
+      if func:
+        return regist_handle(func)
       return regist_handle
 
     @classmethod

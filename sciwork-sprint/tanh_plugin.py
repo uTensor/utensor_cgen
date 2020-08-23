@@ -9,9 +9,9 @@ from utensor_cgen.legalizer.tflite import TFLiteLegalizer
 
 TFLiteLegalizer.register_op_rename('Tanh', 'TanhOperator')
 
-@uTensorRearchGraphLower.CodgenAttributes.register('TanhOperator')
 def handle(op_info):
   op_info.code_gen_attributes['namespaces'] = ('ReferenceOperators',)
+uTensorRearchGraphLower.CodgenAttributes.register('TanhOperator', handle)
 
 class TanhEvalSnippet(OpEvalSnippet):
   __inputs__ = ["act_in"]

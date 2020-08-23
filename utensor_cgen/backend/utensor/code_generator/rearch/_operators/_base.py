@@ -22,7 +22,14 @@ class OperatorFactory(object):
     if op_cls is None:
       missing_op_cls = cls._operators['_MissingOperator']
       if op_info.op_type not in cls._warned_missing_ops:
-        logger.warning('{} is missing, no code will be generated for it'.format(op_info.op_type))
+        op_full_name = '::'.join(
+          ["uTensor"] + \
+          list(op_info.code_gen_attributes.get('namespaces', [])) + \
+          [op_info.op_type]
+        )
+        logger.warning(
+          '{} is missing, no code will be generated for it'.format(op_full_name)
+        )
         cls._warned_missing_ops.add(op_info.op_type)
       return missing_op_cls(op_info)
     return op_cls(op_info)
