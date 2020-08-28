@@ -82,10 +82,9 @@ class _Operator(with_metaclass(_OperatorMeta), object):
     if cls.op_type is MUST_OVERWRITE:
       raise ValueError('op_type must be overwritten: {}'.format(cls))
 
-    type_signature = cls.get_type_signature(op_info)
+    in_dtypes, out_dtypes = type_signature = cls.get_type_signature(op_info)
     construct_params = cls.get_constructor_parameters(op_info)
     full_signature = (cls.namespaces, type_signature, construct_params)
-    in_dtypes, out_dtypes = type_signature
     if full_signature not in cls._cache:
       self = object.__new__(cls)
       self.in_dtypes = in_dtypes

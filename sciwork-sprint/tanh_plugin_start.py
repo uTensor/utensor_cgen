@@ -30,10 +30,6 @@ class TanhOperator(OperatorBase):
   def get_constructor_parameters(cls, op_info):
     pass
 
-  @classmethod
-  def get_type_signature(cls, op_info):
-    pass
-  
   def get_declare_snippet(self, op_var_name, with_const_params=True):
     pass
 
