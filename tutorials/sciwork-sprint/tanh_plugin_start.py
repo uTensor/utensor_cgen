@@ -28,7 +28,7 @@ class TanhOperator(OperatorBase):
 
   @classmethod
   def get_constructor_parameters(cls, op_info):
-    pass
+    return tuple()
 
   def get_declare_snippet(self, op_var_name, with_const_params=True):
     pass
