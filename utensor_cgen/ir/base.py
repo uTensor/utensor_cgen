@@ -42,7 +42,7 @@ class IRBase(object):
     return ['tensorflow']
 
 
-@attr.s(cmp=False)
+@attr.s(eq=True, hash=False)
 class TensorInfo(IRBase, _NoShallowCopyMixin):
   """
   :param name: the name of the tensor
@@ -176,13 +176,16 @@ class TensorInfo(IRBase, _NoShallowCopyMixin):
   def size(self):
     if self.shape is None:
       raise RuntimeError('nondeterministic shape has no size')
-    if None in self.shape:
+    return reduce(lambda i, j: i*(j is None and 1 or j), self.shape, 1)
+  
+  def __attrs_post_init__(self):
+    if self.shape is not None and None in self.shape:
       logger.warning(
         'nondeterministic dimension detected, implicitly converting None to 1: %s, %s',
         self.name,
         self.shape,
       )
-    return reduce(lambda i, j: i*(j is None and 1 or j), self.shape, 1)
+      self.shape = [1 if s is None else s for s in self.shape]
 
   def __deepcopy__(self, memo):
     new_tensor = TensorInfo(
@@ -210,7 +213,7 @@ class TensorInfo(IRBase, _NoShallowCopyMixin):
     )
 
 
-@attr.s(cmp=False, repr=False)
+@attr.s(eq=True, hash=False, repr=False)
 class OperationInfo(IRBase, _NoShallowCopyMixin):
   """
   :param name: the name of the node
@@ -439,7 +442,7 @@ class OperationInfo(IRBase, _NoShallowCopyMixin):
     return str((self.name, self.op_type))
 
 
-@attr.s(cmp=False)
+@attr.s(eq=True)
 class uTensorGraph(IRBase, _NoShallowCopyMixin, uTensorGraphBuilderMixin):
   """
   :param output_nodes: a list of names of ops which are the output nodes
@@ -585,7 +588,7 @@ class uTensorGraph(IRBase, _NoShallowCopyMixin, uTensorGraphBuilderMixin):
   @property
   def graph_def(self):
     """
-    Dynamically generated :class:`tensorflow.GraphDef` object
+    [Deprecated] Dynamically generated :class:`tensorflow.GraphDef` object
     
     :rtype: :class:`tensorflow.GraphDef`
     """
@@ -600,10 +603,13 @@ class uTensorGraph(IRBase, _NoShallowCopyMixin, uTensorGraphBuilderMixin):
       for key, obj in op_info.op_attr.items():
         if self.KWPARSER_PATTERN.match(key):
           continue
-        value_name = obj.value_name
-        tf_value = ConverterDispatcher.get_tf_value(obj.value)
-        attr_value = _AttrValue(**{value_name: tf_value})
-        attr[key] = attr_value
+        try:
+          value_name = obj.value_name
+          tf_value = ConverterDispatcher.get_tf_value(obj.value)
+          attr_value = _AttrValue(**{value_name: tf_value})
+          attr[key] = attr_value
+        except Exception:
+          pass
       graph_def.node.add(name=op_info.name,
                          op=op_info.op_type,
                          input=[in_tensor.name for in_tensor in op_info.input_tensors],
@@ -687,7 +693,7 @@ class uTensorGraph(IRBase, _NoShallowCopyMixin, uTensorGraphBuilderMixin):
     return self.ops_info[op_name]
 
 
-@attr.s(cmp=False)
+@attr.s(eq=True)
 class uTensorGraphView(IRBase, _NoShallowCopyMixin):
 
   _ugraph = attr.ib(type=uTensorGraph)

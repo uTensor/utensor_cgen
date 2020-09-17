@@ -37,7 +37,7 @@ class uTensorBackend(Backend):
       graph_op_lower = graph_op_lower or uTensorRearchGraphLower(config=config[uTensorRearchGraphLower.PART].to_dict())
       graph_alloc_lower = TensorAllocationPlanner(config=config[TensorAllocationPlanner.PART].to_dict())
     graph_transformer = graph_transformer or PipelineTransformer(config=config[PipelineTransformer.PART].to_dict())
-    self._legacy_api = config['legacy-api']
+    self._legacy_api = False # config['legacy-api'], removing legacy api
     self._graph_op_lower = graph_op_lower
     self._graph_transformer = graph_transformer
     self._graph_alloc_lower = graph_alloc_lower

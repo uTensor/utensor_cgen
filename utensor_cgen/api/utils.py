@@ -39,7 +39,8 @@ def show_ugraph(ugraph, oneline=False, ignore_unknown_op=False):
         inputs=op_info.input_tensors,
         outputs=op_info.output_tensors,
         input_shapes=[tensor.shape for tensor in op_info.input_tensors],
-        output_shapes=[tensor.shape for tensor in op_info.output_tensors])
+        output_shapes=[tensor.shape for tensor in op_info.output_tensors],
+      )
       paragraphs.append(op_str)
       if not OperatorFactory.is_supported(op_info.op_type):
         unknown_ops.add(op_info)
