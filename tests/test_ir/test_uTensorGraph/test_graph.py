@@ -24,6 +24,9 @@ def test_ugraph_copy(graph_tuple):
     ugraph_1 = GraphDefParser(config={}).parse(graph_def, output_nodes)
     ugraph_2 = deepcopy(ugraph_1)
     assert ugraph_1 is not ugraph_2
+    for op_name in ugraph_1.ops_info:
+        assert op_name in ugraph_2.ops_info
+    # this is for old pb file quantization, no longer needed
     assert ugraph_1.graph_def == ugraph_2.graph_def
 
 def test_op_info():

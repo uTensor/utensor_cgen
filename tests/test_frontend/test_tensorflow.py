@@ -35,7 +35,7 @@ def test_placeholder_shape():
     ugraph = parser.parse(graph.as_graph_def(), output_nodes=['x'])
     # nondeterministic dimension
     out_tensor = ugraph.ops_info['x'].output_tensors[0]
-    assert out_tensor.shape == [None, 5]
+    assert out_tensor.shape == [1, 5]
     assert out_tensor.dtype is np.dtype('float32')
 
 def test_normal_tensor_shape():

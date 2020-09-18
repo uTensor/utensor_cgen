@@ -1,3 +1,7 @@
+import pytest
+
+
+@pytest.mark.deprecated
 def test_linear_reorder_1(subj_ugraph_1):
     from utensor_cgen.transformer.linear_reoder import LinearReorderTransformerV2
 

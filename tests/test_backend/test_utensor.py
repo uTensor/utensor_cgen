@@ -3,6 +3,7 @@ import os
 import pytest
 
 
+@pytest.mark.deprecated
 def test_legacy_utensor(mlp_ugraph):
     from utensor_cgen.backend.utensor import uTensorBackend
 
