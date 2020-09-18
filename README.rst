@@ -84,6 +84,8 @@ Run ``utensor-cli show --help`` for detailed information.
 Convert Model File to C/C++ Code
 --------------------------------
 
+**IMPORTANT**: ``pb`` file is deprecated in favor of Tensorflow 2.x, please refer to `End-to-End Training with Keras`_ for detail
+
 .. code-block:: console
 
   $ utensor-cli convert <model.pb> \
@@ -232,7 +234,7 @@ the size of the tensor
 Tutorials
 =========
 
--  `End-to-End Training with Keras <https://github.com/uTensor/utensor_cgen/tree/master/tutorials/end2end_training>`_
+-  `End-to-End Training with Keras`_
 -  `Extending uTensor Backend by Adding Custom Operators <https://github.com/uTensor/utensor_cgen/tree/master/tutorials/add_custom_operators>`_
 -  `Wrighting Plugins: Component Registration <https://github.com/uTensor/utensor_cgen/tree/master/tutorials/component_registration>`_
 
@@ -242,7 +244,7 @@ How to Serve Your Model on uTenosr
 Keras_ (Recommended)
 --------------------
 
-Please refer to `End-to-End Training with Keras <https://github.com/uTensor/utensor_cgen/tree/master/tutorials/end2end_training>`_ for detail
+Please refer to `End-to-End Training with Keras`_ for detail
 
 
 TensorFlow_
@@ -314,6 +316,7 @@ Future Works
 .. _pipenv: https://github.com/pypa/pipenv
 .. _Tensorflow: https://www.tensorflow.org
 .. _Keras: https://keras.io/
+.. _End-to-End Training with Keras: https://github.com/uTensor/utensor_cgen/tree/master/tutorials/end2end_training
 .. _PyTorch: https://pytorch.org/
 .. _uTensor: https://github.com/uTensor/uTensor
 .. _simple_mnist.pb: https://github.com/uTensor/utensor_cgen/blob/develop/tests/deep_mlp/simple_mnist.pb
