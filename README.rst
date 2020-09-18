@@ -86,18 +86,29 @@ Convert Model File to C/C++ Code
 
 **IMPORTANT**: ``pb`` file is deprecated in favor of Tensorflow 2.x, please refer to `End-to-End Training with Keras`_ for detail
 
+**[Deprecated]** Convert given ``pb`` file into cpp/hpp files.
+
 .. code-block:: console
 
   $ utensor-cli convert <model.pb> \
     --output-nodes=<node name>[,<node name>,...] \
     [--config=config.toml]
 
-Convert given pb file into cpp/hpp files.
+**[Recommended]** Convert given ``tflm`` model file into cpp/hpp files.
 
-Note that ``--output-nodes`` is required options. It's the names of
-nodes you want to output, seperated by comma for multiple values.
+.. code-block:: console
 
-In graph theory terminology, they are ``leaf`` nodes of your graph.
+  $ utensor-cli convert <model.tflm> \
+    [--output-nodes=<name>[,name,...]] \
+    [--config=config.toml]
+
+Please refer to `Tensorflow Lite Post Training Quantization <https://www.tensorflow.org/lite/performance/post_training_quantization>`_
+for detail how to save your `Keras`_ model as ``tflm`` file.
+
+Note that ``--output-nodes`` is required options for ``pb`` model file only.
+It's the names of nodes you want to output, seperated by comma for multiple values.
+
+In graph theory terminology, they are ``leaf`` nodes in your graph.
 
 Use ``--config`` to pass a configuration file to the cli, you can use ``generate-config`` command to generate one (see below).
 
