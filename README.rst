@@ -321,6 +321,10 @@ Future Works
 .. _uTensor: https://github.com/uTensor/uTensor
 .. _simple_mnist.pb: https://github.com/uTensor/utensor_cgen/blob/develop/tests/deep_mlp/simple_mnist.pb
 
+2. Automaic-Update TFLite fbs file
+
+   - `schema files <https://github.com/tensorflow/tensorflow/tree/cf28969fb2ea72c9738cd3acdddc0b69fd7dff5e/tensorflow/lite/schema>`_
+
 .. readme_end
 
 .. |cnn-dropout| image:: doc/source/_images/cnn_dropout.png
