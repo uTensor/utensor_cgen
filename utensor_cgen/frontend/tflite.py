@@ -79,7 +79,13 @@ class TFLiteParser(Parser):
 
     for idx in range(0, subgraph.TensorsLength()):
       tensor = subgraph.Tensors(idx)
-      tensor_name = tensor.Name().decode('utf8').replace(';', '__')
+      tensor_name = tensor.Name().decode('utf8')
+      illegal_chars = ';'
+      if any(c in tensor_name for c in illegal_chars):
+        logger.warning(
+          f'Unexpected character founded in tensor name {tensor_name}, will be replaced or pruned'
+        )
+      tensor_name = tensor_name.replace(';', '__')
       if tensor_name is "" or None:
         tensor_name = "tensor_" + str(idx)
 
