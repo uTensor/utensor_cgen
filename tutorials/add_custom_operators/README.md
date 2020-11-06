@@ -57,7 +57,7 @@ class ReductionMeanEvalSnippet(OpEvalSnippet):
 
 ### Writing a Backend Component
 
-The backend component is the meat of the operator code generation process. For the uTensor backend, this can be creating custom constructor parameters, overriding the default declaration in code, and describing the evaluation code for this operator. Once this is done, we just need to register the component in the global OperatorFactory:
+The backend component is the meat of the operator code generation process. For the uTensor backend, this can be creating custom constructor parameters, overriding the default declaration in code, and describing the evaluation code for this operator. Once this is done, we just need to register the component in the `OperatorFactory`:
 
 ```python
 @OperatorFactory.register
@@ -106,9 +106,71 @@ class _ReductionMeanOperator(_Operator):
 
 ```
 
+#### `get_constructor_parameters`
+
+This method shoule be a `classmethod` which takes one `op_info` (of type `utensor_cgen.ir.base.OperationInfo`) and return a tuple.
+
+All operators in `uTensor` are derieved from `OperatorInterface` which is implemented template class.
+
+Some of them may require parameters for construction. For example, the constructor of `uTensor::TflmSymQuantOps::FullyConnectedOperator` takes one activation parameters (`FullyConnectedOperator(kTfLiteActRelu)` for example). In that case, you need to return a tuple, `('kTfLiteActRelu',)`, in `get_constructor_parameters`. Note that the values in the tuple returned will be used as is. Normally, the tuple will consist of strings.
+
+As for `ReductionMeanOperator` in our example, it should return an empty tuple since it does not require any parameters for construction.
+
+This method is used for deduplication. That is, the `uTensor` backend will generate singlton object for the operator by its namespace, type signature and constructor parameters (values retured by this method). As a result, one should not confused it with `get_construct_snippet` (see below), which is responsible to generate snippet object for operator construction.
+
+#### `get_construct_snippet`
+
+As methioned above, this method is responsible for returning a `Snippet` object which will generate code snippet for operator construction.
+
+The snippet template looks like this:
+```cpp
+`op_var_name`(`param1`, `param2`, ...)
+```
+and `op_var_name` and `param*` should be replaced accordingly, operator by operator.
+
+Normally, you can simply return a `OpConstructSnippet` (defined in `utensor_cgen.backend.utensor.snippets.rearch`)
+
+#### `get_declare_snippet`
+
+This method is responsible for returing a `Snippet` which will generate code snippet for operator declaration:
+```cpp
+`op_type` `op_var_name`;
+```
+`op_type` (such as `MyNamespace::ReduceMeanOperator`) and `op_var_name` (such as `op1`) will be replaced accordingly, operator by operator.
+
+Normally, returning a `DeclareOpSnippet` (defined in `utensor_cgen.backend.utensor.snippets.rearch`) will be sufficient.
+
+`DeclareOpSnippet` takes following parameters:
+- `op`: an `_Operator` instance, noramlly `self`
+- `templ_dtypes`: should be a iterable of data types which represent the type signature of the operator
+- `op_var_name`: a string of the variable name which holds the reference to the operator in generated code. Normally is given in the `get_declare_snippet` call.
+- `nested_namespaces`: a tuple of namespaces. ex: `("MyNamespace", "ReduceFunction")`
+- `with_const_params`: it was a hack, always pass `True` for now. This will be removed in the future.
+
+#### `get_eval_snippet`
+
+This method is responsible for returning a `Snippet` which will generate code snippet for operation evalution:
+```cpp
+`op_var_name`.set_inputs({
+    {`input_name`, `in_tensor`}, ....
+}).set_outputs({
+    {`output_name`, `out_tensor`}, ...
+}).eval();
+```
+`op_var_name`, `input_name`s, `in_tensor`s, `output_name`s and `out_tensor`s should be replaced accordingly, operator by operator.
+
+Since the input names mapping are different accross operators, you need to inherit `OpEvalSnippet` (defined in `utensor_cgen.backend.utensor.snippets.rearch`) and overwrites its `__inputs__` and `__outputs__` class attributes.
+`__inputs__` and `__outputs__` should be both list of strings which specify the input/output tensor names respectively.
+
+Normally, an `OpEvalSnippet` will takes following arguments
+- `op_info`: an instance of `OperationInfo`, which is used to figure out the input/output tensors required for the operation evaluation
+- `templ_dtypes`: should be a iterable of types which defines the type signature of the operator
+- `op_name`: a string, is the variable name which holds reference to the operator in the generated code (same as `op_var_name`)
+- `tensor_var_map`: is a dictionary which maps tensor name to the variable name which holds reference to the tensor in the generated code
+
 ### Lowering an Operator to our Backend Component
 
-After registering the operator backend component in the OperatorFactory, we need to notify the graph lowering engine to make this target available. Right now, this is a simple registry of operator names and namespaces, but will soon be a proper lowering strategy engine:
+After registering the operator backend component in the OperatorFactory, we need to notify the graph lowering engine to make this target available. Right now, this is a simple registry of operator names and namespaces, but will soon be replaced with lowering strategy engine (WIP):
 
 ```python
 @uTensorRearchGraphLower.CodgenAttributes.register("ReductionMeanOperator")
