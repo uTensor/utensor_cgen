@@ -100,6 +100,9 @@ class TFLiteParser(Parser):
 
       if isinstance(tensor.ShapeAsNumpy(), np.ndarray):
         shape = tensor.ShapeAsNumpy().tolist()
+      elif isinstance(tensor.ShapeAsNumpy(), int):
+        logger.warning(f"{tensor.Name().decode('utf8')} is scalar, convert to tensor as shape [1]")
+        shape = [1]
       else:
         shape = list(fb_model.Buffers(12).DataAsNumpy().view(dtype).shape)
 
