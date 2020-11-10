@@ -17,6 +17,8 @@ __all__ = [
   "DepthwiseSeperateConvOpEvalSnippet",
   "QuantDepthwiseSeperateConvOpEvalSnippet",
   "AddOpEvalSnippet",
+  "MulOpEvalSnippet",
+  "SinEvalSnippet",
   "ReshahpeEvalSnippet",
   "QuantizeEvalSnippet",
   "MatrixMultEvalSnippet",
@@ -192,6 +194,16 @@ class QuantDepthwiseSeperateConvOpEvalSnippet(OpEvalSnippet):
 class AddOpEvalSnippet(OpEvalSnippet):
   __inputs__ = ['a', 'b']
   __outputs__ = ['c']
+
+
+class MulOpEvalSnippet(OpEvalSnippet):
+  __inputs__ = ['a', 'b']
+  __outputs__ = ['c']
+
+
+class SinEvalSnippet(OpEvalSnippet):
+  __inputs__ = ["act_in"]
+  __outputs__ = ["act_out"]
 
 
 class ReshahpeEvalSnippet(OpEvalSnippet):

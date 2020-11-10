@@ -49,6 +49,74 @@ class _AddOperator(_Operator):
 
 
 @OperatorFactory.register
+class _AddOperator(_Operator):
+  namespaces = ('ReferenceOperators',)
+  op_type = 'MulOperator'
+
+  def get_declare_snippet(self, op_var_name, with_const_params=True):
+    return DeclareOpSnippet(
+      op=self,
+      templ_dtypes=[self.in_dtypes[0]],
+      op_var_name=op_var_name,
+      nested_namespaces=type(self).namespaces,
+      with_const_params=with_const_params,
+    )
+
+  def get_eval_snippet(self, op_var_name, op_info, tensor_var_map):
+    return MulOpEvalSnippet(
+      op_info=op_info,
+      templ_dtypes=[self.in_dtypes[0]],
+      op_name=op_var_name,
+      tensor_var_map=tensor_var_map,
+      nested_namespaces=type(self).namespaces,
+    )
+
+  def get_construct_snippet(self, op_var_name):
+    return OpConstructSnippet(
+      op=self,
+      templ_dtypes=[self.in_dtypes[0]],
+      op_var_name=op_var_name,
+      nested_namespaces=type(self).namespaces,
+    )
+
+
+@OperatorFactory.register
+class SinOperator(_Operator):
+  namespaces = ('ReferenceOperators',)
+  op_type = 'SinOperator'
+
+  @classmethod
+  def get_type_signature(cls, op_info):
+    return ((op_info.output_tensors[0].dtype,), (op_info.input_tensors[0].dtype,))
+  
+  def get_declare_snippet(self, op_var_name, with_const_params=True):
+    return DeclareOpSnippet(
+      self,
+      templ_dtypes=[self.out_dtypes[0], self.in_dtypes[0]],
+      op_var_name=op_var_name,
+      nested_namespaces=self.namespaces,
+      with_const_params=with_const_params,
+    )
+
+  def get_eval_snippet(self, op_var_name, op_info, tensor_var_map):
+    return SinEvalSnippet(
+      op_info,
+      templ_dtypes=[self.out_dtypes[0], self.in_dtypes[0]],
+      op_name=op_var_name,
+      tensor_var_map=tensor_var_map,
+      nested_namespaces=self.namespaces
+    )
+
+  def get_construct_snippet(self, op_var_name):
+    return OpConstructSnippet(
+      self,
+      templ_dtypes=[self.out_dtypes[0], self.in_dtypes[0]],
+      op_var_name=op_var_name,
+      nested_namespaces=self.namespaces
+    )
+
+
+@OperatorFactory.register
 class _ReshapeOperator(_Operator):
   namespaces = ('ReferenceOperators',)
   op_type = "ReshapeOperator"

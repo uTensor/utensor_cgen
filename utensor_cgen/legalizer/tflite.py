@@ -34,6 +34,9 @@ class _OpTypeRename(object):
     "Dequantize": "DequantizeOperator",
     "Reshape": "ReshapeOperator",
     "Conv2d": "Conv2dOperator",
+    "Add": "AddOperator",
+    "Mul": "MulOperator",
+    "Sin": "SinOperator",
   }
   
   @classmethod
