@@ -45,7 +45,7 @@ setup(
     entry_points={"console_scripts": ["utensor-cli=utensor_cgen.cli:cli"]},
     install_requires=[
         "Jinja2",
-        "tensorflow==2.1.0",
+        "tensorflow==2.3.1",
         "onnx",
         "idx2numpy",
         "attrs",
