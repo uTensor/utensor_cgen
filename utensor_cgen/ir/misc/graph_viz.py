@@ -3,6 +3,7 @@ from random import random, seed
 import matplotlib.pyplot as plt
 from graphviz import Digraph
 from matplotlib import cm as _cm
+
 from utensor_cgen.logger import logger
 
 plt.style.use('ggplot')
@@ -102,7 +103,7 @@ class _MemallcVisualizer(object):
     xmins = [alloc_plan.plan[tensor_name].offset_start for tensor_name in topo_tensors]
     xmaxs = [alloc_plan.plan[tensor_name].offset_end for tensor_name in topo_tensors]
     colors = [cmap(random()) for _ in alloc_plan.plan]
-    labels = topo_tensors[:]
+    labels = [t.name for t in topo_tensors]
     sizes = [alloc_plan.plan[tensor_name].size for tensor_name in topo_tensors]
     if split_on_large_graph:
       xmin_chunks = [xmins[i:i+num_tensors_per_split] for i in range(0, len(xmins), num_tensors_per_split)]
