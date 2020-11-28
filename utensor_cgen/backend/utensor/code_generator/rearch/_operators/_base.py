@@ -7,12 +7,17 @@ from utensor_cgen.backend.utensor.snippets.rearch import MissingOpEvalSnippet
 from utensor_cgen.logger import logger
 from utensor_cgen.utils import MUST_OVERWRITE, must_return_type
 
-__all__ = ["OperatorFactory"]
+__all__ = ["OperatorFactory", "OpNotSupportedError"]
+
+
+class OpNotSupportedError(Exception): pass
 
 
 class OperatorFactory(object):
 
   _operators = {}
+  _known_op_types = set()
+  _generic_op_builder = {}
   _warned_missing_ops = set()
 
   @classmethod
@@ -39,6 +44,16 @@ class OperatorFactory(object):
     cls._operators[
       (op_cls.namespaces, op_cls.op_type)
     ] = op_cls
+    cls._known_op_types.add(op_cls.op_type)
+    return op_cls
+
+  @classmethod
+  def register_generic_builder(cls, op_cls):
+    if op_cls.op_type in cls._generic_op_builder:
+      raise RuntimeError(
+        f'Duplicated generic op builder detected: {op_cls.op_type}'
+      )
+    cls._generic_op_builder[op_cls.op_type] = op_cls
     return op_cls
 
   @classmethod
@@ -46,15 +61,28 @@ class OperatorFactory(object):
     """Return the set of all supported ops
     """
     return set([
-      "::".join(list(namespaces) + [op_type])
+      "::".join(namespaces + (op_type,))
       for namespaces, op_type in cls._operators.keys()
     ])
 
   @classmethod
-  def is_supported(cls, op_type):
-    if op_type != "Placeholder" and op_type not in cls._operators:
+  def is_supported(cls, op_info):
+    if op_info.op_type in ['Placeholder', 'Constant']:
+      return True
+    if op_info.op_type not in cls._known_op_types:
       return False
     return True
+
+  @classmethod
+  def build_op_info(cls, *args, ugraph, op_type, name, **kwargs):
+    op_cls = cls._generic_op_builder.get(
+      op_type,
+      None
+    )
+    if op_cls is None:
+      err_msg = "unsupported op type in uTensor: {}".format(op_type)
+      raise OpNotSupportedError(err_msg)
+    return op_cls.build_op_info(ugraph, name, *args, **kwargs)
 
 
 class _OperatorMeta(type):

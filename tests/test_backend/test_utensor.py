@@ -3,24 +3,6 @@ import os
 import pytest
 
 
-def test_legacy_utensor(mlp_ugraph):
-    from utensor_cgen.backend.utensor import uTensorBackend
-
-    this_dir = os.path.dirname(__file__)
-
-    backend = uTensorBackend(config={
-        'utensor': {
-            'backend': {
-                'legacy-api': True,
-                'legacy_code_generator': {
-                    'model_dir': os.path.join(this_dir, 'models'),
-                    'params_dir': os.path.join(this_dir, 'data'),
-                },
-            },
-        }
-    })
-    backend.apply(mlp_ugraph)
-
 def test_rearch_utensor(simple_ugraph):
     from utensor_cgen.backend.utensor import uTensorBackend
 
@@ -29,7 +11,6 @@ def test_rearch_utensor(simple_ugraph):
     backend = uTensorBackend(config={
         'utensor': {
             'backend': {
-                'legacy-api': False,
                 'rearch_code_generator': {
                     'model_dir': os.path.join(this_dir, 'models'),
                     'params_dir': os.path.join(this_dir, 'data'),

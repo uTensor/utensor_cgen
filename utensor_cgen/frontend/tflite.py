@@ -59,7 +59,6 @@ class TFLiteParser(Parser):
       ops_info={},
     )
     self._build_graph(fb_model, ugraph)
-    ugraph = self._hotfix_reshape(ugraph)
     ugraph = Legalizer.legalize(ugraph)
     return ugraph
 
@@ -271,28 +270,6 @@ class TFLiteParser(Parser):
 
   def _format_op_type(self, op_type):
     return ''.join(map(lambda s: s.capitalize(), op_type.split('_')))
-
-  @staticmethod
-  def _hotfix_reshape(ugraph):
-    for op in ugraph.get_ops_by_type("Reshape"):
-      new_shape = op.op_attr["new_shape"]
-      if not new_shape:
-        logger.warning(f'{op.name} has no new_shape as its attributes, using the second input tensor as new shape instead')
-        tensor_new_shape = op.input_tensors.pop(1)
-        op.n_inputs -= 1
-        ori_new_shape = tensor_new_shape.op.op_attr['value'].value.np_array.tolist()
-        new_shape_ = []
-        has_neg = False
-        for s in ori_new_shape:
-          if s < 0:
-            has_neg = True
-            s = abs(s)
-          new_shape_.append(s)
-        if has_neg:
-          logger.warning(f"implicit convert negative shape of reshape op to positive: {ori_new_shape} -> {new_shape_}")
-        op.op_attr["new_shape"] = new_shape_
-      del ugraph.ops_info[tensor_new_shape.op.name]
-    return ugraph
 
 
 # helper functions for parsing op data (will be stored in op_attr)

@@ -12,7 +12,7 @@ import numpy as np
 import tensorflow.compat.v1 as tf
 
 # FIXME: remove uTensorOpEqualityDelegate import after we have generic ops
-from utensor_cgen.backend.utensor.code_generator.legacy._operators import \
+from utensor_cgen.backend.utensor.code_generator.rearch._operators import \
     uTensorOpEqualityDelegate
 from utensor_cgen.frontend.tensorflow import GraphDefParser
 from utensor_cgen.ir import OperationInfo, uTensorGraph
@@ -61,7 +61,7 @@ class InlineTransformer(Transformer):
   def transform(self, ugraph):
     for node_name in ugraph.topo_order:
       op_type = ugraph.ops_info[node_name].op_type
-      if op_type == 'Const':
+      if op_type == 'Constant':
         op_info = ugraph.ops_info[node_name]
         op_info.op_type = 'Inline'
     
@@ -133,7 +133,7 @@ class DropoutTransformer(Transformer):
     return dict(input_map), dict(output_map), clusters
 
 
-@TransformerPipeline.register_transformer
+# @TransformerPipeline.register_transformer
 class DropoutTransformerV2(Transformer):
   """Dropout removal transformer version 2
 
@@ -163,9 +163,9 @@ class DropoutTransformerV2(Transformer):
         dropout = tf.nn.dropout(dummy_x, rate=dummy_rate, name='dropout')
     patrn_ugraph = GraphDefParser(config={}).parse(graph.as_graph_def(), output_nodes=[dropout.op.name])
     # replace dummy_x
-    patrn_ugraph['dropout/truediv'].replace_with_null_input_tensor(0)
+    patrn_ugraph['dropout/RealDiv'].replace_with_null_input_tensor(0)
     # # replace dummy_rate
-    patrn_ugraph['dropout/sub'].replace_with_null_input_tensor(1)
+    patrn_ugraph['dropout/Sub'].replace_with_null_input_tensor(1)
     # # replace Shape Op
     patrn_ugraph['dropout/random_uniform/RandomUniform'].replace_with_null_input_tensor(0)
     patrn_ugraph = prune_graph(patrn_ugraph)
@@ -217,7 +217,7 @@ class DropoutTransformerV2(Transformer):
     return match.subject_ugraph
 
 
-@TransformerPipeline.register_transformer
+# @TransformerPipeline.register_transformer
 class BatchNormTransformer(Transformer):
   """Replace Batch Norm namescope with uTensor Op
   """
@@ -230,7 +230,7 @@ class BatchNormTransformer(Transformer):
     raise RuntimeError('bach norm transformer is not yet implemented')
 
 
-@TransformerPipeline.register_transformer
+# @TransformerPipeline.register_transformer
 class FakeGatherV2Transformer(Transformer):
   """Force converting GatherV2 op to Gather op
   """

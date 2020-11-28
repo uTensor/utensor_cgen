@@ -1,5 +1,5 @@
 # FIXME: remove uTensorOpEqualityDelegate import after we have generic op_eq_deleate
-from utensor_cgen.backend.utensor.code_generator.legacy._operators import \
+from utensor_cgen.backend.utensor.code_generator.rearch._operators import \
     uTensorOpEqualityDelegate
 from utensor_cgen.matcher import uTensorGraphMatcher
 
@@ -29,6 +29,7 @@ def test_id_match(patrn_ugraph):
         assert tensor.name in match.subj2patrn_tensor_map, \
             '{} is missing'.format(tensor.name)
 
+
 def test_match_sub1(patrn_ugraph, subject_ugraph1):
     matcher = uTensorGraphMatcher(patrn_ugraph, op_equality_delegate=uTensorOpEqualityDelegate)
     matches = matcher.match_all(subject_ugraph1)
@@ -41,6 +42,7 @@ def test_match_sub1(patrn_ugraph, subject_ugraph1):
     assert match.patrn2subj_op_map['add0'].name == 'sub_add0', match
     assert match.patrn2subj_op_map['output'].name == 'sub_add1', match
 
+
 def test_match_sub1_1(patrn_ugraph, subject_ugraph1_1):
     matcher = uTensorGraphMatcher(patrn_ugraph, op_equality_delegate=uTensorOpEqualityDelegate)
     matches = matcher.match(subject_ugraph1_1)
@@ -50,6 +52,7 @@ def test_match_sub1_1(patrn_ugraph, subject_ugraph1_1):
     assert match.patrn2subj_op_map['input1'].name in ['sub_input0', 'sub_input1']
     assert match.patrn2subj_op_map['add0'].name == 'sub_add0'
     assert match.patrn2subj_op_map['output'].name == 'sub_add1'
+
 
 def test_match_sub1_2(patrn_ugraph, subject_ugraph1_2):
     matcher = uTensorGraphMatcher(patrn_ugraph, op_equality_delegate=uTensorOpEqualityDelegate)

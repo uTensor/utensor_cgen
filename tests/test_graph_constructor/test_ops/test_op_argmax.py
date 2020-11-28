@@ -1,6 +1,8 @@
 import numpy as np
+import pytest
 
 
+@pytest.mark.deprecated
 def test_op_argmax(ugraph):
     with ugraph.begin_construction():
         tensor_logits, = ugraph.add_op(

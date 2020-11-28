@@ -7,6 +7,7 @@ from utensor_cgen.utils import topologic_order_graph
 
 from .api import Legalizer
 from .base import LegalizerBase
+from .utils import _hotfix_reshape
 
 
 @Legalizer.register
@@ -16,6 +17,7 @@ class TFLiteLegalizer(LegalizerBase):
   def legalize_ops(self, ugraph):
     _GraphRewrite.apply(ugraph)
     _OpTypeRename.apply(ugraph)
+    ugraph = _hotfix_reshape(ugraph)
     return ugraph
   
   def legalize_dtype(self, ugraph):
@@ -40,6 +42,7 @@ class _OpTypeRename(object):
     "Mul": "MulOperator",
     "Sin": "SinOperator",
     "Transpose": "TransposeOperator",
+    "Const": "Constant",
   }
   
   @classmethod

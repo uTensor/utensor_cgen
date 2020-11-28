@@ -3,9 +3,12 @@ import tempfile
 from pathlib import Path
 
 import pytest
-import utensor_cgen.api.export as export
 import tensorflow.keras as keras
 
+import utensor_cgen.api.export as export
+
+
+@pytest.mark.beta_release
 def test_keras_model(keras_model, keras_model_dset):
 
     assert keras_model, 'Keras Model generation failed'
@@ -17,7 +20,7 @@ def test_keras_model(keras_model, keras_model_dset):
         target='utensor'
     )
 
-
+@pytest.mark.beta_release
 def test_keras_model_path(keras_model, keras_model_dset):
   with tempfile.TemporaryDirectory(prefix='utensor_') as tmp_dir:
     dir_path = Path(tmp_dir)

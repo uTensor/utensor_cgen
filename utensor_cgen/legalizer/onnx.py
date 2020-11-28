@@ -61,3 +61,11 @@ class OnnxLegalizer(LegalizerBase):
   def _visit_id(self, op_info):
     # identity op should be op_info.op_type == 'Identity'
     return op_info
+  
+  def _visit_const(self, op_info):
+    op_info.op_type = "Constant"
+    return op_info
+  
+  def _visit_relu(self, op_info):
+    op_info.op_type = "ReLUOperator"
+    return op_info

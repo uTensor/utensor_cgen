@@ -9,7 +9,7 @@ from utensor_cgen.transformer import (BatchNormTransformer, DropoutTransformer,
 @pytest.fixture(scope='function', name='methods')
 def pipeline_methods():
     all_methods = [
-        BatchNormTransformer.METHOD_NAME,
+        # BatchNormTransformer.METHOD_NAME,
         DropoutTransformer.METHOD_NAME,
         RefCntOptimizer.METHOD_NAME,
     ]

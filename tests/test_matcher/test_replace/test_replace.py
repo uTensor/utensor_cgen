@@ -1,7 +1,7 @@
 import tensorflow.compat.v1 as tf
 
 # FIXME: remove uTensorOpEqualityDelegate import after we have generic op_eq_deleate
-from utensor_cgen.backend.utensor.code_generator.legacy._operators import \
+from utensor_cgen.backend.utensor.code_generator.rearch._operators import \
     uTensorOpEqualityDelegate
 from utensor_cgen.frontend.tensorflow import GraphDefParser
 from utensor_cgen.matcher import uTensorGraphMatcher

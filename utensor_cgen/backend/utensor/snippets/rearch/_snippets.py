@@ -2,11 +2,14 @@ import re
 
 import numpy as np
 
-from utensor_cgen.backend.utensor.snippets._base import Snippet, SnippetBase
+from utensor_cgen.backend.utensor.snippets._base import (Snippet, SnippetBase,
+                                                         SnippetContainerBase)
 from utensor_cgen.backend.utensor.snippets._types import (NP_TYPES_MAP,
                                                           UTENSOR_TYPES_MAP)
 
 __all__ = [
+  "ContextGlobalArrayContainer",
+  "WeightSnippet",
   "OpConstructSnippet",
   "DeclareRomTensorSnippet",
   "DeclareRamTensorSnippet",
@@ -40,6 +43,28 @@ __all__ = [
   "TimeSlotContainer",
   "SimpleContainer",
 ]
+
+
+class ContextGlobalArrayContainer(SnippetContainerBase):
+  __template_name__ = "containers/rearch/weight_header.hpp"
+  __headers__ = set([])
+
+  def __init__(self, snippets=None):
+    SnippetContainerBase.__init__(self, snippets)
+
+
+class WeightSnippet(Snippet):
+  __template_name__ = "snippets/rearch/weight_snippet.hpp"
+  __headers__ = set([])
+
+  def __init__(self, inline_name, type, shape, value):
+      Snippet.__init__(self)
+      length = np.prod(shape)
+      self.template_vars['type'] =  NP_TYPES_MAP[type].tensor_type_str 
+      self.template_vars['value'] = value
+      self.template_vars['length'] = int(length) 
+      self.template_vars['inline_name'] = inline_name 
+
 
 class _SnippetBase(Snippet):
   __headers__ = set(['"uTensor.h"'])
