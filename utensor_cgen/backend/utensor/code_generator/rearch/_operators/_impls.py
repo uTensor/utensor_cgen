@@ -824,7 +824,6 @@ class _FullyConnectedOperator(_CommonParams):
 
 
 class _MissingOperator(_Operator):
-  namespaces = ["ReferenceOperators","TflmSymQuantOps"]
   op_type = "_MissingOperator"
 
   def get_declare_snippet(self, op_var_name, with_const_params=True):
@@ -836,5 +835,5 @@ class _MissingOperator(_Operator):
   def get_construct_snippet(self, op_var_name):
     return None
 
-for namespace in _MissingOperator.namespaces:
-  OperatorFactory._operators[((namespace,), _MissingOperator.op_type)] = _MissingOperator
+
+OperatorFactory._operators[_MissingOperator.op_type] = _MissingOperator
