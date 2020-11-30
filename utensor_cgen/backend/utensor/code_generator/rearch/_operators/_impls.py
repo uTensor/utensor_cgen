@@ -815,19 +815,3 @@ class _FullyConnectedOperator(_CommonParams):
       op_var_name=op_var_name,
       nested_namespaces=type(self).namespaces,
     )
-
-
-class _MissingOperator(_Operator):
-  op_type = "_MissingOperator"
-
-  def get_declare_snippet(self, op_var_name, with_const_params=True):
-    return None
-
-  def get_eval_snippet(self, op_var_name, op_info, tensor_var_map):
-    return MissingOpEvalSnippet(op_info, op_var_name, tensor_var_map)
-
-  def get_construct_snippet(self, op_var_name):
-    return None
-
-
-OperatorFactory._operators[_MissingOperator.op_type] = _MissingOperator

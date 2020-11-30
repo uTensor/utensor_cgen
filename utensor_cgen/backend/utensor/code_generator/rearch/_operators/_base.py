@@ -3,6 +3,7 @@ from typing import Hashable
 
 from six import with_metaclass
 
+from utensor_cgen.backend.utensor.snippets.rearch import MissingOpEvalSnippet
 from utensor_cgen.logger import logger
 from utensor_cgen.utils import MUST_OVERWRITE, must_return_type
 
@@ -20,7 +21,6 @@ class OperatorFactory(object):
     codegen_namespaces = op_info.code_gen_attributes.get('namespaces', tuple())
     op_cls = cls._operators.get((codegen_namespaces, op_type))
     if op_cls is None:
-      missing_op_cls = cls._operators['_MissingOperator']
       if op_info.op_type not in cls._warned_missing_ops:
         op_full_name = '::'.join(
           ["uTensor"] + \
@@ -31,7 +31,7 @@ class OperatorFactory(object):
           '{} is missing, no code will be generated for it'.format(op_full_name)
         )
         cls._warned_missing_ops.add(op_info.op_type)
-      return missing_op_cls(op_info)
+      return _MissingOperator(op_info)
     return op_cls(op_info)
 
   @classmethod
@@ -198,3 +198,16 @@ class _Operator(with_metaclass(_OperatorMeta), object):
     raise NotImplementedError(
       "base get_construct_snippet invoked: {}".format(type(self))
     )
+
+
+class _MissingOperator(_Operator):
+  op_type = "_MissingOperator"
+
+  def get_declare_snippet(self, op_var_name, with_const_params=True):
+    return None
+
+  def get_eval_snippet(self, op_var_name, op_info, tensor_var_map):
+    return MissingOpEvalSnippet(op_info, op_var_name, tensor_var_map)
+
+  def get_construct_snippet(self, op_var_name):
+    return None
