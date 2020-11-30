@@ -30,6 +30,8 @@ class _OpTypeRename(object):
     "FullyConnected": "FullyConnectedOperator",
     "Quantize": "QuantizeOperator",
     "DepthwiseConv2d": "DepthwiseSeparableConvOperator",
+    "AvgPool2d": "AvgPoolOperator",
+    "MinPool2d": "MinPoolOperator",
     "MaxPool2d": "MaxPoolOperator",
     "Dequantize": "DequantizeOperator",
     "Reshape": "ReshapeOperator",

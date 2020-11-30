@@ -469,6 +469,36 @@ class _PoolingOperatorMixin(object):
     ksize_str = _c_arr_str(ksize)
     return (ksize_str, stride_str, padding)
 
+@OperatorFactory.register
+class _AvgPoolOperator(_PoolingOperatorMixin, _Operator):
+  namespaces = ('ReferenceOperators',)
+  op_type = 'AvgPoolOperator'
+
+  def get_declare_snippet(self, op_var_name, with_const_params=True):
+    return DeclareOpSnippet(
+      op=self,
+      templ_dtypes=[self.in_dtypes[0]],
+      op_var_name=op_var_name,
+      nested_namespaces=type(self).namespaces,
+      with_const_params=with_const_params,
+    )
+  
+  def get_eval_snippet(self, op_var_name, op_info, tensor_var_map):
+    return AvgPoolEvalSnippet(
+      op_info=op_info,
+      templ_dtypes=[self.in_dtypes[0]],
+      op_name=op_var_name,
+      tensor_var_map=tensor_var_map,
+      nested_namespaces=type(self).namespaces,
+    )
+
+  def get_construct_snippet(self, op_var_name):
+    return OpConstructSnippet(
+      op=self,
+      templ_dtypes=[self.in_dtypes[0]],
+      op_var_name=op_var_name,
+      nested_namespaces=type(self).namespaces,
+    )
 
 @OperatorFactory.register
 class _MaxPoolOperator(_PoolingOperatorMixin, _Operator):

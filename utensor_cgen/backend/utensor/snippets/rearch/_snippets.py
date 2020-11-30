@@ -29,6 +29,7 @@ __all__ = [
   "ReLU6EvalSnippet",
   "MinEvalSnippet",
   "MaxEvalSnippet",
+  "AvgPoolEvalSnippet",
   "MinPoolEvalSnippet",
   "MaxPoolEvalSnippet",
   "QuantizedFullyConnectedSnippet",
@@ -255,6 +256,9 @@ class MaxEvalSnippet(OpEvalSnippet):
   __inputs__ = ["in"]
   __outputs__ = ["out"]
 
+class AvgPoolEvalSnippet(OpEvalSnippet):
+  __inputs__ = ["in"]
+  __outputs__ = ["out"]
 
 class MinPoolEvalSnippet(OpEvalSnippet):
   __inputs__ = ["in"]
