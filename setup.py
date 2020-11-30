@@ -47,6 +47,7 @@ setup(
         "Jinja2",
         "tensorflow>=2.1.0",
         "onnx",
+        "keras2onnx",
         "idx2numpy",
         "attrs",
         "click",
