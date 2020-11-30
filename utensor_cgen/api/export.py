@@ -57,7 +57,8 @@ def pytorch_onnx_export(
   optimizations=None,
   config_file='utensor_cli.toml',
   target='utensor',
-  output_onnx_fname=None
+  output_onnx_fname=None,
+  verbose=False
 ) :
   with tempfile.TemporaryDirectory(prefix='utensor_') as tmp_dir:
     dir_path = Path(tmp_dir)
@@ -77,13 +78,15 @@ def pytorch_onnx_export(
     torch.onnx.export(model, 
       representive_dataset, 
       onnx_path, 
-      verbose=True
+      verbose=verbose
     )
 
     # Print a human readable representation of the graph
     onnx_model = onnx.load(onnx_path)
     onnx.checker.check_model(onnx_model)
-    onnx.helper.printable_graph(onnx_model.graph)
+    
+    if verbose:
+      onnx.helper.printable_graph(onnx_model.graph)
 
     convert_graph(onnx_path,
       config=config_file,
@@ -118,8 +121,9 @@ def keras_onnx_export(
     onnx_model_name = f'{model_name}.onnx'
     onnx_model = keras2onnx.convert_keras(model, model.name)
     onnx.save_model(onnx_model, onnx_model_name)
-
-    # with (dir_path / 'tflm_model.tflite').open('wb') as fid:
-    #   fid.write(tflm_model_content)
-    #   fid.flush()
-    convert_graph(onnx_model_name, config=config_file, model_name=model_name, target=target)
+    
+    convert_graph(onnx_model_name, 
+      config=config_file, 
+      model_name=model_name, 
+      target=target
+    )
