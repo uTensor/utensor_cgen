@@ -81,7 +81,7 @@ class _AddOperator(_Operator):
 
 
 @OperatorFactory.register
-class SinOperator(_Operator):
+class _SinOperator(_Operator):
   namespaces = ('ReferenceOperators',)
   op_type = 'SinOperator'
 
@@ -111,6 +111,42 @@ class SinOperator(_Operator):
     return OpConstructSnippet(
       self,
       templ_dtypes=[self.out_dtypes[0], self.in_dtypes[0]],
+      op_var_name=op_var_name,
+      nested_namespaces=self.namespaces
+    )
+
+
+@OperatorFactory.register
+class _TransposeOperator(_Operator):
+  namespaces = ('ReferenceOperators',)
+  op_type = "TransposeOperator"
+
+  @classmethod
+  def get_type_signature(cls, op_info):
+    return ((op_info.input_tensors[0].dtype,), tuple())
+  
+  def get_declare_snippet(self, op_var_name, with_const_params=True):
+    return DeclareOpSnippet(
+      self,
+      templ_dtypes=[self.in_dtypes[0],],
+      op_var_name=op_var_name,
+      nested_namespaces=self.namespaces,
+      with_const_params=with_const_params,
+    )
+
+  def get_eval_snippet(self, op_var_name, op_info, tensor_var_map):
+    return TransposeEvalSnippet(
+      op_info,
+      templ_dtypes=[self.in_dtypes[0],],
+      op_name=op_var_name,
+      tensor_var_map=tensor_var_map,
+      nested_namespaces=self.namespaces
+    )
+
+  def get_construct_snippet(self, op_var_name):
+    return OpConstructSnippet(
+      self,
+      templ_dtypes=[self.in_dtypes[0],],
       op_var_name=op_var_name,
       nested_namespaces=self.namespaces
     )
@@ -788,6 +824,7 @@ class _FullyConnectedOperator(_CommonParams):
 
 
 class _MissingOperator(_Operator):
+  namespaces = ["ReferenceOperators","TflmSymQuantOps"]
   op_type = "_MissingOperator"
 
   def get_declare_snippet(self, op_var_name, with_const_params=True):
@@ -799,5 +836,5 @@ class _MissingOperator(_Operator):
   def get_construct_snippet(self, op_var_name):
     return None
 
-
-OperatorFactory._operators[_MissingOperator.op_type] = _MissingOperator
+for namespace in _MissingOperator.namespaces:
+  OperatorFactory._operators[((namespace,), _MissingOperator.op_type)] = _MissingOperator
