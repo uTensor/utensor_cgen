@@ -20,6 +20,7 @@ from .tensorflow import GraphDefParser
 
 
 def _convert_op_attribute(attrib_pb):
+  ints_attribs = ['perm','dilations','kernel_shape','strides','pads']
   # TODO: integrate with ir.converter
   if attrib_pb.HasField('f'):
     return attrib_pb.f
@@ -27,6 +28,8 @@ def _convert_op_attribute(attrib_pb):
     return attrib_pb.i
   elif attrib_pb.HasField('s'):
     return attrib_pb.s
+  elif attrib_pb.name in ints_attribs:
+    return TensorProtoConverter.__utensor_generic_type__(np_array=np.array(attrib_pb.ints))
   else:
     raise ValueError('Unknown attribute value: {}'.format(attrib_pb))
 
