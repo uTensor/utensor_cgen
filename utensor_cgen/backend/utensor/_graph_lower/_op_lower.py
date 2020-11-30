@@ -90,6 +90,8 @@ class uTensorRearchGraphLower(uTensorGraphLowerBase):
         op_info.code_gen_attributes['namespaces'] = ('ReferenceOperators',)
       for op_info in ugraph.get_ops_by_type('MaxOperator'):
         op_info.code_gen_attributes['namespaces'] = ('ReferenceOperators',)
+      for op_info in ugraph.get_ops_by_type('AvgPoolOperator'):
+        op_info.code_gen_attributes['namespaces'] = ('ReferenceOperators',)
       for op_info in ugraph.get_ops_by_type('MaxPoolOperator'):
         op_info.code_gen_attributes['namespaces'] = ('ReferenceOperators',)
       for op_info in ugraph.get_ops_by_type('MinPoolOperator'):
