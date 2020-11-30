@@ -21,13 +21,19 @@ def keras_model():
     model.add(Conv2D(128, kernel_size=(3, 3), activation='relu'))
     model.add(Flatten())
     model.add(Dense(128, activation='relu'))
-    model.add(Dense(no_classes, activation='softmax'))
+    model.add(Dense(no_classes, activation='softmax'))    
+
 
     model.compile(
         loss=sparse_categorical_crossentropy,
         optimizer=Adam(),
         metrics=['accuracy']
     )
+
+    np.random.seed(12345)
+    mu, sigma = 0, 0.1 # mean and standard deviation
+    x = np.random.normal(mu, sigma, size = (1,) + input_shape)
+    y = model(x)
 
     return model
 

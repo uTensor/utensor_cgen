@@ -29,6 +29,11 @@ def keras_model():
         metrics=['accuracy']
     )
 
+    np.random.seed(12345)
+    mu, sigma = 0, 0.1 # mean and standard deviation
+    x = np.random.normal(mu, sigma, size = (1,) + input_shape)
+    y = model(x)
+
     return model
 
 @fixture(scope='session', name='keras_model_dset')
