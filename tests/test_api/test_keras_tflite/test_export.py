@@ -3,7 +3,6 @@ import tempfile
 from pathlib import Path
 
 import pytest
-import tensorflow.keras as keras
 
 import utensor_cgen.api.export as export
 
@@ -20,6 +19,8 @@ def test_keras_model(keras_model, keras_model_dset):
 
 
 def test_keras_model_path(keras_model, keras_model_dset):
+  import tensorflow.keras as keras
+
   with tempfile.TemporaryDirectory(prefix='utensor_') as tmp_dir:
     dir_path = Path(tmp_dir)
     keras_model_path = os.path.join(dir_path, 'model')
