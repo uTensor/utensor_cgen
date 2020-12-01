@@ -27,6 +27,12 @@ def _convert_op_attribute(attrib_pb):
     return attrib_pb.i
   elif attrib_pb.HasField('s'):
     return attrib_pb.s
+  elif attrib_pb.floats:
+    return TensorProtoConverter.__utensor_generic_type__(np_array=np.array(attrib_pb.floats))
+  elif attrib_pb.ints:
+    return TensorProtoConverter.__utensor_generic_type__(np_array=np.array(attrib_pb.ints))
+  elif attrib_pb.strings:
+    return TensorProtoConverter.__utensor_generic_type__(np_array=np.array(attrib_pb.strings))
   else:
     raise ValueError('Unknown attribute value: {}'.format(attrib_pb))
 
