@@ -4,7 +4,7 @@ import numpy as np
 from pytest import fixture
 
 
-@fixture(scope='session', name='keras_model')
+@fixture(scope='function', name='keras_model')
 def keras_model():
     from tensorflow.keras.layers import (Conv2D, Dense, Flatten, MaxPool2D,
                                          ReLU, Softmax)
@@ -37,13 +37,13 @@ def keras_model():
 
     return model
 
-@fixture(scope='session', name='keras_model_dset')
+@fixture(scope='function', name='keras_model_dset')
 def keras_model_dset():
     import tensorflow as tf
     
     mnist = tf.keras.datasets.mnist
 
-    (x_train, y_train), (x_test, y_test) = mnist.load_data()
+    (x_train, _), (x_test, _) = mnist.load_data()
     x_train, x_test = x_train / 255.0, x_test / 255.0
 
     # Add a channels dimension
@@ -51,15 +51,13 @@ def keras_model_dset():
     x_test = x_test[..., tf.newaxis]
 
     num_calibration_steps = 128
-    calibration_dtype = tf.float32
-    input_shape = (28,28,1)
+    calibration_dtype = 'float32'
 
     def representative_dataset_gen():
         for _ in range(num_calibration_steps):
             rand_idx = np.random.randint(0, x_test.shape[0]-1)
             sample = x_test[rand_idx]
-            sample = sample[tf.newaxis, ...]
-            sample = tf.cast(sample, dtype=calibration_dtype)
+            sample = sample[tf.newaxis, ...].astype(calibration_dtype)
             yield [sample]
 
     return representative_dataset_gen

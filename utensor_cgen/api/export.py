@@ -1,14 +1,11 @@
+import os
 import tempfile
 from pathlib import Path
 
-import os
-
-import tensorflow as tf
-
-import torch
-
+import keras2onnx
 import onnx
-import keras2onnx 
+import tensorflow as tf
+import torch
 
 from .convert import convert_graph
 
@@ -27,8 +24,12 @@ def tflm_keras_export(
     if isinstance(model_or_path, str):
       converter = tf.lite.TFLiteConverter.from_saved_model(model_or_path)
     elif isinstance(model_or_path, tf.keras.Model):
-      model_path = str(dir_path / 'saved_model')
-      model_or_path.save(model_path)
+      model_path = os.path.join(str(dir_path), 'saved_model')
+      tf.keras.models.save_model(
+        model_or_path,
+        model_path,
+        save_format='tf',
+      )
       converter = tf.lite.TFLiteConverter.from_saved_model(model_path)
     else:
       raise RuntimeError(
