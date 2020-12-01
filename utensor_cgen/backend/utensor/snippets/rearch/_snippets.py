@@ -19,6 +19,7 @@ __all__ = [
   "AddOpEvalSnippet",
   "MulOpEvalSnippet",
   "SinEvalSnippet",
+  "TransposeEvalSnippet",
   "ReshahpeEvalSnippet",
   "QuantizeEvalSnippet",
   "MatrixMultEvalSnippet",
@@ -205,6 +206,11 @@ class MulOpEvalSnippet(OpEvalSnippet):
 class SinEvalSnippet(OpEvalSnippet):
   __inputs__ = ["act_in"]
   __outputs__ = ["act_out"]
+
+
+class TransposeEvalSnippet(OpEvalSnippet):
+  __inputs__ = ["input", "perm"]
+  __outputs__ = ["output"]
 
 
 class ReshahpeEvalSnippet(OpEvalSnippet):

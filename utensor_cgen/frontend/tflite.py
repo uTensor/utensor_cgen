@@ -13,6 +13,7 @@ from utensor_cgen.legalizer import Legalizer
 from utensor_cgen.logger import logger
 from utensor_cgen.utils import topologic_order_graph
 
+# schema: https://github.com/tensorflow/tensorflow/blob/master/tensorflow/lite/schema/schema.fbs
 from .tflite_flatbuffer.ActivationFunctionType import ActivationFunctionType
 from .tflite_flatbuffer.BuiltinOperator import BuiltinOperator
 from .tflite_flatbuffer.CustomOptionsFormat import CustomOptionsFormat
@@ -436,6 +437,15 @@ def argmax_op_data(op, fb_mdel):
 
   return option_dict
 
+def transpose_op_data(op, fb_model):
+  option_dict = {}
+  from .tflite_flatbuffer.TransposeOptions import TransposeOptions
+  # no filed declared in the fbs file for TransposeOptions
+  # skipping here
+  # this function is here just for silencing the warning msg
+  pass
+  return option_dict
+
 def default_op_data(op, fb_mdel):
   op_type = _get_op_type(op, fb_mdel)
   logger.warning('the op data parser is missing for %s', op_type)
@@ -452,6 +462,7 @@ _OP_DATA_FUNC_MAP["RESHAPE"] = reshape_op_data
 _OP_DATA_FUNC_MAP["FULLY_CONNECTED"] = fully_connected_op_data
 _OP_DATA_FUNC_MAP["DEQUANTIZE"] = dequantize_op_data
 _OP_DATA_FUNC_MAP["ARG_MAX"] = argmax_op_data
+_OP_DATA_FUNC_MAP["TRANSPOSE"] = transpose_op_data
 
 def _get_op_type(op, fb_model):
   local_op_code = op.OpcodeIndex()

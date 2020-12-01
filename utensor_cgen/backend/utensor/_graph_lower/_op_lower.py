@@ -70,6 +70,8 @@ class uTensorRearchGraphLower(uTensorGraphLowerBase):
         op_info.code_gen_attributes["namespaces"] = ('ReferenceOperators',)
       for op_info in ugraph.get_ops_by_type("SinOperator"):
         op_info.code_gen_attributes["namespaces"] = ('ReferenceOperators',)
+      for op_info in ugraph.get_ops_by_type("TransposeOperator"):
+        op_info.code_gen_attributes["namespaces"] = ('ReferenceOperators',)
       for op_info in ugraph.get_ops_by_type("ReshapeOperator"):
         op_info.code_gen_attributes['namespaces'] = ('ReferenceOperators',)
       for op_info in ugraph.get_ops_by_type("MatrixMultOperator"):

@@ -39,6 +39,7 @@ class _OpTypeRename(object):
     "Add": "AddOperator",
     "Mul": "MulOperator",
     "Sin": "SinOperator",
+    "Transpose": "TransposeOperator",
   }
   
   @classmethod
