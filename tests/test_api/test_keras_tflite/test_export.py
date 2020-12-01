@@ -19,10 +19,11 @@ def test_keras_model(keras_model, keras_model_dset):
 def test_keras_model_path(keras_model, keras_model_dset):
   with tempfile.TemporaryDirectory(prefix='utensor_') as tmp_dir:
     dir_path = Path(tmp_dir)
-    keras_model_path = os.path.join(dir_path, 'model.h5')
+    keras_model_path = os.path.join(dir_path, 'model')
     keras.models.save_model(
         model=keras_model, 
-        filepath=keras_model_path
+        filepath=keras_model_path,
+        save_format='tf'
     )
 
     export.tflm_keras_export(
