@@ -4,12 +4,12 @@ verify_ssl = false
 name = "pypi"
 
 [packages]
-e1839a8 = {path = ".",editable = true}
+tensorflow = "*"
 
 [dev-packages]
 matplotlib = "*"
 pylint = "*"
-"flake8" = "*"
+flake8 = "*"
 pytest = "*"
 rope = "*"
 pillow = "*"
@@ -21,3 +21,7 @@ twine = "*"
 
 [pipenv]
 allow_prereleases = true
+
+[packages.e1839a8]
+path = "."
+editable = true
