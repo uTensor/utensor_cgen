@@ -4,9 +4,9 @@ import numpy as np
 def test_op_const(ugraph):
     with ugraph.begin_construction():
         out_tensor, = ugraph.add_op(
-            op_type='Const',
+            op_type='Constant',
             name='ones',
-            value=np.ones((3, 3), dtype=np.dtype('float32')),
+            values=np.ones((3, 3), dtype=np.dtype('float32')),
             is_output=True
         )
 

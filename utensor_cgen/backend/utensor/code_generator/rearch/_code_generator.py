@@ -7,11 +7,10 @@ from utensor_cgen.backend.base import BackendPart
 from utensor_cgen.backend.graph_lower.generic_graph_lower import \
     TopoOrderTensorTimeslotPlanner
 from utensor_cgen.backend.utensor.snippets.composer import Composer
-from utensor_cgen.backend.utensor.snippets.legacy import (
-    ContextGlobalArrayContainer, WeightSnippet)
 from utensor_cgen.backend.utensor.snippets.rearch import (
-    DeclareRamTensorSnippet, DeclareRomTensorSnippet, FreeTensorSnippet,
-    ModelApiContainer, SimpleContainer, TimeSlotContainer)
+    ContextGlobalArrayContainer, DeclareRamTensorSnippet,
+    DeclareRomTensorSnippet, FreeTensorSnippet, ModelApiContainer,
+    SimpleContainer, TimeSlotContainer, WeightSnippet)
 from utensor_cgen.backend.utensor.snippets.template_env import env
 from utensor_cgen.logger import logger
 from utensor_cgen.utils import Configuration, class_property

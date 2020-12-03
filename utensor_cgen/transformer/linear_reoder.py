@@ -7,7 +7,7 @@ Linear Operation Legalizations
 import tensorflow.compat.v1 as tf
 
 # FIXME: remove uTensorOpEqualityDelegate import after we have generic ops
-from utensor_cgen.backend.utensor.code_generator.legacy._operators import \
+from utensor_cgen.backend.utensor.code_generator.rearch._operators import \
     uTensorOpEqualityDelegate
 from utensor_cgen.frontend.tensorflow import GraphDefParser
 from utensor_cgen.matcher import uTensorGraphMatcher
@@ -19,7 +19,7 @@ from .pipeline import TransformerPipeline
 __all__ = ["LinearReorderTransformerV2"]
 
 
-@TransformerPipeline.register_transformer
+# @TransformerPipeline.register_transformer
 class LinearReorderTransformerV2(Transformer):
   METHOD_NAME = 'linear_reorder'
   KWARGS_NAMESCOPE = '_linear_reorder'

@@ -48,14 +48,14 @@ class PipelineTransformer(BackendPart):
       'save_graph': False,
       'transform_methods': [
         "dropout(name_pattern=r'(dropout[_\w\d]*)/.*')",
-        "linear_reorder",
+        # "linear_reorder",
         # these methods are deprecated
         # "quantize",
         # "conv_pool",
         "inline",
         "biasAdd",
         "remove_id_op",
-        "fake_gather_v2",
+        # "fake_gather_v2",
         "refcnt",
       ]
     }

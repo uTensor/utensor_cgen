@@ -4,29 +4,29 @@ import numpy as np
 def test_op_min(ugraph):
     with ugraph.begin_construction():
         tensor_x, = ugraph.add_op(
-            np.random.rand(3, 5, 9, 2).astype('float32'),
-            op_type='Const',
+            'Constant',
+            values=np.random.rand(3, 5, 9, 2).astype('float32'),
             name='x'
         )
         tensor_out1, = ugraph.add_op(
+            'MinOperator',
             tensor_x,
-            op_type='Min',
             name='min',
             axis=0,
             keepdims=True,
             is_output=True,
         )
         tensor_out2, = ugraph.add_op(
+            'MinOperator',
             tensor_x,
-            op_type='Min',
             name='min2',
             axis=1,
             keepdims=True,
             is_output=True,
         )
         tensor_out3, = ugraph.add_op(
+            'MinOperator',
             tensor_x,
-            op_type='Min',
             name='min3',
             axis=-1,
             keepdims=False,

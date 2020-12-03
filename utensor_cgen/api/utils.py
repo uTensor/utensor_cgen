@@ -4,7 +4,7 @@ import click
 
 
 def show_ugraph(ugraph, oneline=False, ignore_unknown_op=False):
-  from utensor_cgen.backend.utensor.code_generator.legacy._operators import OperatorFactory
+  from utensor_cgen.backend.utensor.code_generator.rearch._operators import OperatorFactory
 
   unknown_ops = set([])
   if oneline:
@@ -16,7 +16,7 @@ def show_ugraph(ugraph, oneline=False, ignore_unknown_op=False):
                         inputs=[tensor.name for tensor in op_info.input_tensors],
                         outputs=[tensor.name for tensor in op_info.output_tensors])
       click.echo(msg)
-      if not OperatorFactory.is_supported(op_info.op_type):
+      if not OperatorFactory.is_supported(op_info):
         unknown_ops.add(op_info)
   else:
     tmpl = click.style('op_name: {op_name}\n', fg='yellow', bold=True) + \
@@ -28,6 +28,8 @@ def show_ugraph(ugraph, oneline=False, ignore_unknown_op=False):
       ouptut(s):
         {outputs}
         {output_shapes}
+      op_attr:
+        {op_attr}
     '''
     tmpl = textwrap.dedent(tmpl)
     paragraphs = []
@@ -39,9 +41,10 @@ def show_ugraph(ugraph, oneline=False, ignore_unknown_op=False):
         inputs=op_info.input_tensors,
         outputs=op_info.output_tensors,
         input_shapes=[tensor.shape for tensor in op_info.input_tensors],
-        output_shapes=[tensor.shape for tensor in op_info.output_tensors])
+        output_shapes=[tensor.shape for tensor in op_info.output_tensors],
+        op_attr=op_info.op_attr)
       paragraphs.append(op_str)
-      if not OperatorFactory.is_supported(op_info.op_type):
+      if not OperatorFactory.is_supported(op_info):
         unknown_ops.add(op_info)
     click.echo('\n'.join(paragraphs))
   click.secho(

@@ -7,20 +7,20 @@ jobs:
       - checkout
         #- run: apt update
       - run: mkdir -p /tmp/coverage && mkdir -p /tmp/test_results
-      - run: pip3 install pytest
+      - run: pip3 install -U pip && pip3 install pytest
       - run: pip3 install .
-      - run: 
+      - run:
           name: Test
-          command: LC_ALL=C.UTF-8 LANG=C.UTF-8 pytest -vv tests -m 'not slow_test and not deprecated'
+          command: LC_ALL=C.UTF-8 LANG=C.UTF-8 pytest -vv tests -m 'not slow_test and not deprecated and not beta_release'
           #- run: genhtml main_coverage.info --output-directory /tmp/coverage
           #- store_test_results:
           #    path: /tmp/test_results
           #- store_artifacts:
           #    path: /tmp/coverage
           #    prefix: coverage
-        
+
 workflows:
-    version: 2
-    run_ci:
-        jobs:
-            - build
+  version: 2
+  run_ci:
+    jobs:
+      - build

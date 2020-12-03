@@ -353,8 +353,11 @@ def reshape_op_data(op, fb_mdel):
 
     option = ReshapeOptions()
     builtin_data = op.BuiltinOptions()
-    option.Init(builtin_data.Bytes, builtin_data.Pos)
-    option_dict["new_shape"] = list(option.NewShapeAsNumpy())
+    if builtin_data is None:
+      option_dict["new_shape"] = list()
+    else:
+      option.Init(builtin_data.Bytes, builtin_data.Pos)
+      option_dict["new_shape"] = list(option.NewShapeAsNumpy())
   else:
     option_dict[
       _CUSTOM_OPTION_FORMAT_MAP[op.CustomOptionsFormat()]

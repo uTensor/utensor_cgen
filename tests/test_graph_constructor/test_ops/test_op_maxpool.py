@@ -4,13 +4,13 @@ import numpy as np
 def test_op_maxpool(ugraph):
     with ugraph.begin_construction():
         tensor_x, = ugraph.add_op(
-            np.random.rand(10, 256, 256, 5),
-            op_type='Const',
+            'Constant',
+            values=np.random.rand(10, 256, 256, 5),
             name='x'
         )
         tensor_out, = ugraph.add_op(
+            'MaxPoolOperator',
             tensor_x,
-            op_type='MaxPool',
             name='pool',
             ksize_height=32,
             ksize_width=32,

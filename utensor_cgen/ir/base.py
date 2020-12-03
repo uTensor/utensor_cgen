@@ -276,12 +276,12 @@ class OperationInfo(IRBase, _NoShallowCopyMixin):
 
   n_inputs = attr.ib()
   @n_inputs.default
-  def default_n_inputs(self):
+  def __default_n_inputs(self):
     return len(self.input_tensors)
 
   n_outputs = attr.ib()
   @n_outputs.default
-  def default_n_outputs(self):
+  def __default_n_outputs(self):
     return len(self.output_tensors)
 
   def __attrs_post_init__(self):
@@ -440,7 +440,11 @@ class OperationInfo(IRBase, _NoShallowCopyMixin):
 
 
 @attr.s(cmp=False)
-class uTensorGraph(IRBase, _NoShallowCopyMixin, uTensorGraphBuilderMixin):
+class uTensorGraph(
+  IRBase,
+  _NoShallowCopyMixin,
+  uTensorGraphBuilderMixin
+):
   """
   :param output_nodes: a list of names of ops which are the output nodes
     in the graph

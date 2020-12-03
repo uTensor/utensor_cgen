@@ -1,16 +1,16 @@
+import os
+
+import numpy as np
 from pytest import fixture
 
-import os
-import numpy as np
-
-import tensorflow as tf
-from tensorflow.keras.models import Sequential, save_model, load_model
-from tensorflow.keras.layers import MaxPool2D, ReLU, Conv2D, Softmax, Dense, Flatten
-from tensorflow.keras.losses import sparse_categorical_crossentropy
-from tensorflow.keras.optimizers import Adam
 
 @fixture(scope='session', name='keras_model')
 def keras_model():
+    from tensorflow.keras.layers import (Conv2D, Dense, Flatten, MaxPool2D,
+                                         ReLU, Softmax)
+    from tensorflow.keras.losses import sparse_categorical_crossentropy
+    from tensorflow.keras.models import Sequential, load_model, save_model
+    from tensorflow.keras.optimizers import Adam
 
     input_shape = (28,28,1)
     no_classes = 10
@@ -38,6 +38,7 @@ def keras_model():
 
 @fixture(scope='session', name='keras_model_dset')
 def keras_model_dset():
+    import tensorflow as tf
     mnist = tf.keras.datasets.mnist
 
     (x_train, y_train), (x_test, y_test) = mnist.load_data()

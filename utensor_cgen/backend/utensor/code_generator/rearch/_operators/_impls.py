@@ -5,9 +5,11 @@ from jinja2 import Template
 
 from utensor_cgen.backend.utensor.snippets._types import NP_TYPES_MAP
 from utensor_cgen.backend.utensor.snippets.rearch import *
+from utensor_cgen.matcher import OpEqualityDelegateBase, _morphism
 from utensor_cgen.utils import must_return_type
 
 from ._base import OperatorFactory, _Operator
+from ._graph_builder import *
 
 
 def _c_arr_str(iterable):
@@ -16,10 +18,15 @@ def _c_arr_str(iterable):
   )
 
 
+class uTensorOpEqualityDelegate(OpEqualityDelegateBase): pass
+
+
 @OperatorFactory.register
-class _AddOperator(_Operator):
+@uTensorOpEqualityDelegate.is_associative(
+  permutations=((0, 1), (1, 0))
+)
+class _AddOperator(_GenericAddOperator):
   namespaces = ('ReferenceOperators',)
-  op_type = 'AddOperator'
 
   def get_declare_snippet(self, op_var_name, with_const_params=True):
     return DeclareOpSnippet(
@@ -49,7 +56,7 @@ class _AddOperator(_Operator):
 
 
 @OperatorFactory.register
-class _AddOperator(_Operator):
+class _MulOperator(_Operator):
   namespaces = ('ReferenceOperators',)
   op_type = 'MulOperator'
 
@@ -351,9 +358,8 @@ class _DequantizeOperator(_Operator):
 
 
 @OperatorFactory.register
-class _ReLUOperator(_Operator):
+class _ReLUOperator(_GenericReLUOperator):
   namespaces = ('ReferenceOperators',)
-  op_type = "ReLUOperator"
 
   def get_declare_snippet(self, op_var_name, with_const_params=True):
     return DeclareOpSnippet(
@@ -415,9 +421,8 @@ class _ReLU6Operator(_Operator):
 
 
 @OperatorFactory.register
-class _MinOperator(_Operator):
+class _MinOperator(_GenericMinOperator):
   namespaces = ('ReferenceOperators',)
-  op_type = 'MinOperator'
 
   def get_declare_snippet(self, op_var_name, with_const_params=True):
     return DeclareOpSnippet(
@@ -447,9 +452,8 @@ class _MinOperator(_Operator):
 
 
 @OperatorFactory.register
-class _MaxOperator(_Operator):
+class _MaxOperator(_GenericMaxOperator, _Operator):
   namespaces = ('ReferenceOperators',)
-  op_type = 'MaxOperator'
 
   def get_declare_snippet(self, op_var_name, with_const_params=True):
     return DeclareOpSnippet(
@@ -478,7 +482,7 @@ class _MaxOperator(_Operator):
     )
 
 
-class _PoolingOperatorMixin(object):
+class _PoolingOperatorMixin:
 
   @classmethod
   @must_return_type(Hashable)
@@ -504,6 +508,7 @@ class _PoolingOperatorMixin(object):
     stride_str = _c_arr_str(strides)
     ksize_str = _c_arr_str(ksize)
     return (ksize_str, stride_str, padding)
+
 
 @OperatorFactory.register
 class _AvgPoolOperator(_PoolingOperatorMixin, _Operator):
@@ -536,10 +541,10 @@ class _AvgPoolOperator(_PoolingOperatorMixin, _Operator):
       nested_namespaces=type(self).namespaces,
     )
 
+
 @OperatorFactory.register
-class _MaxPoolOperator(_PoolingOperatorMixin, _Operator):
+class _MaxPoolOperator(_GenericMaxOperator, _PoolingOperatorMixin):
   namespaces = ('ReferenceOperators',)
-  op_type = 'MaxPoolOperator'
 
   def get_declare_snippet(self, op_var_name, with_const_params=True):
     return DeclareOpSnippet(
@@ -600,7 +605,7 @@ class _MinPoolOperator(_PoolingOperatorMixin, _Operator):
     )
 
 
-class _CommonParams(_Operator):
+class _CommonParams:
   _PADDING_MAP = {
     0: "SAME", # "UNKNOWN",
     1: "VALID",
@@ -629,9 +634,8 @@ class _CommonParams(_Operator):
 
 
 @OperatorFactory.register
-class _Conv2dOperator(_CommonParams):
+class _Conv2dOperator(_GenericConv2dOperator, _CommonParams):
   namespaces = ('ReferenceOperators',)
-  op_type = 'Conv2dOperator'
 
   @classmethod
   @must_return_type(Hashable)
@@ -672,7 +676,7 @@ class _Conv2dOperator(_CommonParams):
 
 
 @OperatorFactory.register
-class _QuantDWSConvOperator(_CommonParams):
+class _QuantDWSConvOperator(_Operator, _CommonParams):
   namespaces = ('TflmSymQuantOps',)
   op_type = "DepthwiseSeparableConvOperator"
 
@@ -725,7 +729,7 @@ class _QuantDWSConvOperator(_CommonParams):
 
 
 @OperatorFactory.register
-class _DWSConvOperator(_CommonParams):
+class _DWSConvOperator(_Operator, _CommonParams):
   namespaces = ('ReferenceOperators',)
   op_type = "DepthwiseSeparableConvOperator"
 
@@ -770,7 +774,7 @@ class _DWSConvOperator(_CommonParams):
 
 
 @OperatorFactory.register
-class _QuantizedFullyConnectedOperator(_CommonParams):
+class _QuantizedFullyConnectedOperator(_Operator, _CommonParams):
   namespaces = ('TflmSymQuantOps',)
   op_type = "FullyConnectedOperator"
 
@@ -811,9 +815,8 @@ class _QuantizedFullyConnectedOperator(_CommonParams):
 
 
 @OperatorFactory.register
-class _FullyConnectedOperator(_CommonParams):
+class _FullyConnectedOperator(_GenericFullyConnectedOperator, _CommonParams):
   namespaces = ("ReferenceOperators",)
-  op_type = "FullyConnectedOperator"
 
   @classmethod
   @must_return_type(Hashable)

@@ -7,8 +7,9 @@ Node fusion for QuantConv2d QuantMaxPool operators
 from copy import deepcopy
 
 import tensorflow as tf
+
 # FIXME: remove uTensorOpEqualityDelegate import after we have generic ops
-from utensor_cgen.backend.utensor.code_generator.legacy._operators import \
+from utensor_cgen.backend.utensor.code_generator.rearch._operators import \
     uTensorOpEqualityDelegate
 from utensor_cgen.frontend.tensorflow import GraphDefParser
 from utensor_cgen.ir import OperationInfo, TensorInfo, uTensorGraph
@@ -17,12 +18,13 @@ from utensor_cgen.utils import prune_graph, topologic_order_graph
 
 from .base import Transformer
 from .pipeline import TransformerPipeline
-from .quantize import QuantizeTransformer
+
+# from .quantize import QuantizeTransformer
 
 __all__ = ["ConvPoolTransformer"]
 
 
-@TransformerPipeline.register_transformer
+# @TransformerPipeline.register_transformer
 class ConvPoolTransformer(Transformer):
   METHOD_NAME = 'conv_pool'
   KWARGS_NAMESCOPE = '_conv_pool'

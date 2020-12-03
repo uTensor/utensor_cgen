@@ -21,32 +21,9 @@ class uTensorGraphLowerBase(BackendPart):
     handler = self.get_handler(ugraph)
     return handler(ugraph)
 
-class uTensorLegacyGraphLower(uTensorGraphLowerBase):
-  PART = 'legacy_graph_lower'
-
-  def handle_tensorflow(self, ugraph):
-    for op_info in ugraph.get_ops_by_type('AddOperator'):
-      op_info.op_type = 'Add'
-    return ugraph
-
-  @class_property
-  def default_config(cls):
-    return {}
-
 
 class uTensorRearchGraphLower(uTensorGraphLowerBase):
   PART = 'rearch_graph_lower'
-
-  class OptypeRenameManager(object):
-    NAME_MAP = {
-      'Add': 'AddOperator',
-      'Conv2D': 'ConvOperator',
-      'MatMul': 'MatrixMultOperator'
-    }
-
-    @classmethod
-    def get_new_optype(cls, op_type):
-      return cls.NAME_MAP.get(op_type, op_type)
   
   class CodgenAttributes(object):
 
@@ -130,8 +107,7 @@ class uTensorRearchGraphLower(uTensorGraphLowerBase):
     cls.OptypeRenameManager.NAME_MAP[generic_name] = target_specific_name
 
   def handle_tensorflow(self, ugraph):
-    for op_info in ugraph.ops_info.values():
-      op_info.op_type = self.OptypeRenameManager.get_new_optype(op_info.op_type)
+    self.CodgenAttributes.apply(ugraph)
  
   def handle_tflite(self, ugraph):
     self.CodgenAttributes.apply(ugraph)

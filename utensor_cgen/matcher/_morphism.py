@@ -34,7 +34,7 @@ class IdentityMorphism(GenericMorphism):
 
 @attr.s
 class Const2InlineMorphism(TypedMorphism):
-  from_op_type = 'Const'
+  from_op_type = 'Constant'
 
   def apply(self, from_op):
     new_op = deepcopy(from_op, memo={'ugraph': from_op.ugraph})
@@ -48,5 +48,5 @@ class Inline2ConstMorphism(TypedMorphism):
 
   def apply(self, from_op):
     new_op = deepcopy(from_op, memo={'ugraph': from_op.ugraph})
-    new_op.op_type = 'Const'
+    new_op.op_type = 'Constant'
     return new_op

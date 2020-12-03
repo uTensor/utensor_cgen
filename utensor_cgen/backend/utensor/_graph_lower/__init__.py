@@ -1,1 +1,1 @@
-from ._op_lower import uTensorLegacyGraphLower, uTensorRearchGraphLower
+from ._op_lower import uTensorRearchGraphLower
