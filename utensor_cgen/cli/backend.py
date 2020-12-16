@@ -52,6 +52,11 @@ def list_support_ops(target, config):
   else:
     backend = BackendManager.get_backend(target)({})
   click.secho(
+    f"Supported ops in {target!r}:",
+    fg="green",
+    bold=True,
+  )
+  click.secho(
     pformat(backend.support_ops),
     fg='white',
     bold=True

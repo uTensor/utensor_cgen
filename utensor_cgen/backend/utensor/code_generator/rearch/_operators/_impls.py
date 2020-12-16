@@ -543,7 +543,7 @@ class _AvgPoolOperator(_PoolingOperatorMixin, _Operator):
 
 
 @OperatorFactory.register
-class _MaxPoolOperator(_GenericMaxOperator, _PoolingOperatorMixin):
+class _MaxPoolOperator(_GenericMaxPoolOperator, _PoolingOperatorMixin):
   namespaces = ('ReferenceOperators',)
 
   def get_declare_snippet(self, op_var_name, with_const_params=True):
