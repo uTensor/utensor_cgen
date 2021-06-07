@@ -17,7 +17,10 @@ class TFLiteLegalizer(LegalizerBase):
   def legalize_ops(self, ugraph):
     _GraphRewrite.apply(ugraph)
     _OpTypeRename.apply(ugraph)
-    ugraph = _hotfix_reshape(ugraph)
+    # import pdb
+
+    # pdb.set_trace()
+    # ugraph = _hotfix_reshape(ugraph)
     return ugraph
   
   def legalize_dtype(self, ugraph):
@@ -120,7 +123,7 @@ class _GraphRewrite(object):
             op_info.op_attr['FusedActivationFunction']
             )
         )
-      elif act_op_type is 'None':
+      elif act_op_type == 'None':
         # no activation is set, ignore
         continue
       else:

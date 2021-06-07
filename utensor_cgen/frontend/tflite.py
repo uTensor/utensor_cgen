@@ -87,7 +87,7 @@ class TFLiteParser(Parser):
           f'Unexpected character founded in tensor name {tensor_name}, will be replaced or pruned'
         )
       tensor_name = tensor_name.replace(';', '__')
-      if tensor_name is "" or None:
+      if tensor_name == "" or tensor_name is None:
         tensor_name = "tensor_" + str(idx)
 
       dtype = self._TENSOR_NP_TYPE[tensor.Type()]
@@ -301,7 +301,8 @@ def fully_connected_op_data(op, fb_mdel):
 def depthwise_conv2d_op_data(op, fb_mdel):
   option_dict = {}
   if op.CustomOptionsLength() < 1:
-    from .tflite_flatbuffer.DepthwiseConv2DOptions import DepthwiseConv2DOptions
+    from .tflite_flatbuffer.DepthwiseConv2DOptions import \
+        DepthwiseConv2DOptions
 
     option = DepthwiseConv2DOptions()
     builtin_data = op.BuiltinOptions()
@@ -443,6 +444,7 @@ def argmax_op_data(op, fb_mdel):
 def transpose_op_data(op, fb_model):
   option_dict = {}
   from .tflite_flatbuffer.TransposeOptions import TransposeOptions
+
   # no filed declared in the fbs file for TransposeOptions
   # skipping here
   # this function is here just for silencing the warning msg
