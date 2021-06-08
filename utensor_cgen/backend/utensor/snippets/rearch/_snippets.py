@@ -21,7 +21,10 @@ __all__ = [
   "QuantDepthwiseSeperateConvOpEvalSnippet",
   "AddOpEvalSnippet",
   "MulOpEvalSnippet",
+  "DivOpEvalSnippet",
+  "SubOpEvalSnippet",
   "SinEvalSnippet",
+  "TanhEvalSnippet",
   "TransposeEvalSnippet",
   "ReshahpeEvalSnippet",
   "QuantizeEvalSnippet",
@@ -38,6 +41,8 @@ __all__ = [
   "MaxPoolEvalSnippet",
   "QuantizedFullyConnectedSnippet",
   "FullyConnectedSnippet",
+  "StridedSliceSnippet",
+  "ConcatSnippet",
   "MissingOpEvalSnippet",
   "ModelApiContainer",
   "TimeSlotContainer",
@@ -228,7 +233,22 @@ class MulOpEvalSnippet(OpEvalSnippet):
   __outputs__ = ['c']
 
 
+class DivOpEvalSnippet(OpEvalSnippet):
+  __inputs__ = ['a', 'b']
+  __outputs__ = ['c']
+
+
+class SubOpEvalSnippet(OpEvalSnippet):
+  __inputs__ = ['a', 'b']
+  __outputs__ = ['c']
+
+
 class SinEvalSnippet(OpEvalSnippet):
+  __inputs__ = ["act_in"]
+  __outputs__ = ["act_out"]
+
+
+class TanhEvalSnippet(OpEvalSnippet):
   __inputs__ = ["act_in"]
   __outputs__ = ["act_out"]
 
@@ -291,6 +311,7 @@ class AvgPoolEvalSnippet(OpEvalSnippet):
   __inputs__ = ["in"]
   __outputs__ = ["out"]
 
+
 class MinPoolEvalSnippet(OpEvalSnippet):
   __inputs__ = ["in"]
   __outputs__ = ["out"]
@@ -310,6 +331,15 @@ class FullyConnectedSnippet(OpEvalSnippet):
   __inputs__ = ["input", "filter", "bias"]
   __outputs__ = ["output"]
 
+
+class StridedSliceSnippet(OpEvalSnippet):
+  __inputs__ = ["input", "begin", "end", "strides"]
+  __outputs__ = ["output"]
+
+
+class ConcatSnippet(OpEvalSnippet):
+  __inputs__ = ["a", "b"]
+  __outputs__ = ["out"]
 
 class MissingOpEvalSnippet(OpEvalSnippet):
   __template_name__ = "snippets/rearch/op_missing.cpp"

@@ -2,8 +2,8 @@
 {%for snp in construct_op_snippets%}
 {%if not loop.first%}, {%endif%}{{snp.render()}}{%endfor%}
 {
-  Context::get_default_context()->set_ram_data_allocator(&ram_allocator);
-  Context::get_default_context()->set_metadata_allocator(&metadata_allocator);
+  // Context::get_default_context()->set_ram_data_allocator(&ram_allocator);
+  // Context::get_default_context()->set_metadata_allocator(&metadata_allocator);
   // TODO: moving ROMTensor declarations here
 }
 

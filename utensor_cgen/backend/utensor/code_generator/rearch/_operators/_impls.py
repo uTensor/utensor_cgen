@@ -56,6 +56,9 @@ class _AddOperator(_GenericAddOperator):
 
 
 @OperatorFactory.register
+@uTensorOpEqualityDelegate.is_associative(
+  permutations=((0, 1), (1, 0))
+)
 class _MulOperator(_Operator):
   namespaces = ('ReferenceOperators',)
   op_type = 'MulOperator'
@@ -88,14 +91,74 @@ class _MulOperator(_Operator):
 
 
 @OperatorFactory.register
+class _DivOperator(_Operator):
+  namespaces = ('ReferenceOperators',)
+  op_type = 'DivOperator'
+
+  def get_declare_snippet(self, op_var_name, with_const_params=True):
+    return DeclareOpSnippet(
+      op=self,
+      templ_dtypes=[self.in_dtypes[0]],
+      op_var_name=op_var_name,
+      nested_namespaces=type(self).namespaces,
+      with_const_params=with_const_params,
+    )
+
+  def get_eval_snippet(self, op_var_name, op_info, tensor_var_map):
+    return DivOpEvalSnippet(
+      op_info=op_info,
+      templ_dtypes=[self.in_dtypes[0]],
+      op_name=op_var_name,
+      tensor_var_map=tensor_var_map,
+      nested_namespaces=type(self).namespaces,
+    )
+
+  def get_construct_snippet(self, op_var_name):
+    return OpConstructSnippet(
+      op=self,
+      templ_dtypes=[self.in_dtypes[0]],
+      op_var_name=op_var_name,
+      nested_namespaces=type(self).namespaces,
+    )
+
+
+@OperatorFactory.register
+class _SubOperator(_Operator):
+  namespaces = ('ReferenceOperators',)
+  op_type = 'SubOperator'
+
+  def get_declare_snippet(self, op_var_name, with_const_params=True):
+    return DeclareOpSnippet(
+      op=self,
+      templ_dtypes=[self.in_dtypes[0]],
+      op_var_name=op_var_name,
+      nested_namespaces=type(self).namespaces,
+      with_const_params=with_const_params,
+    )
+
+  def get_eval_snippet(self, op_var_name, op_info, tensor_var_map):
+    return SubOpEvalSnippet(
+      op_info=op_info,
+      templ_dtypes=[self.in_dtypes[0]],
+      op_name=op_var_name,
+      tensor_var_map=tensor_var_map,
+      nested_namespaces=type(self).namespaces,
+    )
+
+  def get_construct_snippet(self, op_var_name):
+    return OpConstructSnippet(
+      op=self,
+      templ_dtypes=[self.in_dtypes[0]],
+      op_var_name=op_var_name,
+      nested_namespaces=type(self).namespaces,
+    )
+
+
+@OperatorFactory.register
 class _SinOperator(_Operator):
   namespaces = ('ReferenceOperators',)
   op_type = 'SinOperator'
 
-  @classmethod
-  def get_type_signature(cls, op_info):
-    return ((op_info.output_tensors[0].dtype,), (op_info.input_tensors[0].dtype,))
-  
   def get_declare_snippet(self, op_var_name, with_const_params=True):
     return DeclareOpSnippet(
       self,
@@ -124,13 +187,53 @@ class _SinOperator(_Operator):
 
 
 @OperatorFactory.register
+class _TanhOperator(_Operator):
+  namespaces = ('ReferenceOperators',)
+  op_type = "TanhOperator"
+
+  def get_declare_snippet(self, op_var_name, with_const_params=True, **kwargs):
+    """Snippet for delaring the operator
+
+    Parameters
+    ----------
+    - `op_var_name` (str): the variable name for the operator
+    - `with_const_params` (bool): whether to emit constructor parameters in the snippet
+
+    Return
+    ------
+    an object with `render` method which takes no arguments and return a string, normally
+    it's a `DeclareOpSnippet` object.
+    """
+    return DeclareOpSnippet(
+      self,
+      templ_dtypes=[self.in_dtypes[0]],
+      op_var_name=op_var_name,
+      nested_namespaces=self.namespaces,
+      with_const_params=with_const_params,
+    )
+
+  def get_eval_snippet(self, op_var_name, op_info, tensor_var_map, **kwargs):
+    return TanhEvalSnippet(
+      op_info,
+      templ_dtypes=[self.in_dtypes[0]],
+      op_name=op_var_name,
+      tensor_var_map=tensor_var_map,
+      nested_namespaces=self.namespaces
+    )
+  
+  def get_construct_snippet(self, op_var_name):
+    return OpConstructSnippet(
+      self,
+      templ_dtypes=[self.in_dtypes[0]],
+      op_var_name=op_var_name,
+      nested_namespaces=self.namespaces
+    )
+
+
+@OperatorFactory.register
 class _TransposeOperator(_Operator):
   namespaces = ('ReferenceOperators',)
   op_type = "TransposeOperator"
-
-  @classmethod
-  def get_type_signature(cls, op_info):
-    return ((op_info.input_tensors[0].dtype,), tuple())
   
   def get_declare_snippet(self, op_var_name, with_const_params=True):
     return DeclareOpSnippet(
@@ -842,6 +945,91 @@ class _FullyConnectedOperator(_GenericFullyConnectedOperator, _CommonParams):
     return FullyConnectedSnippet(
       op_info=op_info,
       templ_dtypes=[self.out_dtypes[0]],
+      op_name=op_var_name,
+      tensor_var_map=tensor_var_map,
+      nested_namespaces=type(self).namespaces,
+    )
+
+  def get_construct_snippet(self, op_var_name):
+    return OpConstructSnippet(
+      op=self,
+      templ_dtypes=[self.out_dtypes[0]],
+      op_var_name=op_var_name,
+      nested_namespaces=type(self).namespaces,
+    )
+
+
+@OperatorFactory.register
+class _StridedSliceOperator(_Operator):
+  namespaces = ("ReferenceOperators",)
+  op_type = "StridedSliceOperator"
+
+  @classmethod
+  @must_return_type(Hashable)
+  def get_constructor_parameters(cls, op_info):
+    begin_mask = op_info.op_attr["begin_mask"]
+    end_mask = op_info.op_attr["end_mask"]
+    ellipsis_mask = op_info.op_attr['ellipsis_mask']
+    new_axis_mask = op_info.op_attr["new_axis_mask"]
+    shrink_axis_mask = op_info.op_attr["shrink_axis_mask"]
+    return (
+      f'{begin_mask}',
+      f'{end_mask}',
+      f'{ellipsis_mask}',
+      f'{new_axis_mask}',
+      f'{shrink_axis_mask}'
+    )
+  
+  def get_declare_snippet(self, op_var_name, with_const_params=True):
+    return DeclareOpSnippet(
+      op=self,
+      templ_dtypes=[self.in_dtypes[0]],
+      op_var_name=op_var_name,
+      nested_namespaces=type(self).namespaces,
+      with_const_params=with_const_params,
+    )
+
+  def get_eval_snippet(self, op_var_name, op_info, tensor_var_map):
+    return StridedSliceSnippet(
+      op_info=op_info,
+      templ_dtypes=[self.in_dtypes[0]],
+      op_name=op_var_name,
+      tensor_var_map=tensor_var_map,
+      nested_namespaces=type(self).namespaces,
+    )
+
+  def get_construct_snippet(self, op_var_name):
+    return OpConstructSnippet(
+      op=self,
+      templ_dtypes=[self.out_dtypes[0]],
+      op_var_name=op_var_name,
+      nested_namespaces=type(self).namespaces,
+    )
+
+@OperatorFactory.register
+class _ConcatOperator(_Operator):
+  namespaces = ("ReferenceOperators",)
+  op_type = "ConcatOperator"
+
+  @classmethod
+  @must_return_type(Hashable)
+  def get_constructor_parameters(cls, op_info):
+    axis = op_info.op_attr["axis"]
+    return (f'{axis}',)
+  
+  def get_declare_snippet(self, op_var_name, with_const_params=True):
+    return DeclareOpSnippet(
+      op=self,
+      templ_dtypes=[self.in_dtypes[0]],
+      op_var_name=op_var_name,
+      nested_namespaces=type(self).namespaces,
+      with_const_params=with_const_params,
+    )
+
+  def get_eval_snippet(self, op_var_name, op_info, tensor_var_map):
+    return ConcatSnippet(
+      op_info=op_info,
+      templ_dtypes=[self.in_dtypes[0]],
       op_name=op_var_name,
       tensor_var_map=tensor_var_map,
       nested_namespaces=type(self).namespaces,
