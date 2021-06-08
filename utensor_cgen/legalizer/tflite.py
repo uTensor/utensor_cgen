@@ -3,7 +3,7 @@ from copy import deepcopy
 from functools import reduce
 
 from utensor_cgen.ir.base import OperationInfo, TensorInfo
-from utensor_cgen.utils import topologic_order_graph
+from utensor_cgen.utils import prune_graph, topologic_order_graph
 
 from .api import Legalizer
 from .base import LegalizerBase
@@ -17,10 +17,7 @@ class TFLiteLegalizer(LegalizerBase):
   def legalize_ops(self, ugraph):
     _GraphRewrite.apply(ugraph)
     _OpTypeRename.apply(ugraph)
-    # import pdb
-
-    # pdb.set_trace()
-    # ugraph = _hotfix_reshape(ugraph)
+    ugraph = _hotfix_reshape(ugraph)
     return ugraph
   
   def legalize_dtype(self, ugraph):
@@ -46,6 +43,11 @@ class _OpTypeRename(object):
     "Sin": "SinOperator",
     "Transpose": "TransposeOperator",
     "Const": "Constant",
+    "Sub": "SubOperator",
+    "Tanh": "TanhOperator",
+    "Concatenation": "ConcatOperator",
+    "StridedSlice": "StridedSliceOperator",
+    "Div": "DivOperator",
   }
   
   @classmethod
@@ -63,6 +65,8 @@ class _GraphRewrite(object):
   def apply(cls, ugraph):
     cls._handle_fully_connected(ugraph)
     cls._handle_conv_2d(ugraph)
+    cls._handle_expand_dims(ugraph)
+    cls._handle_concat(ugraph)
 
   @classmethod
   def _handle_fully_connected(cls, ugraph):
@@ -151,3 +155,99 @@ class _GraphRewrite(object):
             if input_tensor.name == ori_out_tensor.name:
               consumer_op.input_tensors[i] = act_tensor
     topologic_order_graph(ugraph)
+
+  @classmethod
+  def _handle_expand_dims(cls, ugraph):
+    """
+    replace all ExpandDims operator with Reshape
+    """
+    ops_to_remove = set()
+    for op in ugraph.get_ops_by_type("ExpandDims"):
+      new_shape = op.output_tensors[0].shape
+      reshape_op = OperationInfo(
+        name=f'{op.name}_AsReshape',
+        op_type="Reshape",
+        lib_name="tflite",
+        ugraph=ugraph,
+        input_tensors=op.input_tensors[:1],
+        output_tensors=[
+          TensorInfo(
+            name=f'{op.name}_AsReshape:0',
+            op_name=f'{op.name}_AsReshape',
+            dtype=op.output_tensors[0].dtype,
+            shape=new_shape,
+            ugraph=ugraph,
+            attributes=deepcopy(op.output_tensors[0].attributes),
+          )
+        ],
+        op_attr={
+          'new_shape': new_shape
+        }
+      )
+      out_tensor_name = op.output_tensors[0].name
+      for out_op in op.output_nodes:
+        for i, in_tensor in enumerate(out_op.input_tensors):
+          if in_tensor.name == out_tensor_name:
+            out_op.input_tensors[i] = reshape_op.output_tensors[0]
+      ops_to_remove.add(op.name)
+    if ops_to_remove:
+      prune_graph(ugraph, inplace=True)
+
+  @classmethod
+  def _handle_concat(cls, ugraph):
+    """
+    expand concat op with more than 2 inputs to multiple concat
+
+    ex: concat(a, b, c, axis=3) -> concat(concat(a, b, axis=3), c, axis=3)
+    """
+    def _expand(op):
+      cnt = 1
+      axis = op.op_attr["axis"]
+      new_shape = op.input_tensors[0].shape[:]
+      new_shape[axis] += op.input_tensors[1].shape[axis]
+      op_prime = OperationInfo(
+        name=f"{op.name}_{cnt:02d}",
+        op_type=op.op_type,
+        lib_name=op.lib_name,
+        ugraph=ugraph,
+        input_tensors=op.input_tensors[:2],
+        output_tensors=[
+          TensorInfo(
+            name=f'{op.name}_{cnt:02d}:0',
+            op_name=f"{op.name}_{cnt:02d}",
+            dtype=op.output_tensors[0].dtype,
+            shape=new_shape,
+            ugraph=ugraph
+          ),
+        ],
+        op_attr=deepcopy(op.op_attr),
+      )
+      for tensor in op.input_tensors[2:]:
+        new_shape = op_prime.output_tensors[0].shape[:]
+        new_shape[axis] += tensor.shape[axis]
+        cnt += 1
+        op_prime = OperationInfo(
+          name=f"{op.name}_{cnt:02d}",
+          op_type=op.op_type,
+          lib_name=op.lib_name,
+          ugraph=ugraph,
+          input_tensors=[op_prime.output_tensors[0], tensor],
+          output_tensors=[
+            TensorInfo(
+              name=f'{op.name}_{cnt:02d}:0',
+              op_name=f"{op.name}_{cnt:02d}",
+              dtype=op.output_tensors[0].dtype,
+              shape=new_shape,
+              ugraph=ugraph
+            ),
+          ],
+          op_attr=deepcopy(op.op_attr),
+        )
+      for out_op in op.output_nodes:
+        for i, tensor in enumerate(out_op.input_tensors):
+          if tensor.name == op.output_tensors[0].name:
+            out_op.input_tensors[i] = op_prime.output_tensors[0]
+      prune_graph(ugraph, inplace=True)
+    for op in ugraph.get_ops_by_type("Concatenation"):
+      if len(op.input_tensors) > 2:
+        _expand(op)

@@ -397,7 +397,7 @@ def ops_bfs_queue(ugraph, init_nodes=None):
     bfs_deck.append(op)
   return bfs_deck
 
-def prune_graph(ugraph, output_nodes=None):
+def prune_graph(ugraph, output_nodes=None, inplace=False):
   """
   Remove nodes that is no longer needed *in-place*
 
@@ -410,7 +410,10 @@ def prune_graph(ugraph, output_nodes=None):
   :param output_nodes: the output nodes
   :type output_nodes: List[String]
   """
-  new_ugraph = deepcopy(ugraph)
+  if inplace:
+    new_ugraph = ugraph
+  else:
+    new_ugraph = deepcopy(ugraph)
   if output_nodes is None:
     output_nodes = ugraph.output_nodes[:]
   else:

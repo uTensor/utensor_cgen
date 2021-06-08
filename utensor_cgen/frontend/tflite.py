@@ -13,7 +13,7 @@ from utensor_cgen.legalizer import Legalizer
 from utensor_cgen.logger import logger
 from utensor_cgen.utils import topologic_order_graph
 
-# schema: https://github.com/tensorflow/tensorflow/blob/master/tensorflow/lite/schema/schema.fbs
+# schema: https://github.com/tensorflow/tensorflow/blob/a5c0bbb2d15b0708d508f9c930d65d4a584aa338/tensorflow/lite/schema/schema.fbs
 from .tflite_flatbuffer.ActivationFunctionType import ActivationFunctionType
 from .tflite_flatbuffer.BuiltinOperator import BuiltinOperator
 from .tflite_flatbuffer.CustomOptionsFormat import CustomOptionsFormat
@@ -189,7 +189,7 @@ class TFLiteParser(Parser):
       # topological order, op-index defined by schema
       # BuiltinOperator: https://github.com/tensorflow/tensorflow/blob/031804922d8f4d18b61e3ad077f9f1b69273ff21/tensorflow/lite/schema/schema_v3.fbs#L71
       op = subgraph.Operators(i)
-      op_type = _get_op_type(op, fb_model)
+      op_type = TFLiteParser.get_op_type(op, fb_model)
 
       node_name = str(i) + "_" + op_type
 
@@ -271,13 +271,33 @@ class TFLiteParser(Parser):
   def _format_op_type(self, op_type):
     return ''.join(map(lambda s: s.capitalize(), op_type.split('_')))
 
+  @classmethod
+  def get_op_type(cls, op, fb_model):
+    local_op_code = op.OpcodeIndex()
+    global_op_code = fb_model.OperatorCodes(local_op_code)
+    builtin_op_code = global_op_code.BuiltinCode()
+    return cls._BUILTIN_OPS[builtin_op_code]
 
 # helper functions for parsing op data (will be stored in op_attr)
-def class_option2str(obj, idx):
+def default_op_data(op, fb_mdel):
+  op_type = TFLiteParser.get_op_type(op, fb_mdel)
+  logger.warning('the op data parser is missing for %s', op_type)
+  return {}
+
+_OP_DATA_FUNC_MAP = defaultdict(lambda: default_op_data)
+
+def _register_op_data_func(op_type):
+  def register(func):
+    _OP_DATA_FUNC_MAP[op_type] = func
+    return func
+  return register
+
+def _class_option2str(obj, idx):
   names_lookup = {v: k for k, v in obj.__dict__.items()}
   name = names_lookup[idx]
   return str(idx) + " (" + name + ")"
 
+@_register_op_data_func("FULLY_CONNECTED")
 def fully_connected_op_data(op, fb_mdel):
   option_dict = {}
   if op.CustomOptionsLength() < 1:
@@ -286,10 +306,10 @@ def fully_connected_op_data(op, fb_mdel):
     option = FullyConnectedOptions()
     builtin_data = op.BuiltinOptions()
     option.Init(builtin_data.Bytes, builtin_data.Pos)
-    option_dict["FusedActivationFunction"] = class_option2str(
+    option_dict["FusedActivationFunction"] = _class_option2str(
       ActivationFunctionType, option.FusedActivationFunction()
     )
-    option_dict["w_formats"] = class_option2str(
+    option_dict["w_formats"] = _class_option2str(
       FullyConnectedOptionsWeightsFormat, option.WeightsFormat()
     )
   else:
@@ -298,6 +318,7 @@ def fully_connected_op_data(op, fb_mdel):
     ] = op.CustomOptionsAsNumpy()
   return option_dict
 
+@_register_op_data_func("DEPTHWISE_CONV_2D")
 def depthwise_conv2d_op_data(op, fb_mdel):
   option_dict = {}
   if op.CustomOptionsLength() < 1:
@@ -311,7 +332,7 @@ def depthwise_conv2d_op_data(op, fb_mdel):
     option_dict["StrideW"] = option.StrideW()
     option_dict["StrideH"] = option.StrideH()
     option_dict["DepthMultiplier"] = option.DepthMultiplier()
-    option_dict["FusedActivationFunction"] = class_option2str(
+    option_dict["FusedActivationFunction"] = _class_option2str(
       ActivationFunctionType, option.FusedActivationFunction()
     )
     option_dict["DilationWFactor"] = option.DilationWFactor()
@@ -324,6 +345,7 @@ def depthwise_conv2d_op_data(op, fb_mdel):
 
   return option_dict
 
+@_register_op_data_func("CONV_2D")
 def conv_2d_op_data(op, fb_model):
   option_dict = {}
   if op.CustomOptionsLength() < 1:
@@ -335,7 +357,7 @@ def conv_2d_op_data(op, fb_model):
     option_dict["Padding"] = option.Padding()
     option_dict["StrideW"] = option.StrideW()
     option_dict["StrideH"] = option.StrideH()
-    option_dict["FusedActivationFunction"] = class_option2str(
+    option_dict["FusedActivationFunction"] = _class_option2str(
       ActivationFunctionType, option.FusedActivationFunction()
     )
     option_dict["DilationWFactor"] = option.DilationWFactor()
@@ -347,6 +369,7 @@ def conv_2d_op_data(op, fb_model):
 
   return option_dict
 
+@_register_op_data_func("RESHAPE")
 def reshape_op_data(op, fb_mdel):
   option_dict = {}
   if op.CustomOptionsLength() < 1:
@@ -366,6 +389,7 @@ def reshape_op_data(op, fb_mdel):
 
   return option_dict
 
+@_register_op_data_func("DEQUANTIZE")
 def dequantize_op_data(op, fb_mdel):
   option_dict = {}
   if op.CustomOptionsLength() < 1:
@@ -384,6 +408,7 @@ def dequantize_op_data(op, fb_mdel):
 
   return option_dict
 
+@_register_op_data_func("QUANTIZE")
 def quantize_op_data(op, fb_mdel):
   option_dict = {}
   if op.CustomOptionsLength() < 1:
@@ -402,6 +427,9 @@ def quantize_op_data(op, fb_mdel):
 
   return option_dict
 
+@_register_op_data_func("AVG_POOL_2D")
+@_register_op_data_func("MIN_POOL_2D")
+@_register_op_data_func("MAX_POOL_2D")
 def pool2d_op_data(op, fb_mdel):
   option_dict = {}
   if op.CustomOptionsLength() < 1:
@@ -415,7 +443,7 @@ def pool2d_op_data(op, fb_mdel):
     option_dict["StrideH"] = option.StrideH()
     option_dict["FilterWidth"] = option.FilterWidth()
     option_dict["FilterHeight"] = option.FilterHeight()
-    option_dict["FusedActivationFunction"] = class_option2str(
+    option_dict["FusedActivationFunction"] = _class_option2str(
       ActivationFunctionType, option.FusedActivationFunction()
     )
   else:
@@ -425,7 +453,8 @@ def pool2d_op_data(op, fb_mdel):
 
   return option_dict
 
-def argmax_op_data(op, fb_mdel):
+@_register_op_data_func("ARG_MAX")
+def argmax_op_data(op, fb_model):
   option_dict = {}
   if op.CustomOptionsLength() < 1:
     from .tflite_flatbuffer.ArgMaxOptions import ArgMaxOptions
@@ -441,6 +470,7 @@ def argmax_op_data(op, fb_mdel):
 
   return option_dict
 
+@_register_op_data_func("TRANSPOSE")
 def transpose_op_data(op, fb_model):
   option_dict = {}
   from .tflite_flatbuffer.TransposeOptions import TransposeOptions
@@ -448,29 +478,132 @@ def transpose_op_data(op, fb_model):
   # no filed declared in the fbs file for TransposeOptions
   # skipping here
   # this function is here just for silencing the warning msg
-  pass
   return option_dict
 
-def default_op_data(op, fb_mdel):
-  op_type = _get_op_type(op, fb_mdel)
-  logger.warning('the op data parser is missing for %s', op_type)
+@_register_op_data_func("STRIDED_SLICE")
+def stride_slice_op_data(op, fb_model):
+  option_dict = {}
+  if op.CustomOptionsLength() < 1:
+    from .tflite_flatbuffer.StridedSliceOptions import StridedSliceOptions
+
+    option = StridedSliceOptions()
+    builtin_data = op.BuiltinOptions()
+    option.Init(builtin_data.Bytes, builtin_data.Pos)
+    option_dict["begin_mask"] = option.BeginMask()
+    option_dict["end_mask"] = option.EndMask()
+    option_dict["ellipsis_mask"] = option.EllipsisMask()
+    option_dict["shrink_axis_mask"] = option.ShrinkAxisMask()
+    option_dict["new_axis_mask"] = option.NewAxisMask()
+  else:
+    option_dict[
+      _CUSTOM_OPTION_FORMAT_MAP[op.CustomOptionsFormat()]
+    ] = op.CustomOptionsAsNumpy()
+  return option_dict
+
+@_register_op_data_func("TANH")
+def dummy_op_data(op, fb_model):
+  """
+  dummy func
+  """
   return {}
 
-_OP_DATA_FUNC_MAP = defaultdict(lambda: default_op_data)
-_OP_DATA_FUNC_MAP["QUANTIZE"] = quantize_op_data
-_OP_DATA_FUNC_MAP["DEPTHWISE_CONV_2D"] = depthwise_conv2d_op_data
-_OP_DATA_FUNC_MAP["CONV_2D"] = conv_2d_op_data
-_OP_DATA_FUNC_MAP["AVG_POOL_2D"] = pool2d_op_data
-_OP_DATA_FUNC_MAP["MIN_POOL_2D"] = pool2d_op_data
-_OP_DATA_FUNC_MAP["MAX_POOL_2D"] = pool2d_op_data
-_OP_DATA_FUNC_MAP["RESHAPE"] = reshape_op_data
-_OP_DATA_FUNC_MAP["FULLY_CONNECTED"] = fully_connected_op_data
-_OP_DATA_FUNC_MAP["DEQUANTIZE"] = dequantize_op_data
-_OP_DATA_FUNC_MAP["ARG_MAX"] = argmax_op_data
-_OP_DATA_FUNC_MAP["TRANSPOSE"] = transpose_op_data
+@_register_op_data_func("CONCATENATION")
+def concat_op_data(op, fb_model):
+  option_dict = {}
+  if op.CustomOptionsLength() < 1:
+    from .tflite_flatbuffer.ConcatenationOptions import ConcatenationOptions
 
-def _get_op_type(op, fb_model):
-  local_op_code = op.OpcodeIndex()
-  global_op_code = fb_model.OperatorCodes(local_op_code)
-  builtin_op_code = global_op_code.BuiltinCode()
-  return TFLiteParser._BUILTIN_OPS[builtin_op_code]
+    option = ConcatenationOptions()
+    builtin_data = op.BuiltinOptions()
+    option.Init(builtin_data.Bytes, builtin_data.Pos)
+    option_dict["axis"] = option.Axis()
+    option_dict["FusedActivationFunction"] = _class_option2str(
+      ActivationFunctionType, option.FusedActivationFunction()
+    )
+  else:
+    option_dict[
+      _CUSTOM_OPTION_FORMAT_MAP[op.CustomOptionsFormat()]
+    ] = op.CustomOptionsAsNumpy()
+  return option_dict
+
+@_register_op_data_func("EXPAND_DIMS")
+def expand_dims_op_data(op, fb_model):
+  """
+  dummy, just in case if there is anything need to be parsed here
+  """
+  from .tflite_flatbuffer.ExpandDimsOptions import ExpandDimsOptions
+
+  return {}
+
+@_register_op_data_func("DIV")
+def div_op_data(op, fb_model):
+  option_dict = {}
+  if op.CustomOptionsLength() < 1:
+    from .tflite_flatbuffer.DivOptions import DivOptions
+
+    option = DivOptions()
+    builtin_data = op.BuiltinOptions()
+    option.Init(builtin_data.Bytes, builtin_data.Pos)
+    option_dict["FusedActivationFunction"] = _class_option2str(
+      ActivationFunctionType, option.FusedActivationFunction()
+    )
+  else:
+    option_dict[
+      _CUSTOM_OPTION_FORMAT_MAP[op.CustomOptionsFormat()]
+    ] = op.CustomOptionsAsNumpy()
+  return option_dict
+
+
+@_register_op_data_func("MUL")
+def mul_op_data(op, fb_model):
+  option_dict = {}
+  if op.CustomOptionsLength() < 1:
+    from .tflite_flatbuffer.MulOptions import MulOptions
+
+    option = MulOptions()
+    builtin_data = op.BuiltinOptions()
+    option.Init(builtin_data.Bytes, builtin_data.Pos)
+    option_dict["FusedActivationFunction"] = _class_option2str(
+      ActivationFunctionType, option.FusedActivationFunction()
+    )
+  else:
+    option_dict[
+      _CUSTOM_OPTION_FORMAT_MAP[op.CustomOptionsFormat()]
+    ] = op.CustomOptionsAsNumpy()
+  return option_dict
+
+@_register_op_data_func("ADD")
+def add_op_data(op, fb_model):
+  option_dict = {}
+  if op.CustomOptionsLength() < 1:
+    from .tflite_flatbuffer.AddOptions import AddOptions
+
+    option = AddOptions()
+    builtin_data = op.BuiltinOptions()
+    option.Init(builtin_data.Bytes, builtin_data.Pos)
+    option_dict["FusedActivationFunction"] = _class_option2str(
+      ActivationFunctionType, option.FusedActivationFunction()
+    )
+  else:
+    option_dict[
+      _CUSTOM_OPTION_FORMAT_MAP[op.CustomOptionsFormat()]
+    ] = op.CustomOptionsAsNumpy()
+  return option_dict
+
+@_register_op_data_func("SUB")
+def sub_op_data(op, fb_model):
+  option_dict = {}
+  if op.CustomOptionsLength() < 1:
+    from .tflite_flatbuffer.SubOptions import SubOptions
+
+    option = SubOptions()
+    builtin_data = op.BuiltinOptions()
+    option.Init(builtin_data.Bytes, builtin_data.Pos)
+    option_dict["FusedActivationFunction"] = _class_option2str(
+      ActivationFunctionType, option.FusedActivationFunction()
+    )
+  else:
+    option_dict[
+      _CUSTOM_OPTION_FORMAT_MAP[op.CustomOptionsFormat()]
+    ] = op.CustomOptionsAsNumpy()
+  return option_dict
