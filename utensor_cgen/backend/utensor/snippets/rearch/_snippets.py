@@ -1,5 +1,3 @@
-import re
-
 import numpy as np
 
 from utensor_cgen.backend.utensor.snippets._base import (Snippet, SnippetBase,

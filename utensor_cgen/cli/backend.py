@@ -4,16 +4,14 @@ from pprint import pformat
 import click
 
 from utensor_cgen import __version__
-from utensor_cgen.api.backend import generate_config as _generate_config
-from utensor_cgen.api.backend import get_backends, get_trans_methods
-from utensor_cgen.backend.api import BackendManager
-
 from .main import cli
 
 
 @cli.command(name='list-backends', help='list all available backends')
 @click.help_option('-h', '--help')
 def list_backends():
+  from utensor_cgen.api.backend import get_backends
+
   backends = get_backends()
   click.secho('Available backends:', fg='green', bold=True)
   for backend in backends:
@@ -27,6 +25,7 @@ def list_backends():
 @click.option('--verbose', is_flag=True)
 def list_trans_methods(verbose):
   from pprint import pformat
+  from utensor_cgen.api.backend import get_trans_methods
 
   trans_methods = get_trans_methods()
 
@@ -47,6 +46,7 @@ def list_trans_methods(verbose):
 @click.option('--config', default='utensor_cli.toml', show_default=True)
 def list_support_ops(target, config):
   from utensor_cgen.backend.api import BackendManager
+
   if os.path.exists(config):
     backend = BackendManager.get_backend(target).from_file(config)
   else:
@@ -67,6 +67,8 @@ def list_support_ops(target, config):
 @click.option('--target', required=True, help='target framework/platform')
 @click.option('-o', '--output', default='utensor_cli.toml', metavar='CONFIG.toml', help='the output config file name')
 def generate_config(target, output):
+  from utensor_cgen.api.backend import generate_config as _generate_config
+
   _generate_config(target, output)
   click.secho(
     'config file generated: {}'.format(output),

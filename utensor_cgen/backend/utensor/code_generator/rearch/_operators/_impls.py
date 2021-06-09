@@ -5,7 +5,7 @@ from jinja2 import Template
 
 from utensor_cgen.backend.utensor.snippets._types import NP_TYPES_MAP
 from utensor_cgen.backend.utensor.snippets.rearch import *
-from utensor_cgen.matcher import OpEqualityDelegateBase, _morphism
+from utensor_cgen.matcher import OpEqualityDelegateBase
 from utensor_cgen.utils import must_return_type
 
 from ._base import OperatorFactory, _Operator

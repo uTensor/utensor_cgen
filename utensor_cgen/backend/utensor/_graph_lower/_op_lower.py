@@ -1,9 +1,8 @@
-from copy import deepcopy
 from itertools import chain
 
 from utensor_cgen.backend.base import BackendPart
 from utensor_cgen.logger import logger
-from utensor_cgen.utils import Configuration, class_property
+from utensor_cgen.utils import class_property
 
 
 class uTensorGraphLowerBase(BackendPart):

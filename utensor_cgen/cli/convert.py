@@ -1,8 +1,5 @@
-import os
-
 import click
 
-from utensor_cgen.api.convert import convert_graph as _convert_graph
 from utensor_cgen.utils import NArgsParam
 
 from .main import cli
@@ -28,6 +25,8 @@ from .main import cli
               help='target framework/platform'
 )
 def convert_graph(model_file, output_nodes, config, target):
+  from utensor_cgen.api.convert import convert_graph as _convert_graph
+
   _convert_graph(
     model_file=model_file,
     output_nodes=output_nodes,
