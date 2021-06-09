@@ -192,21 +192,9 @@ class _TanhOperator(_Operator):
   op_type = "TanhOperator"
 
   def get_declare_snippet(self, op_var_name, with_const_params=True, **kwargs):
-    """Snippet for delaring the operator
-
-    Parameters
-    ----------
-    - `op_var_name` (str): the variable name for the operator
-    - `with_const_params` (bool): whether to emit constructor parameters in the snippet
-
-    Return
-    ------
-    an object with `render` method which takes no arguments and return a string, normally
-    it's a `DeclareOpSnippet` object.
-    """
     return DeclareOpSnippet(
       self,
-      templ_dtypes=[self.in_dtypes[0]],
+      templ_dtypes=[self.out_dtypes[0], self.in_dtypes[0]],
       op_var_name=op_var_name,
       nested_namespaces=self.namespaces,
       with_const_params=with_const_params,
@@ -215,7 +203,7 @@ class _TanhOperator(_Operator):
   def get_eval_snippet(self, op_var_name, op_info, tensor_var_map, **kwargs):
     return TanhEvalSnippet(
       op_info,
-      templ_dtypes=[self.in_dtypes[0]],
+      templ_dtypes=[self.out_dtypes[0], self.in_dtypes[0]],
       op_name=op_var_name,
       tensor_var_map=tensor_var_map,
       nested_namespaces=self.namespaces
@@ -224,7 +212,7 @@ class _TanhOperator(_Operator):
   def get_construct_snippet(self, op_var_name):
     return OpConstructSnippet(
       self,
-      templ_dtypes=[self.in_dtypes[0]],
+      templ_dtypes=[self.out_dtypes[0], self.in_dtypes[0]],
       op_var_name=op_var_name,
       nested_namespaces=self.namespaces
     )
