@@ -2,7 +2,6 @@ import os
 import tempfile
 from pathlib import Path
 
-import keras2onnx
 import onnx
 import tensorflow as tf
 import torch
@@ -20,33 +19,26 @@ def tflm_keras_export(
   target="utensor",
   output_tflite_fname=None,
 ):
+  if isinstance(model_or_path, str):
+    converter = tf.lite.TFLiteConverter.from_saved_model(model_or_path)
+  elif isinstance(model_or_path, tf.keras.Model):
+    converter = tf.lite.TFLiteConverter.from_keras_model(model_or_path)
+  else:
+    raise RuntimeError(
+      "expecting a keras model or a path to saved model, get {}".format(
+        model_or_path
+      )
+    )
+  if optimizations is None:
+    optimizations = [tf.lite.Optimize.DEFAULT]
+  # https://www.tensorflow.org/lite/guide/ops_select
+  if supported_ops is not None:
+    converter.target_spec.supported_ops = supported_ops
+  converter.representative_dataset = representive_dataset
+  converter.optimizations = optimizations
+  tflm_model_content = converter.convert()
   with tempfile.TemporaryDirectory(prefix="utensor_") as tmp_dir:
     dir_path = Path(tmp_dir)
-    if isinstance(model_or_path, str):
-      converter = tf.lite.TFLiteConverter.from_saved_model(model_or_path)
-    elif isinstance(model_or_path, tf.keras.Model):
-      model_path = os.path.join(str(dir_path), "saved_model")
-      tf.keras.models.save_model(
-        model_or_path,
-        model_path,
-        save_format="tf",
-      )
-      converter = tf.lite.TFLiteConverter.from_saved_model(model_path)
-    else:
-      raise RuntimeError(
-        "expecting a keras model or a path to saved model, get {}".format(
-          model_or_path
-        )
-      )
-    if optimizations is None:
-      optimizations = [tf.lite.Optimize.DEFAULT]
-    # https://www.tensorflow.org/lite/guide/ops_select
-    if supported_ops is not None:
-      converter.target_spec.supported_ops = supported_ops
-    converter.representative_dataset = representive_dataset
-    converter.optimizations = optimizations
-    tflm_model_content = converter.convert()
-
     with (dir_path / "tflm_model.tflite").open("wb") as fid:
       fid.write(tflm_model_content)
       fid.flush()
@@ -100,37 +92,3 @@ def pytorch_onnx_export(
       Path(output_onnx_fname).parent.mkdir(parents=True, exist_ok=True)
       torch.onnx.export(model, representive_dataset, output_onnx_fname)
       print(f"{output_onnx_fname} saved")
-
-
-def keras_onnx_export(
-  model_or_path,
-  model_name=None,
-  config_file="utensor_cli.toml",
-  target="utensor",
-  output_onnx_fname=None,
-):
-
-  with tempfile.TemporaryDirectory(prefix="utensor_") as tmp_dir:
-    if isinstance(model_or_path, str):
-      model = tf.keras.model.load_model(model_or_path)
-    elif isinstance(model_or_path, tf.keras.Model):
-      model = model_or_path
-    else:
-      raise RuntimeError(
-        "expecting a keras model or a path to saved model, get {}".format(
-          model_or_path
-        )
-      )
-
-    # Perform Keras to ONNX conversion
-    onnx_model_name = os.path.join(tmp_dir, f"{model_name}.onnx")
-    onnx_model = keras2onnx.convert_keras(model, model.name)
-    onnx.save_model(onnx_model, onnx_model_name)
-
-    convert_graph(
-      onnx_model_name, config=config_file, model_name=model_name, target=target
-    )
-
-    if output_onnx_fname is not None:
-      Path(output_onnx_fname).parent.mkdir(parents=True, exist_ok=True)
-      onnx.save_model(onnx_model, output_onnx_fname)

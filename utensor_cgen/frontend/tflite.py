@@ -26,7 +26,7 @@ _CUSTOM_OPTION_FORMAT_MAP = {v: k for k, v in CustomOptionsFormat.__dict__.items
 @FrontendSelector.register(target_exts=[".tflite"])
 class TFLiteParser(Parser):
   _TENSOR_NP_TYPE = {
-    0:np.dtype("float32"),
+    0: np.dtype("float32"),
     1: np.dtype("float16"),
     2: np.dtype("int32"),
     3: np.dtype("uint8"),

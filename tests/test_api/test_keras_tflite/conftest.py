@@ -1,46 +1,43 @@
-import os
-
 import numpy as np
 from pytest import fixture
 
 
-@fixture(scope='function', name='keras_model')
+@fixture(scope="function", name="keras_model")
 def keras_model():
-    from tensorflow.keras.layers import (Conv2D, Dense, Flatten, MaxPool2D,
-                                         ReLU, Softmax)
+    from tensorflow.keras.layers import Conv2D, Dense, Flatten
     from tensorflow.keras.losses import sparse_categorical_crossentropy
-    from tensorflow.keras.models import Sequential, load_model, save_model
+    from tensorflow.keras.models import Sequential
     from tensorflow.keras.optimizers import Adam
 
-    input_shape = (28,28,1)
+    input_shape = (28, 28, 1)
     no_classes = 10
 
     model = Sequential()
-    model.add(Conv2D(32, kernel_size=(3, 3), activation='relu', input_shape=input_shape))
-    model.add(Conv2D(64, kernel_size=(3, 3), activation='relu'))
-    model.add(Conv2D(128, kernel_size=(3, 3), activation='relu'))
+    model.add(
+        Conv2D(32, kernel_size=(3, 3), activation="relu", input_shape=input_shape)
+    )
+    model.add(Conv2D(64, kernel_size=(3, 3), activation="relu"))
+    model.add(Conv2D(128, kernel_size=(3, 3), activation="relu"))
     model.add(Flatten())
-    model.add(Dense(128, activation='relu'))
-    model.add(Dense(no_classes, activation='softmax'))    
-
+    model.add(Dense(128, activation="relu"))
+    model.add(Dense(no_classes, activation="softmax"))
 
     model.compile(
-        loss=sparse_categorical_crossentropy,
-        optimizer=Adam(),
-        metrics=['accuracy']
+        loss=sparse_categorical_crossentropy, optimizer=Adam(), metrics=["accuracy"]
     )
 
     np.random.seed(12345)
-    mu, sigma = 0, 0.1 # mean and standard deviation
-    x = np.random.normal(mu, sigma, size = (1,) + input_shape)
-    y = model(x)
+    mu, sigma = 0, 0.1  # mean and standard deviation
+    x = np.random.normal(mu, sigma, size=(1,) + input_shape)
+    _ = model(x)
 
     return model
 
-@fixture(scope='function', name='keras_model_dset')
+
+@fixture(scope="function", name="keras_model_dset")
 def keras_model_dset():
     import tensorflow as tf
-    
+
     mnist = tf.keras.datasets.mnist
 
     (x_train, _), (x_test, _) = mnist.load_data()
@@ -51,11 +48,11 @@ def keras_model_dset():
     x_test = x_test[..., tf.newaxis]
 
     num_calibration_steps = 128
-    calibration_dtype = 'float32'
+    calibration_dtype = "float32"
 
     def representative_dataset_gen():
         for _ in range(num_calibration_steps):
-            rand_idx = np.random.randint(0, x_test.shape[0]-1)
+            rand_idx = np.random.randint(0, x_test.shape[0] - 1)
             sample = x_test[rand_idx]
             sample = sample[tf.newaxis, ...].astype(calibration_dtype)
             yield [sample]

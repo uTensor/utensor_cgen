@@ -7,17 +7,17 @@ name = "pypi"
 e1839a8 = {path = ".",editable = true}
 
 [dev-packages]
-matplotlib = "*"
 pylint = "*"
-"flake8" = "*"
+flake8 = "*"
 pytest = "*"
 rope = "*"
 pillow = "*"
-scipy = "*"
-graphviz = "*"
+scipy = "==1.5.4"
 sphinx = "*"
 sphinx-autoapi = "*"
 twine = "*"
+black = "*"
+ipykernel = "*"
 
 [pipenv]
 allow_prereleases = true
