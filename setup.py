@@ -1,6 +1,7 @@
 #!/usr/bin/env python
 # -*- coding:utf8 -*-
 import os
+from pathlib import Path
 
 from setuptools import find_packages, setup
 from setuptools.command.develop import develop as _develop
@@ -29,10 +30,19 @@ class _Install(_CompileFlatbuffMixin, _install):
 class _Develop(_CompileFlatbuffMixin, _develop):
     pass
 
+def _get_version():
+    version_file_path = Path(__file__).parent / "utensor_cgen" / "_version.py"
+    if not version_file_path.exists():
+        print(f"WARN: no {version_file_path} found, using 0.0.0 as __version__")
+        return "0.0.0"
+    ns = {}
+    with version_file_path.open("r") as fid:
+        exec(fid.read(), {}, ns)
+    return ns["__version__"]
 
 setup(
     name="utensor_cgen",
-    version='1.0.0',
+    version=_get_version(),
     cmdclass={"install": _Install, "develop": _Develop},
     description="C code generation program for uTensor",
     long_description="please go to [doc](https://utensor-cgen.readthedocs.io/en/latest/) page for more information",
