@@ -19,34 +19,37 @@ def tflm_keras_export(
   target="utensor",
   output_tflite_fname=None,
 ):
-  if isinstance(model_or_path, str):
-    converter = tf.lite.TFLiteConverter.from_saved_model(model_or_path)
-  elif isinstance(model_or_path, tf.keras.Model):
-    converter = tf.lite.TFLiteConverter.from_keras_model(model_or_path)
-  else:
-    raise RuntimeError(
-      "expecting a keras model or a path to saved model, get {}".format(
-        model_or_path
-      )
-    )
-  if optimizations is None:
-    optimizations = [tf.lite.Optimize.DEFAULT]
-  # https://www.tensorflow.org/lite/guide/ops_select
-  if supported_ops is not None:
-    converter.target_spec.supported_ops = supported_ops
-  converter.representative_dataset = representive_dataset
-  converter.optimizations = optimizations
-  tflm_model_content = converter.convert()
-  with tempfile.TemporaryDirectory(prefix="utensor_") as tmp_dir:
+  with tempfile.TemporaryDirectory(prefix='utensor_') as tmp_dir:
     dir_path = Path(tmp_dir)
-    with (dir_path / "tflm_model.tflite").open("wb") as fid:
+    if isinstance(model_or_path, str):
+      converter = tf.lite.TFLiteConverter.from_saved_model(model_or_path)
+    elif isinstance(model_or_path, tf.keras.Model):
+      model_path = os.path.join(str(dir_path), 'saved_model')
+      tf.keras.models.save_model(
+        model_or_path,
+        model_path,
+        save_format='tf',
+      )
+      converter = tf.lite.TFLiteConverter.from_saved_model(model_path)
+    else:
+      raise RuntimeError(
+        f"expecting a keras model or a path to saved model, get {model_or_path}"
+      )
+    if optimizations is None:
+      optimizations = [tf.lite.Optimize.DEFAULT]
+    # https://www.tensorflow.org/lite/guide/ops_select
+    if supported_ops is not None:
+      converter.target_spec.supported_ops = supported_ops
+    converter.representative_dataset = representive_dataset
+    converter.optimizations = optimizations
+    tflm_model_content = converter.convert()
+
+    with (dir_path / 'tflm_model.tflite').open('wb') as fid:
       fid.write(tflm_model_content)
       fid.flush()
-      convert_graph(
-        fid.name, config=config_file, model_name=model_name, target=target
-      )
+      convert_graph(fid.name, config=config_file, model_name=model_name, target=target)
   if output_tflite_fname:
-    with open(output_tflite_fname, "wb") as fid:
+    with open(output_tflite_fname, 'wb') as fid:
       fid.write(tflm_model_content)
 
 
