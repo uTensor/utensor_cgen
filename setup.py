@@ -57,7 +57,8 @@ setup(
         "Jinja2==3.1.2",
         "tensorflow==2.4.4",
         "protobuf<4.0.0", # required, to make sure `ortools` dependency won't mess up with TF
-        "onnx==1.8.0",
+        # https://github.com/onnx/onnx/issues/2808#issuecomment-771064232
+        "onnx==1.8.1",
         "idx2numpy==1.2.3",
         "attrs==20.3.0",
         "click==7.1.2",

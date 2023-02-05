@@ -23,6 +23,7 @@ from .main import cli
 @click.argument('model_file', required=True, metavar='MODEL.{pb,pkl}')
 def show_graph(model_file, config, **kwargs):
   import pickle
+
   from utensor_cgen.frontend import FrontendSelector
 
   _, ext = os.path.splitext(model_file)

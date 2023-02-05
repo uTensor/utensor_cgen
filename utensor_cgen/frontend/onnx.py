@@ -16,8 +16,6 @@ from utensor_cgen.ir.converter import AttrValueConverter, TensorProtoConverter
 from utensor_cgen.legalizer import Legalizer
 from utensor_cgen.utils import topologic_order_graph
 
-from .tensorflow import GraphDefParser
-
 
 def _convert_op_attribute(attrib_pb):
   # TODO: integrate with ir.converter
