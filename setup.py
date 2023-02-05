@@ -56,6 +56,7 @@ setup(
     install_requires=[
         "Jinja2==3.1.2",
         "tensorflow==2.4.4",
+        "protobuf<4.0.0", # required, to make sure `ortools` dependency won't mess up with TF
         "onnx==1.8.0",
         "idx2numpy==1.2.3",
         "attrs==20.3.0",
@@ -66,7 +67,7 @@ setup(
         "matplotlib==3.3.3",
         "toml==0.10.2",
         "flatbuffers==1.12",
-        "ortools==7.6.7691",
+        "ortools==8.2.8710",
     ],
     zip_safe=False,
     classifiers=[

@@ -14,8 +14,8 @@ test_%:
 
 package:
 	rm -rf dist/*
-	.venv/bin/python setup.py bdist_wheel sdist
-	rm -rf build utensor_cgen.egg-info/
+	pipenv run python3 setup.py bdist_wheel sdist
+	rm -rf build
 
 upload-test: package
 	.venv/bin/twine upload -r pypitest dist/*

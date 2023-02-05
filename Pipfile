@@ -18,6 +18,7 @@ sphinx-autoapi = "*"
 twine = "*"
 black = "*"
 ipykernel = "*"
+isort = "*"
 
 [pipenv]
 allow_prereleases = true
