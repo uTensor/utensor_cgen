@@ -3,6 +3,14 @@ import re
 from collections import defaultdict
 
 import numpy as np
+# schema: https://github.com/tensorflow/tensorflow/blob/a5c0bbb2d15b0708d508f9c930d65d4a584aa338/tensorflow/lite/schema/schema.fbs
+from tensorflow.lite.python.schema_py_generated import (
+    ActivationFunctionType, AddOptions, ArgMaxOptions, BuiltinOperator,
+    ConcatenationOptions, Conv2DOptions, CustomOptionsFormat,
+    DepthwiseConv2DOptions, DequantizeOptions, DivOptions,
+    FullyConnectedOptions, FullyConnectedOptionsWeightsFormat, Model,
+    MulOptions, Pool2DOptions, QuantizeOptions, ReshapeOptions,
+    StridedSliceOptions, SubOptions)
 
 from utensor_cgen.frontend import FrontendSelector
 from utensor_cgen.frontend.base import Parser
@@ -12,14 +20,6 @@ from utensor_cgen.ir.converter import (AttrValueConverter,
 from utensor_cgen.legalizer import Legalizer
 from utensor_cgen.logger import logger
 from utensor_cgen.utils import topologic_order_graph
-
-# schema: https://github.com/tensorflow/tensorflow/blob/a5c0bbb2d15b0708d508f9c930d65d4a584aa338/tensorflow/lite/schema/schema.fbs
-from .tflite_flatbuffer.ActivationFunctionType import ActivationFunctionType
-from .tflite_flatbuffer.BuiltinOperator import BuiltinOperator
-from .tflite_flatbuffer.CustomOptionsFormat import CustomOptionsFormat
-from .tflite_flatbuffer.FullyConnectedOptionsWeightsFormat import \
-    FullyConnectedOptionsWeightsFormat
-from .tflite_flatbuffer.Model import Model
 
 _CUSTOM_OPTION_FORMAT_MAP = {v: k for k, v in CustomOptionsFormat.__dict__.items()}
 
@@ -301,8 +301,6 @@ def _class_option2str(obj, idx):
 def fully_connected_op_data(op, fb_mdel):
   option_dict = {}
   if op.CustomOptionsLength() < 1:
-    from .tflite_flatbuffer.FullyConnectedOptions import FullyConnectedOptions
-
     option = FullyConnectedOptions()
     builtin_data = op.BuiltinOptions()
     option.Init(builtin_data.Bytes, builtin_data.Pos)
@@ -322,9 +320,6 @@ def fully_connected_op_data(op, fb_mdel):
 def depthwise_conv2d_op_data(op, fb_mdel):
   option_dict = {}
   if op.CustomOptionsLength() < 1:
-    from .tflite_flatbuffer.DepthwiseConv2DOptions import \
-        DepthwiseConv2DOptions
-
     option = DepthwiseConv2DOptions()
     builtin_data = op.BuiltinOptions()
     option.Init(builtin_data.Bytes, builtin_data.Pos)
@@ -349,8 +344,6 @@ def depthwise_conv2d_op_data(op, fb_mdel):
 def conv_2d_op_data(op, fb_model):
   option_dict = {}
   if op.CustomOptionsLength() < 1:
-    from .tflite_flatbuffer.Conv2DOptions import Conv2DOptions
-
     option = Conv2DOptions()
     builtin_data = op.BuiltinOptions()
     option.Init(builtin_data.Bytes, builtin_data.Pos)
@@ -373,8 +366,6 @@ def conv_2d_op_data(op, fb_model):
 def reshape_op_data(op, fb_mdel):
   option_dict = {}
   if op.CustomOptionsLength() < 1:
-    from .tflite_flatbuffer.ReshapeOptions import ReshapeOptions
-
     option = ReshapeOptions()
     builtin_data = op.BuiltinOptions()
     if builtin_data is None:
@@ -393,8 +384,6 @@ def reshape_op_data(op, fb_mdel):
 def dequantize_op_data(op, fb_mdel):
   option_dict = {}
   if op.CustomOptionsLength() < 1:
-    from .tflite_flatbuffer.DequantizeOptions import DequantizeOptions
-
     option = DequantizeOptions()
     builtin_data = op.BuiltinOptions()
     if builtin_data is None:
@@ -412,8 +401,6 @@ def dequantize_op_data(op, fb_mdel):
 def quantize_op_data(op, fb_mdel):
   option_dict = {}
   if op.CustomOptionsLength() < 1:
-    from .tflite_flatbuffer.QuantizeOptions import QuantizeOptions
-
     option = QuantizeOptions()
     builtin_data = op.BuiltinOptions()
     if builtin_data is None:
@@ -433,8 +420,6 @@ def quantize_op_data(op, fb_mdel):
 def pool2d_op_data(op, fb_mdel):
   option_dict = {}
   if op.CustomOptionsLength() < 1:
-    from .tflite_flatbuffer.Pool2DOptions import Pool2DOptions
-
     option = Pool2DOptions()
     builtin_data = op.BuiltinOptions()
     option.Init(builtin_data.Bytes, builtin_data.Pos)
@@ -457,8 +442,6 @@ def pool2d_op_data(op, fb_mdel):
 def argmax_op_data(op, fb_model):
   option_dict = {}
   if op.CustomOptionsLength() < 1:
-    from .tflite_flatbuffer.ArgMaxOptions import ArgMaxOptions
-
     option = ArgMaxOptions()
     builtin_data = op.BuiltinOptions()
     option.Init(builtin_data.Bytes, builtin_data.Pos)
@@ -473,8 +456,6 @@ def argmax_op_data(op, fb_model):
 @_register_op_data_func("TRANSPOSE")
 def transpose_op_data(op, fb_model):
   option_dict = {}
-  from .tflite_flatbuffer.TransposeOptions import TransposeOptions
-
   # no filed declared in the fbs file for TransposeOptions
   # skipping here
   # this function is here just for silencing the warning msg
@@ -484,8 +465,6 @@ def transpose_op_data(op, fb_model):
 def stride_slice_op_data(op, fb_model):
   option_dict = {}
   if op.CustomOptionsLength() < 1:
-    from .tflite_flatbuffer.StridedSliceOptions import StridedSliceOptions
-
     option = StridedSliceOptions()
     builtin_data = op.BuiltinOptions()
     option.Init(builtin_data.Bytes, builtin_data.Pos)
@@ -511,8 +490,6 @@ def dummy_op_data(op, fb_model):
 def concat_op_data(op, fb_model):
   option_dict = {}
   if op.CustomOptionsLength() < 1:
-    from .tflite_flatbuffer.ConcatenationOptions import ConcatenationOptions
-
     option = ConcatenationOptions()
     builtin_data = op.BuiltinOptions()
     option.Init(builtin_data.Bytes, builtin_data.Pos)
@@ -529,18 +506,15 @@ def concat_op_data(op, fb_model):
 @_register_op_data_func("EXPAND_DIMS")
 def expand_dims_op_data(op, fb_model):
   """
+  ExpandDimsOptions
   dummy, just in case if there is anything need to be parsed here
   """
-  from .tflite_flatbuffer.ExpandDimsOptions import ExpandDimsOptions
-
   return {}
 
 @_register_op_data_func("DIV")
 def div_op_data(op, fb_model):
   option_dict = {}
   if op.CustomOptionsLength() < 1:
-    from .tflite_flatbuffer.DivOptions import DivOptions
-
     option = DivOptions()
     builtin_data = op.BuiltinOptions()
     option.Init(builtin_data.Bytes, builtin_data.Pos)
@@ -558,8 +532,6 @@ def div_op_data(op, fb_model):
 def mul_op_data(op, fb_model):
   option_dict = {}
   if op.CustomOptionsLength() < 1:
-    from .tflite_flatbuffer.MulOptions import MulOptions
-
     option = MulOptions()
     builtin_data = op.BuiltinOptions()
     option.Init(builtin_data.Bytes, builtin_data.Pos)
@@ -576,14 +548,13 @@ def mul_op_data(op, fb_model):
 def add_op_data(op, fb_model):
   option_dict = {}
   if op.CustomOptionsLength() < 1:
-    from .tflite_flatbuffer.AddOptions import AddOptions
-
     option = AddOptions()
     builtin_data = op.BuiltinOptions()
-    option.Init(builtin_data.Bytes, builtin_data.Pos)
-    option_dict["FusedActivationFunction"] = _class_option2str(
-      ActivationFunctionType, option.FusedActivationFunction()
-    )
+    if builtin_data is not None:
+      option.Init(builtin_data.Bytes, builtin_data.Pos)
+      option_dict["FusedActivationFunction"] = _class_option2str(
+        ActivationFunctionType, option.FusedActivationFunction()
+      )
   else:
     option_dict[
       _CUSTOM_OPTION_FORMAT_MAP[op.CustomOptionsFormat()]
@@ -594,8 +565,6 @@ def add_op_data(op, fb_model):
 def sub_op_data(op, fb_model):
   option_dict = {}
   if op.CustomOptionsLength() < 1:
-    from .tflite_flatbuffer.SubOptions import SubOptions
-
     option = SubOptions()
     builtin_data = op.BuiltinOptions()
     option.Init(builtin_data.Bytes, builtin_data.Pos)
