@@ -55,7 +55,7 @@ setup(
     entry_points={"console_scripts": ["utensor-cli=utensor_cgen.cli:cli"]},
     install_requires=[
         "Jinja2==3.1.2",
-        "tensorflow==2.4.4",
+        "tensorflow==2.5.3",
         "protobuf<4.0.0", # required, to make sure `ortools` dependency won't mess up with TF
         # https://github.com/onnx/onnx/issues/2808#issuecomment-771064232
         "onnx==1.8.1",
@@ -67,7 +67,6 @@ setup(
         "graphviz==0.15",
         "matplotlib==3.3.3",
         "toml==0.10.2",
-        "flatbuffers==1.12",
         "ortools==8.2.8710",
     ],
     zip_safe=False,

@@ -1,3 +1,6 @@
+"""
+- https://github.com/lutzroeder/netron/blob/main/source/tflite.js
+"""
 import os
 import re
 from collections import defaultdict

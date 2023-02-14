@@ -20,5 +20,8 @@ black = "*"
 ipykernel = "*"
 isort = "*"
 
+[requires]
+python_version = "3.8.13"
+
 [pipenv]
 allow_prereleases = true
