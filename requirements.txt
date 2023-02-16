@@ -129,7 +129,7 @@ urllib3==1.25.8
 -e git+https://dboyliao@github.com/uTensor/utensor_cgen.git@d6352a329291221efafa9c838cbc7209b9b1c412#egg=utensor_cgen
 wcwidth==0.1.8
 webencodings==0.5.1
-Werkzeug==1.0.1
+Werkzeug==2.2.3
 widgetsnbextension==3.5.1
 wrapt==1.11.2
 zipp==3.0.0
