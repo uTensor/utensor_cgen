@@ -2,6 +2,7 @@
 # -*- coding:utf8 -*-
 import os
 from pathlib import Path
+import sysconfig
 
 from setuptools import find_packages, setup
 from setuptools.command.develop import develop as _develop
@@ -40,6 +41,42 @@ def _get_version():
         exec(fid.read(), {}, ns)
     return ns["__version__"]
 
+def _get_install_requires():
+    if "arm64" in sysconfig.get_platform():
+        return [
+            "tensorflow-macos",
+            "onnx",
+            "ortools",
+            "jinja2",
+            "idx2numpy",
+            "attrs",
+            "click",
+            "torch",
+            "torchvision",
+            "graphviz",
+            "matplotlib",
+            "toml",
+            "flatbuffers",
+        ]
+    else:
+        # x86_64
+        return [
+            "Jinja2==3.1.2",
+            "tensorflow==2.5.3",
+            "protobuf<4.0.0", # required, to make sure `ortools` dependency won't mess up with TF
+            # https://github.com/onnx/onnx/issues/2808#issuecomment-771064232
+            "onnx==1.8.1",
+            "idx2numpy==1.2.3",
+            "attrs==20.3.0",
+            "click==7.1.2",
+            "torch==1.7.0",
+            "torchvision==0.8.1",
+            "graphviz==0.15",
+            "matplotlib==3.3.3",
+            "toml==0.10.2",
+            "ortools==8.2.8710",
+        ]
+
 setup(
     name="utensor_cgen",
     version=_get_version(),
@@ -53,22 +90,7 @@ setup(
     packages=find_packages(),
     package_data={"utensor_cgen.backend.utensor.snippets": ["templates/*/*/*"]},
     entry_points={"console_scripts": ["utensor-cli=utensor_cgen.cli:cli"]},
-    install_requires=[
-        "Jinja2==3.1.2",
-        "tensorflow==2.5.3",
-        "protobuf<4.0.0", # required, to make sure `ortools` dependency won't mess up with TF
-        # https://github.com/onnx/onnx/issues/2808#issuecomment-771064232
-        "onnx==1.8.1",
-        "idx2numpy==1.2.3",
-        "attrs==20.3.0",
-        "click==7.1.2",
-        "torch==1.7.0",
-        "torchvision==0.8.1",
-        "graphviz==0.15",
-        "matplotlib==3.3.3",
-        "toml==0.10.2",
-        "ortools==8.2.8710",
-    ],
+    install_requires=_get_install_requires(),
     zip_safe=False,
     classifiers=[
         "Development Status :: 4 - Beta",
