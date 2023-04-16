@@ -6,7 +6,13 @@ from utensor_cgen.backend.api import BackendManager
 from utensor_cgen.logger import logger
 
 
-def convert_graph(model_file, output_nodes=None, config='utensor_cli.toml', target='utensor', model_name=None):
+def convert_graph(model_file,
+  output_nodes=None,
+  config='utensor_cli.toml',
+  target='utensor',
+  model_name=None,
+  **kwargs
+):
   from utensor_cgen.frontend import FrontendSelector
 
   if os.path.exists(config):
@@ -16,9 +22,11 @@ def convert_graph(model_file, output_nodes=None, config='utensor_cli.toml', targ
   else:
     config = {}
   ugraph = FrontendSelector.parse(
-    model_file, output_nodes,
-    config=config,
-    model_name=model_name
+    model_file,
+    config,
+    output_nodes,
+    model_name=model_name,
+    **kwargs
   )
   backend = BackendManager.get_backend(target)(config)
   backend.apply(ugraph)

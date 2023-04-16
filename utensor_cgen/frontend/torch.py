@@ -19,9 +19,13 @@ class TorchModuleParser(Parser):
     self._onnx_parser = _OnnxParser(config)
 
   def parse(self, model_file: str, output_nodes=None, model_name=None, **kwargs):
+    inputs_file = kwargs.get("inputs_file", None)
+    if inputs_file is None:
+      raise ValueError("--inputs-file is required for torch model file")
+    input_args = torch.load(inputs_file)
     model: torch.nn.Module = torch.load(model_file)
     buffer = BytesIO()
-    torch.onnx.export(model, {}, buffer)
+    torch.onnx.export(model, input_args, buffer)
     buffer.seek(0)
     return self._onnx_parser.parse(
         buffer,
