@@ -10,7 +10,9 @@ class Parser(object):
     if isinstance(config, dict):
       config = Configuration(defaults=cls.default_config, user_config=config)
     if not isinstance(config, Configuration):
-      raise ValueError('invalid config. Should be dict or Configuration, get {}'.format(type(config)))
+      raise ValueError(
+        f'invalid config. Should be dict or Configuration, get {type(config)}'
+      )
     self = object.__new__(cls)
     self._config = config
     return self
@@ -25,5 +27,5 @@ class Parser(object):
 
   @classmethod
   @abstractmethod
-  def parse(cls, fname, output_nodes, model_name=None):
+  def parse(cls, fname, output_nodes=None, model_name=None, **kwargs):
       raise RuntimeError('abstract parse method involded')

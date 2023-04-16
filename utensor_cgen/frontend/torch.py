@@ -18,7 +18,7 @@ class TorchModuleParser(Parser):
   def __init__(self, config):
     self._onnx_parser = _OnnxParser(config)
 
-  def parse(self, model_file: str, output_nodes=None, model_name=None):
+  def parse(self, model_file: str, output_nodes=None, model_name=None, **kwargs):
     model: torch.nn.Module = torch.load(model_file)
     buffer = BytesIO()
     torch.onnx.export(model, {}, buffer)
