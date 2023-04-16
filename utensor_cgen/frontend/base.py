@@ -25,5 +25,5 @@ class Parser(object):
 
   @classmethod
   @abstractmethod
-  def parse(cls, fname, outupt_nodes, model_name=None):
+  def parse(cls, fname, output_nodes, model_name=None):
       raise RuntimeError('abstract parse method involded')
