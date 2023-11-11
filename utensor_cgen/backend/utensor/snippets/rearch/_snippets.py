@@ -41,6 +41,8 @@ __all__ = [
   "FullyConnectedSnippet",
   "StridedSliceSnippet",
   "ConcatSnippet",
+  "SumSnippet",
+  "RsqrtSnippet",
   "MissingOpEvalSnippet",
   "ModelApiContainer",
   "TimeSlotContainer",
@@ -338,6 +340,15 @@ class StridedSliceSnippet(OpEvalSnippet):
 class ConcatSnippet(OpEvalSnippet):
   __inputs__ = ["a", "b"]
   __outputs__ = ["out"]
+
+
+class SumSnippet(OpEvalSnippet):
+  __inputs__ = ["input", "axis"]
+  __outputs__ = ["output"]
+
+class RsqrtSnippet(OpEvalSnippet):
+  __inputs__ = ["input"]
+  __outputs__ = ["output"]
 
 class MissingOpEvalSnippet(OpEvalSnippet):
   __template_name__ = "snippets/rearch/op_missing.cpp"

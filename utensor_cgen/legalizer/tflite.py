@@ -48,6 +48,8 @@ class _OpTypeRename(object):
     "Concatenation": "ConcatOperator",
     "StridedSlice": "StridedSliceOperator",
     "Div": "DivOperator",
+    "Sum": "SumOperator",
+    "Rsqrt": "RsqrtOperator",
   }
   
   @classmethod

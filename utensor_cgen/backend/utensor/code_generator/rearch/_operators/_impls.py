@@ -1030,3 +1030,69 @@ class _ConcatOperator(_Operator):
       op_var_name=op_var_name,
       nested_namespaces=type(self).namespaces,
     )
+
+@OperatorFactory.register
+class _SumOperator(_Operator):
+  namespaces = ("ReferenceOperators",)
+  op_type = "SumOperator"
+
+  
+  def get_declare_snippet(self, op_var_name, with_const_params=True):
+    return DeclareOpSnippet(
+      op=self,
+      templ_dtypes=[self.out_dtypes[0]],
+      op_var_name=op_var_name,
+      nested_namespaces=type(self).namespaces,
+      with_const_params=with_const_params,
+    )
+
+  def get_eval_snippet(self, op_var_name, op_info, tensor_var_map):
+    return SumSnippet(
+      op_info=op_info,
+      templ_dtypes=[self.out_dtypes[0]],
+      op_name=op_var_name,
+      tensor_var_map=tensor_var_map,
+      nested_namespaces=type(self).namespaces,
+    )
+  
+  def get_construct_snippet(self, op_var_name):
+    return OpConstructSnippet(
+      op=self,
+      templ_dtypes=[self.out_dtypes[0]],
+      op_var_name=op_var_name,
+      nested_namespaces=type(self).namespaces,
+    )
+  
+
+@OperatorFactory.register
+class _RsqrtOperator(_Operator):
+  namespaces = ("ReferenceOperators",)
+  op_type = "RsqrtOperator"
+
+  
+  def get_declare_snippet(self, op_var_name, with_const_params=True):
+    return DeclareOpSnippet(
+      op=self,
+      templ_dtypes=[self.out_dtypes[0]],
+      op_var_name=op_var_name,
+      nested_namespaces=type(self).namespaces,
+      with_const_params=with_const_params,
+    )
+
+  def get_eval_snippet(self, op_var_name, op_info, tensor_var_map):
+    return RsqrtSnippet(
+      op_info=op_info,
+      templ_dtypes=[self.out_dtypes[0]],
+      op_name=op_var_name,
+      tensor_var_map=tensor_var_map,
+      nested_namespaces=type(self).namespaces,
+    )
+  
+  def get_construct_snippet(self, op_var_name):
+    return OpConstructSnippet(
+      op=self,
+      templ_dtypes=[self.out_dtypes[0]],
+      op_var_name=op_var_name,
+      nested_namespaces=type(self).namespaces,
+    )
+  
