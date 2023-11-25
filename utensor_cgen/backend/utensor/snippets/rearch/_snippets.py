@@ -1,3 +1,5 @@
+import logging
+
 import numpy as np
 
 from utensor_cgen.backend.utensor.snippets._base import (Snippet, SnippetBase,
@@ -48,7 +50,7 @@ __all__ = [
   "TimeSlotContainer",
   "SimpleContainer",
 ]
-
+_logger = logging.getLogger(__name__)
 
 class ContextGlobalArrayContainer(SnippetContainerBase):
   __template_name__ = "containers/rearch/weight_header.hpp"
@@ -120,7 +122,11 @@ class DeclareRamTensorSnippet(_DeclareTensorBase):
   def __init__(self, tensor_info, tensor_var):
     _DeclareTensorBase.__init__(self, tensor_info, tensor_var)
     self.template_vars['tensor_var'] = tensor_var
-    self.template_vars['shape'] = tensor_info.shape or [1]
+    shape = tensor_info.shape[:] if tensor_info.shape is not None else [1]
+    if None in shape:
+      _logger.warning('shape of tensor %s is nondeterministic, implicitly convert None to 1 for rendering: %s', tensor_var, shape)
+      shape = [s if s is not None else 1 for s in shape]
+    self.template_vars['shape'] = shape
     self.template_vars['utensor_dtype'] = UTENSOR_TYPES_MAP[tensor_info.dtype]
 
 

@@ -3,6 +3,8 @@ from collections import defaultdict
 from copy import deepcopy
 from pathlib import Path
 
+import numpy as np
+
 from utensor_cgen.backend.base import BackendPart
 from utensor_cgen.backend.graph_lower.generic_graph_lower import \
     TopoOrderTensorTimeslotPlanner
@@ -41,6 +43,19 @@ class uTensorRearchCodeGenerator(BackendPart):
     src_fname = self.src_fname
     if src_fname == 'None':
       src_fname = '{}.cpp'.format(ugraph.name)
+    for op_info in ugraph.get_ops_by_type("AddOperator"):
+      in_tensor1 = op_info.input_nodes[0].output_tensors[0]
+      in_tensor2 = op_info.input_nodes[1].output_tensors[0]
+      if len(in_tensor1.shape) != len(in_tensor2.shape):
+        in_tensor_min = min(in_tensor1, in_tensor2, key=lambda t: len(t.shape))
+        in_tensor_max = max(in_tensor1, in_tensor2, key=lambda t: len(t.shape))
+        target_shape = [s if s is not None else 1 for s in in_tensor_max.shape]
+        if in_tensor_min.op.op_type == 'Inline':
+          in_tensor_min.op.op_attr["value"].value.np_array = np.broadcast_to(
+            in_tensor_min.op.op_attr["value"].value.np_array,
+            target_shape
+          )
+          in_tensor_min.shape = target_shape
     # find all required ops and the variable names for the tensors in the generate files
     (
       ops,            # Set[Operator], no Placeholder or Inline ops
