@@ -57,7 +57,7 @@ setup(
         "matplotlib",
         "toml",
         "flatbuffers",
-        "ortools==7.6.7691",
+        "ortools==9.14.6206",
     ],
     zip_safe=False,
     classifiers=[
