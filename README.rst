@@ -28,8 +28,14 @@ For Users
 
 For Developers
 --------------
+- with uv_
+.. code:: console
 
--  with pipenv_
+    $ uv venv create -p python3.10
+    $ uv venv activate
+    $ uv sync
+
+-  with pipenv_ (deprecated)
 
 .. code:: console
 
@@ -312,6 +318,7 @@ Future Works
       to take care of the integrity of the graph.
       The builder will take care of it automatically.
 
+.. _uv: https://github.com/astral-sh/uv
 .. _pip: https://pip.pypa.io/en/stable/
 .. _pipenv: https://github.com/pypa/pipenv
 .. _Tensorflow: https://www.tensorflow.org

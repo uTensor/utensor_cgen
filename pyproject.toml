@@ -1,3 +1,48 @@
+[project]
+name = "utensor_cgen"
+version = "0.1.0"
+description = "C code generation program for uTensor"
+readme = "README.rst"
+license = { text = "Apache-2.0" }
+requires-python = ">=3.10"
+authors = [{ name = "Dboy Liao", email = "qmalliao@gmail.com" }]
+keywords = ["uTensor", "code generation", "embedded", "machine learning"]
+classifiers = [
+    "Development Status :: 4 - Beta",
+    "Environment :: MacOS X",
+    "Intended Audience :: Developers",
+    "License :: OSI Approved :: Apache Software License",
+    "Natural Language :: English",
+    "Operating System :: Unix",
+    "Programming Language :: Python",
+    "Topic :: Scientific/Engineering",
+    "Topic :: Scientific/Engineering :: Artificial Intelligence",
+    "Topic :: Utilities",
+]
+dependencies = [
+    "attrs>=25.4.0",
+    "click>=8.3.1",
+    "flatbuffers>=25.9.23",
+    "graphviz>=0.21",
+    "idx2numpy>=1.2.3",
+    "jinja2>=3.1.6",
+    "keras2onnx>=1.7.0",
+    "matplotlib>=3.10.8",
+    "onnx>=1.20.0",
+    "ortools==9.14.6206",
+    "tensorflow>=2.3.0",
+    "toml>=0.10.2",
+    "torch>=2.9.1",
+    "torchvision>=0.24.1",
+]
+
+[project.urls]
+Homepage = "https://github.com/uTensor/utensor_cgen"
+Documentation = "https://utensor-cgen.readthedocs.io/en/latest/"
+
+[project.scripts]
+utensor-cli = "utensor_cgen.cli:cli"
+
 [build-system]
 requires = ["setuptools", "wheel"]
 build-backend = "setuptools.build_meta:__legacy__"
