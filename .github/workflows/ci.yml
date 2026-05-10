@@ -1,0 +1,19 @@
+name: run_ci
+
+on:
+  push:
+  workflow_dispatch:
+
+jobs:
+  build:
+    runs-on: ubuntu-22.04
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-python@v5
+        with:
+          python-version: '3.6'
+      - run: mkdir -p /tmp/coverage && mkdir -p /tmp/test_results
+      - run: pip3 install -U pip && pip3 install pytest
+      - run: pip3 install .
+      - name: Test
+        run: LC_ALL=C.UTF-8 LANG=C.UTF-8 pytest -vv tests -m 'not slow_test and not deprecated and not beta_release'
